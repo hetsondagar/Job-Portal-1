@@ -1,0 +1,952 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
+import {
+  Star,
+  MapPin,
+  Users,
+  Building2,
+  Globe,
+  Calendar,
+  TrendingUp,
+  Heart,
+  Share2,
+  ChevronRight,
+  Briefcase,
+  IndianRupee,
+  Clock,
+  LinkIcon,
+  Mail,
+  MessageCircle,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { motion } from "framer-motion"
+import { Navbar } from "@/components/navbar"
+import Link from "next/link"
+
+export default function CompanyDetailPage() {
+  const params = useParams()
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
+  const getSectorColor = (sector: string) => {
+    const colors = {
+      technology: {
+        bg: "from-blue-500 to-cyan-500",
+        text: "text-blue-600",
+        border: "border-blue-200",
+        light: "bg-blue-50",
+      },
+      finance: {
+        bg: "from-green-500 to-emerald-500",
+        text: "text-green-600",
+        border: "border-green-200",
+        light: "bg-green-50",
+      },
+      automotive: {
+        bg: "from-orange-500 to-red-500",
+        text: "text-orange-600",
+        border: "border-orange-200",
+        light: "bg-orange-50",
+      },
+      healthcare: {
+        bg: "from-teal-500 to-cyan-500",
+        text: "text-teal-600",
+        border: "border-teal-200",
+        light: "bg-teal-50",
+      },
+      energy: {
+        bg: "from-purple-500 to-pink-500",
+        text: "text-purple-600",
+        border: "border-purple-200",
+        light: "bg-purple-50",
+      },
+      fintech: {
+        bg: "from-blue-500 to-green-500",
+        text: "text-blue-600",
+        border: "border-blue-200",
+        light: "bg-blue-50",
+      },
+    }
+    return colors[sector as keyof typeof colors] || colors.technology
+  }
+
+  // Mock company data - in real app, fetch based on params.id
+  const getCompanyData = (id: string) => {
+    const companies = {
+      "1": {
+        id: 1,
+        name: "TechCorp Solutions",
+        logo: "/placeholder.svg?height=120&width=120",
+        industry: "Technology",
+        sector: "technology",
+        location: "Bangalore",
+        employees: "500-1000",
+        rating: 4.2,
+        reviews: 234,
+        openings: 24,
+        description:
+          "TechCorp Solutions is a leading technology company specializing in innovative software solutions for enterprises. We pride ourselves on creating cutting-edge products that solve real-world problems and drive digital transformation.",
+        founded: "2015",
+        website: "techcorp.com",
+        headquarters: "Bangalore, India",
+        revenue: "$50-100 million",
+        ceo: "Rajesh Kumar",
+        companyType: "Product Based",
+        benefits: [
+          "Health Insurance",
+          "Flexible Hours",
+          "Remote Work",
+          "Learning Budget",
+          "Stock Options",
+          "Parental Leave",
+          "Gym Membership",
+          "Free Meals",
+          "Performance Bonus",
+          "Career Development",
+        ],
+        workCulture: "Collaborative and inclusive culture focused on innovation and growth",
+        salaryRange: "8-25 LPA",
+      },
+      "2": {
+        id: 2,
+        name: "FinanceFirst Bank",
+        logo: "/placeholder.svg?height=120&width=120",
+        industry: "Banking & Finance",
+        sector: "finance",
+        location: "Mumbai",
+        employees: "10000+",
+        rating: 4.1,
+        reviews: 1567,
+        openings: 89,
+        description:
+          "FinanceFirst Bank is one of India's leading private sector banks with a strong digital presence and commitment to customer service excellence.",
+        founded: "1994",
+        website: "financefirst.com",
+        headquarters: "Mumbai, India",
+        revenue: "$1-5 billion",
+        ceo: "Priya Sharma",
+        companyType: "Fortune 500",
+        benefits: [
+          "Medical Insurance",
+          "Provident Fund",
+          "Performance Bonus",
+          "Training Programs",
+          "Career Growth",
+          "Job Security",
+          "Employee Loans",
+          "Retirement Benefits",
+        ],
+        workCulture: "Professional environment with focus on customer service and innovation",
+        salaryRange: "6-30 LPA",
+      },
+    }
+
+    return companies[id as keyof typeof companies] || companies["1"]
+  }
+
+  const company = getCompanyData(params.id as string)
+
+  const departments = [
+    {
+      name: "Engineering - Software & QA",
+      openings: 7,
+      growth: "+12%",
+      description: "Building scalable software solutions",
+    },
+    {
+      name: "Data Science & Analytics",
+      openings: 2,
+      growth: "+8%",
+      description: "Driving insights through data",
+    },
+    {
+      name: "Finance & Accounting",
+      openings: 2,
+      growth: "+15%",
+      description: "Managing financial operations",
+    },
+    {
+      name: "Human Resources",
+      openings: 1,
+      growth: "+5%",
+      description: "Building great teams",
+    },
+    {
+      name: "Sales & Business Development",
+      openings: 3,
+      growth: "+20%",
+      description: "Expanding market reach",
+    },
+    {
+      name: "Project & Program Management",
+      openings: 2,
+      growth: "+10%",
+      description: "Delivering successful projects",
+    },
+  ]
+
+  const jobs = [
+    {
+      id: 1,
+      title: "JR - Admin",
+      department: "Engineering - Software & QA",
+      location: "Bangalore",
+      experience: "0-2 years",
+      salary: "3-6 LPA",
+      skills: ["Administration", "Office Management", "Communication", "MS Office"],
+      posted: "2 days ago",
+      applicants: 45,
+      type: "Full-time",
+      description: "Seeking a junior administrator to support daily office operations and administrative tasks.",
+      requirements: [
+        "Bachelor's degree",
+        "Strong communication skills",
+        "Proficiency in MS Office",
+        "Attention to detail",
+      ],
+    },
+    {
+      id: 2,
+      title: "React Developer",
+      department: "Engineering - Software & QA",
+      location: "Bangalore",
+      experience: "2-4 years",
+      salary: "8-15 LPA",
+      skills: ["React", "JavaScript", "HTML/CSS", "Node.js"],
+      posted: "1 day ago",
+      applicants: 32,
+      type: "Full-time",
+      description: "Looking for an experienced React developer to build modern web applications.",
+      requirements: [
+        "2+ years React experience",
+        "Strong JavaScript skills",
+        "Experience with REST APIs",
+        "Git proficiency",
+      ],
+    },
+    {
+      id: 3,
+      title: "Accounts Payable",
+      department: "Finance & Accounting",
+      location: "Bangalore",
+      experience: "1-3 years",
+      salary: "4-8 LPA",
+      skills: ["Accounting", "Tally", "Excel", "Financial Analysis"],
+      posted: "3 days ago",
+      applicants: 28,
+      type: "Full-time",
+      description: "Managing accounts payable processes and vendor relationships.",
+      requirements: ["Commerce background", "Tally experience", "Excel proficiency", "Attention to detail"],
+    },
+    {
+      id: 4,
+      title: "Key Account Manager",
+      department: "Sales & Business Development",
+      location: "Bangalore",
+      experience: "3-6 years",
+      salary: "10-18 LPA",
+      skills: ["Account Management", "Sales", "Client Relations", "Business Development"],
+      posted: "1 day ago",
+      applicants: 19,
+      type: "Full-time",
+      description: "Managing key client accounts and driving business growth through strategic partnerships.",
+      requirements: [
+        "3+ years account management",
+        "Strong communication",
+        "Sales experience",
+        "Client relationship skills",
+      ],
+    },
+  ]
+
+  const employeeSpeak = [
+    {
+      category: "Company Culture",
+      rating: 4.2,
+      reviews: 45,
+      highlights: ["Collaborative environment", "Learning opportunities", "Work-life balance"],
+    },
+    {
+      category: "Skill Development",
+      rating: 4.0,
+      reviews: 38,
+      highlights: ["Training programs", "Mentorship", "Technology exposure"],
+    },
+    {
+      category: "Salary & Benefits",
+      rating: 3.8,
+      reviews: 42,
+      highlights: ["Competitive salary", "Health benefits", "Performance bonus"],
+    },
+    {
+      category: "Work Satisfaction",
+      rating: 4.1,
+      reviews: 40,
+      highlights: ["Challenging projects", "Recognition", "Career growth"],
+    },
+  ]
+
+  const reviewsByProfile = [
+    {
+      profile: "Software Developer",
+      count: 45,
+      rating: 4.2,
+      reviews: [
+        {
+          title: "Great place for learning",
+          rating: 4,
+          experience: "2 years",
+          pros: "Good learning environment, supportive team, latest technologies",
+          cons: "Work pressure during project deadlines",
+          date: "2 months ago",
+        },
+      ],
+    },
+    {
+      profile: "Project Manager",
+      count: 12,
+      rating: 4.0,
+      reviews: [
+        {
+          title: "Good growth opportunities",
+          rating: 4,
+          experience: "3 years",
+          pros: "Career growth, good management, client interaction",
+          cons: "Sometimes long working hours",
+          date: "1 month ago",
+        },
+      ],
+    },
+    {
+      profile: "Business Analyst",
+      count: 8,
+      rating: 3.9,
+      reviews: [
+        {
+          title: "Decent work culture",
+          rating: 4,
+          experience: "1.5 years",
+          pros: "Learning opportunities, good colleagues, flexible timing",
+          cons: "Limited growth in initial years",
+          date: "3 weeks ago",
+        },
+      ],
+    },
+  ]
+
+  const handleApply = (jobId: number) => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true)
+    } else {
+      // Handle job application
+      console.log(`Applying for job ${jobId}...`)
+    }
+  }
+
+  const handleShare = (platform: string) => {
+    const companyUrl = `${window.location.origin}/companies/${company.id}`
+    const shareText = `Check out ${company.name} - ${company.openings} job openings available!`
+
+    switch (platform) {
+      case "link":
+        navigator.clipboard.writeText(companyUrl)
+        // Show toast notification
+        break
+      case "whatsapp":
+        window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText} ${companyUrl}`)}`)
+        break
+      case "email":
+        window.open(`mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(companyUrl)}`)
+        break
+    }
+  }
+
+  const sectorColors = getSectorColor(company.sector)
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <Navbar />
+
+      {/* Company Header */}
+      <div className="pt-20 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+            <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+              <div className={`h-32 bg-gradient-to-r ${sectorColors.bg} relative`}>
+                <div className="absolute inset-0 bg-black/10" />
+              </div>
+
+              <CardContent className="p-8 -mt-16 relative">
+                <div className="flex flex-col lg:flex-row items-start lg:items-end space-y-6 lg:space-y-0 lg:space-x-8">
+                  <Avatar className="w-32 h-32 ring-4 ring-white dark:ring-slate-800 shadow-xl">
+                    <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
+                    <AvatarFallback className={`text-4xl font-bold ${sectorColors.text}`}>
+                      {company.name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                      <div>
+                        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{company.name}</h1>
+                        <div className="flex items-center space-x-4 mb-3">
+                          <Badge
+                            className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
+                          >
+                            {company.companyType}
+                          </Badge>
+                          <Badge variant="secondary">Private</Badge>
+                          <Badge variant="secondary">Corporate</Badge>
+                        </div>
+                        <div className="flex items-center space-x-6 text-slate-600 dark:text-slate-300">
+                          <div className="flex items-center">
+                            <Star className="w-5 h-5 text-yellow-400 fill-current mr-2" />
+                            <span className="font-semibold text-lg">{company.rating}</span>
+                            <span className="ml-1">({company.reviews} reviews)</span>
+                          </div>
+                          <div className="flex items-center">
+                            <MapPin className="w-5 h-5 mr-2" />
+                            {company.location}
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="w-5 h-5 mr-2" />
+                            {company.employees} employees
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3 mt-4 lg:mt-0">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsFollowing(!isFollowing)}
+                          className={`${isFollowing ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white/50 dark:bg-slate-700/50"} backdrop-blur-sm`}
+                        >
+                          <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
+                          {isFollowing ? "Following" : "Follow"}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
+                              <Share2 className="w-4 h-4 mr-2" />
+                              Share
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleShare("link")}>
+                              <LinkIcon className="w-4 h-4 mr-2" />
+                              Copy Link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare("whatsapp")}>
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              WhatsApp
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare("email")}>
+                              <Mail className="w-4 h-4 mr-2" />
+                              Email
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Company Details Tabs */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <Tabs defaultValue="overview" className="space-y-8">
+          <TabsList className="grid w-full grid-cols-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Jobs ({jobs.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* About Company */}
+              <div className="lg:col-span-2 space-y-8">
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">About {company.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-6">{company.description}</p>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="flex items-center">
+                        <Calendar className="w-5 h-5 mr-3 text-slate-400" />
+                        <div>
+                          <div className="font-medium">Founded</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.founded}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Globe className="w-5 h-5 mr-3 text-slate-400" />
+                        <div>
+                          <div className="font-medium">Website</div>
+                          <div className="text-blue-600">{company.website}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Building2 className="w-5 h-5 mr-3 text-slate-400" />
+                        <div>
+                          <div className="font-medium">Headquarters</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.headquarters}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
+                        <div>
+                          <div className="font-medium">Revenue</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.revenue}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Departments Hiring */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Departments hiring at {company.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {departments.map((dept, index) => (
+                        <Link key={index} href={`/companies/${params.id}/departments/${encodeURIComponent(dept.name)}`}>
+                          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:shadow-md transition-all duration-300 cursor-pointer group">
+                            <div className="flex-1">
+                              <div className="font-medium text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                {dept.name}
+                              </div>
+                              <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">{dept.description}</div>
+                              <div className="text-sm text-slate-500 mt-1">{dept.openings} openings</div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="secondary" className="text-green-600 bg-green-50 dark:bg-green-900/20">
+                                {dept.growth}
+                              </Badge>
+                              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Employee Speak */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Employee Speak</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {employeeSpeak.map((category, index) => (
+                        <div key={index} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-slate-900 dark:text-white">{category.category}</h4>
+                            <div className="flex items-center">
+                              <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                              <span className="font-semibold">{category.rating}</span>
+                            </div>
+                          </div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                            {category.reviews} reviews
+                          </div>
+                          <div className="space-y-1">
+                            {category.highlights.map((highlight, hIndex) => (
+                              <div key={hIndex} className="text-sm text-slate-700 dark:text-slate-300">
+                                • {highlight}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Sidebar */}
+              <div className="space-y-8">
+                {/* Live jobs by Company */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Live jobs by {company.name}</span>
+                      <Badge className={`bg-gradient-to-r ${sectorColors.bg} text-white`}>{company.openings}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      className={`w-full bg-gradient-to-r ${sectorColors.bg} hover:shadow-lg transition-all duration-300`}
+                    >
+                      Register now
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Company Benefits */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle>Benefits reported by employees</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {company.benefits.slice(0, 8).map((benefit, index) => (
+                        <Badge key={index} variant="secondary" className="justify-center py-2 text-xs">
+                          {benefit}
+                        </Badge>
+                      ))}
+                    </div>
+                    {company.benefits.length > 8 && (
+                      <div className="mt-3 text-center">
+                        <Button variant="link" className="text-sm text-blue-600">
+                          View all benefits
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Reviews by Job Profile */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Reviews by Job Profile</span>
+                      <Button variant="link" className="text-sm text-blue-600 p-0">
+                        View all
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-64">
+                      <div className="space-y-4">
+                        {reviewsByProfile.map((profile, index) => (
+                          <div key={index} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium text-sm text-slate-900 dark:text-white">
+                                {profile.profile}
+                              </span>
+                              <div className="flex items-center">
+                                <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
+                                <span className="text-sm font-semibold">{profile.rating}</span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">{profile.count} reviews</div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* More Information */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle>More Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Company Size</span>
+                      <span className="font-medium">{company.employees}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Founded</span>
+                      <span className="font-medium">{company.founded}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Website</span>
+                      <span className="font-medium text-blue-600">{company.website}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="jobs" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {jobs.length} job openings at {company.name}
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400">Departments hiring at {company.name}</p>
+              </div>
+              <Badge
+                className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
+              >
+                {jobs.length} Active Jobs
+              </Badge>
+            </div>
+
+            {/* Department Filters */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-600">
+                Quantity category (4)
+              </Button>
+              <Button variant="outline" size="sm">
+                Department (1)
+              </Button>
+              <Button variant="outline" size="sm">
+                Location (1)
+              </Button>
+              <Button variant="outline" size="sm">
+                Experience (1)
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {jobs.map((job, index) => (
+                <motion.div
+                  key={job.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.6 }}
+                >
+                  <Link href={`/jobs/${job.id}`}>
+                    <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl hover:shadow-xl transition-all duration-300 group cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h3 className="text-xl font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors mb-2">
+                                  {job.title}
+                                </h3>
+                                <div className="text-slate-600 dark:text-slate-400 font-medium mb-2">
+                                  {company.name}
+                                </div>
+                                <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-400 mb-4">
+                                  <div className="flex items-center">
+                                    <Building2 className="w-4 h-4 mr-1" />
+                                    {job.department}
+                                  </div>
+                                  <div className="flex items-center">
+                                    <MapPin className="w-4 h-4 mr-1" />
+                                    {job.location}
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Briefcase className="w-4 h-4 mr-1" />
+                                    {job.experience}
+                                  </div>
+                                  <div className="flex items-center">
+                                    <IndianRupee className="w-4 h-4 mr-1" />
+                                    {job.salary}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col space-y-2">
+                                <Button
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleApply(job.id)
+                                  }}
+                                  className={`h-10 px-6 bg-gradient-to-r ${sectorColors.bg} hover:shadow-lg transition-all duration-300`}
+                                >
+                                  Apply now
+                                </Button>
+                                {!isAuthenticated && (
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setShowAuthDialog(true)
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      Register
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setShowAuthDialog(true)
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      Login
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{job.description}</p>
+
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {job.skills.map((skill, skillIndex) => (
+                                <Badge key={skillIndex} variant="secondary" className="text-xs">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+                              <div className="flex items-center space-x-4 text-sm text-slate-500">
+                                <div className="flex items-center">
+                                  <Clock className="w-4 h-4 mr-1" />
+                                  {job.posted}
+                                </div>
+                                <div className="flex items-center">
+                                  <Users className="w-4 h-4 mr-1" />
+                                  {job.applicants} applicants
+                                </div>
+                                <Badge variant="outline" className="text-xs">
+                                  {job.type}
+                                </Badge>
+                              </div>
+                              <Button variant="outline" size="sm">
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Interview Questions */}
+            <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Interview Questions</span>
+                  <Button variant="link" className="text-sm text-blue-600 p-0">
+                    View all
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="text-sm py-1 px-3">
+                    Software Engineer (5)
+                  </Badge>
+                  <Badge variant="outline" className="text-sm py-1 px-3">
+                    Data Software Engineer (5)
+                  </Badge>
+                  <Badge variant="outline" className="text-sm py-1 px-3">
+                    Software Developer (5)
+                  </Badge>
+                  <Badge variant="outline" className="text-sm py-1 px-3">
+                    Data Analyst (1)
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to apply for jobs. Please register or login to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-3 mt-6">
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              Register Now
+            </Button>
+            <Button variant="outline" className="w-full bg-transparent">
+              Login
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Footer */}
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <Briefcase className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-2xl font-bold">JobPortal</span>
+              </div>
+              <p className="text-slate-400 mb-6">India's leading job portal connecting talent with opportunities.</p>
+              <div className="flex space-x-4">
+                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                  <span className="text-sm">f</span>
+                </div>
+                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                  <span className="text-sm">t</span>
+                </div>
+                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                  <span className="text-sm">in</span>
+                </div>
+              </div>
+            </div>
+
+            {[
+              {
+                title: "For Job Seekers",
+                links: ["Browse Jobs", "Career Advice", "Resume Builder", "Salary Guide"],
+              },
+              {
+                title: "For Employers",
+                links: ["Post Jobs", "Search Resumes", "Recruitment Solutions", "Pricing"],
+              },
+              {
+                title: "Company",
+                links: ["About Us", "Contact", "Privacy Policy", "Terms of Service"],
+              },
+            ].map((section, index) => (
+              <div key={index}>
+                <h3 className="font-semibold mb-6 text-lg">{section.title}</h3>
+                <ul className="space-y-3">
+                  {section.links.map((link, linkIndex) => (
+                    <li key={linkIndex}>
+                      <Link href="#" className="text-slate-400 hover:text-white transition-colors hover:underline">
+                        {link}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
+            <p>&copy; 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}

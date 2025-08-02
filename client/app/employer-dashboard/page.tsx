@@ -1,0 +1,343 @@
+"use client"
+import Link from "next/link"
+import {
+  Plus,
+  Users,
+  Eye,
+  Award,
+  Briefcase,
+  BarChart3,
+  TrendingUp,
+  Clock,
+  CheckCircle,
+  Database,
+  FileText,
+  Calendar,
+  Mail,
+  Phone,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { motion } from "framer-motion"
+import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerFooter } from "@/components/employer-footer"
+
+export default function EmployerDashboard() {
+  const stats = [
+    {
+      title: "Active Jobs",
+      value: "12",
+      change: "+3 this month",
+      icon: Briefcase,
+      color: "from-blue-500 to-blue-600",
+    },
+    {
+      title: "Total Applications",
+      value: "1,247",
+      change: "+18% from last month",
+      icon: Users,
+      color: "from-green-500 to-green-600",
+    },
+    {
+      title: "Profile Views",
+      value: "8,432",
+      change: "+12% this week",
+      icon: Eye,
+      color: "from-purple-500 to-purple-600",
+    },
+    {
+      title: "Hired Candidates",
+      value: "23",
+      change: "+5 this month",
+      icon: Award,
+      color: "from-orange-500 to-orange-600",
+    },
+  ]
+
+  const quickActions = [
+    {
+      title: "Post a Job",
+      description: "Create a new job posting",
+      icon: Plus,
+      href: "/employer-dashboard/post-job",
+      color: "from-blue-500 to-blue-600",
+    },
+    {
+      title: "Search Database",
+      description: "Find candidates in our database",
+      icon: Database,
+      href: "/employer-dashboard/create-requirement",
+      color: "from-green-500 to-green-600",
+    },
+    {
+      title: "Manage Jobs",
+      description: "View and manage your job postings",
+      icon: BarChart3,
+      href: "/employer-dashboard/manage-jobs",
+      color: "from-purple-500 to-purple-600",
+    },
+    {
+      title: "View Requirements",
+      description: "Manage your hiring requirements",
+      icon: FileText,
+      href: "/employer-dashboard/requirements",
+      color: "from-orange-500 to-orange-600",
+    },
+  ]
+
+  const recentActivity = [
+    {
+      id: 1,
+      type: "application",
+      title: "New application received",
+      description: "Priya Sharma applied for Senior React Developer",
+      time: "2 hours ago",
+      icon: Users,
+    },
+    {
+      id: 2,
+      type: "job",
+      title: "Job posted successfully",
+      description: "Product Manager position is now live",
+      time: "1 day ago",
+      icon: Briefcase,
+    },
+    {
+      id: 3,
+      type: "requirement",
+      title: "Requirement created",
+      description: "Software Engineer requirement added to database",
+      time: "2 days ago",
+      icon: Database,
+    },
+  ]
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
+      <EmployerNavbar />
+
+      {/* Welcome Banner */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white overflow-hidden mb-8"
+        >
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Welcome back, KESHAV!</h1>
+                <p className="text-blue-100 text-lg mb-4">Ready to find your next great hire?</p>
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="w-5 h-5 text-blue-200" />
+                    <span className="text-sm">12 Active Jobs</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-5 h-5 text-blue-200" />
+                    <span className="text-sm">1,247 Applications</span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden lg:block">
+                <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center">
+                  <Briefcase className="w-16 h-16 text-white/80" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90"></div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+            >
+              <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-600">{stat.title}</p>
+                      <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                      <p className="text-sm text-green-600">{stat.change}</p>
+                    </div>
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
+                    >
+                      <stat.icon className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Quick Actions */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Quick Actions */}
+            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+              <CardHeader>
+                <CardTitle className="text-slate-900 flex items-center">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {quickActions.map((action, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1, duration: 0.3 }}
+                    >
+                      <Link href={action.href}>
+                        <Card className="h-full hover:shadow-md transition-all duration-300 hover:scale-105 cursor-pointer border-slate-200">
+                          <CardContent className="p-6">
+                            <div className="flex items-start space-x-4">
+                              <div
+                                className={`w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} flex items-center justify-center`}
+                              >
+                                <action.icon className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-slate-900 mb-1">{action.title}</h3>
+                                <p className="text-sm text-slate-600">{action.description}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+              <CardHeader>
+                <CardTitle className="text-slate-900 flex items-center">
+                  <Clock className="w-5 h-5 mr-2" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-start space-x-4 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <activity.icon className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-900">{activity.title}</h4>
+                        <p className="text-sm text-slate-600">{activity.description}</p>
+                        <p className="text-xs text-slate-500 mt-1">{activity.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Profile & Support */}
+          <div className="space-y-8">
+            {/* Profile Completion */}
+            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+              <CardHeader>
+                <CardTitle className="text-slate-900 flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  Profile Completion
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-slate-600">Company Profile</span>
+                      <span className="text-sm font-medium text-slate-900">85%</span>
+                    </div>
+                    <Progress value={85} className="h-2" />
+                  </div>
+                  <div className="text-sm text-slate-600">Complete your profile to attract better candidates</div>
+                  <Button variant="outline" size="sm" className="w-full bg-transparent">
+                    Complete Profile
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Events */}
+            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+              <CardHeader>
+                <CardTitle className="text-slate-900 flex items-center">
+                  <Calendar className="w-5 h-5 mr-2" />
+                  Upcoming Events
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Interview with John Doe</p>
+                      <p className="text-xs text-slate-600">Today, 2:00 PM</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Job posting expires</p>
+                      <p className="text-xs text-slate-600">Tomorrow, 11:59 PM</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Support */}
+            <Card className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <CardContent className="p-6">
+                <h3 className="font-bold text-lg mb-2">Need Help?</h3>
+                <p className="text-blue-100 text-sm mb-4">Our support team is here to help you succeed</p>
+                <div className="space-y-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call Support
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Email Us
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <EmployerFooter />
+    </div>
+  )
+}

@@ -1,0 +1,423 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { ArrowLeft, MapPin, Briefcase, Clock, IndianRupee, Star, Building2, Users, Filter } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { motion } from "framer-motion"
+import { Navbar } from "@/components/navbar"
+import Link from "next/link"
+
+export default function DepartmentJobsPage() {
+  const params = useParams()
+  const router = useRouter()
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
+  const companyId = params.id as string
+  const departmentName = decodeURIComponent(params.department as string)
+
+  // Mock company data
+  const company = {
+    id: companyId,
+    name: "TechCorp Solutions",
+    logo: "/placeholder.svg?height=80&width=80",
+    rating: 4.2,
+    reviews: 234,
+    sector: "technology",
+  }
+
+  // Mock department jobs
+  const departmentJobs = [
+    {
+      id: 1,
+      title: "Senior Software Engineer",
+      department: departmentName,
+      location: "Bangalore",
+      experience: "4-7 years",
+      salary: "15-25 LPA",
+      skills: ["React", "Node.js", "Python", "AWS"],
+      posted: "2 days ago",
+      applicants: 45,
+      type: "Full-time",
+      description:
+        "We are looking for a Senior Software Engineer to join our engineering team and work on cutting-edge projects.",
+      requirements: [
+        "4+ years of software development experience",
+        "Strong proficiency in React and Node.js",
+        "Experience with cloud platforms",
+        "Excellent problem-solving skills",
+      ],
+    },
+    {
+      id: 2,
+      title: "React Developer",
+      department: departmentName,
+      location: "Bangalore",
+      experience: "2-4 years",
+      salary: "8-15 LPA",
+      skills: ["React", "JavaScript", "HTML/CSS", "Redux"],
+      posted: "1 day ago",
+      applicants: 32,
+      type: "Full-time",
+      description: "Looking for an experienced React developer to build modern web applications.",
+      requirements: [
+        "2+ years React experience",
+        "Strong JavaScript skills",
+        "Experience with REST APIs",
+        "Git proficiency",
+      ],
+    },
+    {
+      id: 3,
+      title: "Full Stack Developer",
+      department: departmentName,
+      location: "Bangalore",
+      experience: "3-5 years",
+      salary: "12-20 LPA",
+      skills: ["React", "Node.js", "MongoDB", "Express"],
+      posted: "3 days ago",
+      applicants: 28,
+      type: "Full-time",
+      description: "Join our team as a Full Stack Developer and work on both frontend and backend technologies.",
+      requirements: [
+        "3+ years full-stack development",
+        "Experience with MERN stack",
+        "Database design knowledge",
+        "API development experience",
+      ],
+    },
+  ]
+
+  const getSectorColor = (sector: string) => {
+    const colors = {
+      technology: "from-blue-500 to-cyan-500",
+      finance: "from-green-500 to-emerald-500",
+      automotive: "from-orange-500 to-red-500",
+      healthcare: "from-teal-500 to-cyan-500",
+      energy: "from-purple-500 to-pink-500",
+    }
+    return colors[sector as keyof typeof colors] || "from-gray-500 to-slate-500"
+  }
+
+  const handleApply = (jobId: number) => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true)
+    } else {
+      console.log(`Applying for job ${jobId}...`)
+    }
+  }
+
+  const handleBackNavigation = () => {
+    router.push(`/companies/${companyId}`)
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <Navbar />
+
+      <div className="pt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-6"
+          >
+            <Button
+              variant="ghost"
+              className="text-slate-600 dark:text-slate-400 hover:text-blue-600"
+              onClick={handleBackNavigation}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to {company.name}
+            </Button>
+          </motion.div>
+
+          {/* Department Header */}
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl mb-8">
+              <CardContent className="p-8">
+                <div className="flex items-center space-x-6">
+                  <Avatar className="w-20 h-20 ring-2 ring-white/50">
+                    <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
+                    <AvatarFallback className="text-2xl font-bold text-blue-600">{company.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                      {departmentName} Jobs at {company.name}
+                    </h1>
+                    <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                        <span className="font-semibold">{company.rating}</span>
+                        <span className="text-sm ml-1">({company.reviews} reviews)</span>
+                      </div>
+                      <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                        {departmentJobs.length} openings
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Filters and Sort */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                {departmentJobs.length} jobs in {departmentName}
+              </h2>
+              <p className="text-slate-600 dark:text-slate-300">Explore opportunities in this department</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+              </Button>
+              <Select defaultValue="recent">
+                <SelectTrigger className="w-48 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="salary">Highest Salary</SelectItem>
+                  <SelectItem value="experience">Experience Level</SelectItem>
+                  <SelectItem value="applicants">Least Applicants</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Jobs List */}
+          <div className="space-y-6">
+            {departmentJobs.map((job, index) => (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.6 }}
+              >
+                <Link href={`/jobs/${job.id}`}>
+                  <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 group cursor-pointer overflow-hidden">
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}
+                    />
+
+                    <CardContent className="p-8 relative">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-6">
+                            <div>
+                              <h3 className="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors mb-2">
+                                {job.title}
+                              </h3>
+                              <div className="text-lg text-slate-600 dark:text-slate-400 font-medium mb-4">
+                                {company.name}
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="flex items-center text-slate-600 dark:text-slate-300">
+                                  <Building2 className="w-5 h-5 mr-2 text-slate-400" />
+                                  <div>
+                                    <div className="font-medium">{job.department}</div>
+                                    <div className="text-sm text-slate-500">Department</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center text-slate-600 dark:text-slate-300">
+                                  <MapPin className="w-5 h-5 mr-2 text-slate-400" />
+                                  <div>
+                                    <div className="font-medium">{job.location}</div>
+                                    <div className="text-sm text-slate-500">Location</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center text-slate-600 dark:text-slate-300">
+                                  <Briefcase className="w-5 h-5 mr-2 text-slate-400" />
+                                  <div>
+                                    <div className="font-medium">{job.experience}</div>
+                                    <div className="text-sm text-slate-500">Experience</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center text-slate-600 dark:text-slate-300">
+                                  <IndianRupee className="w-5 h-5 mr-2 text-slate-400" />
+                                  <div>
+                                    <div className="font-medium">{job.salary}</div>
+                                    <div className="text-sm text-slate-500">Per Annum</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col space-y-2">
+                              <Button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleApply(job.id)
+                                }}
+                                className={`h-10 px-6 bg-gradient-to-r ${getSectorColor(company.sector)} hover:shadow-lg transition-all duration-300`}
+                              >
+                                Apply Now
+                              </Button>
+                              {!isAuthenticated && (
+                                <div className="flex space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      setShowAuthDialog(true)
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    Register
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      setShowAuthDialog(true)
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    Login
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <p className="text-slate-700 dark:text-slate-300 mb-6 leading-relaxed">{job.description}</p>
+
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            {job.skills.map((skill, skillIndex) => (
+                              <Badge
+                                key={skillIndex}
+                                variant="secondary"
+                                className="bg-blue-50 text-blue-700 border-blue-200"
+                              >
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-6 border-t border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center space-x-6 text-sm text-slate-500">
+                              <div className="flex items-center">
+                                <Clock className="w-4 h-4 mr-1" />
+                                {job.posted}
+                              </div>
+                              <div className="flex items-center">
+                                <Users className="w-4 h-4 mr-1" />
+                                {job.applicants} applicants
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {job.type}
+                              </Badge>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              Save Job
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Load More */}
+          <div className="text-center mt-12">
+            <Button variant="outline" className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm px-8 py-3">
+              Load More Jobs
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to apply for jobs. Please register or login to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-3 mt-6">
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              Register Now
+            </Button>
+            <Button variant="outline" className="w-full bg-transparent">
+              Login
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Footer */}
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <Briefcase className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-2xl font-bold">JobPortal</span>
+              </div>
+              <p className="text-slate-400 mb-6">India's leading job portal connecting talent with opportunities.</p>
+            </div>
+
+            {[
+              {
+                title: "For Job Seekers",
+                links: ["Browse Jobs", "Career Advice", "Resume Builder", "Salary Guide"],
+              },
+              {
+                title: "For Employers",
+                links: ["Post Jobs", "Search Resumes", "Recruitment Solutions", "Pricing"],
+              },
+              {
+                title: "Company",
+                links: ["About Us", "Contact", "Privacy Policy", "Terms of Service"],
+              },
+            ].map((section, index) => (
+              <div key={index}>
+                <h3 className="font-semibold mb-6 text-lg">{section.title}</h3>
+                <ul className="space-y-3">
+                  {section.links.map((link, linkIndex) => (
+                    <li key={linkIndex}>
+                      <Link href="#" className="text-slate-400 hover:text-white transition-colors hover:underline">
+                        {link}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
+            <p>&copy; 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
