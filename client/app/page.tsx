@@ -89,53 +89,53 @@ export default function HomePage() {
   const topCompanies = [
     {
       id: 1,
-      name: "Google",
+      name: "TechCorp Solutions",
       industry: "Technology",
-      openings: 156,
-      rating: 4.8,
+      openings: 24,
+      rating: 4.2,
       icon: "🔍",
       color: "from-blue-500 to-cyan-500",
       hoverColor: "from-blue-600 to-cyan-600",
     },
     {
       id: 2,
-      name: "Microsoft",
-      industry: "Technology",
+      name: "FinanceFirst Bank",
+      industry: "Banking & Finance",
       openings: 89,
-      rating: 4.6,
-      icon: "🪟",
-      color: "from-indigo-500 to-purple-500",
-      hoverColor: "from-indigo-600 to-purple-600",
-    },
-    {
-      id: 3,
-      name: "Amazon",
-      industry: "E-commerce",
-      openings: 234,
-      rating: 4.4,
-      icon: "📦",
-      color: "from-orange-500 to-yellow-500",
-      hoverColor: "from-orange-600 to-yellow-600",
-    },
-    {
-      id: 4,
-      name: "HDFC Bank",
-      industry: "Finance",
-      openings: 189,
-      rating: 4.3,
+      rating: 4.1,
       icon: "🏦",
       color: "from-green-500 to-emerald-500",
       hoverColor: "from-green-600 to-emerald-600",
     },
     {
-      id: 5,
-      name: "Apollo Hospitals",
+      id: 3,
+      name: "AutoDrive Motors",
+      industry: "Automotive",
+      openings: 45,
+      rating: 4.0,
+      icon: "🚗",
+      color: "from-orange-500 to-red-500",
+      hoverColor: "from-orange-600 to-red-600",
+    },
+    {
+      id: 4,
+      name: "HealthCare Plus",
       industry: "Healthcare",
-      openings: 145,
-      rating: 4.5,
+      openings: 67,
+      rating: 4.3,
       icon: "🏥",
-      color: "from-red-500 to-pink-500",
-      hoverColor: "from-red-600 to-pink-600",
+      color: "from-teal-500 to-cyan-500",
+      hoverColor: "from-teal-600 to-cyan-600",
+    },
+    {
+      id: 5,
+      name: "EduTech Innovations",
+      industry: "Education Technology",
+      openings: 34,
+      rating: 4.4,
+      icon: "📚",
+      color: "from-emerald-500 to-teal-500",
+      hoverColor: "from-emerald-600 to-teal-600",
     },
     {
       id: 6,
@@ -682,7 +682,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <Navbar />
 
       {/* Hero Section */}
@@ -894,9 +894,10 @@ export default function HomePage() {
                   initial={{ opacity: 0, x: 50 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.6 }}
-                  className="flex-shrink-0 w-80"
+                  className="flex-shrink-0 w-72 sm:w-80"
                 >
-                  <Card className={`h-full bg-gradient-to-br ${company.color} hover:${company.hoverColor} backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl transition-all duration-500 group cursor-pointer transform hover:scale-105`}>
+                  <Link href={`/companies/${company.id}`}>
+                    <Card className={`h-full bg-gradient-to-br ${company.color} hover:${company.hoverColor} backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl transition-all duration-500 group cursor-pointer transform hover:scale-105`}>
                     <CardContent className="p-6 text-white relative overflow-hidden">
                       {/* Background pattern */}
                       <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -955,6 +956,7 @@ export default function HomePage() {
                       </div>
                     </CardContent>
                   </Card>
+                    </Link>
               </motion.div>
             ))}
             </div>
@@ -1044,7 +1046,7 @@ export default function HomePage() {
           </div>
 
           <div className="text-center mt-12">
-            <Link href="/companies">
+            <Link href="/companies?featured=true">
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
                 View All Companies
                 <ArrowRight className="w-5 h-5 ml-2" />

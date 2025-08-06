@@ -154,12 +154,135 @@ export default function CompanyDetailPage() {
         workCulture: "Professional environment with focus on customer service and innovation",
         salaryRange: "6-30 LPA",
       },
+      "3": {
+        id: 3,
+        name: "AutoDrive Motors",
+        logo: "/placeholder.svg?height=120&width=120",
+        industry: "Automotive",
+        sector: "automotive",
+        location: "Chennai",
+        employees: "5000-10000",
+        rating: 4.0,
+        reviews: 892,
+        openings: 45,
+        description:
+          "Leading automotive manufacturer with focus on electric and hybrid vehicles.",
+        founded: "1985",
+        website: "autodrive.com",
+        headquarters: "Chennai, India",
+        revenue: "$500M-1B",
+        ceo: "Vikram Singh",
+        companyType: "MNC",
+        benefits: [
+          "Employee Discounts",
+          "Health Insurance",
+          "Retirement Benefits",
+          "Skill Development",
+          "Performance Bonus",
+          "Career Growth",
+        ],
+        workCulture: "Engineering-focused culture with emphasis on innovation",
+        salaryRange: "5-20 LPA",
+      },
+      "4": {
+        id: 4,
+        name: "HealthCare Plus",
+        logo: "/placeholder.svg?height=120&width=120",
+        industry: "Healthcare",
+        sector: "healthcare",
+        location: "Delhi",
+        employees: "2000-5000",
+        rating: 4.3,
+        reviews: 567,
+        openings: 67,
+        description:
+          "Leading healthcare provider with state-of-the-art medical facilities.",
+        founded: "2000",
+        website: "healthcareplus.com",
+        headquarters: "Delhi, India",
+        revenue: "$100M-500M",
+        ceo: "Dr. Anjali Patel",
+        companyType: "Healthcare",
+        benefits: [
+          "Medical Insurance",
+          "Health Benefits",
+          "Professional Development",
+          "Work-Life Balance",
+          "Performance Bonus",
+        ],
+        workCulture: "Patient-focused culture with emphasis on care",
+        salaryRange: "7-22 LPA",
+      },
+      "5": {
+        id: 5,
+        name: "EduTech Innovations",
+        logo: "/placeholder.svg?height=120&width=120",
+        industry: "Education Technology",
+        sector: "edtech",
+        location: "Pune",
+        employees: "500-1000",
+        rating: 4.4,
+        reviews: 345,
+        openings: 34,
+        description:
+          "Revolutionizing education through innovative technology solutions.",
+        founded: "2018",
+        website: "edutech.com",
+        headquarters: "Pune, India",
+        revenue: "$10M-50M",
+        ceo: "Arun Kumar",
+        companyType: "Startup",
+        benefits: [
+          "Learning Budget",
+          "Remote Work",
+          "Stock Options",
+          "Flexible Hours",
+          "Performance Bonus",
+        ],
+        workCulture: "Innovative and fast-paced startup culture",
+        salaryRange: "8-28 LPA",
+      },
     }
 
-    return companies[id as keyof typeof companies] || companies["1"]
+    return companies[id as keyof typeof companies] || null
   }
 
   const company = getCompanyData(params.id as string)
+
+  // Handle company not found
+  if (!company) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Navbar />
+        
+        <div className="pt-20 pb-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-20">
+              <div className="w-24 h-24 mx-auto mb-6 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                <Building2 className="w-12 h-12 text-red-500" />
+              </div>
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Company Not Found</h1>
+              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
+                The company you're looking for doesn't exist or may have been removed. Please check the URL or browse our companies directory.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/companies">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
+                    Browse All Companies
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button variant="outline" className="font-semibold px-8 py-3 rounded-2xl">
+                    Go to Homepage
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const departments = [
     {

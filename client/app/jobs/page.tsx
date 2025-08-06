@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import {
   Search,
   MapPin,
@@ -14,6 +14,7 @@ import {
   Sparkles,
   Star,
   ArrowRight,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,16 +25,115 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+
+// Types for state management
+interface FilterState {
+  search: string
+  location: string
+  experienceLevels: string[]
+  jobTypes: string[]
+  locations: string[]
+  salaryRange: string
+  category: string
+  type: string
+}
+
+interface Job {
+  id: number
+  title: string
+  company: string
+  location: string
+  experience: string
+  salary: string
+  skills: string[]
+  logo: string
+  posted: string
+  applicants: number
+  description: string
+  type: string
+  remote: boolean
+  urgent: boolean
+  featured: boolean
+  companyRating: number
+  category: string
+}
 
 export default function JobsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [sortBy, setSortBy] = useState("recent")
 
-  const jobs = [
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    location: "",
+    experienceLevels: [],
+    jobTypes: [],
+    locations: [],
+    salaryRange: "",
+    category: "",
+    type: "",
+  })
+
+  // Check URL parameters for filters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const category = urlParams.get('category')
+      const type = urlParams.get('type')
+      const location = urlParams.get('location')
+      
+      if (category) {
+        setFilters(prev => ({ ...prev, category }))
+      }
+      if (type) {
+        setFilters(prev => ({ ...prev, type }))
+      }
+      if (location) {
+        setFilters(prev => ({ ...prev, location }))
+      }
+    }
+  }, [])
+
+  const experienceLevels = [
+    "Fresher",
+    "1-3 years",
+    "3-5 years",
+    "5-8 years",
+    "8-12 years",
+    "12+ years",
+  ]
+
+  const jobTypes = [
+    "Full-time",
+    "Part-time",
+    "Contract",
+    "Internship",
+    "Remote",
+    "Work from home",
+  ]
+
+  const locations = [
+    "Bangalore",
+    "Mumbai",
+    "Delhi",
+    "Hyderabad",
+    "Chennai",
+    "Pune",
+    "Gurgaon",
+    "Noida",
+    "Kolkata",
+    "Ahmedabad",
+    "Remote",
+    "Work from home",
+  ]
+
+  const jobs: Job[] = [
     {
       id: 1,
       title: "Senior Full Stack Developer",
@@ -51,6 +151,7 @@ export default function JobsPage() {
       urgent: false,
       featured: true,
       companyRating: 4.2,
+      category: "software",
     },
     {
       id: 2,
@@ -69,6 +170,7 @@ export default function JobsPage() {
       urgent: true,
       featured: false,
       companyRating: 4.5,
+      category: "product",
     },
     {
       id: 3,
@@ -87,6 +189,7 @@ export default function JobsPage() {
       urgent: false,
       featured: false,
       companyRating: 4.1,
+      category: "data",
     },
     {
       id: 4,
@@ -98,55 +201,269 @@ export default function JobsPage() {
       skills: ["React", "TypeScript", "CSS", "Next.js"],
       logo: "/placeholder.svg?height=40&width=40",
       posted: "1 day ago",
-      applicants: 67,
+      applicants: 38,
       description: "Create beautiful and responsive user interfaces...",
-      type: "Full-time",
-      remote: true,
-      urgent: true,
-      featured: true,
-      companyRating: 4.3,
-    },
-    {
-      id: 5,
-      title: "DevOps Engineer",
-      company: "CloudTech Systems",
-      location: "Chennai",
-      experience: "3-5 years",
-      salary: "10-18 LPA",
-      skills: ["AWS", "Docker", "Kubernetes", "CI/CD"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "4 days ago",
-      applicants: 23,
-      description: "Manage cloud infrastructure and deployment pipelines...",
       type: "Full-time",
       remote: false,
       urgent: false,
+      featured: true,
+      companyRating: 4.3,
+      category: "software",
+    },
+    {
+      id: 5,
+      title: "UX Designer",
+      company: "DesignStudio",
+      location: "Delhi",
+      experience: "3-5 years",
+      salary: "10-18 LPA",
+      skills: ["Figma", "Adobe XD", "User Research", "Prototyping"],
+      logo: "/placeholder.svg?height=40&width=40",
+      posted: "2 days ago",
+      applicants: 25,
+      description: "Design intuitive and engaging user experiences...",
+      type: "Full-time",
+      remote: true,
+      urgent: false,
       featured: false,
       companyRating: 4.0,
+      category: "design",
     },
     {
       id: 6,
-      title: "UX Designer",
-      company: "DesignStudio Pro",
-      location: "Delhi",
-      experience: "2-5 years",
-      salary: "6-12 LPA",
-      skills: ["Figma", "User Research", "Prototyping", "Design Systems"],
+      title: "DevOps Engineer",
+      company: "CloudTech",
+      location: "Bangalore",
+      experience: "4-6 years",
+      salary: "18-28 LPA",
+      skills: ["Docker", "Kubernetes", "AWS", "Jenkins"],
       logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 41,
-      description: "Design intuitive user experiences for digital products...",
+      posted: "1 day ago",
+      applicants: 22,
+      description: "Build and maintain scalable infrastructure...",
       type: "Full-time",
-      remote: true,
+      remote: false,
       urgent: true,
       featured: false,
       companyRating: 4.4,
+      category: "devops",
+    },
+    {
+      id: 7,
+      title: "Sales Manager",
+      company: "SalesForce Inc",
+      location: "Mumbai",
+      experience: "5-8 years",
+      salary: "15-25 LPA",
+      skills: ["Sales Strategy", "CRM", "Leadership", "Client Relations"],
+      logo: "/placeholder.svg?height=40&width=40",
+      posted: "3 days ago",
+      applicants: 35,
+      description: "Lead sales team and drive revenue growth...",
+      type: "Full-time",
+      remote: false,
+      urgent: false,
+      featured: true,
+      companyRating: 4.2,
+      category: "sales",
+    },
+    {
+      id: 8,
+      title: "Marketing Specialist",
+      company: "Digital Marketing Pro",
+      location: "Gurgaon",
+      experience: "2-4 years",
+      salary: "6-12 LPA",
+      skills: ["Digital Marketing", "SEO", "Social Media", "Analytics"],
+      logo: "/placeholder.svg?height=40&width=40",
+      posted: "2 days ago",
+      applicants: 42,
+      description: "Execute digital marketing campaigns...",
+      type: "Full-time",
+      remote: true,
+      urgent: false,
+      featured: false,
+      companyRating: 3.9,
+      category: "marketing",
     },
   ]
 
-  const experienceLevels = ["0-1 years", "1-3 years", "3-5 years", "5-7 years", "7-10 years", "10+ years"]
-  const jobTypes = ["Full-time", "Part-time", "Contract", "Internship", "Remote"]
-  const locations = ["Bangalore", "Mumbai", "Delhi", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"]
+  // Filter functions
+  const handleFilterChange = useCallback((filterType: keyof FilterState, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }))
+  }, [])
+
+  const handleExperienceToggle = useCallback((level: string) => {
+    setFilters(prev => ({
+      ...prev,
+      experienceLevels: prev.experienceLevels.includes(level)
+        ? prev.experienceLevels.filter(l => l !== level)
+        : [...prev.experienceLevels, level]
+    }))
+  }, [])
+
+  const handleJobTypeToggle = useCallback((type: string) => {
+    setFilters(prev => ({
+      ...prev,
+      jobTypes: prev.jobTypes.includes(type)
+        ? prev.jobTypes.filter(t => t !== type)
+        : [...prev.jobTypes, type]
+    }))
+  }, [])
+
+  const handleLocationToggle = useCallback((location: string) => {
+    setFilters(prev => ({
+      ...prev,
+      locations: prev.locations.includes(location)
+        ? prev.locations.filter(l => l !== location)
+        : [...prev.locations, location]
+    }))
+  }, [])
+
+  const clearAllFilters = useCallback(() => {
+    setFilters({
+      search: "",
+      location: "",
+      experienceLevels: [],
+      jobTypes: [],
+      locations: [],
+      salaryRange: "",
+      category: "",
+      type: "",
+    })
+  }, [])
+
+  // Filter and sort jobs
+  const filteredJobs = useMemo(() => {
+    let filtered = jobs
+
+    // Search filter
+    if (filters.search) {
+      filtered = filtered.filter(job =>
+        job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.company.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.description.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.skills.some(skill => skill.toLowerCase().includes(filters.search.toLowerCase()))
+      )
+    }
+
+    // Location filter
+    if (filters.location) {
+      filtered = filtered.filter(job =>
+        job.location.toLowerCase().includes(filters.location.toLowerCase())
+      )
+    }
+
+    // Experience level filter
+    if (filters.experienceLevels.length > 0) {
+      filtered = filtered.filter(job =>
+        filters.experienceLevels.some(level => {
+          if (level === "Fresher") return job.experience.includes("0") || job.experience.includes("Fresher")
+          if (level === "1-3 years") return job.experience.includes("1-3") || job.experience.includes("2-4")
+          if (level === "3-5 years") return job.experience.includes("3-5") || job.experience.includes("4-6")
+          if (level === "5-8 years") return job.experience.includes("5-8") || job.experience.includes("6-8")
+          if (level === "8-12 years") return job.experience.includes("8-12") || job.experience.includes("8+")
+          if (level === "12+ years") return job.experience.includes("12+") || job.experience.includes("10+")
+          return false
+        })
+      )
+    }
+
+    // Job type filter
+    if (filters.jobTypes.length > 0) {
+      filtered = filtered.filter(job =>
+        filters.jobTypes.some(type => {
+          if (type === "Remote") return job.remote
+          if (type === "Work from home") return job.remote
+          return job.type === type
+        })
+      )
+    }
+
+    // Location filter (from checkbox)
+    if (filters.locations.length > 0) {
+      filtered = filtered.filter(job =>
+        filters.locations.some(location => {
+          if (location === "Remote") return job.remote
+          if (location === "Work from home") return job.remote
+          return job.location === location
+        })
+      )
+    }
+
+    // Salary range filter
+    if (filters.salaryRange) {
+      filtered = filtered.filter(job => {
+        const range = filters.salaryRange
+        if (range === "0-5") return job.salary.includes("3-") || job.salary.includes("4-") || job.salary.includes("5")
+        if (range === "5-10") return job.salary.includes("6-") || job.salary.includes("8-") || job.salary.includes("10")
+        if (range === "10-15") return job.salary.includes("12-") || job.salary.includes("15")
+        if (range === "15-25") return job.salary.includes("18-") || job.salary.includes("20-") || job.salary.includes("25")
+        if (range === "25+") return job.salary.includes("25+") || job.salary.includes("30") || job.salary.includes("35")
+        return true
+      })
+    }
+
+    // Category filter (from URL)
+    if (filters.category) {
+      filtered = filtered.filter(job => job.category === filters.category)
+    }
+
+    // Type filter (from URL)
+    if (filters.type) {
+      filtered = filtered.filter(job => {
+        if (filters.type === "fresher") return job.experience.includes("0") || job.experience.includes("Fresher")
+        if (filters.type === "remote") return job.remote
+        if (filters.type === "wfh") return job.remote
+        if (filters.type === "walkin") return job.type === "Walk-in"
+        if (filters.type === "parttime") return job.type === "Part-time"
+        return job.type === filters.type
+      })
+    }
+
+    // Sort jobs
+    switch (sortBy) {
+      case "recent":
+        // Sort by posted date (mock implementation)
+        filtered.sort((a, b) => {
+          const aDays = parseInt(a.posted.split(' ')[0])
+          const bDays = parseInt(b.posted.split(' ')[0])
+          return aDays - bDays
+        })
+        break
+      case "relevant":
+        // Sort by company rating
+        filtered.sort((a, b) => b.companyRating - a.companyRating)
+        break
+      case "salary-high":
+        // Sort by salary (mock implementation)
+        filtered.sort((a, b) => {
+          const aSalary = parseInt(a.salary.split('-')[1])
+          const bSalary = parseInt(b.salary.split('-')[1])
+          return bSalary - aSalary
+        })
+        break
+      case "salary-low":
+        // Sort by salary (mock implementation)
+        filtered.sort((a, b) => {
+          const aSalary = parseInt(a.salary.split('-')[0])
+          const bSalary = parseInt(b.salary.split('-')[0])
+          return aSalary - bSalary
+        })
+        break
+      default:
+        filtered.sort((a, b) => {
+          const aDays = parseInt(a.posted.split(' ')[0])
+          const bDays = parseInt(b.posted.split(' ')[0])
+          return aDays - bDays
+        })
+    }
+
+    return filtered
+  }, [jobs, filters, sortBy])
 
   const handleApply = (jobId: number) => {
     if (!isAuthenticated) {
@@ -188,6 +505,8 @@ export default function JobsPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
                 <Input
                   placeholder="Job title, keywords, or company"
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
                   className="pl-10 sm:pl-12 h-10 sm:h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm text-sm sm:text-base"
                 />
               </div>
@@ -195,6 +514,8 @@ export default function JobsPage() {
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
                 <Input
                   placeholder="Location"
+                  value={filters.location}
+                  onChange={(e) => handleFilterChange("location", e.target.value)}
                   className="pl-10 sm:pl-12 h-10 sm:h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm text-sm sm:text-base"
                 />
               </div>
@@ -239,92 +560,129 @@ export default function JobsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="flex gap-6 sm:gap-8">
-          {/* Filters Sidebar */}
-          <div className={`w-full lg:w-80 space-y-6 ${showFilters ? "block" : "hidden lg:block"}`}>
-            <div className="sticky top-24">
-              <Card className="border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+          {/* Filters Sidebar - Sticky */}
+          <div className={`w-full lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}>
+            <div className="sticky top-32 z-10 h-fit">
+              <Card className="border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-base sm:text-lg flex items-center">
+                  <CardTitle className="text-base sm:text-lg flex items-center justify-between">
+                    <div className="flex items-center">
                     <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     Filters
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(filters.experienceLevels.length > 0 || filters.jobTypes.length > 0 || filters.locations.length > 0 || filters.salaryRange || filters.category || filters.type) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearAllFilters}
+                          className="text-xs text-red-600 hover:text-red-700"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Clear
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFilters(false)}
+                        className="lg:hidden text-slate-500 hover:text-slate-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6">
-                  {/* Experience Level */}
-                  <div>
-                    <h3 className="font-semibold mb-3 text-sm sm:text-base">Experience Level</h3>
-                    <div className="space-y-2">
-                      {experienceLevels.map((level) => (
-                        <div key={level} className="flex items-center space-x-2">
-                          <Checkbox id={level} />
-                          <label
-                            htmlFor={level}
-                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                          >
-                            {level}
-                          </label>
+                  <div className="space-y-4 sm:space-y-6">
+                      {/* Experience Level */}
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Experience Level</h3>
+                        <div className="space-y-2">
+                          {experienceLevels.map((level) => (
+                            <div key={level} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={level} 
+                                  checked={filters.experienceLevels.includes(level)}
+                                  onCheckedChange={() => handleExperienceToggle(level)}
+                                />
+                              <label
+                                htmlFor={level}
+                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                              >
+                                {level}
+                              </label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  <Separator />
+                      <Separator />
 
-                  {/* Job Type */}
-                  <div>
-                    <h3 className="font-semibold mb-3 text-sm sm:text-base">Job Type</h3>
-                    <div className="space-y-2">
-                      {jobTypes.map((type) => (
-                        <div key={type} className="flex items-center space-x-2">
-                          <Checkbox id={type} />
-                          <label
-                            htmlFor={type}
-                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                          >
-                            {type}
-                          </label>
+                      {/* Job Type */}
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Job Type</h3>
+                        <div className="space-y-2">
+                          {jobTypes.map((type) => (
+                            <div key={type} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={type} 
+                                  checked={filters.jobTypes.includes(type)}
+                                  onCheckedChange={() => handleJobTypeToggle(type)}
+                                />
+                              <label
+                                htmlFor={type}
+                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                              >
+                                {type}
+                              </label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  <Separator />
+                      <Separator />
 
-                  {/* Location */}
-                  <div>
-                    <h3 className="font-semibold mb-3 text-sm sm:text-base">Location</h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {locations.map((location) => (
-                        <div key={location} className="flex items-center space-x-2">
-                          <Checkbox id={location} />
-                          <label
-                            htmlFor={location}
-                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                          >
-                            {location}
-                          </label>
+                      {/* Location */}
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Location</h3>
+                        <div className="space-y-2">
+                          {locations.map((location) => (
+                            <div key={location} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={location} 
+                                  checked={filters.locations.includes(location)}
+                                  onCheckedChange={() => handleLocationToggle(location)}
+                                />
+                              <label
+                                htmlFor={location}
+                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                              >
+                                {location}
+                              </label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  <Separator />
+                      <Separator />
 
-                  {/* Salary Range */}
-                  <div>
-                    <h3 className="font-semibold mb-3 text-sm sm:text-base">Salary Range</h3>
-                    <Select>
-                      <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
-                        <SelectValue placeholder="Select salary range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0-5">0-5 LPA</SelectItem>
-                        <SelectItem value="5-10">5-10 LPA</SelectItem>
-                        <SelectItem value="10-15">10-15 LPA</SelectItem>
-                        <SelectItem value="15-25">15-25 LPA</SelectItem>
-                        <SelectItem value="25+">25+ LPA</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {/* Salary Range */}
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Salary Range</h3>
+                          <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange("salaryRange", value)}>
+                          <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
+                            <SelectValue placeholder="Select salary range" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0-5">0-5 LPA</SelectItem>
+                            <SelectItem value="5-10">5-10 LPA</SelectItem>
+                            <SelectItem value="10-15">10-15 LPA</SelectItem>
+                            <SelectItem value="15-25">15-25 LPA</SelectItem>
+                            <SelectItem value="25+">25+ LPA</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                   </div>
                 </CardContent>
               </Card>
@@ -333,12 +691,82 @@ export default function JobsPage() {
 
           {/* Job Listings */}
           <div className="flex-1 min-w-0">
+            {/* Active Filters Summary */}
+            {(filters.experienceLevels.length > 0 || filters.jobTypes.length > 0 || filters.locations.length > 0 || filters.salaryRange || filters.category || filters.type) && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Active Filters:</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {filters.category && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Category: {filters.category}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("category", "")} />
+                    </Badge>
+                  )}
+                  {filters.type && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Type: {filters.type}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("type", "")} />
+                    </Badge>
+                  )}
+                  {filters.experienceLevels.map((level) => (
+                    <Badge key={level} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Experience: {level}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleExperienceToggle(level)} />
+                    </Badge>
+                  ))}
+                  {filters.jobTypes.map((type) => (
+                    <Badge key={type} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Type: {type}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleJobTypeToggle(type)} />
+                    </Badge>
+                  ))}
+                  {filters.locations.map((location) => (
+                    <Badge key={location} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Location: {location}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleLocationToggle(location)} />
+                    </Badge>
+                  ))}
+                  {filters.salaryRange && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Salary: {filters.salaryRange} LPA
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("salaryRange", "")} />
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-4">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Job Opportunities</h1>
-                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">{jobs.length} jobs found</p>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">{filteredJobs.length} jobs found</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="lg:hidden"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    {showFilters ? 'Hide' : 'Show'} Filters
+                  </Button>
+                </div>
               </div>
-              <Select defaultValue="recent">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+                <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-full sm:w-48 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600">
                   <SelectValue />
                 </SelectTrigger>
@@ -349,10 +777,26 @@ export default function JobsPage() {
                   <SelectItem value="salary-low">Salary: Low to High</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
             </div>
 
-            <div className="space-y-4 sm:space-y-6">
-              {jobs.map((job, index) => (
+            {/* No Results Message */}
+            {filteredJobs.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                  <Search className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No jobs found</h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Try adjusting your filters or search terms to find more jobs.
+                </p>
+                <Button onClick={clearAllFilters} variant="outline">
+                  Clear All Filters
+                </Button>
+              </div>
+            ) : (
+            <div className="space-y-4 sm:space-y-6 min-h-screen">
+                {filteredJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, y: 30 }}
@@ -447,85 +891,48 @@ export default function JobsPage() {
                                 ))}
                                 {job.skills.length > 4 && (
                                   <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
-                                    +{job.skills.length - 4}
+                                      +{job.skills.length - 4} more
                                   </Badge>
                                 )}
                               </div>
-                            </div>
-                          </div>
 
-                          {/* Action buttons positioned at bottom right */}
-                          <div className="flex flex-col justify-end items-end space-y-2 lg:space-y-3 flex-shrink-0">
-                            <Button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleApply(job.id)
-                              }}
-                              className={`w-full sm:w-auto h-9 sm:h-10 px-4 sm:px-6 transition-all duration-300 transform hover:scale-105 text-sm ${
-                                job.urgent
-                                  ? "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 shadow-lg hover:shadow-red-500/25"
-                                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-blue-500/25"
-                              }`}
-                            >
-                              Apply Now
-                            </Button>
-                            {!isAuthenticated && (
-                              <div className="flex space-x-2">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 gap-2">
+                                  <div className="flex items-center space-x-4">
+                                    <span className="text-xs sm:text-sm text-slate-500">
+                                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+                                      {job.posted}
+                                    </span>
+                                    <span className="text-xs sm:text-sm text-slate-500">
+                                      <Users className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+                                      {job.applicants} applicants
+                                    </span>
+                            </div>
+                                  <div className="flex items-center space-x-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    setShowAuthDialog(true)
                                   }}
-                                  className="text-xs"
+                                      className="text-xs sm:text-sm"
                                 >
-                                  Register
+                                      Save
                                 </Button>
                                 <Button
-                                  variant="outline"
-                                  size="sm"
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    setShowAuthDialog(true)
-                                  }}
-                                  className="text-xs"
-                                >
-                                  Login
-                                </Button>
-                              </div>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                              }}
-                              className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm text-xs"
-                            >
-                              Save Job
+                                        handleApply(job.id)
+                                      }}
+                                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
+                                    >
+                                      Apply Now
                             </Button>
                           </div>
                         </div>
-
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 gap-2">
-                          <div className="flex items-center space-x-4 text-xs sm:text-sm text-slate-500">
-                            <div className="flex items-center">
-                              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              <span>{job.posted}</span>
                             </div>
-                            <div className="flex items-center">
-                              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              <span>{job.applicants} applicants</span>
                             </div>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {job.type}
-                          </Badge>
                         </div>
                       </CardContent>
                     </Card>
@@ -533,36 +940,14 @@ export default function JobsPage() {
                 </motion.div>
               ))}
             </div>
-
-            {/* Pagination */}
-            <div className="flex justify-center mt-8 sm:mt-12">
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  disabled
-                  className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-sm"
-                >
-                  Previous
-                </Button>
-                <Button className="bg-blue-600 text-white text-sm">1</Button>
-                <Button variant="outline" className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-sm">
-                  2
-                </Button>
-                <Button variant="outline" className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-sm">
-                  3
-                </Button>
-                <Button variant="outline" className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-sm">
-                  Next
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Authentication Dialog */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="sm:max-w-md mx-4">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Login Required</DialogTitle>
             <DialogDescription>
@@ -570,81 +955,56 @@ export default function JobsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
-            <Link href="/register">
               <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
                 Register Now
               </Button>
-            </Link>
-            <Link href="/login">
               <Button variant="outline" className="w-full bg-transparent">
                 Login
               </Button>
-            </Link>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Footer */}
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-12 sm:mt-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-            <div className="col-span-1 sm:col-span-2 md:col-span-1">
-              <div className="flex items-center space-x-2 mb-4 sm:mb-6">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <span className="text-xl sm:text-2xl font-bold">JobPortal</span>
-              </div>
-              <p className="text-slate-400 mb-4 sm:mb-6 text-sm sm:text-base">
+      <footer className="bg-slate-900 text-white py-12 mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">JobPortal</h3>
+              <p className="text-slate-300 text-sm">
                 India's leading job portal connecting talent with opportunities.
               </p>
-              <div className="flex space-x-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
-                  <span className="text-xs sm:text-sm">f</span>
                 </div>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
-                  <span className="text-xs sm:text-sm">t</span>
+            <div>
+              <h4 className="font-semibold mb-4">For Job Seekers</h4>
+              <ul className="space-y-2 text-sm text-slate-300">
+                <li><a href="#" className="hover:text-white transition-colors">Browse Jobs</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Create Profile</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Job Alerts</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Career Advice</a></li>
+              </ul>
                 </div>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
-                  <span className="text-xs sm:text-sm">in</span>
-                </div>
-              </div>
+            <div>
+              <h4 className="font-semibold mb-4">For Employers</h4>
+              <ul className="space-y-2 text-sm text-slate-300">
+                <li><a href="#" className="hover:text-white transition-colors">Post a Job</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Browse Candidates</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Resources</a></li>
+              </ul>
             </div>
-
-            {[
-              {
-                title: "For Job Seekers",
-                links: ["Browse Jobs", "Career Advice", "Resume Builder", "Salary Guide", "JobAtPace Premium"],
-              },
-              {
-                title: "For Employers",
-                links: ["Post Jobs", "Search Resumes", "Recruitment Solutions", "Pricing", "TalentPulse"],
-              },
-              {
-                title: "Company",
-                links: ["About Us", "Contact", "Privacy Policy", "Terms of Service"],
-              },
-            ].map((section, index) => (
-              <div key={index}>
-                <h3 className="font-semibold mb-4 sm:mb-6 text-base sm:text-lg">{section.title}</h3>
-                <ul className="space-y-2 sm:space-y-3">
-                  {section.links.map((link, linkIndex) => (
-                    <li key={linkIndex}>
-                      <Link
-                        href="#"
-                        className="text-slate-400 hover:text-white transition-colors hover:underline text-sm sm:text-base"
-                      >
-                        {link}
-                      </Link>
-                    </li>
-                  ))}
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm text-slate-300">
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
                 </ul>
               </div>
-            ))}
           </div>
-
-          <div className="border-t border-slate-800 mt-8 sm:mt-12 pt-6 sm:pt-8 text-center text-slate-400">
-            <p className="text-sm sm:text-base">&copy; 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
+          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-sm text-slate-400">
+            <p>&copy; 2024 JobPortal. All rights reserved.</p>
           </div>
         </div>
       </footer>

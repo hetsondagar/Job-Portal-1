@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo, useCallback, useEffect } from "react"
 import {
   Search,
   MapPin,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   ArrowRight,
   Zap,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,13 +33,83 @@ import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
 
+// Types for state management
+interface FilterState {
+  search: string
+  location: string
+  industries: string[]
+  companyTypes: string[]
+  companySizes: string[]
+  locations: string[]
+  minRating: string
+  salaryRange: string
+}
+
+interface Company {
+  id: number
+  name: string
+  logo: string
+  industry: string
+  sector: string
+  location: string
+  employees: string
+  rating: number
+  reviews: number
+  openings: number
+  description: string
+  founded: string
+  website: string
+  benefits: string[]
+  featured: boolean
+  salaryRange: string
+  workCulture: string
+  companyType: string
+  urgent: boolean
+}
+
 export default function CompaniesPage() {
+  // State management
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null)
   const [selectedCompany, setSelectedCompany] = useState<number | null>(null)
   const [companiesPerPage, setCompaniesPerPage] = useState(20)
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortBy, setSortBy] = useState("rating")
+  const [isFeaturedFilter, setIsFeaturedFilter] = useState(false)
+  const [badgeDisplay, setBadgeDisplay] = useState<'featured' | 'urgent'>('featured')
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    location: "",
+    industries: [],
+    companyTypes: [],
+    companySizes: [],
+    locations: [],
+    minRating: "",
+    salaryRange: "",
+  })
+
+  // Check URL parameters for featured filter
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const featured = urlParams.get('featured')
+      if (featured === 'true') {
+        setIsFeaturedFilter(true)
+      }
+    }
+  }, [])
+
+  // Alternate badge display for companies with both featured and urgent
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBadgeDisplay(prev => prev === 'featured' ? 'urgent' : 'featured')
+    }, 3000) // Change every 3 seconds
+
+    return () => clearInterval(interval)
+  }, [])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -181,9 +252,129 @@ export default function CompaniesPage() {
     { name: "Energy", count: "340 Companies", sector: "energy" },
   ]
 
+  // Filter functions
+  const handleFilterChange = useCallback((filterType: keyof FilterState, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }))
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [])
+
+  const handleIndustryToggle = useCallback((industry: string) => {
+    setFilters(prev => ({
+      ...prev,
+      industries: prev.industries.includes(industry)
+        ? prev.industries.filter(i => i !== industry)
+        : [...prev.industries, industry]
+    }))
+    
+    // Clear top industry selection when manually changing filters
+    if (selectedIndustry) {
+      setSelectedIndustry(null)
+    }
+    setCurrentPage(1)
+  }, [selectedIndustry])
+
+  const handleCompanyTypeToggle = useCallback((type: string) => {
+    setFilters(prev => ({
+      ...prev,
+      companyTypes: prev.companyTypes.includes(type)
+        ? prev.companyTypes.filter(t => t !== type)
+        : [...prev.companyTypes, type]
+    }))
+    
+    // Clear top industry selection when manually changing filters
+    if (selectedIndustry) {
+      setSelectedIndustry(null)
+    }
+    setCurrentPage(1)
+  }, [selectedIndustry])
+
+  const handleCompanySizeToggle = useCallback((size: string) => {
+    setFilters(prev => ({
+      ...prev,
+      companySizes: prev.companySizes.includes(size)
+        ? prev.companySizes.filter(s => s !== size)
+        : [...prev.companySizes, size]
+    }))
+    setCurrentPage(1)
+  }, [])
+
+  const handleLocationToggle = useCallback((location: string) => {
+    setFilters(prev => ({
+      ...prev,
+      locations: prev.locations.includes(location)
+        ? prev.locations.filter(l => l !== location)
+        : [...prev.locations, location]
+    }))
+    setCurrentPage(1)
+  }, [])
+
+  // Function to handle top industry card selection and sync with filters
+  const handleIndustryCardSelection = useCallback((industryName: string | null) => {
+    setSelectedIndustry(industryName)
+    
+    if (!industryName) {
+      // If deselecting, clear related filters
+      setFilters(prev => ({
+        ...prev,
+        industries: [],
+        companyTypes: []
+      }))
+      return
+    }
+
+    // Map industry card selections to filter states
+    const filterMapping: { [key: string]: { industries: string[], companyTypes: string[] } } = {
+      "Internet": { industries: ["Technology"], companyTypes: ["Product"] },
+      "Startup": { industries: [], companyTypes: ["Startup"] },
+      "MNCs": { industries: [], companyTypes: ["MNC"] },
+      "Fortune 500": { industries: [], companyTypes: ["Fortune 500"] },
+      "Fintech": { industries: ["Financial Technology"], companyTypes: [] },
+      "EdTech": { industries: ["Education Technology"], companyTypes: [] },
+      "Healthcare": { industries: ["Healthcare"], companyTypes: [] },
+      "Manufacturing": { industries: ["Manufacturing"], companyTypes: [] },
+      "Automobile": { industries: ["Automotive"], companyTypes: [] },
+      "Government": { industries: [], companyTypes: ["Government"] },
+      "Unicorn": { industries: [], companyTypes: ["Unicorn"] },
+      "Consulting": { industries: ["Consulting"], companyTypes: [] },
+      "E-commerce": { industries: ["E-commerce"], companyTypes: [] },
+      "Energy": { industries: ["Energy"], companyTypes: [] },
+      "Product": { industries: ["Technology"], companyTypes: ["Product"] }
+    }
+
+    const mapping = filterMapping[industryName]
+    if (mapping) {
+      setFilters(prev => ({
+        ...prev,
+        industries: mapping.industries,
+        companyTypes: mapping.companyTypes
+      }))
+    }
+    
+    setCurrentPage(1)
+  }, [])
+
+  const clearAllFilters = useCallback(() => {
+    setFilters({
+      search: "",
+      location: "",
+      industries: [],
+      companyTypes: [],
+      companySizes: [],
+      locations: [],
+      minRating: "",
+      salaryRange: "",
+    })
+    handleIndustryCardSelection(null)
+    setIsFeaturedFilter(false)
+    setCurrentPage(1)
+  }, [handleIndustryCardSelection])
+
   // Generate more companies for pagination
-  const generateCompanies = () => {
-    const baseCompanies = [
+  const generateCompanies = (): Company[] => {
+    const baseCompanies: Company[] = [
       {
         id: 1,
         name: "TechCorp Solutions",
@@ -209,7 +400,7 @@ export default function CompaniesPage() {
         id: 2,
         name: "FinanceFirst Bank",
         logo: "/placeholder.svg?height=80&width=80",
-        industry: "Banking & Finance",
+        industry: "Fintech",
         sector: "finance",
         location: "Mumbai",
         employees: "10000+",
@@ -272,7 +463,7 @@ export default function CompaniesPage() {
         id: 5,
         name: "EduTech Innovations",
         logo: "/placeholder.svg?height=80&width=80",
-        industry: "Education Technology",
+        industry: "EdTech",
         sector: "edtech",
         location: "Pune",
         employees: "500-1000",
@@ -314,7 +505,7 @@ export default function CompaniesPage() {
         id: 7,
         name: "FinTech Solutions",
         logo: "/placeholder.svg?height=80&width=80",
-        industry: "Financial Technology",
+        industry: "Fintech",
         sector: "fintech",
         location: "Mumbai",
         employees: "500-1000",
@@ -604,17 +795,222 @@ export default function CompaniesPage() {
         companyType: "Sports",
         urgent: true,
       },
+      {
+        id: 21,
+        name: "RemoteTech Solutions",
+        logo: "/placeholder.svg?height=80&width=80",
+        industry: "Technology",
+        sector: "technology",
+        location: "Remote",
+        employees: "200-500",
+        rating: 4.6,
+        reviews: 234,
+        openings: 34,
+        description: "Fully remote technology company specializing in cloud solutions and AI.",
+        founded: "2020",
+        website: "remotetech.com",
+        benefits: ["Remote Work", "Flexible Hours", "Stock Options", "Learning Budget"],
+        featured: true,
+        salaryRange: "12-35 LPA",
+        workCulture: "Remote-first",
+        companyType: "Startup",
+        urgent: true,
+      },
+      {
+        id: 22,
+        name: "HybridWorks Inc",
+        logo: "/placeholder.svg?height=80&width=80",
+        industry: "Consulting",
+        sector: "consulting",
+        location: "Hybrid",
+        employees: "1000-2000",
+        rating: 4.3,
+        reviews: 456,
+        openings: 56,
+        description: "Hybrid work model consulting firm helping companies adapt to new work environments.",
+        founded: "2019",
+        website: "hybridworks.com",
+        benefits: ["Hybrid Work", "Health Insurance", "Performance Bonus", "Professional Development"],
+        featured: true,
+        salaryRange: "10-30 LPA",
+        workCulture: "Flexible",
+        companyType: "Consulting",
+        urgent: false,
+      },
+      {
+        id: 23,
+        name: "Global Remote Services",
+        logo: "/placeholder.svg?height=80&width=80",
+        industry: "Financial Technology",
+        sector: "fintech",
+        location: "Remote",
+        employees: "500-1000",
+        rating: 4.5,
+        reviews: 345,
+        openings: 45,
+        description: "Global fintech company operating entirely remotely with teams across the world.",
+        founded: "2021",
+        website: "globalremote.com",
+        benefits: ["Remote Work", "Global Team", "Stock Options", "Flexible Hours"],
+        featured: true,
+        salaryRange: "15-40 LPA",
+        workCulture: "Global",
+        companyType: "Unicorn",
+        urgent: true,
+      },
+      {
+        id: 24,
+        name: "Hybrid Healthcare",
+        logo: "/placeholder.svg?height=80&width=80",
+        industry: "Healthcare",
+        sector: "healthcare",
+        location: "Hybrid",
+        employees: "2000-5000",
+        rating: 4.2,
+        reviews: 567,
+        openings: 67,
+        description: "Healthcare company offering hybrid work options for administrative and support roles.",
+        founded: "2018",
+        website: "hybridhealthcare.com",
+        benefits: ["Hybrid Work", "Health Insurance", "Performance Bonus", "Work-Life Balance"],
+        featured: false,
+        salaryRange: "8-25 LPA",
+        workCulture: "Patient-focused",
+        companyType: "Healthcare",
+        urgent: false,
+      },
     ]
 
     return baseCompanies
   }
 
   const allCompanies = generateCompanies()
-  const totalCompanies = allCompanies.length
+
+  // Filter and sort companies
+  const filteredCompanies = useMemo(() => {
+    let filtered = allCompanies
+
+    // Featured filter (from URL parameter)
+    if (isFeaturedFilter) {
+      filtered = filtered.filter(company => company.featured)
+    }
+
+    // Search filter
+    if (filters.search) {
+      filtered = filtered.filter(company =>
+        company.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        company.industry.toLowerCase().includes(filters.search.toLowerCase()) ||
+        company.description.toLowerCase().includes(filters.search.toLowerCase())
+      )
+    }
+
+    // Location filter
+    if (filters.location) {
+      filtered = filtered.filter(company =>
+        company.location.toLowerCase().includes(filters.location.toLowerCase())
+      )
+    }
+
+    // Industry filter
+    if (filters.industries.length > 0) {
+      filtered = filtered.filter(company =>
+        filters.industries.includes(company.industry)
+      )
+    }
+
+    // Company type filter
+    if (filters.companyTypes.length > 0) {
+      filtered = filtered.filter(company =>
+        filters.companyTypes.includes(company.companyType)
+      )
+    }
+
+    // Company size filter
+    if (filters.companySizes.length > 0) {
+      filtered = filtered.filter(company =>
+        filters.companySizes.some(size => {
+          if (size === "1-50 employees") return company.employees === "1-50"
+          if (size === "51-200 employees") return company.employees === "51-200"
+          if (size === "201-1000 employees") return company.employees === "201-1000" || company.employees === "500-1000"
+          if (size === "1001-5000 employees") return company.employees === "1001-5000" || company.employees === "2000-5000"
+          if (size === "5000+ employees") return company.employees === "5000+" || company.employees === "10000+"
+          return false
+        })
+      )
+    }
+
+    // Location filter (from checkbox)
+    if (filters.locations.length > 0) {
+      filtered = filtered.filter(company =>
+        filters.locations.includes(company.location)
+      )
+    }
+
+    // Rating filter
+    if (filters.minRating) {
+      const minRating = parseFloat(filters.minRating)
+      filtered = filtered.filter(company => company.rating >= minRating)
+    }
+
+    // Salary range filter
+    if (filters.salaryRange) {
+      filtered = filtered.filter(company => {
+        const range = filters.salaryRange
+        if (range === "0-10") return company.salaryRange.includes("5-") || company.salaryRange.includes("6-") || company.salaryRange.includes("7-") || company.salaryRange.includes("8-") || company.salaryRange.includes("9-") || company.salaryRange.includes("10")
+        if (range === "10-20") return company.salaryRange.includes("10-") || company.salaryRange.includes("12-") || company.salaryRange.includes("15-") || company.salaryRange.includes("18-") || company.salaryRange.includes("20")
+        if (range === "20-30") return company.salaryRange.includes("20-") || company.salaryRange.includes("22-") || company.salaryRange.includes("25-") || company.salaryRange.includes("28-") || company.salaryRange.includes("30")
+        if (range === "30+") return company.salaryRange.includes("30+") || company.salaryRange.includes("35") || company.salaryRange.includes("40")
+        return true
+      })
+    }
+
+    // Selected industry filter (from top cards)
+    if (selectedIndustry) {
+      filtered = filtered.filter(company => {
+        if (selectedIndustry === "Internet") return company.industry === "Technology" && company.companyType === "Product"
+        if (selectedIndustry === "Startup") return company.companyType === "Startup"
+        if (selectedIndustry === "MNCs") return company.companyType === "MNC"
+        if (selectedIndustry === "Fortune 500") return company.companyType === "Fortune 500"
+        if (selectedIndustry === "Fintech") return company.industry === "Financial Technology"
+        if (selectedIndustry === "EdTech") return company.industry === "Education Technology"
+        if (selectedIndustry === "Healthcare") return company.industry === "Healthcare"
+        if (selectedIndustry === "Manufacturing") return company.industry === "Manufacturing"
+        if (selectedIndustry === "Automobile") return company.industry === "Automotive"
+        if (selectedIndustry === "Government") return company.companyType === "Government"
+        if (selectedIndustry === "Unicorn") return company.companyType === "Unicorn"
+        if (selectedIndustry === "Consulting") return company.industry === "Consulting"
+        if (selectedIndustry === "E-commerce") return company.industry === "E-commerce"
+        if (selectedIndustry === "Energy") return company.industry === "Energy"
+        return company.industry === selectedIndustry
+      })
+    }
+
+    // Sort companies
+    switch (sortBy) {
+      case "rating":
+        filtered.sort((a, b) => b.rating - a.rating)
+        break
+      case "openings":
+        filtered.sort((a, b) => b.openings - a.openings)
+        break
+      case "reviews":
+        filtered.sort((a, b) => b.reviews - a.reviews)
+        break
+      case "name":
+        filtered.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      default:
+        filtered.sort((a, b) => b.rating - a.rating)
+    }
+
+    return filtered
+  }, [allCompanies, filters, selectedIndustry, sortBy])
+
+  const totalCompanies = filteredCompanies.length
   const totalPages = Math.ceil(totalCompanies / companiesPerPage)
   const startIndex = (currentPage - 1) * companiesPerPage
   const endIndex = startIndex + companiesPerPage
-  const currentCompanies = allCompanies.slice(startIndex, endIndex)
+  const currentCompanies = filteredCompanies.slice(startIndex, endIndex)
 
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -626,6 +1022,13 @@ export default function CompaniesPage() {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({ left: 300, behavior: "smooth" })
     }
+  }
+
+  // Reset to page 1 when filters change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Scroll to top of company list
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   const getHeaderText = () => {
@@ -678,6 +1081,8 @@ export default function CompaniesPage() {
     "Ahmedabad",
     "Kochi",
     "Indore",
+    "Hybrid",
+    "Remote",
   ]
 
   const companyTypes = [
@@ -693,7 +1098,7 @@ export default function CompaniesPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <Navbar />
 
       {/* Hero Section */}
@@ -735,6 +1140,8 @@ export default function CompaniesPage() {
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <Input
                     placeholder="Search companies..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange("search", e.target.value)}
                     className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium"
                 />
               </div>
@@ -742,13 +1149,15 @@ export default function CompaniesPage() {
                   <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <Input
                   placeholder="Location"
+                    value={filters.location}
+                    onChange={(e) => handleFilterChange("location", e.target.value)}
                     className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium"
                 />
               </div>
                 <Button className="h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 rounded-2xl text-lg">
                   <Search className="w-5 h-5 mr-2" />
                   Search Companies
-              </Button>
+                </Button>
             </div>
             </div>
           </motion.div>
@@ -820,7 +1229,7 @@ export default function CompaniesPage() {
                           ? `${sectorColors.light} ring-2 ${sectorColors.ring} shadow-2xl ${sectorColors.glow}`
                           : "bg-white/80 dark:bg-slate-800/80 hover:shadow-2xl hover:shadow-blue-500/10"
                       } backdrop-blur-xl overflow-hidden relative`}
-                      onClick={() => setSelectedIndustry(isSelected ? null : type.name)}
+                      onClick={() => handleIndustryCardSelection(isSelected ? null : type.name)}
                     >
                       <div
                         className={`absolute inset-0 bg-gradient-to-br ${sectorColors.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
@@ -867,38 +1276,73 @@ export default function CompaniesPage() {
         <div className="flex gap-6 sm:gap-8">
           {/* Sticky Filters Sidebar */}
           <div className={`w-full lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}>
-            <div className="sticky top-24">
-              <Card className="border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+            <div className="sticky top-32 z-10 h-fit">
+              <Card className="border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base sm:text-lg flex items-center">
+                  <CardTitle className="text-base sm:text-lg flex items-center justify-between">
+                    <div className="flex items-center">
                     <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     All Filters
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilters(false)}
+                      className="lg:hidden text-slate-500 hover:text-slate-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[calc(100vh-200px)]">
-                    <div className="space-y-4 sm:space-y-6 pr-2 sm:pr-4">
+                <CardContent className="space-y-4 sm:space-y-6">
+                      {/* Clear All Filters */}
+                      {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.companySizes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.salaryRange) && (
+                        <div className="mb-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearAllFilters}
+                            className="w-full text-xs bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Clear All Filters
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Industry */}
                       <div>
                         <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                           Industry
                         </h3>
-                        <ScrollArea className="h-32 sm:h-48">
-                          <div className="space-y-2">
-                            {industries.map((industry) => (
+                        <div className="space-y-2">
+                            {industries.map((industry) => {
+                              const isAutoSelected = selectedIndustry && filters.industries.includes(industry)
+                              return (
                               <div key={industry} className="flex items-center space-x-2">
-                                <Checkbox id={industry} />
+                                  <Checkbox 
+                                    id={industry} 
+                                    checked={filters.industries.includes(industry)}
+                                    onCheckedChange={() => handleIndustryToggle(industry)}
+                                  />
                                 <label
                                   htmlFor={industry}
-                                  className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                                    className={`text-xs sm:text-sm cursor-pointer ${
+                                      isAutoSelected 
+                                        ? "text-blue-600 dark:text-blue-400 font-medium" 
+                                        : "text-slate-700 dark:text-slate-300"
+                                    }`}
                                 >
                                   {industry}
+                                    {isAutoSelected && (
+                                      <span className="ml-1 text-xs text-blue-500">(auto)</span>
+                                    )}
                                 </label>
                               </div>
-                            ))}
+                              )
+                            })}
                           </div>
-                        </ScrollArea>
-                      </div>
+                        </div>
 
                       <Separator className="bg-slate-200 dark:bg-slate-700" />
 
@@ -908,17 +1352,31 @@ export default function CompaniesPage() {
                           Company Type
                         </h3>
                         <div className="space-y-2">
-                          {companyTypes.map((type) => (
+                          {companyTypes.map((type) => {
+                            const isAutoSelected = selectedIndustry && filters.companyTypes.includes(type)
+                            return (
                             <div key={type} className="flex items-center space-x-2">
-                              <Checkbox id={type} />
+                                <Checkbox 
+                                  id={type} 
+                                  checked={filters.companyTypes.includes(type)}
+                                  onCheckedChange={() => handleCompanyTypeToggle(type)}
+                                />
                               <label
                                 htmlFor={type}
-                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  className={`text-xs sm:text-sm cursor-pointer ${
+                                    isAutoSelected 
+                                      ? "text-blue-600 dark:text-blue-400 font-medium" 
+                                      : "text-slate-700 dark:text-slate-300"
+                                  }`}
                               >
                                 {type}
+                                  {isAutoSelected && (
+                                    <span className="ml-1 text-xs text-blue-500">(auto)</span>
+                                  )}
                               </label>
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
 
@@ -932,7 +1390,11 @@ export default function CompaniesPage() {
                         <div className="space-y-2">
                           {companySizes.map((size) => (
                             <div key={size} className="flex items-center space-x-2">
-                              <Checkbox id={size} />
+                              <Checkbox 
+                                id={size} 
+                                checked={filters.companySizes.includes(size)}
+                                onCheckedChange={() => handleCompanySizeToggle(size)}
+                              />
                               <label
                                 htmlFor={size}
                                 className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
@@ -951,11 +1413,14 @@ export default function CompaniesPage() {
                         <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                           Location
                         </h3>
-                        <ScrollArea className="h-32 sm:h-48">
-                          <div className="space-y-2">
+                        <div className="space-y-2">
                             {locations.map((location) => (
                               <div key={location} className="flex items-center space-x-2">
-                                <Checkbox id={location} />
+                                <Checkbox 
+                                  id={location} 
+                                  checked={filters.locations.includes(location)}
+                                  onCheckedChange={() => handleLocationToggle(location)}
+                                />
                                 <label
                                   htmlFor={location}
                                   className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
@@ -965,7 +1430,6 @@ export default function CompaniesPage() {
                               </div>
                             ))}
                           </div>
-                        </ScrollArea>
                       </div>
 
                       <Separator className="bg-slate-200 dark:bg-slate-700" />
@@ -975,7 +1439,7 @@ export default function CompaniesPage() {
                         <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                           Rating
                         </h3>
-                        <Select>
+                        <Select value={filters.minRating} onValueChange={(value) => handleFilterChange("minRating", value)}>
                           <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
                             <SelectValue placeholder="Minimum rating" />
                           </SelectTrigger>
@@ -995,7 +1459,7 @@ export default function CompaniesPage() {
                         <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                           Salary Range
                         </h3>
-                        <Select>
+                        <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange("salaryRange", value)}>
                           <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
                             <SelectValue placeholder="Select range" />
                           </SelectTrigger>
@@ -1007,26 +1471,42 @@ export default function CompaniesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                  </ScrollArea>
                 </CardContent>
               </Card>
             </div>
           </div>
 
           {/* Company Listings */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 min-h-screen">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                  {selectedIndustry ? `${selectedIndustry} Companies` : "All Companies"}
+                    {isFeaturedFilter 
+                      ? "Featured Companies" 
+                      : selectedIndustry 
+                        ? `${selectedIndustry} Companies` 
+                        : "All Companies"
+                    }
                 </h2>
                 <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">
                   {startIndex + 1}-{Math.min(endIndex, totalCompanies)} of {totalCompanies} companies
                 </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="lg:hidden"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    {showFilters ? 'Hide' : 'Show'} Filters
+                  </Button>
+                </div>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                <Select defaultValue="rating">
+                <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-full sm:w-48 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600">
                     <SelectValue />
                   </SelectTrigger>
@@ -1040,9 +1520,101 @@ export default function CompaniesPage() {
               </div>
             </div>
 
+            {/* Active Filters Summary */}
+            {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.companySizes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.salaryRange || isFeaturedFilter) && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Active Filters:</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+                                  <div className="flex flex-wrap gap-2">
+                    {isFeaturedFilter && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200">
+                        Featured Companies Only
+                        <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => setIsFeaturedFilter(false)} />
+                      </Badge>
+                    )}
+                    {filters.industries.map((industry) => {
+                      const isAutoSelected = selectedIndustry && filters.industries.includes(industry)
+                      return (
+                        <Badge key={industry} variant="secondary" className={`${
+                          isAutoSelected 
+                            ? "bg-blue-200 text-blue-900 dark:bg-blue-700 dark:text-blue-100" 
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200"
+                        }`}>
+                          Industry: {industry}
+                          {isAutoSelected && <span className="ml-1 text-xs">(auto)</span>}
+                          <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleIndustryToggle(industry)} />
+                        </Badge>
+                      )
+                    })}
+                  {filters.companyTypes.map((type) => {
+                    const isAutoSelected = selectedIndustry && filters.companyTypes.includes(type)
+                    return (
+                      <Badge key={type} variant="secondary" className={`${
+                        isAutoSelected 
+                          ? "bg-blue-200 text-blue-900 dark:bg-blue-700 dark:text-blue-100" 
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200"
+                      }`}>
+                        Type: {type}
+                        {isAutoSelected && <span className="ml-1 text-xs">(auto)</span>}
+                        <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleCompanyTypeToggle(type)} />
+                      </Badge>
+                    )
+                  })}
+                  {filters.companySizes.map((size) => (
+                    <Badge key={size} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Size: {size}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleCompanySizeToggle(size)} />
+                    </Badge>
+                  ))}
+                  {filters.locations.map((location) => (
+                    <Badge key={location} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Location: {location}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleLocationToggle(location)} />
+                    </Badge>
+                  ))}
+                  {filters.minRating && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Rating: {filters.minRating}+
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("minRating", "")} />
+                    </Badge>
+                  )}
+                  {filters.salaryRange && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      Salary: {filters.salaryRange} LPA
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("salaryRange", "")} />
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Company Grid */}
             <div className="space-y-4 sm:space-y-6">
-              {currentCompanies.map((company, index) => {
+              {currentCompanies.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                    <Search className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No companies found</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-4">
+                    Try adjusting your filters or search terms to find more companies.
+                  </p>
+                  <Button onClick={clearAllFilters} variant="outline">
+                    Clear All Filters
+                  </Button>
+                </div>
+              ) : (
+                currentCompanies.map((company, index) => {
                 const sectorColors = getSectorColor(company.sector)
 
                 return (
@@ -1063,24 +1635,38 @@ export default function CompaniesPage() {
                             : "bg-white/70 dark:bg-slate-800/70"
                         } ${sectorColors.border}`}
                       >
-                        {/* Badges positioned to avoid overlap */}
-                        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                          {company.featured && (
+                        {/* Badges positioned above follow button */}
+                        {(company.featured || company.urgent) && (
+                          <div className="absolute top-4 right-4 z-10">
+                            {company.featured && company.urgent ? (
+                              // Show alternating badges when both are present
+                              badgeDisplay === 'featured' ? (
+                                <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs animate-pulse">
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  Featured
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs animate-pulse">
+                                  <Zap className="w-3 h-3 mr-1" />
+                                  Urgent Hiring
+                                </Badge>
+                              )
+                            ) : company.featured ? (
                             <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs">
                               <Sparkles className="w-3 h-3 mr-1" />
                               Featured
                             </Badge>
-                          )}
-                          {company.urgent && (
-                            <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white animate-bounce text-xs">
+                            ) : (
+                              <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs animate-bounce">
                               <Zap className="w-3 h-3 mr-1" />
                               Urgent Hiring
                             </Badge>
                           )}
                         </div>
+                        )}
 
                         <div
-                          className={`absolute inset-0 bg-gradient-to-br ${sectorColors.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
+                          className={`absolute inset-0 bg-gradient-to-br ${sectorColors.bg} opacity-0 ${!company.urgent ? 'group-hover:opacity-10' : ''} transition-opacity duration-500`}
                         />
 
                         <CardContent className="p-4 sm:p-6 lg:p-8">
@@ -1101,7 +1687,7 @@ export default function CompaniesPage() {
                                     className={`text-xl sm:text-2xl font-bold mb-2 transition-colors duration-300 ${
                                       company.urgent
                                         ? "text-red-700 dark:text-red-400"
-                                        : "text-slate-900 dark:text-white group-hover:" + sectorColors.text
+                                        : "text-slate-900 dark:text-white group-hover:text-blue-600"
                                     } line-clamp-2`}
                                   >
                                     {company.name}
@@ -1212,7 +1798,7 @@ export default function CompaniesPage() {
                     </Link>
                   </motion.div>
                 )
-              })}
+              }))}
             </div>
 
             {/* Pagination */}
@@ -1225,7 +1811,7 @@ export default function CompaniesPage() {
                 <Button
                   variant="outline"
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(currentPage - 1)}
+                  onClick={() => handlePageChange(currentPage - 1)}
                   className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
                 >
                   <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
@@ -1243,7 +1829,7 @@ export default function CompaniesPage() {
                         key={pageNum}
                         variant={currentPage === pageNum ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setCurrentPage(pageNum)}
+                          onClick={() => handlePageChange(pageNum)}
                         className={
                           currentPage === pageNum
                             ? "bg-blue-600 text-white text-xs sm:text-sm"
@@ -1261,7 +1847,7 @@ export default function CompaniesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(totalPages)}
+                        onClick={() => handlePageChange(totalPages)}
                         className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
                       >
                         {totalPages}
@@ -1273,7 +1859,7 @@ export default function CompaniesPage() {
                 <Button
                   variant="outline"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(currentPage + 1)}
+                  onClick={() => handlePageChange(currentPage + 1)}
                   className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
                 >
                   Next

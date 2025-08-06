@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 
@@ -38,14 +38,7 @@ export function Navbar() {
     { name: "Part-time jobs", href: "/jobs?type=parttime" },
   ]
 
-  const jobsByLocation = [
-    { name: "Jobs in Delhi", href: "/jobs?location=delhi" },
-    { name: "Jobs in Mumbai", href: "/jobs?location=mumbai" },
-    { name: "Jobs in Bangalore", href: "/jobs?location=bangalore" },
-    { name: "Jobs in Hyderabad", href: "/jobs?location=hyderabad" },
-    { name: "Jobs in Chennai", href: "/jobs?location=chennai" },
-    { name: "Jobs in Pune", href: "/jobs?location=pune" },
-  ]
+
 
   const exploreCategories = [
     { name: "Unicorn", href: "/companies?category=unicorn" },
@@ -111,10 +104,10 @@ export function Navbar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[800px] bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6"
+                    className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[600px] bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6"
                     style={{ left: "50%", transform: "translateX(-50%)" }}
                   >
-                    <div className="grid grid-cols-3 gap-8">
+                    <div className="grid grid-cols-2 gap-8">
                       {/* Popular Categories */}
                       <div>
                         <h3 className="font-bold text-slate-900 dark:text-white mb-4">Popular categories</h3>
@@ -145,22 +138,6 @@ export function Navbar() {
                         </Link>
                       ))}
                     </div>
-                      </div>
-
-                      {/* Jobs by Location */}
-                      <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-4">Jobs by location</h3>
-                        <div className="space-y-2">
-                          {jobsByLocation.map((location, index) => (
-                      <Link
-                              key={index}
-                              href={location.href}
-                              className="block text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      >
-                              {location.name}
-                      </Link>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -289,6 +266,7 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80">
+              <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
               <div className="flex flex-col space-y-6 mt-6">
                 <Link href="/jobs" className="text-lg font-medium text-slate-900 dark:text-white">
                   Jobs
