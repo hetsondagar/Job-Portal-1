@@ -20,11 +20,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  firstName: {
+  first_name: {
     type: DataTypes.STRING,
     allowNull: false
   },
-  lastName: {
+  last_name: {
     type: DataTypes.STRING,
     allowNull: false
   },
@@ -32,7 +32,7 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true
   },
-  userType: {
+  user_type: {
     type: DataTypes.ENUM('jobseeker', 'employer', 'admin'),
     allowNull: false,
     defaultValue: 'jobseeker'
@@ -41,19 +41,19 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true
   },
-  isEmailVerified: {
+  is_email_verified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  isPhoneVerified: {
+  is_phone_verified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  lastLoginAt: {
+  last_login_at: {
     type: DataTypes.DATE,
     allowNull: true
   },
-  isActive: {
+  is_active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
@@ -62,7 +62,7 @@ const User = sequelize.define('User', {
     defaultValue: {}
   },
   // For job seekers
-  dateOfBirth: {
+  date_of_birth: {
     type: DataTypes.DATEONLY,
     allowNull: true
   },
@@ -70,24 +70,24 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('male', 'female', 'other'),
     allowNull: true
   },
-  currentLocation: {
+  current_location: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  willingToRelocate: {
+  willing_to_relocate: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  expectedSalary: {
+  expected_salary: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
   },
-  noticePeriod: {
+  notice_period: {
     type: DataTypes.INTEGER, // in days
     allowNull: true
   },
   // For employers
-  companyId: {
+  company_id: {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
@@ -104,35 +104,35 @@ const User = sequelize.define('User', {
     allowNull: true
   },
   // Enhanced authentication & security
-  emailVerificationToken: {
+  email_verification_token: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  emailVerificationExpires: {
+  email_verification_expires: {
     type: DataTypes.DATE,
     allowNull: true
   },
-  passwordResetToken: {
+  password_reset_token: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  passwordResetExpires: {
+  password_reset_expires: {
     type: DataTypes.DATE,
     allowNull: true
   },
-  twoFactorEnabled: {
+  two_factor_enabled: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  twoFactorSecret: {
+  two_factor_secret: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  loginAttempts: {
+  login_attempts: {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
-  lockUntil: {
+  lock_until: {
     type: DataTypes.DATE,
     allowNull: true
   },
@@ -157,20 +157,20 @@ const User = sequelize.define('User', {
     type: DataTypes.JSONB,
     defaultValue: []
   },
-  socialLinks: {
+  social_links: {
     type: DataTypes.JSONB,
     defaultValue: {}
   },
   // Privacy & preferences
-  profileVisibility: {
-    type: DataTypes.ENUM('public', 'private', 'connections_only'),
+  profile_visibility: {
+    type: DataTypes.ENUM('public', 'private', 'connections'),
     defaultValue: 'public'
   },
-  contactVisibility: {
-    type: DataTypes.ENUM('public', 'private', 'connections_only'),
+  contact_visibility: {
+    type: DataTypes.ENUM('public', 'private', 'connections'),
     defaultValue: 'public'
   },
-  emailNotifications: {
+  email_notifications: {
     type: DataTypes.JSONB,
     defaultValue: {
       jobAlerts: true,
@@ -180,7 +180,7 @@ const User = sequelize.define('User', {
       marketing: false
     }
   },
-  pushNotifications: {
+  push_notifications: {
     type: DataTypes.JSONB,
     defaultValue: {
       jobAlerts: true,
@@ -190,19 +190,19 @@ const User = sequelize.define('User', {
     }
   },
   // Account status & verification
-  accountStatus: {
-    type: DataTypes.ENUM('active', 'suspended', 'deactivated', 'pending_verification'),
-    defaultValue: 'pending_verification'
+  account_status: {
+    type: DataTypes.ENUM('active', 'suspended', 'deleted'),
+    defaultValue: 'active'
   },
-  verificationLevel: {
-    type: DataTypes.ENUM('basic', 'verified', 'premium_verified'),
-    defaultValue: 'basic'
+  verification_level: {
+    type: DataTypes.ENUM('unverified', 'basic', 'premium'),
+    defaultValue: 'unverified'
   },
-  lastProfileUpdate: {
+  last_profile_update: {
     type: DataTypes.DATE,
     allowNull: true
   },
-  profileCompletion: {
+  profile_completion: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
     validate: {
@@ -232,11 +232,11 @@ User.prototype.comparePassword = async function(candidatePassword) {
 };
 
 User.prototype.getFullName = function() {
-  return `${this.firstName} ${this.lastName}`;
+  return `${this.first_name} ${this.last_name}`;
 };
 
 User.prototype.getInitials = function() {
-  return `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase();
+  return `${this.first_name.charAt(0)}${this.last_name.charAt(0)}`.toUpperCase();
 };
 
 module.exports = User; 

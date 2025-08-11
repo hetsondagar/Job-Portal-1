@@ -6,33 +6,22 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 
+
+// Import database configuration
+const { sequelize, testConnection } = require('./config/sequelize');
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
-const venueRoutes = require('./routes/venue');
-const bookingRoutes = require('./routes/booking');
-const paymentRoutes = require('./routes/payment');
-const transactionRoutes = require('./routes/transactions');
-const payoutRoutes = require('./routes/payouts');
-const coachRoutes = require('./routes/coach');
-const leagueRoutes = require('./routes/league');
-const offerRoutes = require('./routes/offer');
-const notificationRoutes = require('./routes/notification');
-const reviewRoutes = require('./routes/review');
-const loyaltyRoutes = require('./routes/loyalty');
-const rewardRoutes = require('./routes/reward');
-const supportRoutes = require('./routes/support');
-const communityRoutes = require('./routes/community');
-const adminRoutes = require('./routes/admin');
-const newsletterRoutes = require('./routes/newsletter');
-const charityRoutes = require('./routes/charity');
-const generalRoutes = require('./routes/general');
 
 // Import middleware
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 
 // Security middleware
 app.use(helmet());
@@ -83,24 +72,6 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/venues', venueRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/payouts', payoutRoutes);
-app.use('/api/coaches', coachRoutes);
-app.use('/api/leagues', leagueRoutes);
-app.use('/api/offers', offerRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/loyalty', loyaltyRoutes);
-app.use('/api/rewards', rewardRoutes);
-app.use('/api/support', supportRoutes);
-app.use('/api/community', communityRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/newsletter', newsletterRoutes);
-app.use('/api/charity', charityRoutes);
-app.use('/api', generalRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -109,11 +80,28 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Trivana API server running on port: ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-});
+const startServer = async () => {
+  try {
+    // Test database connection
+    await testConnection();
+    
+    // Sync database models
+    await sequelize.sync({ alter: true });
+    console.log('✅ Database models synchronized');
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Job Portal API server running on port: ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`🔗 API Documentation: http://localhost:${PORT}/api`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

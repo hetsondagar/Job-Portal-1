@@ -17,7 +17,7 @@ module.exports = {
     },
     define: {
       timestamps: true,
-      underscored: true,
+      underscored: false,
       freezeTableName: true
     }
   },
@@ -37,7 +37,7 @@ module.exports = {
     },
     define: {
       timestamps: true,
-      underscored: true,
+      underscored: false,
       freezeTableName: true
     }
   },
@@ -57,7 +57,7 @@ module.exports = {
     },
     define: {
       timestamps: true,
-      underscored: true,
+      underscored: false,
       freezeTableName: true
     },
     dialectOptions: {

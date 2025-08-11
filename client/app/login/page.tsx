@@ -13,17 +13,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 export default function LoginPage() {
+  const { login, loading, error, clearError } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic
-    console.log("Login attempt:", { email, password, rememberMe })
+    clearError()
+    
+    try {
+      await login({ email, password, rememberMe })
+      // Login successful - toast will be shown by the useAuth hook after redirect
+    } catch (error: any) {
+      // Check if the error indicates user doesn't exist
+      if (error.message?.includes('Invalid email or password') || 
+          error.message?.includes('User not found') ||
+          error.message?.includes('does not exist')) {
+        toast.error("Account not found. Please register first.")
+        // Optionally redirect to register page after a delay
+        setTimeout(() => {
+          window.location.href = '/register'
+        }, 2000)
+      } else {
+        toast.error(error.message || "Login failed")
+      }
+    }
   }
 
   const benefits = [
@@ -149,10 +169,11 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Sign In
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  {loading ? "Signing In..." : "Sign In"}
+                  {!loading && <ArrowRight className="w-5 h-5 ml-2" />}
                 </Button>
               </form>
 

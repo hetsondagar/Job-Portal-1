@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Briefcase, CheckCircle, Building2 } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Briefcase, CheckCircle, Building2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,10 +14,15 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 export default function RegisterPage() {
+  const { signup, loading, error, clearError } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | 'very-strong'>('weak')
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -29,10 +34,100 @@ export default function RegisterPage() {
     subscribeNewsletter: true,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Password validation function
+  const validatePassword = (password: string) => {
+    const errors: string[] = []
+    
+    if (password.length < 8) {
+      errors.push("Password must be at least 8 characters long")
+    }
+    
+    if (!/(?=.*[a-z])/.test(password)) {
+      errors.push("Password must contain at least one lowercase letter")
+    }
+    
+    if (!/(?=.*[A-Z])/.test(password)) {
+      errors.push("Password must contain at least one uppercase letter")
+    }
+    
+    if (!/(?=.*\d)/.test(password)) {
+      errors.push("Password must contain at least one number")
+    }
+    
+    // Calculate password strength
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (/(?=.*[a-z])/.test(password)) strength++
+    if (/(?=.*[A-Z])/.test(password)) strength++
+    if (/(?=.*\d)/.test(password)) strength++
+    if (/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(password)) strength++
+    
+    if (strength <= 2) setPasswordStrength('weak')
+    else if (strength <= 3) setPasswordStrength('medium')
+    else if (strength <= 4) setPasswordStrength('strong')
+    else setPasswordStrength('very-strong')
+    
+    setPasswordErrors(errors)
+    return errors.length === 0
+  }
+
+  // Validate password on change
+  useEffect(() => {
+    if (formData.password) {
+      validatePassword(formData.password)
+    } else {
+      setPasswordErrors([])
+      setPasswordStrength('weak')
+    }
+  }, [formData.password])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle registration logic
-    console.log("Registration attempt:", formData)
+    clearError()
+    
+    // Validate password strength
+    if (!validatePassword(formData.password)) {
+      toast.error("Please fix password requirements before continuing")
+      return
+    }
+    
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match")
+      return
+    }
+
+    // Validate terms agreement
+    if (!formData.agreeToTerms) {
+      toast.error("Please agree to the terms and conditions")
+      return
+    }
+
+    try {
+      await signup({
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone || undefined,
+        experience: formData.experience || undefined,
+        agreeToTerms: formData.agreeToTerms,
+        subscribeNewsletter: formData.subscribeNewsletter,
+      })
+      toast.success("Account created successfully! Please sign in to continue.")
+      // Redirect to login page after successful registration
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 2000)
+    } catch (error: any) {
+      // Handle specific validation errors from backend
+      if (error.message && error.message.includes('Validation failed')) {
+        toast.error("Please check your input and try again")
+      } else if (error.message && error.message.includes('already exists')) {
+        toast.error("An account with this email already exists")
+      } else {
+        toast.error(error.message || "Registration failed")
+      }
+    }
   }
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -106,9 +201,25 @@ export default function RegisterPage() {
                 </Link>
               </div>
               <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Create Account</CardTitle>
-              <p className="text-slate-600 dark:text-slate-300 mt-2">
+              <p className="text-slate-600 dark:text-slate-300 mt-2 mb-4">
                 Join thousands of professionals finding their dream jobs
               </p>
+              
+              {/* Password Requirements Notice */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-left">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-800 dark:text-blue-200 mb-1">Password Requirements:</p>
+                    <ul className="text-blue-700 dark:text-blue-300 space-y-0.5 text-xs">
+                      <li>• At least 8 characters long</li>
+                      <li>• One uppercase letter (A-Z)</li>
+                      <li>• One lowercase letter (a-z)</li>
+                      <li>• One number (0-9)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -200,7 +311,9 @@ export default function RegisterPage() {
                         placeholder="Create password"
                         value={formData.password}
                         onChange={(e) => handleInputChange("password", e.target.value)}
-                        className="pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
+                        className={`pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                          formData.password && passwordErrors.length > 0 ? 'border-red-500' : ''
+                        }`}
                         required
                       />
                       <button
@@ -211,6 +324,54 @@ export default function RegisterPage() {
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
+                    
+                    {/* Password Strength Indicator */}
+                    {formData.password && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-300 ${
+                                passwordStrength === 'weak' ? 'bg-red-500 w-1/4' :
+                                passwordStrength === 'medium' ? 'bg-yellow-500 w-1/2' :
+                                passwordStrength === 'strong' ? 'bg-blue-500 w-3/4' :
+                                'bg-green-500 w-full'
+                              }`}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium ${
+                            passwordStrength === 'weak' ? 'text-red-500' :
+                            passwordStrength === 'medium' ? 'text-yellow-500' :
+                            passwordStrength === 'strong' ? 'text-blue-500' :
+                            'text-green-500'
+                          }`}>
+                            {passwordStrength.charAt(0).toUpperCase() + passwordStrength.slice(1)}
+                          </span>
+                        </div>
+                        
+                        {/* Password Requirements */}
+                        <div className="space-y-1">
+                          {[
+                            { condition: formData.password.length >= 8, text: "At least 8 characters" },
+                            { condition: /(?=.*[a-z])/.test(formData.password), text: "One lowercase letter" },
+                            { condition: /(?=.*[A-Z])/.test(formData.password), text: "One uppercase letter" },
+                            { condition: /(?=.*\d)/.test(formData.password), text: "One number" },
+                            { condition: /(?=.*[!@#$%^&*(),.?":{}|<>])/.test(formData.password), text: "One special character (optional)" }
+                          ].map((req, index) => (
+                            <div key={index} className="flex items-center space-x-2 text-xs">
+                              {req.condition ? (
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <AlertCircle className="w-3 h-3 text-red-500" />
+                              )}
+                              <span className={req.condition ? 'text-green-600' : 'text-red-600'}>
+                                {req.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -273,10 +434,11 @@ export default function RegisterPage() {
 
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Create Account
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  {loading ? "Creating Account..." : "Create Account"}
+                  {!loading && <ArrowRight className="w-5 h-5 ml-2" />}
                 </Button>
               </form>
 
