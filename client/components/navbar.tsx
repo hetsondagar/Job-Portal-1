@@ -65,7 +65,7 @@ export function Navbar() {
 
   const employerServices = [
     { name: "Buy online", href: "/employer/buy-online" },
-    { name: "TalentPulse", href: "/employer/talent-pulse" },
+    { name: "TalentPulse", href: "/naukri-talent-cloud" },
     { name: "Post a job", href: "/employer-dashboard/post-job", badge: "FREE" },
     { name: "Employer Login", href: "/employer-login" },
   ]

@@ -323,7 +323,7 @@ export default function LoginPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/talentpulse" className="text-slate-400 hover:text-white transition-colors text-sm">
+                  <Link href="/naukri-talent-cloud" className="text-slate-400 hover:text-white transition-colors text-sm">
                     TalentPulse
                   </Link>
                 </li>

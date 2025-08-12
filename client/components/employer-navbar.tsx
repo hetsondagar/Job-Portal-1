@@ -204,10 +204,12 @@ export function EmployerNavbar() {
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
 
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold">
-              <span className="hidden sm:inline">Talent</span>
-              <span>Pulse</span>
-            </Button>
+            <Link href="/naukri-talent-cloud">
+              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold">
+                <span className="hidden sm:inline">Talent</span>
+                <span>Pulse</span>
+              </Button>
+            </Link>
             
             {/* User Avatar Dropdown */}
             <DropdownMenu>
@@ -315,6 +317,19 @@ export function EmployerNavbar() {
                       <span className="text-slate-700 dark:text-slate-200">{item.name}</span>
                     </Link>
                   ))}
+                </div>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Services</h3>
+                  <Link
+                    href="/naukri-talent-cloud"
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <div className="w-5 h-5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">TP</span>
+                    </div>
+                    <span className="text-slate-700 dark:text-slate-200">TalentPulse</span>
+                  </Link>
                 </div>
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4">
                   <h3 className="font-semibold text-slate-900 dark:text-white">Account</h3>

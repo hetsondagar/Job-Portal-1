@@ -1167,7 +1167,7 @@ export default function CompaniesPage() {
       {/* TalentPulse Premium Banner */}
       <div className="bg-gradient-to-r from-purple-500 via-indigo-600 to-blue-600 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/talentpulse">
+          <Link href="/naukri-talent-cloud">
             <div className="flex flex-col sm:flex-row items-center justify-between text-white cursor-pointer group">
               <div className="flex items-center mb-2 sm:mb-0">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
