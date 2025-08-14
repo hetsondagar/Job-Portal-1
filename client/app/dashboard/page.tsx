@@ -110,19 +110,21 @@ export default function DashboardPage() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                    <Search className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <link href="/jobs">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                      <Search className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white">Find Jobs</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">Browse opportunities</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">Find Jobs</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">Browse opportunities</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </link>
 
             <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-shadow cursor-pointer">
               <CardContent className="p-6">
