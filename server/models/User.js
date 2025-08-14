@@ -235,14 +235,14 @@ const User = sequelize.define('User', {
   tableName: 'users',
   hooks: {
     beforeCreate: async (user) => {
-      // Only hash password for local users
-      if (user.password && user.oauth_provider === 'local') {
+      // Hash password for all users with passwords (except OAuth users without passwords)
+      if (user.password && (!user.oauth_provider || user.oauth_provider === 'local')) {
         user.password = await bcrypt.hash(user.password, 12);
       }
     },
     beforeUpdate: async (user) => {
-      // Only hash password for local users
-      if (user.changed('password') && user.password && user.oauth_provider === 'local') {
+      // Hash password for all users with passwords (except OAuth users without passwords)
+      if (user.changed('password') && user.password && (!user.oauth_provider || user.oauth_provider === 'local')) {
         user.password = await bcrypt.hash(user.password, 12);
       }
     }
@@ -251,8 +251,8 @@ const User = sequelize.define('User', {
 
 // Instance methods
 User.prototype.comparePassword = async function(candidatePassword) {
-  // OAuth users don't have passwords
-  if (this.oauth_provider !== 'local' || !this.password) {
+  // Users without passwords (OAuth users) can't login with password
+  if (!this.password) {
     return false;
   }
   return await bcrypt.compare(candidatePassword, this.password);

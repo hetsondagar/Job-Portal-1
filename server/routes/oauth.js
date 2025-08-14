@@ -4,8 +4,19 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Company = require('../models/Company');
+const { sequelize } = require('../config/sequelize');
 
 const router = express.Router();
+
+// Helper function to generate slug
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .substring(0, 50);
+};
 
 // Helper function to generate JWT token
 const generateToken = (user) => {
@@ -29,7 +40,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     scope: ['profile', 'email']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-      // Check if user already exists
+      console.log('🔍 Google OAuth Strategy - Profile:', {
+        id: profile.id,
+        email: profile.emails?.[0]?.value,
+        name: profile.displayName
+      });
+
+      // Check if user already exists with this OAuth ID
       let user = await User.findOne({
         where: {
           oauth_provider: 'google',
@@ -44,6 +61,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         });
 
         if (existingUser) {
+          console.log('📝 Linking OAuth account to existing user:', existingUser.id);
           // Link OAuth account to existing user
           await existingUser.update({
             oauth_provider: 'google',
@@ -51,11 +69,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             oauth_access_token: accessToken,
             oauth_refresh_token: refreshToken,
             oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
-            is_email_verified: true
+            is_email_verified: true,
+            last_login_at: new Date()
           });
           user = existingUser;
         } else {
-          // Create new user
+          console.log('📝 Creating new OAuth user');
+          // Create new user - default to jobseeker, will be updated in callback if needed
           user = await User.create({
             email: profile.emails[0].value,
             first_name: profile.name.givenName || profile.displayName.split(' ')[0],
@@ -68,10 +88,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             avatar: profile.photos[0]?.value,
             is_email_verified: true,
             account_status: 'active',
-            user_type: 'jobseeker'
+            user_type: 'jobseeker' // Default, will be updated in callback if needed
           });
         }
       } else {
+        console.log('📝 Updating existing OAuth user tokens:', user.id);
         // Update existing OAuth user's tokens
         await user.update({
           oauth_access_token: accessToken,
@@ -81,8 +102,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         });
       }
 
+      console.log('✅ Google OAuth Strategy - User ready:', {
+        id: user.id,
+        email: user.email,
+        userType: user.user_type
+      });
+
       return done(null, user);
     } catch (error) {
+      console.error('❌ Google OAuth Strategy error:', error);
       return done(error, null);
     }
   }));
@@ -97,7 +125,13 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
     profileFields: ['id', 'displayName', 'photos', 'email']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-      // Check if user already exists
+      console.log('🔍 Facebook OAuth Strategy - Profile:', {
+        id: profile.id,
+        email: profile.emails?.[0]?.value,
+        name: profile.displayName
+      });
+
+      // Check if user already exists with this OAuth ID
       let user = await User.findOne({
         where: {
           oauth_provider: 'facebook',
@@ -112,6 +146,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
         });
 
         if (existingUser) {
+          console.log('📝 Linking OAuth account to existing user:', existingUser.id);
           // Link OAuth account to existing user
           await existingUser.update({
             oauth_provider: 'facebook',
@@ -119,10 +154,12 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
             oauth_access_token: accessToken,
             oauth_refresh_token: refreshToken,
             oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
-            is_email_verified: true
+            is_email_verified: true,
+            last_login_at: new Date()
           });
           user = existingUser;
         } else {
+          console.log('📝 Creating new OAuth user');
           // Create new user
           const nameParts = profile.displayName.split(' ');
           user = await User.create({
@@ -137,10 +174,11 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
             avatar: profile.photos[0]?.value,
             is_email_verified: true,
             account_status: 'active',
-            user_type: 'jobseeker'
+            user_type: 'jobseeker' // Default, will be updated in callback if needed
           });
         }
       } else {
+        console.log('📝 Updating existing OAuth user tokens:', user.id);
         // Update existing OAuth user's tokens
         await user.update({
           oauth_access_token: accessToken,
@@ -150,22 +188,35 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
         });
       }
 
+      console.log('✅ Facebook OAuth Strategy - User ready:', {
+        id: user.id,
+        email: user.email,
+        userType: user.user_type
+      });
+
       return done(null, user);
     } catch (error) {
+      console.error('❌ Facebook OAuth Strategy error:', error);
       return done(error, null);
     }
   }));
 }
 
 // Google OAuth routes
-router.get('/google', (req, res) => {
+router.get('/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(503).json({
       success: false,
       message: 'Google OAuth is not configured'
     });
   }
-  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res);
+  
+  // Store the state parameter in session for later use
+  if (req.query.state) {
+    req.session.oauthState = req.query.state;
+  }
+  
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
 router.get('/google/callback', (req, res) => {
@@ -173,33 +224,124 @@ router.get('/google/callback', (req, res) => {
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_not_configured`);
   }
   
-  passport.authenticate('google', { session: false, failureRedirect: '/login' })(req, res, () => {
-    try {
-      const user = req.user;
-      const token = generateToken(user);
-      
-      // Check if user needs to set up a password (OAuth users without password)
-      const needsPasswordSetup = !user.password && user.oauth_provider === 'google';
-      
-      // Redirect to frontend with token and setup flag
-      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}`;
-      res.redirect(redirectUrl);
-    } catch (error) {
-      console.error('Google OAuth callback error:', error);
-      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`);
+  console.log('🔍 Google OAuth Callback - Query params:', req.query);
+  
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err || !user) {
+      console.error('❌ Google OAuth authentication failed:', err || info);
+      // Redirect to appropriate login page based on state parameter
+      const state = req.query?.state;
+      const loginPage = state === 'employer' ? '/employer-login' : '/login';
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}${loginPage}?error=oauth_failed`);
     }
-  });
+    
+    // Handle successful authentication
+    (async () => {
+      try {
+        // Get state from session or query params
+        const state = req.session?.oauthState || req.query?.state;
+        console.log('📝 Google OAuth Callback - Processing user:', {
+          id: user.id,
+          email: user.email,
+          userType: user.user_type,
+          state: state
+        });
+        
+        // If state indicates employer and user is not already an employer, update user type
+        if (state === 'employer' && user.user_type !== 'employer') {
+          console.log('🔄 Updating user type to employer');
+          
+          // Start a transaction to create company and update user
+          const transaction = await sequelize.transaction();
+          
+          try {
+            // Create a default company for the employer
+            const companyName = `${user.first_name} ${user.last_name}'s Company`;
+            const companySlug = generateSlug(companyName);
+            
+            const company = await Company.create({
+              name: companyName,
+              slug: companySlug,
+              industry: 'Other',
+              companySize: '1-50',
+              email: user.email,
+              phone: user.phone,
+              contactPerson: `${user.first_name} ${user.last_name}`,
+              contactEmail: user.email,
+              contactPhone: user.phone,
+              companyStatus: 'active',
+              isActive: true
+            }, { transaction });
+
+            console.log('✅ Company created for OAuth employer:', company.id);
+            
+            // Update user with employer type and company ID
+            await user.update({ 
+              user_type: 'employer',
+              company_id: company.id
+            }, { transaction });
+            
+            // Commit the transaction
+            await transaction.commit();
+            
+            // Refresh user object to get updated user_type
+            await user.reload();
+          } catch (error) {
+            // Rollback transaction on error
+            await transaction.rollback();
+            console.error('❌ Error creating company for OAuth employer:', error);
+            throw error;
+          }
+        }
+        
+        const token = generateToken(user);
+        
+        // Check if user needs to set up a password (OAuth users without password)
+        const needsPasswordSetup = !user.password && user.oauth_provider === 'google';
+        
+        console.log('📝 Google OAuth Callback - Final user state:', {
+          id: user.id,
+          email: user.email,
+          userType: user.user_type,
+          needsPasswordSetup: needsPasswordSetup
+        });
+        
+        // Determine redirect URL based on user type
+        let redirectUrl;
+        if (user.user_type === 'employer') {
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}`;
+        } else {
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}`;
+        }
+        
+        console.log('✅ Google OAuth Callback - Redirecting to:', redirectUrl);
+        res.redirect(redirectUrl);
+      } catch (error) {
+        console.error('❌ Google OAuth callback error:', error);
+        // Redirect to appropriate login page based on state parameter
+        const state = req.query?.state;
+        const loginPage = state === 'employer' ? '/employer-login' : '/login';
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}${loginPage}?error=oauth_failed`);
+      }
+    })();
+  })(req, res);
 });
 
 // Facebook OAuth routes
-router.get('/facebook', (req, res) => {
+router.get('/facebook', (req, res, next) => {
   if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
     return res.status(503).json({
       success: false,
       message: 'Facebook OAuth is not configured'
     });
   }
-  passport.authenticate('facebook', { scope: ['email'] })(req, res);
+  
+  // Store the state parameter in session for later use
+  if (req.query.state) {
+    req.session.oauthState = req.query.state;
+  }
+  
+  passport.authenticate('facebook', { scope: ['email'] })(req, res, next);
 });
 
 router.get('/facebook/callback', (req, res) => {
@@ -207,22 +349,107 @@ router.get('/facebook/callback', (req, res) => {
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_not_configured`);
   }
   
-  passport.authenticate('facebook', { session: false, failureRedirect: '/login' })(req, res, () => {
-    try {
-      const user = req.user;
-      const token = generateToken(user);
-      
-      // Check if user needs to set up a password (OAuth users without password)
-      const needsPasswordSetup = !user.password && user.oauth_provider === 'facebook';
-      
-      // Redirect to frontend with token and setup flag
-      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}`;
-      res.redirect(redirectUrl);
-    } catch (error) {
-      console.error('Facebook OAuth callback error:', error);
-      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`);
+  console.log('🔍 Facebook OAuth Callback - Query params:', req.query);
+  
+  passport.authenticate('facebook', { session: false }, (err, user, info) => {
+    if (err || !user) {
+      console.error('❌ Facebook OAuth authentication failed:', err || info);
+      // Redirect to appropriate login page based on state parameter
+      const state = req.query?.state;
+      const loginPage = state === 'employer' ? '/employer-login' : '/login';
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}${loginPage}?error=oauth_failed`);
     }
-  });
+    
+    // Handle successful authentication
+    (async () => {
+      try {
+        // Get state from session or query params
+        const state = req.session?.oauthState || req.query?.state;
+        console.log('📝 Facebook OAuth Callback - Processing user:', {
+          id: user.id,
+          email: user.email,
+          userType: user.user_type,
+          state: state
+        });
+        
+        // If state indicates employer and user is not already an employer, update user type
+        if (state === 'employer' && user.user_type !== 'employer') {
+          console.log('🔄 Updating user type to employer');
+          
+          // Start a transaction to create company and update user
+          const transaction = await sequelize.transaction();
+          
+          try {
+            // Create a default company for the employer
+            const companyName = `${user.first_name} ${user.last_name}'s Company`;
+            const companySlug = generateSlug(companyName);
+            
+            const company = await Company.create({
+              name: companyName,
+              slug: companySlug,
+              industry: 'Other',
+              companySize: '1-50',
+              email: user.email,
+              phone: user.phone,
+              contactPerson: `${user.first_name} ${user.last_name}`,
+              contactEmail: user.email,
+              contactPhone: user.phone,
+              companyStatus: 'active',
+              isActive: true
+            }, { transaction });
+
+            console.log('✅ Company created for OAuth employer:', company.id);
+            
+            // Update user with employer type and company ID
+            await user.update({ 
+              user_type: 'employer',
+              company_id: company.id
+            }, { transaction });
+            
+            // Commit the transaction
+            await transaction.commit();
+            
+            // Refresh user object to get updated user_type
+            await user.reload();
+          } catch (error) {
+            // Rollback transaction on error
+            await transaction.rollback();
+            console.error('❌ Error creating company for OAuth employer:', error);
+            throw error;
+          }
+        }
+        
+        const token = generateToken(user);
+        
+        // Check if user needs to set up a password (OAuth users without password)
+        const needsPasswordSetup = !user.password && user.oauth_provider === 'facebook';
+        
+        console.log('📝 Facebook OAuth Callback - Final user state:', {
+          id: user.id,
+          email: user.email,
+          userType: user.user_type,
+          needsPasswordSetup: needsPasswordSetup
+        });
+        
+        // Determine redirect URL based on user type
+        let redirectUrl;
+        if (user.user_type === 'employer') {
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}`;
+        } else {
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}`;
+        }
+        
+        console.log('✅ Facebook OAuth Callback - Redirecting to:', redirectUrl);
+        res.redirect(redirectUrl);
+      } catch (error) {
+        console.error('❌ Facebook OAuth callback error:', error);
+        // Redirect to appropriate login page based on state parameter
+        const state = req.query?.state;
+        const loginPage = state === 'employer' ? '/employer-login' : '/login';
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}${loginPage}?error=oauth_failed`);
+      }
+    })();
+  })(req, res);
 });
 
 // Setup password for OAuth users
@@ -283,14 +510,17 @@ router.post('/setup-password', async (req, res) => {
 
 // Get OAuth URLs for frontend
 router.get('/urls', (req, res) => {
+  const { userType = 'jobseeker' } = req.query;
   const urls = {};
   
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    urls.google = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/google`;
+    const googleUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/google`;
+    urls.google = userType === 'employer' ? `${googleUrl}?state=employer` : googleUrl;
   }
   
   if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
-    urls.facebook = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/facebook`;
+    const facebookUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/facebook`;
+    urls.facebook = userType === 'employer' ? `${facebookUrl}?state=employer` : facebookUrl;
   }
   
   res.json({
