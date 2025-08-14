@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const session = require('express-session');
 
 
 // Import database configuration
@@ -13,6 +14,26 @@ const { sequelize, testConnection } = require('./config/sequelize');
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const oauthRoutes = require('./routes/oauth');
+const companiesRoutes = require('./routes/companies');
+
+// Import passport for OAuth
+const passport = require('passport');
+
+// Passport session configuration
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const User = require('./models/User');
+    const user = await User.findByPk(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 // Import middleware
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
@@ -32,6 +53,18 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Session configuration for OAuth
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret-key-change-this-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
 // Rate limiting
@@ -59,6 +92,10 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -72,6 +109,8 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/oauth', oauthRoutes);
+app.use('/api/companies', companiesRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

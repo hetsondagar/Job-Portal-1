@@ -14,7 +14,20 @@ const Company = sequelize.define('Company', {
   slug: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: true,
+    set(value) {
+      if (value) {
+        this.setDataValue('slug', value);
+      } else if (this.name) {
+        // Auto-generate slug from name if not provided
+        const slug = this.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+          .substring(0, 50);
+        this.setDataValue('slug', slug);
+      }
+    }
   },
   logo: {
     type: DataTypes.STRING,
@@ -241,13 +254,21 @@ const Company = sequelize.define('Company', {
   tableName: 'companies',
   hooks: {
     beforeCreate: async (company) => {
-      if (!company.slug) {
-        company.slug = company.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      if (!company.slug && company.name) {
+        company.slug = company.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+          .substring(0, 50);
       }
     },
     beforeUpdate: async (company) => {
       if (company.changed('name') && !company.changed('slug')) {
-        company.slug = company.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        company.slug = company.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+          .substring(0, 50);
       }
     }
   }

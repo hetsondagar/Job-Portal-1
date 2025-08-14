@@ -37,6 +37,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [location, setLocation] = useState("")
   const [currentTextIndex, setCurrentTextIndex] = useState(0)
+  const [isStickyVisible, setIsStickyVisible] = useState(false)
 
   // Search functionality
   const handleSearch = () => {
@@ -77,6 +78,17 @@ export default function HomePage() {
       setCurrentTextIndex((prev) => (prev + 1) % heroTexts.length)
     }, 4000)
     return () => clearInterval(timer)
+  }, [])
+
+  // Scroll event listener for sticky search bar
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      setIsStickyVisible(scrollY > 300)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const stats = [
@@ -786,6 +798,51 @@ export default function HomePage() {
                     {skill}
                   </motion.button>
                 ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Sticky Search Bar - Appears on scroll */}
+          <motion.div
+            initial={{ opacity: 0, y: -100 }}
+            animate={{ 
+              opacity: isStickyVisible ? 1 : 0, 
+              y: isStickyVisible ? 0 : -100 
+            }}
+            transition={{ duration: 0.3 }}
+            className={`fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-lg transform transition-all duration-300 ${
+              isStickyVisible ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
+          >
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex flex-col lg:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Input
+                    placeholder="Job title, keywords, or company"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
+                  />
+                </div>
+                <div className="relative flex-1">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Input
+                    placeholder="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
+                  />
+                </div>
+                <Button 
+                  onClick={handleSearch}
+                  className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 rounded-xl text-sm shadow-lg"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
               </div>
             </div>
           </motion.div>

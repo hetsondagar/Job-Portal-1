@@ -18,7 +18,7 @@ const User = sequelize.define('User', {
   },
   password: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // Allow null for OAuth users
   },
   first_name: {
     type: DataTypes.STRING,
@@ -209,17 +209,40 @@ const User = sequelize.define('User', {
       min: 0,
       max: 100
     }
+  },
+  // OAuth fields
+  oauth_provider: {
+    type: DataTypes.ENUM('google', 'facebook', 'local'),
+    defaultValue: 'local'
+  },
+  oauth_id: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  oauth_access_token: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  oauth_refresh_token: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  oauth_token_expires_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'users',
   hooks: {
     beforeCreate: async (user) => {
-      if (user.password) {
+      // Hash password for all users with passwords (except OAuth users without passwords)
+      if (user.password && (!user.oauth_provider || user.oauth_provider === 'local')) {
         user.password = await bcrypt.hash(user.password, 12);
       }
     },
     beforeUpdate: async (user) => {
-      if (user.changed('password')) {
+      // Hash password for all users with passwords (except OAuth users without passwords)
+      if (user.changed('password') && user.password && (!user.oauth_provider || user.oauth_provider === 'local')) {
         user.password = await bcrypt.hash(user.password, 12);
       }
     }
@@ -228,6 +251,10 @@ const User = sequelize.define('User', {
 
 // Instance methods
 User.prototype.comparePassword = async function(candidatePassword) {
+  // Users without passwords (OAuth users) can't login with password
+  if (!this.password) {
+    return false;
+  }
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
