@@ -311,6 +311,8 @@ export default function CompaniesPage() {
     setCurrentPage(1)
   }, [])
 
+
+
   // Function to handle top industry card selection and sync with filters
   const handleIndustryCardSelection = useCallback((industryName: string | null) => {
     setSelectedIndustry(industryName)
@@ -1223,38 +1225,38 @@ export default function CompaniesPage() {
                     whileHover={{ scale: 1.05, y: -5 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Card
-                      className={`min-w-[200px] sm:min-w-[240px] cursor-pointer transition-all duration-500 border-0 group ${
-                        isSelected
-                          ? `${sectorColors.light} ring-2 ${sectorColors.ring} shadow-2xl ${sectorColors.glow}`
-                          : "bg-white/80 dark:bg-slate-800/80 hover:shadow-2xl hover:shadow-blue-500/10"
-                      } backdrop-blur-xl overflow-hidden relative`}
-                      onClick={() => handleIndustryCardSelection(isSelected ? null : type.name)}
-                    >
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-br ${sectorColors.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
-                      />
-                      <CardContent className="p-4 sm:p-6 text-center relative z-10">
-                        <div className="mb-3 sm:mb-4">
-                          <div
-                            className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-2xl bg-gradient-to-br ${sectorColors.bg} flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
-                          >
-                            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        </div>
-                        <h3
-                          className={`font-bold text-base sm:text-lg mb-2 ${isSelected ? sectorColors.text : "text-slate-900 dark:text-white group-hover:" + sectorColors.text} transition-colors duration-300`}
-                        >
-                          {type.name}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-3 sm:mb-4">
-                          {type.count}
-                        </p>
+                      <Card
+                        className={`min-w-[200px] sm:min-w-[240px] cursor-pointer transition-all duration-500 border-0 group ${
+                          isSelected
+                            ? `${sectorColors.light} ring-2 ${sectorColors.ring} shadow-2xl ${sectorColors.glow}`
+                            : "bg-white/80 dark:bg-slate-800/80 hover:shadow-2xl hover:shadow-blue-500/10"
+                        } backdrop-blur-xl overflow-hidden relative`}
+                        onClick={() => handleIndustryCardSelection(isSelected ? null : type.name)}
+                      >
                         <div
-                          className={`w-full h-1.5 sm:h-2 rounded-full bg-gradient-to-r ${sectorColors.bg} ${isSelected ? "opacity-100" : "opacity-30 group-hover:opacity-70"} transition-all duration-300`}
+                          className={`absolute inset-0 bg-gradient-to-br ${sectorColors.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
                         />
-                      </CardContent>
-                    </Card>
+                        <CardContent className="p-4 sm:p-6 text-center relative z-10">
+                          <div className="mb-3 sm:mb-4">
+                            <div
+                              className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-2xl bg-gradient-to-br ${sectorColors.bg} flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
+                            >
+                              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </div>
+                          </div>
+                          <h3
+                            className={`font-bold text-base sm:text-lg mb-2 ${isSelected ? sectorColors.text : "text-slate-900 dark:text-white group-hover:" + sectorColors.text} transition-colors duration-300`}
+                          >
+                            {type.name}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-3 sm:mb-4">
+                            {type.count}
+                          </p>
+                          <div
+                            className={`w-full h-1.5 sm:h-2 rounded-full bg-gradient-to-r ${sectorColors.bg} ${isSelected ? "opacity-100" : "opacity-30 group-hover:opacity-70"} transition-all duration-300`}
+                          />
+                        </CardContent>
+                      </Card>
                   </motion.div>
                 )
               })}
@@ -1901,15 +1903,32 @@ export default function CompaniesPage() {
             {[
               {
                 title: "For Job Seekers",
-                links: ["Browse Jobs", "Career Advice", "Resume Builder", "Salary Guide", "JobAtPace Premium"],
+                links: [
+                  { name: "Browse Jobs", href: "/jobs" },
+                  { name: "Career Advice", href: "/career-advice" },
+                  { name: "Resume Builder", href: "/resume-builder" },
+                  { name: "Salary Guide", href: "/salary-guide" },
+                  { name: "JobAtPace Premium", href: "/jobatpace" },
+                ],
               },
               {
                 title: "For Employers",
-                links: ["Post Jobs", "Search Resumes", "Recruitment Solutions", "Pricing", "TalentPulse"],
+                links: [
+                  { name: "Post Jobs", href: "/employer-dashboard/post-job" },
+                  { name: "Search Resumes", href: "/employer-dashboard/requirements" },
+                  { name: "Recruitment Solutions", href: "/naukri-talent-cloud" },
+                  { name: "Pricing", href: "/pricing" },
+                  { name: "TalentPulse", href: "/naukri-talent-cloud" },
+                ],
               },
               {
                 title: "Company",
-                links: ["About Us", "Contact", "Privacy Policy", "Terms of Service"],
+                links: [
+                  { name: "About Us", href: "/about" },
+                  { name: "Contact", href: "/contact" },
+                  { name: "Privacy Policy", href: "/privacy" },
+                  { name: "Terms of Service", href: "/terms" },
+                ],
               },
             ].map((section, index) => (
               <div key={index}>
@@ -1918,10 +1937,10 @@ export default function CompaniesPage() {
                   {section.links.map((link, linkIndex) => (
                     <li key={linkIndex}>
                       <Link
-                        href="#"
+                        href={link.href}
                         className="text-slate-400 hover:text-white transition-colors hover:underline text-sm sm:text-base"
                       >
-                        {link}
+                        {link.name}
                       </Link>
                     </li>
                   ))}

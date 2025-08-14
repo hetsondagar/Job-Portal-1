@@ -85,18 +85,18 @@ export default function JobsPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
       const category = urlParams.get('category')
-      const type = urlParams.get('type')
-      const location = urlParams.get('location')
-      
-      if (category) {
-        setFilters(prev => ({ ...prev, category }))
-      }
-      if (type) {
-        setFilters(prev => ({ ...prev, type }))
-      }
-      if (location) {
-        setFilters(prev => ({ ...prev, location }))
-      }
+                  const type = urlParams.get('type')
+            const location = urlParams.get('location')
+
+            if (category) {
+              setFilters(prev => ({ ...prev, category }))
+            }
+            if (type) {
+              setFilters(prev => ({ ...prev, type }))
+            }
+            if (location) {
+              setFilters(prev => ({ ...prev, location }))
+            }
     }
   }, [])
 
@@ -978,28 +978,28 @@ export default function JobsPage() {
             <div>
               <h4 className="font-semibold mb-4">For Job Seekers</h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-white transition-colors">Browse Jobs</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Create Profile</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Job Alerts</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Career Advice</a></li>
+                <li><Link href="/jobs" className="hover:text-white transition-colors">Browse Jobs</Link></li>
+                <li><Link href="/register" className="hover:text-white transition-colors">Create Profile</Link></li>
+                <li><Link href="/dashboard" className="hover:text-white transition-colors">Job Alerts</Link></li>
+                <li><Link href="/career-advice" className="hover:text-white transition-colors">Career Advice</Link></li>
               </ul>
                 </div>
             <div>
               <h4 className="font-semibold mb-4">For Employers</h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-white transition-colors">Post a Job</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Browse Candidates</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Resources</a></li>
+                <li><Link href="/employer-dashboard/post-job" className="hover:text-white transition-colors">Post a Job</Link></li>
+                <li><Link href="/employer-dashboard/requirements" className="hover:text-white transition-colors">Browse Candidates</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/resources" className="hover:text-white transition-colors">Resources</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
                 </ul>
               </div>
           </div>
