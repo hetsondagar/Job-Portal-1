@@ -67,14 +67,17 @@ export default function OAuthCallbackPage() {
             setMessage(`Welcome! Please set up a password for your ${provider} account`)
             toast.success(`Welcome! Please set up a password for your ${provider} account`)
           } else {
-            // User already has a password, proceed to dashboard
+            // User already has a password, proceed to appropriate dashboard based on user type
             setStatus('success')
             setMessage(`Successfully signed in with ${provider}`)
             toast.success(`Welcome! You've been signed in with ${provider}`)
             
-            // Redirect to dashboard after a short delay
+            // Redirect to appropriate dashboard based on user type
+            const userType = response.data.user.userType
+            const dashboardPath = userType === 'employer' ? '/employer-dashboard' : '/dashboard'
+            
             setTimeout(() => {
-              router.push('/dashboard')
+              router.push(dashboardPath)
             }, 2000)
           }
         } else {
@@ -126,9 +129,14 @@ export default function OAuthCallbackPage() {
         setMessage('Password set successfully! Welcome to your account.')
         toast.success('Password set successfully!')
         
-        // Redirect to dashboard after a short delay
+        // Get current user data to determine user type
+        const userResponse = await apiService.getCurrentUser()
+        const userType = userResponse.success && userResponse.data?.user ? userResponse.data.user.userType : 'jobseeker'
+        const dashboardPath = userType === 'employer' ? '/employer-dashboard' : '/dashboard'
+        
+        // Redirect to appropriate dashboard after a short delay
         setTimeout(() => {
-          router.push('/dashboard')
+          router.push(dashboardPath)
         }, 2000)
       } else {
         throw new Error(response.message || 'Failed to set password')

@@ -21,10 +21,22 @@ export interface User {
   summary?: string;
   profileCompletion?: number;
   lastLoginAt?: string;
+  companyId?: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  industry: string;
+  companySize: string;
+  website?: string;
+  email: string;
+  phone?: string;
 }
 
 export interface AuthResponse {
   user: User;
+  company?: Company;
   token: string;
 }
 
@@ -36,6 +48,19 @@ export interface SignupData {
   experience?: string;
   agreeToTerms: boolean;
   subscribeNewsletter?: boolean;
+}
+
+export interface EmployerSignupData {
+  fullName: string;
+  email: string;
+  password: string;
+  companyName: string;
+  phone: string;
+  companySize?: string;
+  industry?: string;
+  website?: string;
+  agreeToTerms: boolean;
+  subscribeUpdates?: boolean;
 }
 
 export interface LoginData {
@@ -112,6 +137,28 @@ class ApiService {
     return result;
   }
 
+  async employerSignup(data: EmployerSignupData): Promise<ApiResponse<AuthResponse>> {
+    const response = await fetch(`${API_BASE_URL}/auth/employer-signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await this.handleResponse<AuthResponse>(response);
+
+    if (result.success && result.data?.token) {
+      localStorage.setItem('token', result.data.token);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
+      if (result.data.company) {
+        localStorage.setItem('company', JSON.stringify(result.data.company));
+      }
+    }
+
+    return result;
+  }
+
   async login(data: LoginData): Promise<ApiResponse<AuthResponse>> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -122,10 +169,13 @@ class ApiService {
     });
 
     const result = await this.handleResponse<AuthResponse>(response);
-    
+
     if (result.success && result.data?.token) {
       localStorage.setItem('token', result.data.token);
       localStorage.setItem('user', JSON.stringify(result.data.user));
+      if (result.data.company) {
+        localStorage.setItem('company', JSON.stringify(result.data.company));
+      }
     }
 
     return result;
@@ -246,6 +296,15 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Company endpoints
+  async getCompanyInfo(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
   // Utility methods
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
@@ -258,6 +317,12 @@ class ApiService {
     return userStr ? JSON.parse(userStr) : null;
   }
 
+  getCompanyFromStorage(): Company | null {
+    if (typeof window === 'undefined') return null;
+    const companyStr = localStorage.getItem('company');
+    return companyStr ? JSON.parse(companyStr) : null;
+  }
+
   getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');
@@ -267,20 +332,28 @@ class ApiService {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('company');
   }
 
   // OAuth methods
-  async getOAuthUrls(): Promise<ApiResponse<{ google: string; facebook: string }>> {
-    const response = await fetch(`${API_BASE_URL}/oauth/urls`, {
+  async getOAuthUrls(userType: 'jobseeker' | 'employer' = 'jobseeker'): Promise<ApiResponse<{ google: string; facebook: string }>> {
+    console.log('🔍 Getting OAuth URLs for userType:', userType);
+    
+    const response = await fetch(`${API_BASE_URL}/oauth/urls?userType=${userType}`, {
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    return this.handleResponse<{ google: string; facebook: string }>(response);
+    const result = await this.handleResponse<{ google: string; facebook: string }>(response);
+    console.log('✅ OAuth URLs received:', result.data);
+    
+    return result;
   }
 
   async handleOAuthCallback(token: string): Promise<ApiResponse<AuthResponse>> {
+    console.log('🔍 Handling OAuth callback with token:', token ? 'present' : 'missing');
+    
     // Store the token temporarily
     localStorage.setItem('token', token);
     
@@ -289,9 +362,31 @@ class ApiService {
     
     if (response.success && response.data?.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      console.log('✅ OAuth callback - User data stored:', {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        userType: response.data.user.userType
+      });
+      
+      // If user is an employer, get company information
+      if (response.data.user.userType === 'employer' && response.data.user.companyId) {
+        const companyResponse = await this.getCompanyInfo(response.data.user.companyId);
+        if (companyResponse.success && companyResponse.data) {
+          localStorage.setItem('company', JSON.stringify(companyResponse.data));
+          console.log('✅ OAuth callback - Company data stored:', companyResponse.data);
+        }
+      }
     }
     
     return response;
+  }
+
+  async getCompanyInfo(companyId: string): Promise<ApiResponse<Company>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<Company>(response);
   }
 
   async setupOAuthPassword(password: string): Promise<ApiResponse> {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import { apiService, User, SignupData, LoginData } from '@/lib/api';
+import { apiService, User, SignupData, EmployerSignupData, LoginData } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   signup: (data: SignupData) => Promise<void>;
+  employerSignup: (data: EmployerSignupData) => Promise<void>;
   login: (data: LoginData) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -71,6 +72,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const employerSignup = async (data: EmployerSignupData) => {
+    try {
+      setError(null);
+      setLoading(true);
+      
+      const response = await apiService.employerSignup(data);
+      
+      if (response.success && response.data?.user) {
+        setUser(response.data.user);
+        // After successful employer signup, redirect to employer dashboard
+        router.push('/employer-dashboard');
+      } else {
+        setError(response.message || 'Employer signup failed');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Employer signup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const login = async (data: LoginData) => {
     try {
       setError(null);
@@ -80,8 +102,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.success && response.data?.user) {
         setUser(response.data.user);
-        // After successful login, redirect to dashboard
-        router.push('/dashboard');
+        // After successful login, redirect to appropriate dashboard based on user type
+        if (response.data.user.userType === 'employer') {
+          router.push('/employer-dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         setError(response.message || 'Login failed');
       }
@@ -114,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     error,
     signup,
+    employerSignup,
     login,
     logout,
     clearError,

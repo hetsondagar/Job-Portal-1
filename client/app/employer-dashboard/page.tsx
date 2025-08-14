@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import { useState, useEffect } from "react"
 import {
   Plus,
   Users,
@@ -22,8 +23,30 @@ import { Progress } from "@/components/ui/progress"
 import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { CompanyInfoDisplay } from "@/components/company-info-display"
+import { apiService } from "@/lib/api"
 
 export default function EmployerDashboard() {
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await apiService.getCurrentUser()
+        if (response.success && response.data?.user) {
+          setUser(response.data.user)
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+  }, [])
+
   const stats = [
     {
       title: "Active Jobs",
@@ -117,39 +140,41 @@ export default function EmployerDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
       <EmployerNavbar />
 
-      {/* Welcome Banner */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white overflow-hidden mb-8"
-        >
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Welcome back, KESHAV!</h1>
-                <p className="text-blue-100 text-lg mb-4">Ready to find your next great hire?</p>
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5 text-blue-200" />
-                    <span className="text-sm">12 Active Jobs</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-5 h-5 text-blue-200" />
-                    <span className="text-sm">1,247 Applications</span>
+              {/* Welcome Banner */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white overflow-hidden mb-8"
+          >
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">
+                    Welcome back, {user?.first_name ? user.first_name.toUpperCase() : 'EMPLOYER'}!
+                  </h1>
+                  <p className="text-blue-100 text-lg mb-4">Ready to find your next great hire?</p>
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="w-5 h-5 text-blue-200" />
+                      <span className="text-sm">12 Active Jobs</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-5 h-5 text-blue-200" />
+                      <span className="text-sm">1,247 Applications</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="hidden lg:block">
-                <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center">
-                  <Briefcase className="w-16 h-16 text-white/80" />
+                <div className="hidden lg:block">
+                  <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center">
+                    <Briefcase className="w-16 h-16 text-white/80" />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90"></div>
-        </motion.div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90"></div>
+          </motion.div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -255,6 +280,11 @@ export default function EmployerDashboard() {
 
           {/* Right Column - Profile & Support */}
           <div className="space-y-8">
+            {/* Company Information */}
+            {user?.company_id && (
+              <CompanyInfoDisplay companyId={user.company_id} />
+            )}
+
             {/* Profile Completion */}
             <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
               <CardHeader>
