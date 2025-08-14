@@ -2,8 +2,10 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const { sequelize } = require('../config/sequelize');
+const emailService = require('../services/simpleEmailService');
 
 const router = express.Router();
 
@@ -40,6 +42,24 @@ const validateLogin = [
   body('password')
     .notEmpty()
     .withMessage('Password is required')
+];
+
+const validateForgotPassword = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please enter a valid email address')
+];
+
+const validateResetPassword = [
+  body('token')
+    .notEmpty()
+    .withMessage('Reset token is required'),
+  body('password')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number')
 ];
 
 // Helper function to generate JWT token
@@ -309,6 +329,166 @@ router.post('/refresh', async (req, res) => {
     res.status(401).json({
       success: false,
       message: 'Invalid token'
+    });
+  }
+});
+
+// Forgot password endpoint
+router.post('/forgot-password', validateForgotPassword, async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { email } = req.body;
+
+    // Find user by email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
+
+    // Check if account is active
+    if (user.account_status !== 'active') {
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+    // Save reset token to user
+    await user.update({
+      password_reset_token: resetToken,
+      password_reset_expires: resetTokenExpiry
+    });
+
+    // Send password reset email
+    try {
+      const userName = user.first_name || user.email.split('@')[0];
+      await emailService.sendPasswordResetEmail(user.email, resetToken, userName);
+      
+      console.log('✅ Password reset email sent successfully to:', user.email);
+      
+      res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    } catch (emailError) {
+      console.error('❌ Failed to send password reset email:', emailError);
+      
+      // Still return success to user for security (don't reveal if email exists)
+      res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Reset password endpoint
+router.post('/reset-password', validateResetPassword, async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { token, password } = req.body;
+
+    // Find user by reset token
+    const user = await User.findOne({
+      where: {
+        password_reset_token: token,
+        password_reset_expires: { [sequelize.Op.gt]: new Date() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Update password and clear reset token
+    await user.update({
+      password: password,
+      password_reset_token: null,
+      password_reset_expires: null
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Verify reset token endpoint
+router.get('/verify-reset-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    // Find user by reset token
+    const user = await User.findOne({
+      where: {
+        password_reset_token: token,
+        password_reset_expires: { [sequelize.Op.gt]: new Date() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Reset token is valid'
+    });
+
+  } catch (error) {
+    console.error('Verify reset token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });

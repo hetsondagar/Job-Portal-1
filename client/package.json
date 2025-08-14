@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.4.0",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",

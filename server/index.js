@@ -13,6 +13,10 @@ const { sequelize, testConnection } = require('./config/sequelize');
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const oauthRoutes = require('./routes/oauth');
+
+// Import passport for OAuth
+const passport = require('passport');
 
 // Import middleware
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
@@ -59,6 +63,9 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Passport middleware
+app.use(passport.initialize());
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -72,6 +79,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/oauth', oauthRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

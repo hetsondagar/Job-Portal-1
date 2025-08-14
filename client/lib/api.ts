@@ -44,6 +44,15 @@ export interface LoginData {
   rememberMe?: boolean;
 }
 
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ResetPasswordData {
+  token: string;
+  password: string;
+}
+
 export interface ProfileUpdateData {
   firstName?: string;
   lastName?: string;
@@ -130,6 +139,40 @@ class ApiService {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
+    return this.handleResponse(response);
+  }
+
+  async forgotPassword(data: ForgotPasswordData): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async resetPassword(data: ResetPasswordData): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async verifyResetToken(token: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-reset-token/${token}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     return this.handleResponse(response);
   }
@@ -224,6 +267,41 @@ class ApiService {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+  }
+
+  // OAuth methods
+  async getOAuthUrls(): Promise<ApiResponse<{ google: string; facebook: string }>> {
+    const response = await fetch(`${API_BASE_URL}/oauth/urls`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return this.handleResponse<{ google: string; facebook: string }>(response);
+  }
+
+  async handleOAuthCallback(token: string): Promise<ApiResponse<AuthResponse>> {
+    // Store the token temporarily
+    localStorage.setItem('token', token);
+    
+    // Get user data
+    const response = await this.getCurrentUser();
+    
+    if (response.success && response.data?.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    
+    return response;
+  }
+
+  async setupOAuthPassword(password: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/oauth/setup-password`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ password }),
+    });
+
+    return this.handleResponse(response);
   }
 }
 

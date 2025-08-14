@@ -34,6 +34,7 @@ export default function FeaturedCompaniesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isStickyVisible, setIsStickyVisible] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const getSectorColor = (sector: string) => {
@@ -124,6 +125,17 @@ export default function FeaturedCompaniesPage() {
     { name: "Automotive", count: "15+ Companies", sector: "automotive" },
     { name: "Energy", count: "12+ Companies", sector: "energy" },
   ]
+
+  // Scroll event listener for sticky search bar
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      setIsStickyVisible(scrollY > 200)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Generate featured companies
   const generateFeaturedCompanies = () => {
@@ -332,6 +344,52 @@ export default function FeaturedCompaniesPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Sticky Search Bar - Appears on scroll */}
+      <motion.div
+        initial={{ opacity: 0, y: -100 }}
+        animate={{ 
+          opacity: isStickyVisible ? 1 : 0, 
+          y: isStickyVisible ? 0 : -100 
+        }}
+        transition={{ duration: 0.3 }}
+        className={`fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-lg transform transition-all duration-300 ${
+          isStickyVisible ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Input
+                  placeholder="Company name or industry"
+                  className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm"
+                />
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Input
+                  placeholder="Location"
+                  className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm"
+                />
+              </div>
+              <Button className="h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg text-sm font-semibold">
+                <Search className="w-4 h-4 mr-2" />
+                Search
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              className="lg:hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600 h-12"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Industry Type Filters */}
       <div className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 py-6 sm:py-8">
