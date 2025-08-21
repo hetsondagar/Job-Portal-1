@@ -202,6 +202,114 @@ const Job = sequelize.define('Job', {
   metadata: {
     type: DataTypes.JSONB,
     defaultValue: {}
+  },
+  // Advanced Job Posting Features
+  isPrivate: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Whether this is a private/targeted job posting'
+  },
+  visibilityType: {
+    type: DataTypes.ENUM('public', 'private', 'referral-only', 'invite-only'),
+    defaultValue: 'public',
+    comment: 'Visibility type for the job posting'
+  },
+  allowedViewers: {
+    type: DataTypes.JSONB,
+    defaultValue: [],
+    comment: 'Array of user IDs or email domains allowed to view this job'
+  },
+  referralCode: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Referral code for private job access'
+  },
+  scheduledPublishAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'When to automatically publish this job'
+  },
+  scheduledExpiryAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'When to automatically expire this job'
+  },
+  autoRenew: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Whether to automatically renew this job posting'
+  },
+  renewalPeriod: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'Renewal period in days'
+  },
+  maxRenewals: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'Maximum number of times this job can be renewed'
+  },
+  currentRenewalCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Current number of renewals'
+  },
+  templateId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    comment: 'Reference to job template used'
+  },
+  bulkImportId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    comment: 'Reference to bulk import job if created via bulk import'
+  },
+  // Enhanced Analytics
+  searchImpressions: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Number of times job appeared in search results'
+  },
+  searchClicks: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Number of clicks from search results'
+  },
+  applicationRate: {
+    type: DataTypes.DECIMAL(5, 4),
+    defaultValue: 0,
+    comment: 'Application rate (applications/views)'
+  },
+  qualityScore: {
+    type: DataTypes.DECIMAL(3, 2),
+    defaultValue: 0,
+    comment: 'AI-powered quality score for the job posting'
+  },
+  seoScore: {
+    type: DataTypes.DECIMAL(3, 2),
+    defaultValue: 0,
+    comment: 'SEO optimization score'
+  },
+  // Advanced Features
+  isATSEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Whether ATS scoring is enabled for this job'
+  },
+  atsKeywords: {
+    type: DataTypes.JSONB,
+    defaultValue: [],
+    comment: 'Keywords for ATS optimization'
+  },
+  targetAudience: {
+    type: DataTypes.JSONB,
+    defaultValue: {},
+    comment: 'Target audience criteria for this job'
+  },
+  promotionSettings: {
+    type: DataTypes.JSONB,
+    defaultValue: {},
+    comment: 'Promotion and advertising settings'
   }
 }, {
   tableName: 'jobs',

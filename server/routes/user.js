@@ -1,9 +1,75 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const User = require('../models/User');
+const Resume = require('../models/Resume');
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/resumes');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['.pdf', '.doc', '.docx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOC, and DOCX files are allowed'));
+    }
+  }
+});
+
+// Configure multer for avatar uploads
+const avatarStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/avatars');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB limit for avatars
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed for avatars'));
+    }
+  }
+});
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -335,6 +401,563 @@ router.delete('/account', authenticateToken, [
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+});
+
+// Job Applications endpoints
+router.get('/applications', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication, Job, Company } = require('../config/index');
+    
+    const applications = await JobApplication.findAll({
+      where: { userId: req.user.id },
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          include: [
+            {
+              model: Company,
+              as: 'company'
+            }
+          ]
+        }
+      ],
+      order: [['appliedAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: applications
+    });
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch applications'
+    });
+  }
+});
+
+// Job Alerts endpoints
+router.get('/job-alerts', authenticateToken, async (req, res) => {
+  try {
+    const { JobAlert } = require('../config/index');
+    
+    const alerts = await JobAlert.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: alerts
+    });
+  } catch (error) {
+    console.error('Error fetching job alerts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch job alerts'
+    });
+  }
+});
+
+router.post('/job-alerts', authenticateToken, async (req, res) => {
+  try {
+    const { JobAlert } = require('../config/index');
+    
+    const alertData = {
+      ...req.body,
+      userId: req.user.id
+    };
+
+    const alert = await JobAlert.create(alertData);
+
+    res.json({
+      success: true,
+      data: alert
+    });
+  } catch (error) {
+    console.error('Error creating job alert:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create job alert'
+    });
+  }
+});
+
+router.put('/job-alerts/:id', authenticateToken, async (req, res) => {
+  try {
+    const { JobAlert } = require('../config/index');
+    
+    const alert = await JobAlert.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job alert not found'
+      });
+    }
+
+    await alert.update(req.body);
+
+    res.json({
+      success: true,
+      data: alert
+    });
+  } catch (error) {
+    console.error('Error updating job alert:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update job alert'
+    });
+  }
+});
+
+router.delete('/job-alerts/:id', authenticateToken, async (req, res) => {
+  try {
+    const { JobAlert } = require('../config/index');
+    
+    const alert = await JobAlert.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job alert not found'
+      });
+    }
+
+    await alert.destroy();
+
+    res.json({
+      success: true,
+      message: 'Job alert deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting job alert:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete job alert'
+    });
+  }
+});
+
+// Job Bookmarks endpoints
+router.get('/bookmarks', authenticateToken, async (req, res) => {
+  try {
+    const { JobBookmark, Job, Company } = require('../config/index');
+    
+    const bookmarks = await JobBookmark.findAll({
+      where: { userId: req.user.id },
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          include: [
+            {
+              model: Company,
+              as: 'company'
+            }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: bookmarks
+    });
+  } catch (error) {
+    console.error('Error fetching bookmarks:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch bookmarks'
+    });
+  }
+});
+
+router.post('/bookmarks', authenticateToken, async (req, res) => {
+  try {
+    const { JobBookmark } = require('../config/index');
+    
+    const bookmarkData = {
+      ...req.body,
+      userId: req.user.id
+    };
+
+    const bookmark = await JobBookmark.create(bookmarkData);
+
+    res.json({
+      success: true,
+      data: bookmark
+    });
+  } catch (error) {
+    console.error('Error creating bookmark:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create bookmark'
+    });
+  }
+});
+
+router.put('/bookmarks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { JobBookmark } = require('../config/index');
+    
+    const bookmark = await JobBookmark.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!bookmark) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bookmark not found'
+      });
+    }
+
+    await bookmark.update(req.body);
+
+    res.json({
+      success: true,
+      data: bookmark
+    });
+  } catch (error) {
+    console.error('Error updating bookmark:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update bookmark'
+    });
+  }
+});
+
+router.delete('/bookmarks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { JobBookmark } = require('../config/index');
+    
+    const bookmark = await JobBookmark.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!bookmark) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bookmark not found'
+      });
+    }
+
+    await bookmark.destroy();
+
+    res.json({
+      success: true,
+      message: 'Bookmark deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting bookmark:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete bookmark'
+    });
+  }
+});
+
+// Search History endpoints
+router.get('/search-history', authenticateToken, async (req, res) => {
+  try {
+    const { Analytics } = require('../config/index');
+    
+    const searchHistory = await Analytics.findAll({
+      where: { 
+        userId: req.user.id,
+        eventType: 'search_performed'
+      },
+      order: [['createdAt', 'DESC']],
+      limit: 20
+    });
+
+    res.json({
+      success: true,
+      data: searchHistory
+    });
+  } catch (error) {
+    console.error('Error fetching search history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch search history'
+    });
+  }
+});
+
+// Dashboard Stats endpoint
+router.get('/dashboard-stats', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication, Analytics } = require('../config/index');
+    
+    // Get application count
+    const applicationCount = await JobApplication.count({
+      where: { userId: req.user.id }
+    });
+
+    // Get profile views
+    const profileViews = await Analytics.count({
+      where: { 
+        userId: req.user.id,
+        eventType: 'profile_view'
+      }
+    });
+
+    // Get recent applications
+    const recentApplications = await JobApplication.findAll({
+      where: { userId: req.user.id },
+      order: [['appliedAt', 'DESC']],
+      limit: 5
+    });
+
+    res.json({
+      success: true,
+      data: {
+        applicationCount,
+        profileViews,
+        recentApplications
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard stats'
+    });
+  }
+});
+
+// Resume endpoints
+router.get('/resumes', authenticateToken, async (req, res) => {
+  try {
+    const resumes = await Resume.findAll({
+      where: { userId: req.user.id },
+      order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: resumes
+    });
+  } catch (error) {
+    console.error('Error fetching resumes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch resumes'
+    });
+  }
+});
+
+router.post('/resumes', authenticateToken, async (req, res) => {
+  try {
+    const { title, summary, objective, skills, languages, certifications, projects, achievements } = req.body;
+
+    const resume = await Resume.create({
+      userId: req.user.id,
+      title,
+      summary,
+      objective,
+      skills: skills || [],
+      languages: languages || [],
+      certifications: certifications || [],
+      projects: projects || [],
+      achievements: achievements || [],
+      isDefault: false,
+      isPublic: true
+    });
+
+    res.status(201).json({
+      success: true,
+      data: resume
+    });
+  } catch (error) {
+    console.error('Error creating resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create resume'
+    });
+  }
+});
+
+router.put('/resumes/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, summary, objective, skills, languages, certifications, projects, achievements, isPublic } = req.body;
+
+    const resume = await Resume.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+
+    await resume.update({
+      title,
+      summary,
+      objective,
+      skills: skills || resume.skills,
+      languages: languages || resume.languages,
+      certifications: certifications || resume.certifications,
+      projects: projects || resume.projects,
+      achievements: achievements || resume.achievements,
+      isPublic: isPublic !== undefined ? isPublic : resume.isPublic
+    });
+
+    res.json({
+      success: true,
+      data: resume
+    });
+  } catch (error) {
+    console.error('Error updating resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update resume'
+    });
+  }
+});
+
+router.delete('/resumes/:id', authenticateToken, async (req, res) => {
+  try {
+    const resume = await Resume.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+
+    await resume.destroy();
+
+    res.json({
+      success: true,
+      message: 'Resume deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete resume'
+    });
+  }
+});
+
+router.post('/resumes/upload', authenticateToken, upload.single('resume'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const { title } = req.body;
+    const filename = req.file.filename;
+    const originalName = req.file.originalname;
+
+    const resume = await Resume.create({
+      userId: req.user.id,
+      title: title || `Resume - ${originalName}`,
+      isDefault: false,
+      isPublic: true,
+      metadata: {
+        filename,
+        originalName,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        resumeId: resume.id,
+        filename
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload resume'
+    });
+  }
+});
+
+router.put('/resumes/:id/set-default', authenticateToken, async (req, res) => {
+  try {
+    const resume = await Resume.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+
+    // Remove default from all other resumes
+    await Resume.update(
+      { isDefault: false },
+      { where: { userId: req.user.id } }
+    );
+
+    // Set this resume as default
+    await resume.update({ isDefault: true });
+
+    res.json({
+      success: true,
+      data: resume
+    });
+  } catch (error) {
+    console.error('Error setting default resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to set default resume'
+    });
+  }
+});
+
+// Avatar upload endpoint
+router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const filename = req.file.filename;
+    const avatarUrl = `/uploads/avatars/${filename}`;
+
+    // Update user's avatar
+    await req.user.update({ avatar: avatarUrl });
+
+    res.status(200).json({
+      success: true,
+      message: 'Avatar uploaded successfully',
+      data: { avatarUrl }
+    });
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload avatar'
     });
   }
 });

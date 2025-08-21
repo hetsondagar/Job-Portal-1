@@ -25,6 +25,8 @@ export default function IndividualRequirementPage() {
   const [sortBy, setSortBy] = useState("relevance")
   const [showCount, setShowCount] = useState("50")
   const [showFilters, setShowFilters] = useState(false)
+  const [atsMode, setAtsMode] = useState(false)
+  const [atsLoading, setAtsLoading] = useState(false)
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -57,6 +59,18 @@ export default function IndividualRequirementPage() {
     lastActive: ["Today", "This week", "This month", "Last 3 months", "Last 6 months"],
   }
 
+  // ATS Matching function
+  const handleATSMatching = () => {
+    setAtsMode(!atsMode)
+    if (!atsMode) {
+      setAtsLoading(true)
+      // Simulate ATS processing
+      setTimeout(() => {
+        setAtsLoading(false)
+      }, 2000)
+    }
+  }
+
   // Enhanced candidate data matching the screenshot
   const candidates = [
     {
@@ -75,6 +89,7 @@ export default function IndividualRequirementPage() {
       additionalInfo: "Frontend Web Development | Interaction | ...more",
       phoneVerified: true,
       emailVerified: true,
+      atsScore: 95,
     },
     {
       id: 2,
@@ -104,6 +119,7 @@ export default function IndividualRequirementPage() {
       previousRole: "Stack Edu Tech",
       phoneVerified: true,
       emailVerified: true,
+      atsScore: 88,
     },
     {
       id: 3,
@@ -133,6 +149,7 @@ export default function IndividualRequirementPage() {
       additionalInfo: "Web Development | Open Source | Full Stack | ...more",
       phoneVerified: true,
       emailVerified: false,
+      atsScore: 82,
     },
   ]
 
@@ -199,6 +216,18 @@ export default function IndividualRequirementPage() {
                 className="pl-10"
               />
           </div>
+
+            {/* ATS Score Matching Button */}
+            <Button
+              variant="outline"
+              onClick={() => handleATSMatching()}
+              className="flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100"
+            >
+              <div className="w-4 h-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded flex items-center justify-center">
+                <span className="text-white text-xs font-bold">AI</span>
+              </div>
+              <span>ATS Matching</span>
+            </Button>
 
             {/* Filter Toggle */}
             <Button
@@ -376,16 +405,51 @@ export default function IndividualRequirementPage() {
                   Clear All Filters
                 </Button>
                 <div className="text-sm text-slate-600">
-                  {candidates.length} candidates found
+                  {atsMode ? 
+                    `${candidates.length} candidates sorted by ATS score` : 
+                    `${candidates.length} candidates found`
+                  }
                               </div>
                               </div>
             </Card>
                             )}
                           </div>
 
+        {/* ATS Loading State */}
+        {atsLoading && (
+          <Card className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-slate-600">Analyzing resumes with AI...</p>
+            <p className="text-sm text-slate-500 mt-2">This may take a few moments</p>
+          </Card>
+        )}
+
+        {/* ATS Mode Header */}
+        {atsMode && !atsLoading && (
+          <Card className="p-4 mb-4 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">AI</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">ATS Score Matching</h3>
+                  <p className="text-sm text-slate-600">Candidates sorted by AI-powered match score</p>
+                </div>
+              </div>
+              <Button variant="outline" onClick={() => setAtsMode(false)}>
+                Exit ATS Mode
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* Candidates List */}
         <div className="space-y-4">
-          {candidates.map((candidate) => (
+          {(atsMode ? 
+            [...candidates].sort((a, b) => (b.atsScore || 0) - (a.atsScore || 0)) : 
+            candidates
+          ).map((candidate) => (
             <Card key={candidate.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start space-x-4">
                 <Avatar className="w-16 h-16">
@@ -400,6 +464,11 @@ export default function IndividualRequirementPage() {
                       <p className="text-slate-600 text-sm mb-2">{candidate.designation}</p>
                                 </div>
                     <div className="flex items-center space-x-2">
+                      {atsMode && candidate.atsScore && (
+                        <Badge className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border-purple-200">
+                          {candidate.atsScore}% Match
+                        </Badge>
+                      )}
                       {candidate.phoneVerified && (
                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                           Phone ✓
@@ -448,6 +517,17 @@ export default function IndividualRequirementPage() {
                     <div className="flex items-center space-x-4 text-xs text-slate-500">
                       <span>Modified: {candidate.lastModified}</span>
                       <span>Active: {candidate.activeStatus}</span>
+                      {atsMode && candidate.atsScore && (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                              style={{ width: `${candidate.atsScore}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-purple-600 font-medium">{candidate.atsScore}%</span>
+                        </div>
+                      )}
                     </div>
                     <Link href={`/employer-dashboard/requirements/${params.id}/candidates/${candidate.id}`}>
                   <Button variant="outline" size="sm">
@@ -466,3 +546,4 @@ export default function IndividualRequirementPage() {
     </div>
   )
 }
+

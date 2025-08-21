@@ -87,24 +87,38 @@ export default function EmployerDashboard() {
       color: "from-blue-500 to-blue-600",
     },
     {
-      title: "Search Database",
-      description: "Find candidates in our database",
+      title: "Job Templates",
+      description: "Use reusable job templates",
+      icon: FileText,
+      href: "/employer-dashboard/job-templates",
+      color: "from-indigo-500 to-indigo-600",
+    },
+    {
+      title: "Bulk Import",
+      description: "Import multiple jobs at once",
       icon: Database,
-      href: "/employer-dashboard/create-requirement",
+      href: "/employer-dashboard/bulk-import",
       color: "from-green-500 to-green-600",
     },
     {
-      title: "Manage Jobs",
-      description: "View and manage your job postings",
-      icon: BarChart3,
-      href: "/employer-dashboard/manage-jobs",
+      title: "Featured Jobs",
+      description: "Promote your job listings",
+      icon: TrendingUp,
+      href: "/employer-dashboard/featured-jobs",
       color: "from-purple-500 to-purple-600",
     },
     {
-      title: "View Requirements",
-      description: "Manage your hiring requirements",
-      icon: FileText,
-      href: "/employer-dashboard/requirements",
+      title: "Search Database",
+      description: "Find candidates in our database",
+      icon: Users,
+      href: "/employer-dashboard/create-requirement",
+      color: "from-teal-500 to-teal-600",
+    },
+    {
+      title: "Analytics",
+      description: "View search performance metrics",
+      icon: BarChart3,
+      href: "/employer-dashboard/analytics",
       color: "from-orange-500 to-orange-600",
     },
   ]
@@ -217,7 +231,7 @@ export default function EmployerDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {quickActions.map((action, index) => (
                     <motion.div
                       key={index}

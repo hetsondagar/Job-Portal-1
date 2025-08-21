@@ -174,6 +174,8 @@ export default function RequirementsPage() {
     })
   }
 
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <EmployerNavbar />
@@ -242,6 +244,8 @@ export default function RequirementsPage() {
                     )}
                   </div>
                 </div>
+
+
 
                 {/* Requirement Status */}
                 <div className="space-y-4">
@@ -360,6 +364,7 @@ export default function RequirementsPage() {
                                 <Copy className="w-4 h-4 mr-2" />
                                 Duplicate
                               </DropdownMenuItem>
+
                               <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   className="text-red-600"
@@ -421,6 +426,8 @@ export default function RequirementsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+
 
       <EmployerFooter />
     </div>

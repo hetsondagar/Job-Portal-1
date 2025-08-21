@@ -15,6 +15,7 @@ export interface User {
   userType: 'jobseeker' | 'employer' | 'admin';
   isEmailVerified: boolean;
   accountStatus: string;
+  avatar?: string;
   phone?: string;
   currentLocation?: string;
   headline?: string;
@@ -96,6 +97,87 @@ export interface ProfileUpdateData {
   certifications?: any[];
   socialLinks?: any;
   preferences?: any;
+}
+
+export interface Job {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  company?: Company;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  userId: string;
+  status: 'applied' | 'reviewing' | 'shortlisted' | 'interviewed' | 'offered' | 'hired' | 'rejected' | 'withdrawn';
+  coverLetter?: string;
+  expectedSalary?: number;
+  appliedAt: string;
+  job?: Job;
+}
+
+export interface JobAlert {
+  id: string;
+  userId: string;
+  name: string;
+  keywords?: string[];
+  locations?: string[];
+  categories?: string[];
+  experienceLevel?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  isActive: boolean;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  smsEnabled: boolean;
+}
+
+export interface JobBookmark {
+  id: string;
+  userId: string;
+  jobId: string;
+  folder?: string;
+  notes?: string;
+  priority: 'low' | 'medium' | 'high';
+  isApplied: boolean;
+  job?: Job;
+}
+
+export interface DashboardStats {
+  applicationCount: number;
+  profileViews: number;
+  recentApplications: JobApplication[];
+}
+
+export interface SearchHistory {
+  id: string;
+  searchQuery: any;
+  filters: any;
+  createdAt: string;
+}
+
+export interface Resume {
+  id: string;
+  userId: string;
+  title: string;
+  summary?: string;
+  objective?: string;
+  skills: string[];
+  languages: any[];
+  certifications: any[];
+  projects: any[];
+  achievements: any[];
+  isDefault: boolean;
+  isPublic: boolean;
+  views: number;
+  downloads: number;
+  lastUpdated: string;
+  metadata?: any;
 }
 
 class ApiService {
@@ -351,7 +433,7 @@ class ApiService {
     return result;
   }
 
-  async handleOAuthCallback(token: string): Promise<ApiResponse<AuthResponse>> {
+  async handleOAuthCallback(token: string): Promise<ApiResponse<{ user: User }>> {
     console.log('🔍 Handling OAuth callback with token:', token ? 'present' : 'missing');
     
     // Store the token temporarily
@@ -381,14 +463,6 @@ class ApiService {
     return response;
   }
 
-  async getCompanyInfo(companyId: string): Promise<ApiResponse<Company>> {
-    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<Company>(response);
-  }
-
   async setupOAuthPassword(password: string): Promise<ApiResponse> {
     const response = await fetch(`${API_BASE_URL}/oauth/setup-password`, {
       method: 'POST',
@@ -397,6 +471,195 @@ class ApiService {
     });
 
     return this.handleResponse(response);
+  }
+
+  // Job Applications endpoints
+  async getApplications(): Promise<ApiResponse<JobApplication[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/applications`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobApplication[]>(response);
+  }
+
+  // Job Alerts endpoints
+  async getJobAlerts(): Promise<ApiResponse<JobAlert[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-alerts`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobAlert[]>(response);
+  }
+
+  async createJobAlert(data: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-alerts`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<JobAlert>(response);
+  }
+
+  async updateJobAlert(id: string, data: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-alerts/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<JobAlert>(response);
+  }
+
+  async deleteJobAlert(id: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/job-alerts/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  // Job Bookmarks endpoints
+  async getBookmarks(): Promise<ApiResponse<JobBookmark[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/bookmarks`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobBookmark[]>(response);
+  }
+
+  async createBookmark(data: Partial<JobBookmark>): Promise<ApiResponse<JobBookmark>> {
+    const response = await fetch(`${API_BASE_URL}/user/bookmarks`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<JobBookmark>(response);
+  }
+
+  async updateBookmark(id: string, data: Partial<JobBookmark>): Promise<ApiResponse<JobBookmark>> {
+    const response = await fetch(`${API_BASE_URL}/user/bookmarks/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<JobBookmark>(response);
+  }
+
+  async deleteBookmark(id: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/bookmarks/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  // Search History endpoints
+  async getSearchHistory(): Promise<ApiResponse<SearchHistory[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/search-history`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<SearchHistory[]>(response);
+  }
+
+  // Dashboard Stats endpoint
+  async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
+    const response = await fetch(`${API_BASE_URL}/user/dashboard-stats`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<DashboardStats>(response);
+  }
+
+  // Resume endpoints
+  async getResumes(): Promise<ApiResponse<Resume[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<Resume[]>(response);
+  }
+
+  async createResume(data: Partial<Resume>): Promise<ApiResponse<Resume>> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<Resume>(response);
+  }
+
+  async updateResume(id: string, data: Partial<Resume>): Promise<ApiResponse<Resume>> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<Resume>(response);
+  }
+
+  async deleteResume(id: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async uploadResumeFile(file: File): Promise<ApiResponse<{ resumeId: string; filename: string }>> {
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/resumes/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    return this.handleResponse<{ resumeId: string; filename: string }>(response);
+  }
+
+  async setDefaultResume(id: string): Promise<ApiResponse<Resume>> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes/${id}/set-default`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<Resume>(response);
+  }
+
+  // Avatar upload endpoint
+  async uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/avatar`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    return this.handleResponse<{ avatarUrl: string }>(response);
   }
 }
 

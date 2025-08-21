@@ -16,6 +16,7 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Crown,
   CheckCircle,
   TrendingUp,
@@ -38,6 +39,18 @@ export default function HomePage() {
   const [location, setLocation] = useState("")
   const [currentTextIndex, setCurrentTextIndex] = useState(0)
   const [isStickyVisible, setIsStickyVisible] = useState(false)
+  const [showAllJobRoles, setShowAllJobRoles] = useState(false)
+  
+  // Animation states for sections
+  const [animatedSections, setAnimatedSections] = useState({
+    hero: false,
+    stats: false,
+    companies: false,
+    featuredJobs: false,
+    testimonials: false,
+    features: false,
+    cta: false
+  })
 
   // Search functionality
   const handleSearch = () => {
@@ -80,14 +93,41 @@ export default function HomePage() {
     return () => clearInterval(timer)
   }, [])
 
-  // Scroll event listener for sticky search bar
+  // Enhanced scroll event listener for animations
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY
+      const windowHeight = window.innerHeight
+      
+      // Sticky search bar
       setIsStickyVisible(scrollY > 300)
+      
+      // Section animations
+      const sections = {
+        hero: 0,
+        stats: windowHeight * 0.3,
+        companies: windowHeight * 1.2,
+        featuredJobs: windowHeight * 2.0,
+        testimonials: windowHeight * 2.8,
+        features: windowHeight * 3.6,
+        cta: windowHeight * 4.4
+      }
+      
+      setAnimatedSections(prev => ({
+        hero: true, // Always animated
+        stats: scrollY > sections.stats,
+        companies: scrollY > sections.companies,
+        featuredJobs: scrollY > sections.featuredJobs,
+        testimonials: scrollY > sections.testimonials,
+        features: scrollY > sections.features,
+        cta: scrollY > sections.cta
+      }))
     }
 
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    // Trigger initial check
+    handleScroll()
+    
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -753,7 +793,7 @@ export default function HomePage() {
             transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
             className="mb-12"
           >
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20 dark:border-slate-700/20 max-w-4xl mx-auto transform hover:scale-[1.02] transition-all duration-500">
+                         <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20 dark:border-slate-700/20 max-w-4xl mx-auto transform hover:scale-[1.02] transition-all duration-300">
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="relative flex-1 group">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
@@ -912,7 +952,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            animate={{ opacity: animatedSections.stats ? 1 : 0, y: animatedSections.stats ? 0 : 30 }}
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
@@ -949,7 +989,7 @@ export default function HomePage() {
                 <motion.div
                   key={company.id}
                   initial={{ opacity: 0, x: 50 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  animate={{ opacity: animatedSections.companies ? 1 : 0, x: animatedSections.companies ? 0 : 50 }}
                   transition={{ delay: index * 0.1, duration: 0.6 }}
                   className="flex-shrink-0 w-72 sm:w-80"
                 >
@@ -1033,38 +1073,30 @@ export default function HomePage() {
       {/* Featured Companies */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800">
         <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
+          <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Featured Companies</h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
               Discover opportunities with the most innovative and respected companies
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {featuredCompanies.map((company, index) => (
-              <motion.div
+              <div
                 key={company.id}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.6 }}
-                whileHover={{ y: -10, scale: 1.02 }}
+                className="group transform transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]"
               >
                 <Link href={`/companies/${company.id}`}>
-                  <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden h-full">
+                  <Card className="cursor-pointer border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden h-full">
                     <CardContent className="p-6 text-center relative h-full flex flex-col justify-between">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
 
                       <div>
                         <Avatar className="w-16 h-16 mx-auto mb-4 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg">
                           <AvatarImage src={company.logo} alt={company.name} />
                           <AvatarFallback className="text-lg font-bold">{company.name[0]}</AvatarFallback>
                         </Avatar>
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors">
+                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors duration-300">
                           {company.name}
                         </h3>
                         <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{company.industry}</p>
@@ -1093,12 +1125,12 @@ export default function HomePage() {
                           <span className="text-slate-600 dark:text-slate-400">{company.employees}</span>
                           <span className="font-semibold text-slate-900 dark:text-white">{company.openings} openings</span>
                           </div>
-                        <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${getSectorColor(company.sector)} transition-all duration-500 mx-auto rounded-full`} />
+                        <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${getSectorColor(company.sector)} transition-all duration-300 mx-auto rounded-full`} />
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
-              </motion.div>
+              </div>
             ))}
           </div>
 
@@ -1118,7 +1150,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            animate={{ opacity: animatedSections.features ? 1 : 0, y: animatedSections.features ? 0 : 30 }}
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
@@ -1129,33 +1161,33 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {trendingJobRoles.map((role, index) => (
+            {trendingJobRoles.slice(0, showAllJobRoles ? trendingJobRoles.length : 12).map((role, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                animate={{ opacity: animatedSections.features ? 1 : 0, y: animatedSections.features ? 0 : 30 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
-                whileHover={{ y: -10, scale: 1.02 }}
+                className="transform transition-all duration-200 ease-out hover:-translate-y-6 hover:scale-110 hover:shadow-2xl will-change-transform group"
               >
                 <Link href={`/jobs?category=${role.category}`}>
-                  <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden h-full">
+                  <Card className="group cursor-pointer border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-200 ease-out overflow-hidden h-full">
                     <CardContent className="p-6 text-center relative h-full flex flex-col justify-between">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${role.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${role.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
 
                       <div>
-                        <div className="text-4xl mb-4 group-hover:scale-125 transition-transform duration-500">
+                        <div className="text-4xl mb-4 group-hover:scale-125 group-hover:rotate-3 transition-all duration-200 ease-out">
                           {role.icon}
                         </div>
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors">
+                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-all duration-200 ease-out group-hover:scale-105">
                           {role.name}
                         </h3>
                       </div>
 
                       <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out transform translate-y-2 group-hover:translate-y-0">
                           {role.openings}
                         </p>
-                        <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${role.color} transition-all duration-500 mx-auto rounded-full`} />
+                        <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${role.color} transition-all duration-200 ease-out mx-auto rounded-full`} />
                       </div>
                     </CardContent>
                   </Card>
@@ -1163,6 +1195,27 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
+
+          {/* Show More/Less Button */}
+          {trendingJobRoles.length > 12 && (
+            <div className="text-center mt-8">
+              <Button
+                onClick={() => setShowAllJobRoles(!showAllJobRoles)}
+                variant="outline"
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-300 px-6 py-3 rounded-2xl"
+              >
+                <span className="mr-2">
+                  {showAllJobRoles ? "Show Less" : "Show More"}
+                </span>
+                <motion.div
+                  animate={{ rotate: showAllJobRoles ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </motion.div>
+              </Button>
+            </div>
+          )}
 
           <div className="text-center mt-12">
             <Link href="/jobs">
@@ -1180,7 +1233,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            animate={{ opacity: animatedSections.featuredJobs ? 1 : 0, y: animatedSections.featuredJobs ? 0 : 30 }}
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
@@ -1195,14 +1248,14 @@ export default function HomePage() {
               <motion.div
                 key={job.id}
                 initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                animate={{ opacity: animatedSections.featuredJobs ? 1 : 0, y: animatedSections.featuredJobs ? 0 : 30 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
-                whileHover={{ y: -10, scale: 1.02 }}
+                className="transform transition-all duration-200 ease-out hover:-translate-y-3 hover:scale-110 hover:shadow-2xl"
               >
                 <Link href={`/jobs/${job.id}`}>
-                  <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden h-full">
+                  <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden h-full">
                     <CardContent className="p-6 relative h-full flex flex-col justify-between">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(job.sector)} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(job.sector)} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
 
                       <div>
                         <div className="flex items-start justify-between mb-4">

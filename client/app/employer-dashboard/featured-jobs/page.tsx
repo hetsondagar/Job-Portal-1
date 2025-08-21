@@ -1,0 +1,441 @@
+"use client"
+
+import { useState } from "react"
+import { Plus, TrendingUp, Eye, MousePointer, Users, DollarSign, Calendar, Target, BarChart3, Settings } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerFooter } from "@/components/employer-footer"
+
+export default function FeaturedJobsPage() {
+  const [featuredJobs, setFeaturedJobs] = useState([
+    {
+      id: 1,
+      jobTitle: "Senior Software Engineer",
+      promotionType: "featured",
+      status: "active",
+      startDate: "2024-01-15",
+      endDate: "2024-02-15",
+      budget: 500,
+      spentAmount: 245.50,
+      impressions: 1250,
+      clicks: 89,
+      applications: 12,
+      ctr: 7.12,
+      conversionRate: 13.48,
+      priority: 1
+    },
+    {
+      id: 2,
+      jobTitle: "Product Manager",
+      promotionType: "premium",
+      status: "active",
+      startDate: "2024-01-10",
+      endDate: "2024-02-10",
+      budget: 800,
+      spentAmount: 567.25,
+      impressions: 2100,
+      clicks: 156,
+      applications: 23,
+      ctr: 7.43,
+      conversionRate: 14.74,
+      priority: 2
+    },
+    {
+      id: 3,
+      jobTitle: "Frontend Developer",
+      promotionType: "urgent",
+      status: "paused",
+      startDate: "2024-01-20",
+      endDate: "2024-02-20",
+      budget: 300,
+      spentAmount: 89.75,
+      impressions: 450,
+      clicks: 34,
+      applications: 5,
+      ctr: 7.56,
+      conversionRate: 14.71,
+      priority: 3
+    }
+  ])
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+
+  const getPromotionTypeColor = (type: string) => {
+    switch (type) {
+      case "featured":
+        return "bg-blue-100 text-blue-800"
+      case "premium":
+        return "bg-purple-100 text-purple-800"
+      case "urgent":
+        return "bg-red-100 text-red-800"
+      case "sponsored":
+        return "bg-green-100 text-green-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800"
+      case "paused":
+        return "bg-yellow-100 text-yellow-800"
+      case "expired":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getPromotionTypeIcon = (type: string) => {
+    switch (type) {
+      case "featured":
+        return <TrendingUp className="w-4 h-4" />
+      case "premium":
+        return <DollarSign className="w-4 h-4" />
+      case "urgent":
+        return <Target className="w-4 h-4" />
+      case "sponsored":
+        return <BarChart3 className="w-4 h-4" />
+      default:
+        return <TrendingUp className="w-4 h-4" />
+    }
+  }
+
+  const totalBudget = featuredJobs.reduce((sum, job) => sum + job.budget, 0)
+  const totalSpent = featuredJobs.reduce((sum, job) => sum + job.spentAmount, 0)
+  const totalImpressions = featuredJobs.reduce((sum, job) => sum + job.impressions, 0)
+  const totalApplications = featuredJobs.reduce((sum, job) => sum + job.applications, 0)
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+      <EmployerNavbar />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Featured Jobs</h1>
+            <p className="text-slate-600">Manage paid promotions and featured job listings</p>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Promotion
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create Job Promotion</DialogTitle>
+                <DialogDescription>
+                  Promote your job posting to reach more candidates
+                </DialogDescription>
+              </DialogHeader>
+              <CreatePromotionForm />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Total Budget</p>
+                  <p className="text-2xl font-bold text-slate-900">₹{totalBudget.toLocaleString()}</p>
+                </div>
+                <DollarSign className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Spent</p>
+                  <p className="text-2xl font-bold text-blue-600">₹{totalSpent.toLocaleString()}</p>
+                </div>
+                <BarChart3 className="w-8 h-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Impressions</p>
+                  <p className="text-2xl font-bold text-purple-600">{totalImpressions.toLocaleString()}</p>
+                </div>
+                <Eye className="w-8 h-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Applications</p>
+                  <p className="text-2xl font-bold text-green-600">{totalApplications}</p>
+                </div>
+                <Users className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Featured Jobs List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Promotions</CardTitle>
+            <CardDescription>Manage your featured job promotions and track performance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {featuredJobs.map((job) => (
+                <div key={job.id} className="border border-slate-200 rounded-lg p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      {getPromotionTypeIcon(job.promotionType)}
+                      <div>
+                        <h3 className="font-semibold text-slate-900 text-lg">{job.jobTitle}</h3>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge className={getPromotionTypeColor(job.promotionType)}>
+                            {job.promotionType}
+                          </Badge>
+                          <Badge className={getStatusColor(job.status)}>
+                            {job.status}
+                          </Badge>
+                          <Badge variant="outline">
+                            Priority {job.priority}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button size="sm" variant="outline">
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        Pause
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
+                    <div>
+                      <p className="text-sm text-slate-600 mb-1">Budget & Spending</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-semibold">₹{job.spentAmount.toFixed(2)}</span>
+                        <span className="text-sm text-slate-500">/ ₹{job.budget}</span>
+                      </div>
+                      <Progress value={(job.spentAmount / job.budget) * 100} className="mt-2" />
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-slate-600 mb-1">Impressions</p>
+                      <p className="text-lg font-semibold">{job.impressions.toLocaleString()}</p>
+                      <p className="text-xs text-slate-500">Views</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-slate-600 mb-1">Clicks</p>
+                      <p className="text-lg font-semibold">{job.clicks}</p>
+                      <p className="text-xs text-slate-500">{job.ctr}% CTR</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-slate-600 mb-1">Applications</p>
+                      <p className="text-lg font-semibold">{job.applications}</p>
+                      <p className="text-xs text-slate-500">{job.conversionRate}% conversion</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm text-slate-600">
+                    <div className="flex items-center space-x-4">
+                      <span>Duration: {job.startDate} - {job.endDate}</span>
+                      <span>•</span>
+                      <span>₹{(job.spentAmount / job.impressions * 1000).toFixed(2)} per 1K impressions</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button size="sm" variant="outline">
+                        View Details
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <EmployerFooter />
+    </div>
+  )
+}
+
+function CreatePromotionForm() {
+  const [promotionType, setPromotionType] = useState("featured")
+  const [selectedJob, setSelectedJob] = useState("")
+  const [budget, setBudget] = useState("")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+
+  const promotionTypes = [
+    {
+      value: "featured",
+      label: "Featured",
+      description: "Highlight your job in search results",
+      price: "₹500/week"
+    },
+    {
+      value: "premium",
+      label: "Premium",
+      description: "Top placement with enhanced visibility",
+      price: "₹800/week"
+    },
+    {
+      value: "urgent",
+      label: "Urgent",
+      description: "Mark as urgent to attract quick applications",
+      price: "₹300/week"
+    },
+    {
+      value: "sponsored",
+      label: "Sponsored",
+      description: "Custom promotion with targeted audience",
+      price: "₹1000/week"
+    }
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <Label htmlFor="job">Select Job</Label>
+        <Select value={selectedJob} onValueChange={setSelectedJob}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choose a job to promote" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="job1">Senior Software Engineer</SelectItem>
+            <SelectItem value="job2">Product Manager</SelectItem>
+            <SelectItem value="job3">Frontend Developer</SelectItem>
+            <SelectItem value="job4">UX Designer</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Promotion Type</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+          {promotionTypes.map((type) => (
+            <div
+              key={type.value}
+              className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                promotionType === type.value
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
+              onClick={() => setPromotionType(type.value)}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium">{type.label}</span>
+                <span className="text-sm font-semibold text-blue-600">{type.price}</span>
+              </div>
+              <p className="text-sm text-slate-600">{type.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="budget">Budget (₹)</Label>
+          <Input
+            id="budget"
+            type="number"
+            placeholder="500"
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="priority">Priority Level</Label>
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">High Priority</SelectItem>
+              <SelectItem value="2">Medium Priority</SelectItem>
+              <SelectItem value="3">Low Priority</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="startDate">Start Date</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="endDate">End Date</Label>
+          <Input
+            id="endDate"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="targetAudience">Target Audience (Optional)</Label>
+        <Textarea
+          id="targetAudience"
+          placeholder="Describe your target audience..."
+          rows={3}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox id="autoRenew" />
+        <Label htmlFor="autoRenew">Auto-renew promotion</Label>
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <Button variant="outline">Cancel</Button>
+        <Button disabled={!selectedJob || !budget || !startDate || !endDate}>
+          Create Promotion
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+
