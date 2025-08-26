@@ -245,18 +245,17 @@ export default function RegisterPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-slate-700 dark:text-slate-300">
-                      Phone Number
+                      Phone Number (Optional)
                     </Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="Enter your phone number"
+                        placeholder="Enter your phone number (optional)"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
                         className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                        required
                       />
                     </div>
                   </div>
@@ -281,12 +280,12 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="experience" className="text-slate-700 dark:text-slate-300">
-                    Experience Level
-                  </Label>
+                                      <Label htmlFor="experience" className="text-slate-700 dark:text-slate-300">
+                      Experience Level (Optional)
+                    </Label>
                   <Select value={formData.experience} onValueChange={(value) => handleInputChange("experience", value)}>
                     <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
-                      <SelectValue placeholder="Select your experience level" />
+                      <SelectValue placeholder="Select your experience level (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fresher">Fresher (0-1 years)</SelectItem>

@@ -29,6 +29,7 @@ export default function OAuthCallbackPage() {
         const token = searchParams.get('token')
         const provider = searchParams.get('provider')
         const needsPasswordSetup = searchParams.get('needsPasswordSetup') === 'true'
+        const userType = searchParams.get('userType') || 'jobseeker'
         const error = searchParams.get('error')
 
         if (error) {
@@ -61,6 +62,22 @@ export default function OAuthCallbackPage() {
           // Store user data
           localStorage.setItem('user', JSON.stringify(response.data.user))
           
+          // Sync Google profile data if it's a Google OAuth user
+          if (provider === 'google' && response.data.user.oauth_provider === 'google') {
+            try {
+              console.log('🔄 Syncing Google profile data...')
+              const syncResponse = await apiService.syncGoogleProfile()
+              if (syncResponse.success && syncResponse.data?.user) {
+                // Update stored user data with synced profile
+                localStorage.setItem('user', JSON.stringify(syncResponse.data.user))
+                console.log('✅ Google profile data synced successfully')
+              }
+            } catch (error) {
+              console.error('❌ Failed to sync Google profile:', error)
+              // Continue with the flow even if sync fails
+            }
+          }
+          
           if (needsPasswordSetup) {
             // User needs to set up a password
             setStatus('password-setup')
@@ -73,8 +90,10 @@ export default function OAuthCallbackPage() {
             toast.success(`Welcome! You've been signed in with ${provider}`)
             
             // Redirect to appropriate dashboard based on user type
-            const userType = response.data.user.userType
-            const dashboardPath = userType === 'employer' ? '/employer-dashboard' : '/dashboard'
+            const finalUserType = response.data.user.userType || userType
+            const dashboardPath = finalUserType === 'employer' ? '/employer-dashboard' : '/dashboard'
+            
+            console.log('🔄 Redirecting to dashboard:', dashboardPath, 'for user type:', finalUserType)
             
             setTimeout(() => {
               router.push(dashboardPath)

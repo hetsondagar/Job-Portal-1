@@ -206,110 +206,89 @@ const Job = sequelize.define('Job', {
   // Advanced Job Posting Features
   isPrivate: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    comment: 'Whether this is a private/targeted job posting'
+    defaultValue: false
   },
   visibilityType: {
     type: DataTypes.ENUM('public', 'private', 'referral-only', 'invite-only'),
-    defaultValue: 'public',
-    comment: 'Visibility type for the job posting'
+    defaultValue: 'public'
   },
   allowedViewers: {
     type: DataTypes.JSONB,
-    defaultValue: [],
-    comment: 'Array of user IDs or email domains allowed to view this job'
+    defaultValue: []
   },
   referralCode: {
     type: DataTypes.STRING(50),
-    allowNull: true,
-    comment: 'Referral code for private job access'
+    allowNull: true
   },
   scheduledPublishAt: {
     type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'When to automatically publish this job'
+    allowNull: true
   },
   scheduledExpiryAt: {
     type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'When to automatically expire this job'
+    allowNull: true
   },
   autoRenew: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    comment: 'Whether to automatically renew this job posting'
+    defaultValue: false
   },
   renewalPeriod: {
     type: DataTypes.INTEGER,
-    allowNull: true,
-    comment: 'Renewal period in days'
+    allowNull: true
   },
   maxRenewals: {
     type: DataTypes.INTEGER,
-    allowNull: true,
-    comment: 'Maximum number of times this job can be renewed'
+    allowNull: true
   },
   currentRenewalCount: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    comment: 'Current number of renewals'
+    defaultValue: 0
   },
   templateId: {
     type: DataTypes.UUID,
-    allowNull: true,
-    comment: 'Reference to job template used'
+    allowNull: true
   },
   bulkImportId: {
     type: DataTypes.UUID,
-    allowNull: true,
-    comment: 'Reference to bulk import job if created via bulk import'
+    allowNull: true
   },
   // Enhanced Analytics
   searchImpressions: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    comment: 'Number of times job appeared in search results'
+    defaultValue: 0
   },
   searchClicks: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    comment: 'Number of clicks from search results'
+    defaultValue: 0
   },
   applicationRate: {
     type: DataTypes.DECIMAL(5, 4),
-    defaultValue: 0,
-    comment: 'Application rate (applications/views)'
+    defaultValue: 0
   },
   qualityScore: {
     type: DataTypes.DECIMAL(3, 2),
-    defaultValue: 0,
-    comment: 'AI-powered quality score for the job posting'
+    defaultValue: 0
   },
   seoScore: {
     type: DataTypes.DECIMAL(3, 2),
-    defaultValue: 0,
-    comment: 'SEO optimization score'
+    defaultValue: 0
   },
   // Advanced Features
   isATSEnabled: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    comment: 'Whether ATS scoring is enabled for this job'
+    defaultValue: false
   },
   atsKeywords: {
     type: DataTypes.JSONB,
-    defaultValue: [],
-    comment: 'Keywords for ATS optimization'
+    defaultValue: []
   },
   targetAudience: {
     type: DataTypes.JSONB,
-    defaultValue: {},
-    comment: 'Target audience criteria for this job'
+    defaultValue: {}
   },
   promotionSettings: {
     type: DataTypes.JSONB,
-    defaultValue: {},
-    comment: 'Promotion and advertising settings'
+    defaultValue: {}
   }
 }, {
   tableName: 'jobs',
