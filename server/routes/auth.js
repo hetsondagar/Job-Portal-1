@@ -220,6 +220,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
+      console.log('❌ User already exists:', email);
       return res.status(409).json({
         success: false,
         message: 'User with this email already exists'
@@ -235,16 +236,31 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
-      // Generate slug from company name
-      const generateSlug = (name) => {
-        return name
+      // Generate unique slug from company name
+      const generateSlug = async (name) => {
+        let baseSlug = name
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, '')
           .substring(0, 50);
+        
+        let slug = baseSlug;
+        let counter = 1;
+        
+        // Check if slug exists and generate unique one
+        while (true) {
+          const existingCompany = await Company.findOne({ where: { slug } });
+          if (!existingCompany) {
+            break;
+          }
+          slug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+        
+        return slug;
       };
 
-      const companySlug = generateSlug(companyName);
+      const companySlug = await generateSlug(companyName);
       
       // Create company record
       console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug });
@@ -260,7 +276,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         contactPerson: fullName,
         contactEmail: email,
         contactPhone: phone,
-        companyStatus: 'active',
+        companyStatus: 'pending_approval',
         isActive: true
       }, { transaction });
 
@@ -302,6 +318,8 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       // Generate JWT token
       const token = generateToken(user);
 
+      console.log('✅ Employer signup completed successfully for:', email);
+
       // Return success response with company information
       res.status(201).json({
         success: true,
@@ -333,11 +351,29 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
     } catch (error) {
       // Rollback transaction on error
       await transaction.rollback();
+      console.error('❌ Transaction error during employer signup:', error);
       throw error;
     }
 
   } catch (error) {
-    console.error('Employer signup error:', error);
+    console.error('❌ Employer signup error:', error);
+    
+    // Handle specific database errors
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0]?.path;
+      if (field === 'email') {
+        return res.status(409).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      } else if (field === 'slug') {
+        return res.status(409).json({
+          success: false,
+          message: 'Company with this name already exists. Please choose a different company name.'
+        });
+      }
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -349,9 +385,12 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
 // Login endpoint
 router.post('/login', validateLogin, async (req, res) => {
   try {
+    console.log('🔍 Login request received:', req.body);
+    
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
@@ -364,14 +403,18 @@ router.post('/login', validateLogin, async (req, res) => {
     // Find user by email
     const user = await User.findOne({ where: { email } });
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
 
+    console.log('✅ User found:', { id: user.id, email: user.email, userType: user.user_type });
+
     // Check if account is active
     if (user.account_status !== 'active') {
+      console.log('❌ Account not active:', user.account_status);
       return res.status(401).json({
         success: false,
         message: 'Account is not active. Please contact support.'
@@ -381,11 +424,14 @@ router.post('/login', validateLogin, async (req, res) => {
     // Verify password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      console.log('❌ Invalid password for user:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
+
+    console.log('✅ Password verified successfully');
 
     // Update last login
     await user.update({ last_login_at: new Date() });
@@ -425,6 +471,8 @@ router.post('/login', validateLogin, async (req, res) => {
       }
     }
 
+    console.log('✅ Login successful for user:', user.email);
+
     // Return success response
     res.status(200).json({
       success: true,
@@ -433,7 +481,7 @@ router.post('/login', validateLogin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

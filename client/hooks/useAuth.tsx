@@ -8,9 +8,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  signup: (data: SignupData) => Promise<void>;
-  employerSignup: (data: EmployerSignupData) => Promise<void>;
-  login: (data: LoginData) => Promise<void>;
+  signup: (data: SignupData) => Promise<AuthResponse | undefined>;
+  employerSignup: (data: EmployerSignupData) => Promise<AuthResponse | undefined>;
+  login: (data: LoginData) => Promise<AuthResponse | undefined>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -60,13 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.success && response.data?.user) {
         setUser(response.data.user);
-        // After successful signup, redirect to login page
-        router.push('/login');
+        // Return the response data so the calling component can handle redirection
+        return response.data;
       } else {
         setError(response.message || 'Signup failed');
+        throw new Error(response.message || 'Signup failed');
       }
     } catch (error: any) {
       setError(error.message || 'Signup failed');
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -81,13 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.success && response.data?.user) {
         setUser(response.data.user);
-        // After successful employer signup, redirect to employer dashboard
-        router.push('/employer-dashboard');
+        // Return the response data so the calling component can handle redirection
+        return response.data;
       } else {
         setError(response.message || 'Employer signup failed');
+        throw new Error(response.message || 'Employer signup failed');
       }
     } catch (error: any) {
       setError(error.message || 'Employer signup failed');
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -102,14 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.success && response.data?.user) {
         setUser(response.data.user);
-        // After successful login, redirect to appropriate dashboard based on user type
-        if (response.data.user.userType === 'employer') {
-          router.push('/employer-dashboard');
-        } else {
-          router.push('/dashboard');
-        }
+        // Return the response data so the calling component can handle redirection
+        return response.data;
       } else {
         setError(response.message || 'Login failed');
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error: any) {
       setError(error.message || 'Login failed');

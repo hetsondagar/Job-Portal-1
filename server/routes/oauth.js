@@ -37,7 +37,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:8000/api/oauth/google/callback",
-    scope: ['profile', 'email']
+    scope: ['profile', 'email', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       console.log('🔍 Google OAuth Strategy - Profile:', {
@@ -62,16 +62,23 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
         if (existingUser) {
           console.log('📝 Linking OAuth account to existing user:', existingUser.id);
-          // Link OAuth account to existing user
-          await existingUser.update({
-            oauth_provider: 'google',
-            oauth_id: profile.id,
-            oauth_access_token: accessToken,
-            oauth_refresh_token: refreshToken,
-            oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
-            is_email_verified: true,
-            last_login_at: new Date()
-          });
+                  // Link OAuth account to existing user and sync profile data
+        await existingUser.update({
+          oauth_provider: 'google',
+          oauth_id: profile.id,
+          oauth_access_token: accessToken,
+          oauth_refresh_token: refreshToken,
+          oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
+          is_email_verified: true,
+          last_login_at: new Date(),
+          // Sync Google profile data if not already set
+          first_name: existingUser.first_name || profile.name.givenName || profile.displayName.split(' ')[0],
+          last_name: existingUser.last_name || profile.name.familyName || profile.displayName.split(' ').slice(1).join(' ') || '',
+          avatar: existingUser.avatar || profile.photos[0]?.value,
+          headline: existingUser.headline || profile.displayName || `${profile.name.givenName} ${profile.name.familyName}`,
+          current_location: existingUser.current_location || profile._json?.locale || 'Not specified',
+          last_profile_update: new Date()
+        });
           user = existingUser;
         } else {
           console.log('📝 Creating new OAuth user');
@@ -88,17 +95,30 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             avatar: profile.photos[0]?.value,
             is_email_verified: true,
             account_status: 'active',
-            user_type: 'jobseeker' // Default, will be updated in callback if needed
+            user_type: 'jobseeker', // Default, will be updated in callback if needed
+            // Sync additional Google profile data
+            headline: profile.displayName || `${profile.name.givenName} ${profile.name.familyName}`,
+            summary: `Profile synced from Google account`,
+            current_location: profile._json?.locale || 'Not specified',
+            profile_completion: 60, // Basic profile completion
+            last_profile_update: new Date()
           });
         }
       } else {
         console.log('📝 Updating existing OAuth user tokens:', user.id);
-        // Update existing OAuth user's tokens
+        // Update existing OAuth user's tokens and sync latest profile data
         await user.update({
           oauth_access_token: accessToken,
           oauth_refresh_token: refreshToken,
           oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
-          last_login_at: new Date()
+          last_login_at: new Date(),
+          // Sync latest Google profile data
+          first_name: profile.name.givenName || user.first_name,
+          last_name: profile.name.familyName || user.last_name,
+          avatar: profile.photos[0]?.value || user.avatar,
+          headline: profile.displayName || user.headline,
+          current_location: profile._json?.locale || user.current_location,
+          last_profile_update: new Date()
         });
       }
 
@@ -309,9 +329,9 @@ router.get('/google/callback', (req, res) => {
         // Determine redirect URL based on user type
         let redirectUrl;
         if (user.user_type === 'employer') {
-          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}`;
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}&userType=employer`;
         } else {
-          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}`;
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker`;
         }
         
         console.log('✅ Google OAuth Callback - Redirecting to:', redirectUrl);
@@ -434,9 +454,9 @@ router.get('/facebook/callback', (req, res) => {
         // Determine redirect URL based on user type
         let redirectUrl;
         if (user.user_type === 'employer') {
-          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}`;
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}&userType=employer`;
         } else {
-          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}`;
+          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker`;
         }
         
         console.log('✅ Facebook OAuth Callback - Redirecting to:', redirectUrl);
@@ -528,5 +548,92 @@ router.get('/urls', (req, res) => {
     data: urls
   });
 });
+
+// Sync Google profile data endpoint
+router.post('/sync-google-profile', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access token required'
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findByPk(decoded.id);
+
+    if (!user || user.oauth_provider !== 'google') {
+      return res.status(400).json({
+        success: false,
+        message: 'User not found or not a Google OAuth user'
+      });
+    }
+
+    // Fetch additional profile data from Google
+    const googleProfileData = await fetchGoogleProfileData(user.oauth_access_token);
+    
+    if (googleProfileData) {
+      // Update user with additional Google profile data
+      await user.update({
+        first_name: googleProfileData.given_name || user.first_name,
+        last_name: googleProfileData.family_name || user.last_name,
+        avatar: googleProfileData.picture || user.avatar,
+        headline: googleProfileData.name || user.headline,
+        current_location: googleProfileData.locale || user.current_location,
+        summary: googleProfileData.name ? `Profile synced from Google account - ${googleProfileData.name}` : user.summary,
+        last_profile_update: new Date(),
+        profile_completion: Math.min(user.profile_completion + 20, 100) // Increase profile completion
+      });
+
+      console.log('✅ Google profile data synced for user:', user.id);
+    }
+
+    // Get updated user data
+    const updatedUser = await User.findByPk(user.id, {
+      attributes: { exclude: ['password', 'oauth_access_token', 'oauth_refresh_token'] }
+    });
+
+    res.json({
+      success: true,
+      message: 'Google profile data synced successfully',
+      data: {
+        user: updatedUser
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error syncing Google profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sync Google profile data'
+    });
+  }
+});
+
+// Helper function to fetch Google profile data
+async function fetchGoogleProfileData(accessToken) {
+  try {
+    const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('📝 Fetched Google profile data:', {
+        name: data.name,
+        email: data.email,
+        picture: data.picture,
+        locale: data.locale
+      });
+      return data;
+    } else {
+      console.error('❌ Failed to fetch Google profile data:', response.status);
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Error fetching Google profile data:', error);
+    return null;
+  }
+}
 
 module.exports = router;
