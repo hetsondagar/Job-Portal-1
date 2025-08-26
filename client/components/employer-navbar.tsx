@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/hooks/useAuth"
+import { apiService } from "@/lib/api"
 
 export function EmployerNavbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -16,28 +18,56 @@ export function EmployerNavbar() {
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { user, logout } = useAuth()
+  const [company, setCompany] = useState<any>(null)
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Get company data if user is an employer
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      if (user?.userType === 'employer' && user?.companyId) {
+        try {
+          const response = await apiService.getCompanyInfo(user.companyId)
+          if (response.success && response.data) {
+            setCompany(response.data)
+          }
+        } catch (error) {
+          console.error('Failed to fetch company data:', error)
+        }
+      }
+    }
+
+    fetchCompanyData()
+  }, [user])
+
   if (!mounted) {
     return null
   }
 
-  // Mock user data - in real app, this would come from context/API
+  // Use real user data or fallback to mock data
   const userData = {
-    firstName: "Keshav",
-    lastName: "Encon",
-    email: "keshav.encon@techcorp.com",
-    avatar: "/placeholder-user.jpg",
-    company: "TechCorp Solutions",
-    designation: "Senior HR Manager"
+    firstName: user?.firstName || "Employer",
+    lastName: user?.lastName || "User",
+    email: user?.email || "employer@company.com",
+    avatar: user?.avatar || "/placeholder-user.jpg",
+    company: company?.name || "Your Company",
+    designation: "HR Manager"
   }
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   const jobsMenuItems = [
@@ -255,7 +285,7 @@ export function EmployerNavbar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600">
+                <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -349,7 +379,7 @@ export function EmployerNavbar() {
                     <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                     <span className="text-slate-700 dark:text-slate-200">Notifications</span>
                   </Link>
-                  <button className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors w-full text-left">
+                  <button className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors w-full text-left" onClick={handleLogout}>
                     <LogOut className="w-5 h-5 text-red-600" />
                     <span className="text-red-600">Log out</span>
                   </button>

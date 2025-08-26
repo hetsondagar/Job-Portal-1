@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, Save, Eye, Send } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Save, Eye, Send, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,12 +11,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { useAuth } from "@/hooks/useAuth"
+import { apiService } from "@/lib/api"
+import { toast } from "sonner"
 
 export default function PostJobPage() {
+  const router = useRouter()
+  const { user, loading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
+  const [publishing, setPublishing] = useState(false)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     department: "",
@@ -42,11 +52,89 @@ export default function PostJobPage() {
     }
   }
 
+  // Remove the automatic redirect - let users fill out the form
+
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
   }
+
+  const handlePublishJob = async () => {
+    // Check authentication when trying to publish
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+    
+    if (user.userType !== 'employer') {
+      toast.error('Only employers can post jobs')
+      setShowAuthDialog(true)
+      return
+    }
+
+    // Validate required fields
+    if (!formData.title || !formData.description || !formData.requirements || !formData.location) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    try {
+      setPublishing(true)
+      const jobData = {
+        title: formData.title,
+        description: formData.description,
+        requirements: formData.requirements,
+        location: formData.location,
+        type: formData.type || 'full-time',
+        experience: formData.experience || 'fresher',
+        salary: formData.salary,
+        benefits: formData.benefits,
+        skills: formData.skills,
+        department: formData.department
+      }
+
+      const response = await apiService.postJob(jobData)
+      
+      if (response.success) {
+        toast.success('Job posted successfully!')
+        // Reset form
+        setFormData({
+          title: "",
+          department: "",
+          location: "",
+          type: "",
+          experience: "",
+          salary: "",
+          description: "",
+          requirements: "",
+          benefits: "",
+          skills: [],
+        })
+        setCurrentStep(1)
+        // Optionally redirect to jobs list
+        // router.push('/employer-dashboard/my-jobs')
+      } else {
+        toast.error(response.message || 'Failed to post job')
+      }
+    } catch (error: any) {
+      console.error('Job posting error:', error)
+      toast.error(error.message || 'Failed to post job')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  const handleAuthDialogAction = (action: 'login' | 'register') => {
+    setShowAuthDialog(false)
+    if (action === 'login') {
+      router.push('/employer-login')
+    } else {
+      router.push('/employer-register')
+    }
+  }
+
+  
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -64,7 +152,7 @@ export default function PostJobPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Department*</label>
-                <Select>
+                <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
@@ -87,7 +175,7 @@ export default function PostJobPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Job Type*</label>
-                <Select>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select job type" />
                   </SelectTrigger>
@@ -101,7 +189,7 @@ export default function PostJobPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Experience Level*</label>
-                <Select>
+                <Select value={formData.experience} onValueChange={(value) => setFormData({ ...formData, experience: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select experience" />
                   </SelectTrigger>
@@ -269,6 +357,21 @@ export default function PostJobPage() {
     }
   }
 
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <EmployerNavbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <EmployerNavbar />
@@ -371,9 +474,13 @@ export default function PostJobPage() {
                           <Eye className="w-4 h-4 mr-2" />
                           Preview
                         </Button>
-                        <Button className="bg-green-600 hover:bg-green-700">
+                        <Button 
+                          onClick={handlePublishJob} 
+                          disabled={publishing}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
                           <Send className="w-4 h-4 mr-2" />
-                          Publish Job
+                          {publishing ? 'Publishing...' : 'Publish Job'}
                         </Button>
                       </div>
                     )}
@@ -386,6 +493,29 @@ export default function PostJobPage() {
       </div>
 
       <EmployerFooter />
+
+      {/* Authentication Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              Authentication Required
+            </DialogTitle>
+            <DialogDescription>
+              You need to be logged in as an employer to post jobs. Please sign in or create an account to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => handleAuthDialogAction('login')}>
+              Sign In
+            </Button>
+            <Button onClick={() => handleAuthDialogAction('register')}>
+              Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -387,6 +387,25 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Job posting endpoints
+  async postJob(data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getMyJobs(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/my-jobs`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   // Utility methods
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
@@ -471,6 +490,15 @@ class ApiService {
     });
 
     return this.handleResponse(response);
+  }
+
+  async syncGoogleProfile(): Promise<ApiResponse<{ user: User }>> {
+    const response = await fetch(`${API_BASE_URL}/oauth/sync-google-profile`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<{ user: User }>(response);
   }
 
   // Job Applications endpoints

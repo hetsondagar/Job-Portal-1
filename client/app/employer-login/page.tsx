@@ -54,8 +54,20 @@ export default function EmployerLoginPage() {
     
     try {
       clearError()
-      await login({ email, password, rememberMe })
-      toast.success('Successfully signed in!')
+      const result = await login({ email, password, rememberMe })
+      
+      // Check if user is an employer and redirect accordingly
+      if (result?.user?.userType === 'employer') {
+        toast.success('Successfully signed in! Redirecting to employer dashboard...')
+        setTimeout(() => {
+          router.push('/employer-dashboard')
+        }, 1000)
+      } else {
+        toast.error('This account is not registered as an employer. Please use the regular login.')
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      }
     } catch (error: any) {
       console.error('Login error:', error)
       toast.error(error.message || 'Login failed')

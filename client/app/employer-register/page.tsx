@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
+import { useRouter } from "next/navigation"
 
 // Employer Navbar Component
 function EmployerNavbar() {
@@ -70,6 +71,7 @@ export default function EmployerRegisterPage() {
     subscribeUpdates: true,
   })
   const { employerSignup, loading, error, clearError } = useAuth()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,7 +90,7 @@ export default function EmployerRegisterPage() {
 
     try {
       clearError()
-      await employerSignup({
+      const result = await employerSignup({
         fullName: formData.fullName,
         email: formData.email,
         password: formData.password,
@@ -100,7 +102,16 @@ export default function EmployerRegisterPage() {
         agreeToTerms: formData.agreeToTerms,
         subscribeUpdates: formData.subscribeUpdates,
       })
-      toast.success('Employer account created successfully!')
+      
+      if (result?.user?.userType === 'employer') {
+        toast.success('Employer account created successfully! Redirecting to dashboard...')
+        // Redirect to employer dashboard
+        setTimeout(() => {
+          router.push('/employer-dashboard')
+        }, 2000)
+      } else {
+        toast.error('Failed to create employer account. Please try again.')
+      }
     } catch (error: any) {
       console.error('Registration error:', error)
       toast.error(error.message || 'Registration failed')

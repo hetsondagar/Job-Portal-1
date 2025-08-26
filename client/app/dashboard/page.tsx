@@ -25,6 +25,7 @@ import {
   X
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
+
 import { toast } from 'sonner'
 import { apiService, DashboardStats, Resume } from '@/lib/api'
 
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [showResumeModal, setShowResumeModal] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,6 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user && !loading) {
+      setCurrentUser(user)
       fetchDashboardStats()
       fetchResumes()
     }
@@ -203,6 +206,8 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+
+
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">

@@ -24,28 +24,22 @@ import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { CompanyInfoDisplay } from "@/components/company-info-display"
+
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function EmployerDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await apiService.getCurrentUser()
-        if (response.success && response.data?.user) {
-          setUser(response.data.user)
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
+  return (
+    <EmployerAuthGuard>
+      <EmployerDashboardContent user={user} />
+    </EmployerAuthGuard>
+  )
+}
 
-    fetchUser()
-  }, [])
+function EmployerDashboardContent({ user }: { user: any }) {
 
   const stats = [
     {
@@ -166,7 +160,7 @@ export default function EmployerDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">
-                    Welcome back, {user?.first_name ? user.first_name.toUpperCase() : 'EMPLOYER'}!
+                    Welcome back, {user?.firstName ? user.firstName.toUpperCase() : 'EMPLOYER'}!
                   </h1>
                   <p className="text-blue-100 text-lg mb-4">Ready to find your next great hire?</p>
                   <div className="flex items-center space-x-6">
@@ -298,6 +292,8 @@ export default function EmployerDashboard() {
             {user?.company_id && (
               <CompanyInfoDisplay companyId={user.company_id} />
             )}
+
+
 
             {/* Profile Completion */}
             <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">

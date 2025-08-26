@@ -27,12 +27,34 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔍 Login form submitted with:', { email, password: '[HIDDEN]', rememberMe })
     clearError()
     
+    // Basic validation
+    if (!email || !password) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
     try {
-      await login({ email, password, rememberMe })
-      // Login successful - toast will be shown by the useAuth hook after redirect
+      console.log('🔄 Attempting login...')
+      const result = await login({ email, password, rememberMe })
+      console.log('✅ Login successful:', result)
+      
+      // Check if login was successful and redirect accordingly
+      if (result?.user?.userType === 'employer') {
+        toast.success('Successfully signed in! Redirecting to employer dashboard...')
+        setTimeout(() => {
+          window.location.href = '/employer-dashboard'
+        }, 1000)
+      } else {
+        toast.success('Successfully signed in! Redirecting to dashboard...')
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 1000)
+      }
     } catch (error: any) {
+      console.error('❌ Login error:', error)
       // Check if the error indicates user doesn't exist
       if (error.message?.includes('Invalid email or password') || 
           error.message?.includes('User not found') ||
@@ -132,7 +154,7 @@ export default function LoginPage() {
             </CardHeader>
 
             <CardContent className="space-y-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" onInvalid={(e) => console.log('❌ Form validation failed:', e)}>
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
                     Email Address
@@ -144,7 +166,10 @@ export default function LoginPage() {
                       type="email"
                       placeholder="Enter your email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        console.log('📧 Email changed:', e.target.value)
+                        setEmail(e.target.value)
+                      }}
                       className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
                       required
                     />
@@ -162,7 +187,10 @@ export default function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        console.log('🔒 Password changed:', e.target.value ? '[HIDDEN]' : '')
+                        setPassword(e.target.value)
+                      }}
                       className="pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
                       required
                     />
@@ -195,6 +223,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={loading}
+                  onClick={() => console.log('🔘 Sign In button clicked')}
                   className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   {loading ? "Signing In..." : "Sign In"}
