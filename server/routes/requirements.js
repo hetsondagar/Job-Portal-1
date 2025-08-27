@@ -124,10 +124,16 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log('🔍 User company_id:', req.user?.company_id);
     console.log('🔍 User type:', req.user?.user_type);
     
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      console.log('❌ User is not an employer, user_type:', req.user.user_type);
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view requirements.' });
+    }
+    
     const companyId = req.user.company_id;
     if (!companyId) {
       console.log('❌ No company_id found for user');
-      return res.status(400).json({ success: false, message: 'Authenticated user has no company associated' });
+      return res.status(400).json({ success: false, message: 'Authenticated user has no company associated. Please contact support.' });
     }
     
     console.log('🔍 Fetching requirements for company:', companyId);
