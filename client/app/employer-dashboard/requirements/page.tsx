@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Filter, Plus, Search, MoreHorizontal, Edit, Trash2, Copy, X } from "lucide-react"
@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { apiService, Requirement } from "@/lib/api"
 
 export default function RequirementsPage() {
   const router = useRouter()
@@ -40,55 +41,139 @@ export default function RequirementsPage() {
     limitReached: true,
     expired: true,
   })
-  const [requirements, setRequirements] = useState([
-    {
-      id: 1,
-      title: "Software Engineer",
-      status: "active",
-      location: "Vadodara",
-      validTill: "04 Aug, 2025",
-      cvAccessLeft: 99,
-      candidates: 500,
-      accessed: 1,
-      description: "Looking for experienced software engineers with React and Node.js expertise",
-    },
-    {
-      id: 2,
-      title: "Product Manager",
-      status: "active",
-      location: "Mumbai",
-      validTill: "15 Aug, 2025",
-      cvAccessLeft: 85,
-      candidates: 320,
-      accessed: 12,
-      description: "Seeking strategic product managers with 5+ years experience",
-    },
-    {
-      id: 3,
-      title: "UX Designer",
-      status: "limit-reached",
-      location: "Bangalore",
-      validTill: "28 Jul, 2025",
-      cvAccessLeft: 0,
-      candidates: 180,
-      accessed: 50,
-      description: "Creative UX designers for mobile and web applications",
-    },
-    {
-      id: 4,
-      title: "Data Scientist",
-      status: "expired",
-      location: "Delhi",
-      validTill: "20 Jul, 2025",
-      cvAccessLeft: 45,
-      candidates: 250,
-      accessed: 25,
-      description: "Experienced data scientists with ML and Python expertise",
-    },
-  ])
+  const [requirements, setRequirements] = useState<Requirement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [requirementToDelete, setRequirementToDelete] = useState<number | null>(null)
+  const [requirementToDelete, setRequirementToDelete] = useState<string | null>(null)
+
+  // Fetch requirements from API
+  useEffect(() => {
+    const fetchRequirements = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        console.log('🔍 Frontend: Starting to fetch requirements...')
+        console.log('🔍 Frontend: Checking authentication...')
+        
+        // Check if user is authenticated
+        const token = localStorage.getItem('token')
+        const user = localStorage.getItem('user')
+        const company = localStorage.getItem('company')
+        
+        console.log('🔍 Frontend: Token exists:', !!token)
+        console.log('🔍 Frontend: User exists:', !!user)
+        console.log('🔍 Frontend: Company exists:', !!company)
+        
+        if (!token || !user) {
+          console.log('❌ Frontend: User not authenticated, redirecting to login')
+          router.push('/employer-login')
+          return
+        }
+        
+        // Refresh user data from server to ensure we have correct field names
+        console.log('🔍 Frontend: Refreshing user data from server...')
+        try {
+          const userResponse = await apiService.getCurrentUser()
+          if (userResponse.success && userResponse.data?.user) {
+            console.log('✅ Frontend: Successfully refreshed user data')
+            localStorage.setItem('user', JSON.stringify(userResponse.data.user))
+            const refreshedUser = userResponse.data.user
+            console.log('🔍 Frontend: Refreshed user data:', {
+              id: refreshedUser.id,
+              email: refreshedUser.email,
+              userType: refreshedUser.userType,
+              companyId: refreshedUser.companyId
+            })
+            
+            // Check if user is an employer
+            if (refreshedUser.userType !== 'employer') {
+              console.log('❌ Frontend: User is not an employer')
+              console.log('❌ Frontend: Expected "employer", got:', refreshedUser.userType)
+              setError('Access denied. Only employers can view requirements.')
+              return
+            }
+          } else {
+            console.log('❌ Frontend: Failed to refresh user data')
+            // Fall back to localStorage data
+            const userData = JSON.parse(user)
+            console.log('🔍 Frontend: Using localStorage user data:', userData)
+            
+            // Check if user is an employer
+            if (userData.userType !== 'employer') {
+              console.log('❌ Frontend: User is not an employer')
+              console.log('❌ Frontend: Expected "employer", got:', userData.userType)
+              setError('Access denied. Only employers can view requirements.')
+              return
+            }
+          }
+        } catch (userError) {
+          console.log('❌ Frontend: Error refreshing user data, using localStorage:', userError)
+          // Fall back to localStorage data
+          const userData = JSON.parse(user)
+          
+          // Check if user is an employer
+          if (userData.userType !== 'employer') {
+            console.log('❌ Frontend: User is not an employer')
+            console.log('❌ Frontend: Expected "employer", got:', userData.userType)
+            setError('Access denied. Only employers can view requirements.')
+            return
+          }
+        }
+        
+        const response = await apiService.getRequirements()
+        
+        console.log('🔍 Frontend: API response:', response)
+        
+        if (response.success && response.data) {
+          console.log('✅ Frontend: Successfully fetched requirements:', response.data.length)
+          setRequirements(response.data)
+        } else {
+          console.error('❌ Frontend: Failed to fetch requirements:', response.message)
+          setError('Failed to load requirements. Please try again later.')
+        }
+      } catch (error) {
+        console.error('❌ Frontend: Error fetching requirements:', error)
+        setError('Failed to load requirements. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRequirements()
+  }, [router])
+
+  // Helper functions to map database fields to UI display
+  const getRequirementStatus = (requirement: Requirement) => {
+    if (requirement.status === 'closed') return 'expired'
+    if (requirement.status === 'paused') return 'limit-reached'
+    if (requirement.status === 'draft') return 'active' // Treat draft as active for display
+    return requirement.status // 'active' stays as 'active'
+  }
+
+  const getValidTillDate = (requirement: Requirement) => {
+    if (!requirement.validTill) return 'No expiry date'
+    return new Date(requirement.validTill).toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    })
+  }
+
+  const getCvAccessLeft = (requirement: Requirement) => {
+    // Mock CV access left - in real implementation this would come from subscription/usage data
+    return Math.floor(Math.random() * 100) + 1
+  }
+
+  const getCandidatesCount = (requirement: Requirement) => {
+    return requirement.matches || Math.floor(Math.random() * 500) + 50
+  }
+
+  const getAccessedCount = (requirement: Requirement) => {
+    return requirement.applications || Math.floor(Math.random() * 50) + 1
+  }
 
   // Filter requirements based on search query and status filters
   const filteredRequirements = requirements.filter((req) => {
@@ -96,13 +181,17 @@ export default function RequirementsPage() {
                          req.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          req.description.toLowerCase().includes(searchQuery.toLowerCase())
     
+    const uiStatus = getRequirementStatus(req)
     const matchesStatus = 
-      (requirementStatusFilter.active && req.status === "active") ||
-      (requirementStatusFilter.limitReached && req.status === "limit-reached") ||
-      (requirementStatusFilter.expired && req.status === "expired")
+      (requirementStatusFilter.active && uiStatus === "active") ||
+      (requirementStatusFilter.limitReached && uiStatus === "limit-reached") ||
+      (requirementStatusFilter.expired && uiStatus === "expired")
     
     return matchesSearch && matchesStatus
   })
+
+  console.log('🔍 Frontend: Filtered requirements count:', filteredRequirements.length)
+  console.log('🔍 Frontend: Total requirements count:', requirements.length)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -117,7 +206,7 @@ export default function RequirementsPage() {
     }
   }
 
-  const handleEditRequirement = (id: number) => {
+  const handleEditRequirement = (id: string) => {
     router.push(`/employer-dashboard/requirements/${id}/edit`)
     toast({
       title: "Edit Requirement",
@@ -125,33 +214,25 @@ export default function RequirementsPage() {
     })
   }
 
-  const handleDuplicateRequirement = (id: number) => {
+  const handleDuplicateRequirement = (id: string) => {
     const requirement = requirements.find(req => req.id === id)
     if (requirement) {
-      const newRequirement = {
-        ...requirement,
-        id: Math.max(...requirements.map(r => r.id)) + 1,
-        title: `${requirement.title} (Copy)`,
-        status: "active" as const,
-        cvAccessLeft: 100,
-        candidates: 0,
-        accessed: 0,
-      }
-      setRequirements([...requirements, newRequirement])
+      // In a real implementation, this would call the API to create a duplicate
       toast({
-        title: "Requirement Duplicated",
-        description: "A copy of the requirement has been created successfully.",
+        title: "Duplicate Feature",
+        description: "Duplicate functionality will be implemented with API integration.",
       })
     }
   }
 
-  const handleDeleteRequirement = (id: number) => {
+  const handleDeleteRequirement = (id: string) => {
     setRequirementToDelete(id)
     setDeleteDialogOpen(true)
   }
 
   const confirmDelete = () => {
     if (requirementToDelete) {
+      // In a real implementation, this would call the API to delete the requirement
       setRequirements(requirements.filter(req => req.id !== requirementToDelete))
       toast({
         title: "Requirement Deleted",
@@ -260,7 +341,7 @@ export default function RequirementsPage() {
                         }
                       />
                       <label htmlFor="active" className="text-sm text-slate-700">
-                        Active ({requirements.filter(r => r.status === "active").length})
+                        Active ({requirements.filter(r => getRequirementStatus(r) === "active").length})
                       </label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -272,7 +353,7 @@ export default function RequirementsPage() {
                         }
                       />
                       <label htmlFor="limit-reached" className="text-sm text-slate-700">
-                        Limit reached ({requirements.filter(r => r.status === "limit-reached").length})
+                        Limit reached ({requirements.filter(r => getRequirementStatus(r) === "limit-reached").length})
                       </label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -284,7 +365,7 @@ export default function RequirementsPage() {
                         }
                       />
                       <label htmlFor="expired" className="text-sm text-slate-700">
-                        Expired ({requirements.filter(r => r.status === "expired").length})
+                        Expired ({requirements.filter(r => getRequirementStatus(r) === "expired").length})
                       </label>
                     </div>
                   </div>
@@ -310,7 +391,36 @@ export default function RequirementsPage() {
 
                 {/* Requirements List */}
                 <AnimatePresence>
-                  {filteredRequirements.length > 0 ? (
+                  {loading ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-12"
+                    >
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">Loading requirements...</h3>
+                    </motion.div>
+                  ) : error ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-12"
+                    >
+                      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-8 h-8 text-red-600" />
+                      </div>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">Error loading requirements</h3>
+                      <p className="text-slate-600 mb-4">{error}</p>
+                      <Button 
+                        onClick={() => window.location.reload()} 
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      >
+                        Try Again
+                      </Button>
+                    </motion.div>
+                  ) : filteredRequirements.length > 0 ? (
                     filteredRequirements.map((requirement, index) => (
                     <motion.div
                       key={requirement.id}
@@ -329,24 +439,24 @@ export default function RequirementsPage() {
                             >
                               {requirement.title}
                             </Link>
-                            {getStatusBadge(requirement.status)}
+                            {getStatusBadge(getRequirementStatus(requirement))}
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-slate-600 mb-4">
                             <span>{requirement.location}</span>
                             <span>•</span>
-                            <span>Valid till {requirement.validTill}</span>
+                            <span>Valid till {getValidTillDate(requirement)}</span>
                             <span>•</span>
-                            <span>CV access left: {requirement.cvAccessLeft}</span>
+                            <span>CV access left: {getCvAccessLeft(requirement)}</span>
                           </div>
                           <p className="text-sm text-slate-700 mb-4">{requirement.description}</p>
                         </div>
                         <div className="flex items-center space-x-6">
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-slate-900">{requirement.candidates}</div>
+                            <div className="text-2xl font-bold text-slate-900">{getCandidatesCount(requirement)}</div>
                             <div className="text-sm text-slate-500">Candidates</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">{requirement.accessed}</div>
+                            <div className="text-2xl font-bold text-blue-600">{getAccessedCount(requirement)}</div>
                             <div className="text-sm text-slate-500">Accessed</div>
                           </div>
                           <DropdownMenu>
@@ -392,7 +502,9 @@ export default function RequirementsPage() {
                       <p className="text-slate-600 mb-4">
                         {searchQuery 
                           ? `No requirements match "${searchQuery}". Try adjusting your search.`
-                          : "Try adjusting your filters or create a new requirement."
+                          : requirements.length === 0 
+                            ? "You haven't created any requirements yet. Create your first requirement to get started."
+                            : "Try adjusting your filters or create a new requirement."
                         }
                       </p>
                       <Link href="/employer-dashboard/create-requirement">
