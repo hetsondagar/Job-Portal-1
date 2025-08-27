@@ -16,6 +16,7 @@ import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { useToast } from "@/hooks/use-toast"
+import { apiService } from "@/lib/api"
 
 export default function CreateRequirementPage() {
   const params = useParams()
@@ -123,19 +124,56 @@ export default function CreateRequirementPage() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const payload: any = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        experience: formData.experience,
+        workExperienceMin: formData.workExperienceMin ? Number(formData.workExperienceMin) : undefined,
+        workExperienceMax: formData.workExperienceMax ? Number(formData.workExperienceMax) : undefined,
+        salary: formData.salary,
+        currentSalaryMin: formData.currentSalaryMin ? Number(formData.currentSalaryMin) : undefined,
+        currentSalaryMax: formData.currentSalaryMax ? Number(formData.currentSalaryMax) : undefined,
+        currency: formData.currency,
+        jobType: formData.jobType,
+        skills: formData.skills,
+        keySkills: formData.keySkills,
+        education: formData.education,
+        industry: formData.industry,
+        department: formData.department,
+        validTill: formData.validTill || undefined,
+        noticePeriod: formData.noticePeriod,
+        remoteWork: formData.remoteWork,
+        travelRequired: formData.travelRequired === 'Yes' ? true : (formData.travelRequired === 'No' ? false : undefined),
+        shiftTiming: formData.shiftTiming,
+        candidateLocations: formData.candidateLocations,
+        candidateDesignations: formData.candidateDesignations,
+        includeWillingToRelocate: !!formData.includeWillingToRelocate,
+        includeNotMentioned: !!formData.includeNotMentioned,
+        benefits: formData.benefits,
+      }
+
+      console.log('🔍 Submitting requirement payload:', payload)
+      const response = await apiService.createRequirement(payload)
+      console.log('✅ Requirement API response:', response)
+      if (!response.success) {
+        console.error('❌ Requirement creation failed:', response)
+        throw new Error(response.message || 'Failed to create requirement')
+      }
       
       toast({
         title: "Requirement Created",
-        description: "Your requirement has been created successfully.",
+        description: `Your requirement has been created successfully. ID: ${response.data?.id || ''}`,
       })
-      
-      router.push('/employer-dashboard/requirements')
-    } catch (error) {
+      // Give the toast time to show before navigating
+      setTimeout(() => {
+        router.push('/employer-dashboard/requirements')
+      }, 1000)
+    } catch (error: any) {
+      console.error('❌ Error creating requirement:', error?.message || error)
       toast({
         title: "Error",
-        description: "Failed to create requirement. Please try again.",
+        description: error?.message || "Failed to create requirement. Please try again.",
         variant: "destructive",
       })
     } finally {

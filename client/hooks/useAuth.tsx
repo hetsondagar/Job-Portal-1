@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import { apiService, User, SignupData, EmployerSignupData, LoginData } from '@/lib/api';
+import { apiService, User, SignupData, EmployerSignupData, LoginData, AuthResponse } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -23,21 +23,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Normalize backend /auth/me response (snake_case) to frontend User (camelCase)
+  const mapUserFromApi = (u: any): User => ({
+    id: u.id,
+    email: u.email,
+    firstName: u.first_name ?? u.firstName,
+    lastName: u.last_name ?? u.lastName,
+    userType: (u.user_type ?? u.userType) as User['userType'],
+    isEmailVerified: u.is_email_verified ?? u.isEmailVerified,
+    accountStatus: u.account_status ?? u.accountStatus,
+    avatar: u.avatar,
+    phone: u.phone,
+    currentLocation: u.current_location ?? u.currentLocation,
+    headline: u.headline,
+    summary: u.summary,
+    profileCompletion: u.profile_completion ?? u.profileCompletion,
+    lastLoginAt: u.last_login_at ?? u.lastLoginAt,
+    companyId: u.company_id ?? u.companyId,
+  });
+
   useEffect(() => {
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
-        const storedUser = apiService.getCurrentUserFromStorage();
-        if (storedUser && apiService.isAuthenticated()) {
-          // Verify token is still valid with database check
+        // Rely on token presence, then validate with server; avoid trusting stale localStorage user
+        if (apiService.isAuthenticated()) {
           const response = await apiService.getCurrentUser();
           if (response.success && response.data?.user) {
-            setUser(response.data.user);
+            const normalized = mapUserFromApi(response.data.user as any);
+            setUser(normalized);
+            // Keep storage in sync in camelCase to prevent future stale shape
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('user', JSON.stringify(normalized));
+            }
           } else {
-            // Token is invalid or user doesn't exist, clear storage
             apiService.clearAuth();
             setUser(null);
           }
+        } else {
+          setUser(null);
         }
       } catch (error) {
         console.error('Auth check error:', error);
@@ -59,9 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiService.signup(data);
       
       if (response.success && response.data?.user) {
-        setUser(response.data.user);
+        const normalized = mapUserFromApi(response.data.user as any);
+        setUser(normalized);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(normalized));
+        }
         // Return the response data so the calling component can handle redirection
-        return response.data;
+        return { ...response.data, user: normalized } as any;
       } else {
         setError(response.message || 'Signup failed');
         throw new Error(response.message || 'Signup failed');
@@ -82,9 +110,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiService.employerSignup(data);
       
       if (response.success && response.data?.user) {
-        setUser(response.data.user);
+        const normalized = mapUserFromApi(response.data.user as any);
+        setUser(normalized);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(normalized));
+        }
         // Return the response data so the calling component can handle redirection
-        return response.data;
+        return { ...response.data, user: normalized } as any;
       } else {
         setError(response.message || 'Employer signup failed');
         throw new Error(response.message || 'Employer signup failed');
@@ -101,13 +133,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       setLoading(true);
-      
+      // Clear any stale auth before performing login to avoid misrouting due to old data
+      apiService.clearAuth();
+
       const response = await apiService.login(data);
       
       if (response.success && response.data?.user) {
-        setUser(response.data.user);
+        const normalized = mapUserFromApi(response.data.user as any);
+        setUser(normalized);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(normalized));
+        }
         // Return the response data so the calling component can handle redirection
-        return response.data;
+        return { ...response.data, user: normalized } as any;
       } else {
         setError(response.message || 'Login failed');
         throw new Error(response.message || 'Login failed');
