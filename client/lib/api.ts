@@ -190,13 +190,20 @@ class ApiService {
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred');
+    const url = (response as any)?.url || 'unknown-url';
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch (e) {
+      console.error('❌ Failed to parse JSON for', url, e);
     }
-    
-    return data;
+
+    if (!response.ok) {
+      console.error('❌ API error:', { url, status: response.status, statusText: response.statusText, body: data });
+      throw new Error((data && data.message) || `Request failed (${response.status})`);
+    }
+
+    return data as ApiResponse<T>;
   }
 
   // Authentication endpoints
@@ -387,9 +394,9 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
-  // Job posting endpoints
+  // Job endpoints
   async postJob(data: any): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/jobs`, {
+    const response = await fetch(`${API_BASE_URL}/jobs/create`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -398,11 +405,63 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
-  async getMyJobs(): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/jobs/my-jobs`, {
+  async getJobs(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<any>> {
+    const query = params
+      ? '?' + Object.entries(params)
+          .filter(([, v]) => v !== undefined && v !== null && v !== '')
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+          .join('&')
+      : '';
+    const response = await fetch(`${API_BASE_URL}/jobs${query}`, {
       headers: this.getAuthHeaders(),
     });
+    return this.handleResponse<any>(response);
+  }
 
+  async getJobById(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getCompanyJobs(companyId?: string, params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<any>> {
+    const finalCompanyId = companyId || this.getCompanyFromStorage()?.id || this.getCurrentUserFromStorage()?.companyId || '';
+    const query = params
+      ? '?' + Object.entries(params)
+          .filter(([, v]) => v !== undefined && v !== null && v !== '')
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+          .join('&')
+      : '';
+    const response = await fetch(`${API_BASE_URL}/jobs/company/${finalCompanyId}${query}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async updateJob(id: string, data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async deleteJob(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async updateJobStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}/status`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
     return this.handleResponse<any>(response);
   }
 
@@ -584,6 +643,25 @@ class ApiService {
     });
 
     return this.handleResponse<SearchHistory[]>(response);
+  }
+
+  // Requirements endpoints
+  async createRequirement(data: any): Promise<ApiResponse<any>> {
+    // Ensure companyId is present for employers
+    const company = this.getCompanyFromStorage();
+    const user = this.getCurrentUserFromStorage();
+    const withCompany = {
+      ...data,
+      companyId: data.companyId || company?.id || user?.companyId,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/requirements`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(withCompany),
+    });
+
+    return this.handleResponse<any>(response);
   }
 
   // Dashboard Stats endpoint
