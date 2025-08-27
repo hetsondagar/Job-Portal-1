@@ -59,22 +59,36 @@ export default function OAuthCallbackPage() {
         const response = await apiService.getCurrentUser()
         
         if (response.success && response.data?.user) {
+          // Check if this is an employer user - if so, redirect to employer callback
+          if (response.data.user.userType === 'employer') {
+            console.log('❌ Employer user detected in jobseeker OAuth callback - redirecting to employer callback')
+            toast.error('This account is registered as an employer. Redirecting to employer login.')
+            setTimeout(() => {
+              router.push('/employer-login')
+            }, 2000)
+            return
+          }
+          
           // Store user data
           localStorage.setItem('user', JSON.stringify(response.data.user))
           
           // Sync Google profile data if it's a Google OAuth user
           if (provider === 'google' && response.data.user.oauth_provider === 'google') {
             try {
-              console.log('🔄 Syncing Google profile data...')
+              console.log('🔄 Syncing Google profile data for jobseeker...')
               const syncResponse = await apiService.syncGoogleProfile()
               if (syncResponse.success && syncResponse.data?.user) {
                 // Update stored user data with synced profile
                 localStorage.setItem('user', JSON.stringify(syncResponse.data.user))
-                console.log('✅ Google profile data synced successfully')
+                console.log('✅ Google profile data synced successfully for jobseeker')
+                
+                // Show success message about profile sync
+                toast.success('Google profile data synced successfully!')
               }
             } catch (error) {
-              console.error('❌ Failed to sync Google profile:', error)
+              console.error('❌ Failed to sync Google profile for jobseeker:', error)
               // Continue with the flow even if sync fails
+              toast.info('Profile sync failed, but you can continue to your dashboard')
             }
           }
           
@@ -84,19 +98,15 @@ export default function OAuthCallbackPage() {
             setMessage(`Welcome! Please set up a password for your ${provider} account`)
             toast.success(`Welcome! Please set up a password for your ${provider} account`)
           } else {
-            // User already has a password, proceed to appropriate dashboard based on user type
+            // User already has a password, proceed to jobseeker dashboard
             setStatus('success')
             setMessage(`Successfully signed in with ${provider}`)
             toast.success(`Welcome! You've been signed in with ${provider}`)
             
-            // Redirect to appropriate dashboard based on user type
-            const finalUserType = response.data.user.userType || userType
-            const dashboardPath = finalUserType === 'employer' ? '/employer-dashboard' : '/dashboard'
-            
-            console.log('🔄 Redirecting to dashboard:', dashboardPath, 'for user type:', finalUserType)
-            
+            // Always redirect to jobseeker dashboard from this callback
+            console.log('✅ Redirecting jobseeker to dashboard')
             setTimeout(() => {
-              router.push(dashboardPath)
+              router.push('/dashboard')
             }, 2000)
           }
         } else {
@@ -111,9 +121,18 @@ export default function OAuthCallbackPage() {
         // Clear any stored data
         apiService.clearAuth()
         
-        setTimeout(() => {
-          router.push('/login')
-        }, 3000)
+        // Even on error, try to redirect to jobseeker dashboard if we have a token
+        const token = searchParams.get('token')
+        if (token) {
+          console.log('🔄 Attempting to redirect to jobseeker dashboard despite error')
+          setTimeout(() => {
+            router.push('/dashboard')
+          }, 3000)
+        } else {
+          setTimeout(() => {
+            router.push('/login')
+          }, 3000)
+        }
       }
     }
 
@@ -148,14 +167,9 @@ export default function OAuthCallbackPage() {
         setMessage('Password set successfully! Welcome to your account.')
         toast.success('Password set successfully!')
         
-        // Get current user data to determine user type
-        const userResponse = await apiService.getCurrentUser()
-        const userType = userResponse.success && userResponse.data?.user ? userResponse.data.user.userType : 'jobseeker'
-        const dashboardPath = userType === 'employer' ? '/employer-dashboard' : '/dashboard'
-        
-        // Redirect to appropriate dashboard after a short delay
+        // Always redirect to jobseeker dashboard from this callback
         setTimeout(() => {
-          router.push(dashboardPath)
+          router.push('/dashboard')
         }, 2000)
       } else {
         throw new Error(response.message || 'Failed to set password')

@@ -54,7 +54,10 @@ const validateEmployerSignup = [
     .isLength({ min: 2, max: 200 })
     .withMessage('Company name must be between 2 and 200 characters'),
   body('phone')
-    .isMobilePhone()
+    .trim()
+    .isLength({ min: 10, max: 15 })
+    .withMessage('Phone number must be between 10 and 15 digits')
+    .matches(/^[\+]?[0-9\s\-\(\)]+$/)
     .withMessage('Please enter a valid phone number'),
   body('companySize')
     .optional()

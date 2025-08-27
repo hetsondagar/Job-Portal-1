@@ -52,25 +52,50 @@ export default function EmployerLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Basic validation
+    if (!email || !password) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
     try {
       clearError()
+      console.log('🔍 Starting employer login for:', email)
       const result = await login({ email, password, rememberMe })
+      
+      console.log('✅ Login result:', result)
+      console.log('👤 User data:', result?.user)
+      console.log('🎯 User type:', result?.user?.userType)
       
       // Check if user is an employer and redirect accordingly
       if (result?.user?.userType === 'employer') {
+        console.log('✅ User is employer, redirecting to employer dashboard')
         toast.success('Successfully signed in! Redirecting to employer dashboard...')
         setTimeout(() => {
+          console.log('🔄 Redirecting to /employer-dashboard')
           router.push('/employer-dashboard')
         }, 1000)
       } else {
+        console.log('❌ User is not employer, userType:', result?.user?.userType)
         toast.error('This account is not registered as an employer. Please use the regular login.')
         setTimeout(() => {
+          console.log('🔄 Redirecting to /login')
           router.push('/login')
         }, 2000)
       }
     } catch (error: any) {
-      console.error('Login error:', error)
+      console.error('❌ Login error:', error)
+      
+      // Handle specific error types
+      if (error.message?.includes('Invalid email or password') || 
+          error.message?.includes('User not found') ||
+          error.message?.includes('does not exist')) {
+        toast.error("Account not found. Please register first or check your credentials.")
+      } else if (error.message?.includes('Validation failed')) {
+        toast.error("Please check your input and try again")
+      } else {
       toast.error(error.message || 'Login failed')
+      }
     }
   }
 
@@ -86,8 +111,19 @@ export default function EmployerLoginPage() {
       
       if (response.success && response.data) {
         const url = provider === 'google' ? response.data.google : response.data.facebook
-        console.log('✅ Redirecting to OAuth provider:', url);
+        console.log('✅ OAuth URL received for employer:', url);
+        console.log('🔍 URL contains state=employer:', url.includes('state=employer'));
+        
+        // Store a flag to indicate this is an employer OAuth flow
+        sessionStorage.setItem('oauth_flow_type', 'employer')
+        console.log('✅ OAuth flow type set to employer in sessionStorage');
+        
+        // Also store in localStorage for persistence
+        localStorage.setItem('oauth_flow_type', 'employer')
+        console.log('✅ OAuth flow type set to employer in localStorage');
+        
         // Redirect to OAuth provider
+        console.log('🔄 Redirecting to OAuth provider:', url);
         window.location.href = url
       } else {
         console.error('❌ Failed to get OAuth URL:', response);

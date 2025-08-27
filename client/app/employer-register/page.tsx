@@ -76,6 +76,32 @@ export default function EmployerRegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Basic frontend validation
+    if (!formData.companyName.trim()) {
+      toast.error('Company name is required')
+      return
+    }
+    
+    if (!formData.fullName.trim()) {
+      toast.error('Full name is required')
+      return
+    }
+    
+    if (!formData.email.trim()) {
+      toast.error('Email is required')
+      return
+    }
+    
+    if (!formData.phone.trim()) {
+      toast.error('Phone number is required')
+      return
+    }
+    
+    if (!formData.password) {
+      toast.error('Password is required')
+      return
+    }
+    
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match')
@@ -114,7 +140,17 @@ export default function EmployerRegisterPage() {
       }
     } catch (error: any) {
       console.error('Registration error:', error)
+      
+      // Handle specific validation errors
+      if (error.message && error.message.includes('Validation failed')) {
+        toast.error('Please check your input and try again')
+      } else if (error.message && error.message.includes('already exists')) {
+        toast.error('An account with this email already exists')
+      } else if (error.message && error.message.includes('phone number')) {
+        toast.error('Please enter a valid phone number (10-15 digits)')
+      } else {
       toast.error(error.message || 'Registration failed')
+      }
     }
   }
 
@@ -257,7 +293,7 @@ export default function EmployerRegisterPage() {
                         <Input
                           id="phone"
                           type="tel"
-                          placeholder="Enter your phone number"
+                          placeholder="e.g., +1234567890 or 1234567890"
                           value={formData.phone}
                           onChange={(e) => handleInputChange("phone", e.target.value)}
                           className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
@@ -298,11 +334,10 @@ export default function EmployerRegisterPage() {
                           <SelectValue placeholder="Select company size" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1-10">1-10 employees</SelectItem>
-                          <SelectItem value="11-50">11-50 employees</SelectItem>
+                          <SelectItem value="1-50">1-50 employees</SelectItem>
                           <SelectItem value="51-200">51-200 employees</SelectItem>
                           <SelectItem value="201-500">201-500 employees</SelectItem>
-                          <SelectItem value="501-1000">501-1000 employees</SelectItem>
+                          <SelectItem value="500-1000">500-1000 employees</SelectItem>
                           <SelectItem value="1000+">1000+ employees</SelectItem>
                         </SelectContent>
                       </Select>

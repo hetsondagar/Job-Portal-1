@@ -43,11 +43,13 @@ export default function LoginPage() {
       
       // Check if login was successful and redirect accordingly
       if (result?.user?.userType === 'employer') {
-        toast.success('Successfully signed in! Redirecting to employer dashboard...')
+        console.log('❌ Employer trying to login through jobseeker login page')
+        toast.error('This account is registered as an employer. Please use the employer login page.')
         setTimeout(() => {
-          window.location.href = '/employer-dashboard'
-        }, 1000)
+          window.location.href = '/employer-login'
+        }, 2000)
       } else {
+        console.log('✅ Jobseeker login successful, redirecting to dashboard')
         toast.success('Successfully signed in! Redirecting to dashboard...')
         setTimeout(() => {
           window.location.href = '/dashboard'
@@ -75,18 +77,22 @@ export default function LoginPage() {
       setOauthLoading(provider)
       clearError()
       
-      // Get OAuth URLs from backend
-      const response = await apiService.getOAuthUrls()
+      console.log('🔍 Starting OAuth login for jobseeker with provider:', provider);
+      
+      // Get OAuth URLs from backend for jobseeker
+      const response = await apiService.getOAuthUrls('jobseeker')
       
       if (response.success && response.data) {
         const url = provider === 'google' ? response.data.google : response.data.facebook
+        console.log('✅ Redirecting to OAuth provider:', url);
         // Redirect to OAuth provider
         window.location.href = url
       } else {
+        console.error('❌ Failed to get OAuth URL:', response);
         toast.error('Failed to get OAuth URL')
       }
     } catch (error: any) {
-      console.error(`${provider} OAuth error:`, error)
+      console.error(`❌ ${provider} OAuth error:`, error)
       toast.error(`Failed to sign in with ${provider}`)
     } finally {
       setOauthLoading(null)

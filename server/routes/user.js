@@ -173,9 +173,32 @@ const validateProfileUpdate = [
 // Get user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
+    // Transform user data to camelCase format to match frontend expectations
+    const userData = {
+      id: req.user.id,
+      email: req.user.email,
+      firstName: req.user.first_name,
+      lastName: req.user.last_name,
+      userType: req.user.user_type,
+      isEmailVerified: req.user.is_email_verified,
+      accountStatus: req.user.account_status,
+      lastLoginAt: req.user.last_login_at,
+      companyId: req.user.company_id,
+      phone: req.user.phone,
+      avatar: req.user.avatar,
+      currentLocation: req.user.current_location,
+      headline: req.user.headline,
+      summary: req.user.summary,
+      profileCompletion: req.user.profile_completion,
+      oauthProvider: req.user.oauth_provider,
+      oauthId: req.user.oauth_id,
+      createdAt: req.user.createdAt,
+      updatedAt: req.user.updatedAt
+    };
+
     res.status(200).json({
       success: true,
-      data: { user: req.user }
+      data: userData
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -696,41 +719,148 @@ router.get('/search-history', authenticateToken, async (req, res) => {
 // Dashboard Stats endpoint
 router.get('/dashboard-stats', authenticateToken, async (req, res) => {
   try {
-    const { JobApplication, Analytics } = require('../config/index');
+    const JobApplication = require('../models/JobApplication');
+    const Analytics = require('../models/Analytics');
+    const Job = require('../models/Job');
     
-    // Get application count
-    const applicationCount = await JobApplication.count({
-      where: { userId: req.user.id }
-    });
+    console.log('📊 Fetching dashboard stats for user:', req.user.id);
+    
+    // Get application count with error handling
+    let applicationCount = 0;
+    try {
+      applicationCount = await JobApplication.count({
+        where: { userId: req.user.id }
+      });
+      console.log('✅ Application count:', applicationCount);
+    } catch (error) {
+      console.error('❌ Error fetching application count:', error);
+      applicationCount = 0;
+    }
 
-    // Get profile views
-    const profileViews = await Analytics.count({
-      where: { 
-        userId: req.user.id,
-        eventType: 'profile_view'
+    // Get profile views with error handling
+    let profileViews = 0;
+    try {
+      // Try to get profile views, but handle if the column doesn't exist
+      profileViews = await Analytics.count({
+        where: { 
+          userId: req.user.id,
+          eventType: 'profile_view'
+        }
+      });
+      console.log('✅ Profile views:', profileViews);
+    } catch (error) {
+      console.error('❌ Error fetching profile views:', error);
+      // If the query fails, try a simpler query without eventType
+      try {
+        profileViews = await Analytics.count({
+          where: { userId: req.user.id }
+        });
+        console.log('✅ Fallback profile views (all events):', profileViews);
+      } catch (fallbackError) {
+        console.error('❌ Fallback profile views also failed:', fallbackError);
+        profileViews = 0;
       }
-    });
+    }
 
-    // Get recent applications
-    const recentApplications = await JobApplication.findAll({
-      where: { userId: req.user.id },
-      order: [['appliedAt', 'DESC']],
-      limit: 5
-    });
+    // Get recent applications with error handling
+    let recentApplications = [];
+    try {
+      recentApplications = await JobApplication.findAll({
+        where: { userId: req.user.id },
+        order: [['appliedAt', 'DESC']],
+        limit: 5,
+        include: [
+          {
+            model: Job,
+            as: 'job',
+            attributes: ['id', 'title', 'company', 'location', 'salary_min', 'salary_max']
+          }
+        ]
+      });
+      console.log('✅ Recent applications:', recentApplications.length);
+    } catch (error) {
+      console.error('❌ Error fetching recent applications:', error);
+      // Try without the include if it fails
+      try {
+        recentApplications = await JobApplication.findAll({
+          where: { userId: req.user.id },
+          order: [['appliedAt', 'DESC']],
+          limit: 5
+        });
+        console.log('✅ Recent applications (without job details):', recentApplications.length);
+      } catch (fallbackError) {
+        console.error('❌ Fallback recent applications also failed:', fallbackError);
+        recentApplications = [];
+      }
+    }
 
+    // For employers, also get job posting stats
+    let jobStats = {};
+    if (req.user.user_type === 'employer') {
+      try {
+        const activeJobs = await Job.count({
+          where: { 
+            employerId: req.user.id,
+            status: 'active'
+          }
+        });
+        
+        const totalApplications = await JobApplication.count({
+          include: [{
+            model: Job,
+            as: 'job',
+            where: { employerId: req.user.id }
+          }]
+        });
+        
+        jobStats = {
+          activeJobs,
+          totalApplications
+        };
+        console.log('✅ Employer job stats:', jobStats);
+      } catch (error) {
+        console.error('❌ Error fetching employer job stats:', error);
+        // Try simpler queries if the complex ones fail
+        try {
+          const activeJobs = await Job.count({
+            where: { employerId: req.user.id }
+          });
+          
+          const totalApplications = await JobApplication.count({
+            where: { employerId: req.user.id }
+          });
+          
+          jobStats = {
+            activeJobs,
+            totalApplications
+          };
+          console.log('✅ Employer job stats (simplified):', jobStats);
+        } catch (fallbackError) {
+          console.error('❌ Fallback employer job stats also failed:', fallbackError);
+          jobStats = { activeJobs: 0, totalApplications: 0 };
+        }
+      }
+    }
+
+    const stats = {
+      applicationCount,
+      profileViews,
+      recentApplications,
+      ...jobStats
+    };
+
+    console.log('✅ Dashboard stats prepared successfully');
+    
     res.json({
       success: true,
-      data: {
-        applicationCount,
-        profileViews,
-        recentApplications
-      }
+      data: stats
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    console.error('❌ Error fetching dashboard stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch dashboard stats'
+      message: 'Failed to fetch dashboard stats',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

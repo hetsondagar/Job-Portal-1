@@ -16,6 +16,7 @@ import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
+import { apiService } from "@/lib/api"
 
 export default function RegisterPage() {
   const { signup, loading, error, clearError } = useAuth()
@@ -33,6 +34,7 @@ export default function RegisterPage() {
     agreeToTerms: false,
     subscribeNewsletter: true,
   })
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
 
   // Password validation function
   const validatePassword = (password: string) => {
@@ -132,6 +134,33 @@ export default function RegisterPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleOAuthSignup = async (provider: 'google' | 'facebook') => {
+    try {
+      setOauthLoading(provider)
+      clearError()
+      
+      console.log('🔍 Starting OAuth signup for jobseeker with provider:', provider);
+      
+      // Get OAuth URLs from backend for jobseeker
+      const response = await apiService.getOAuthUrls('jobseeker')
+      
+      if (response.success && response.data) {
+        const url = provider === 'google' ? response.data.google : response.data.facebook
+        console.log('✅ Redirecting to OAuth provider:', url);
+        // Redirect to OAuth provider
+        window.location.href = url
+      } else {
+        console.error('❌ Failed to get OAuth URL:', response);
+        toast.error('Failed to get OAuth URL')
+      }
+    } catch (error: any) {
+      console.error(`❌ ${provider} OAuth error:`, error)
+      toast.error(`Failed to sign up with ${provider}`)
+    } finally {
+      setOauthLoading(null)
+    }
   }
 
   const benefits = [
