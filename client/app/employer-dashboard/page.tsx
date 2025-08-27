@@ -16,6 +16,7 @@ import {
   Calendar,
   Mail,
   Phone,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +25,7 @@ import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { CompanyInfoDisplay } from "@/components/company-info-display"
+import { toast } from "sonner"
 
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
@@ -40,37 +42,141 @@ export default function EmployerDashboard() {
 }
 
 function EmployerDashboardContent({ user }: { user: any }) {
+  const [stats, setStats] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [companyData, setCompanyData] = useState<any>(null)
+  const [recentApplications, setRecentApplications] = useState<any[]>([])
 
-  const stats = [
-    {
-      title: "Active Jobs",
-      value: "12",
-      change: "+3 this month",
-      icon: Briefcase,
-      color: "from-blue-500 to-blue-600",
-    },
-    {
-      title: "Total Applications",
-      value: "1,247",
-      change: "+18% from last month",
-      icon: Users,
-      color: "from-green-500 to-green-600",
-    },
-    {
-      title: "Profile Views",
-      value: "8,432",
-      change: "+12% this week",
-      icon: Eye,
-      color: "from-purple-500 to-purple-600",
-    },
-    {
-      title: "Hired Candidates",
-      value: "23",
-      change: "+5 this month",
-      icon: Award,
-      color: "from-orange-500 to-orange-600",
-    },
-  ]
+  useEffect(() => {
+    if (user) {
+      loadDashboardData()
+    }
+  }, [user])
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      console.log('🔄 Loading employer dashboard data for user:', user.id)
+
+      // Load dashboard stats
+      const statsResponse = await apiService.getDashboardStats()
+      if (statsResponse.success && statsResponse.data) {
+        const dashboardStats = [
+          {
+            title: "Active Jobs",
+            value: statsResponse.data.activeJobs?.toString() || "0",
+            change: "+3 this month",
+            icon: Briefcase,
+            color: "from-blue-500 to-blue-600",
+          },
+          {
+            title: "Total Applications",
+            value: statsResponse.data.totalApplications?.toString() || "0",
+            change: "+18% from last month",
+            icon: Users,
+            color: "from-green-500 to-green-600",
+          },
+          {
+            title: "Profile Views",
+            value: statsResponse.data.profileViews?.toString() || "0",
+            change: "+12% this week",
+            icon: Eye,
+            color: "from-purple-500 to-purple-600",
+          },
+          {
+            title: "Hired Candidates",
+            value: statsResponse.data.hiredCandidates?.toString() || "0",
+            change: "+5 this month",
+            icon: Award,
+            color: "from-orange-500 to-orange-600",
+          },
+        ]
+        setStats(dashboardStats)
+        console.log('✅ Dashboard stats loaded:', dashboardStats)
+      }
+
+      // Load company data if user has a company
+      if (user.company_id) {
+        try {
+          const companyResponse = await apiService.getCompany(user.company_id)
+          if (companyResponse.success && companyResponse.data) {
+            setCompanyData(companyResponse.data)
+            console.log('✅ Company data loaded:', companyResponse.data)
+          }
+        } catch (error) {
+          console.error('❌ Error loading company data:', error)
+        }
+      }
+
+      // Load recent applications
+      try {
+        const applicationsResponse = await apiService.getApplications()
+        if (applicationsResponse.success && applicationsResponse.data) {
+          setRecentApplications(applicationsResponse.data.slice(0, 5))
+          console.log('✅ Recent applications loaded:', applicationsResponse.data.length)
+        }
+      } catch (error) {
+        console.error('❌ Error loading recent applications:', error)
+      }
+
+      // For Google OAuth users, display Google account details directly
+      if (user.oauth_provider === 'google') {
+        console.log('✅ Google OAuth user detected, using Google account details')
+        toast.success('Welcome! Your Google account details are loaded.')
+        
+        // Update user data with Google profile information if available
+        if (user.firstName || user.lastName || user.email) {
+          const updatedUser = {
+            ...user,
+            // Use Google profile data if available
+            displayName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email,
+            avatar: user.avatar || null,
+            email: user.email
+          }
+          localStorage.setItem('user', JSON.stringify(updatedUser))
+          console.log('✅ Google account details updated in dashboard')
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error loading dashboard data:', error)
+      toast.error('Failed to load dashboard data')
+      
+      // Set default stats if loading fails
+      setStats([
+        {
+          title: "Active Jobs",
+          value: "0",
+          change: "No data",
+          icon: Briefcase,
+          color: "from-blue-500 to-blue-600",
+        },
+        {
+          title: "Total Applications",
+          value: "0",
+          change: "No data",
+          icon: Users,
+          color: "from-green-500 to-green-600",
+        },
+        {
+          title: "Profile Views",
+          value: "0",
+          change: "No data",
+          icon: Eye,
+          color: "from-purple-500 to-purple-600",
+        },
+        {
+          title: "Hired Candidates",
+          value: "0",
+          change: "No data",
+          icon: Award,
+          color: "from-orange-500 to-orange-600",
+        },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const quickActions = [
     {
@@ -186,31 +292,41 @@ function EmployerDashboardContent({ user }: { user: any }) {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-            >
-              <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                      <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                      <p className="text-sm text-green-600">{stat.change}</p>
+          {loading ? (
+            <div className="col-span-full flex justify-center items-center py-12">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+            </div>
+          ) : stats.length > 0 ? (
+            stats.map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+              >
+                <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">{stat.title}</p>
+                        <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                        <p className="text-sm text-green-600">{stat.change}</p>
+                      </div>
+                      <div
+                        className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
+                      >
+                        <stat.icon className="w-6 h-6 text-white" />
+                      </div>
                     </div>
-                    <div
-                      className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                    >
-                      <stat.icon className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-slate-600">No dashboard data available.</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

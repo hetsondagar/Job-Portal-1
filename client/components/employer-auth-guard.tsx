@@ -18,18 +18,29 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
 
   useEffect(() => {
     if (!loading) {
+      console.log('🔍 EmployerAuthGuard - User state:', {
+        hasUser: !!user,
+        userType: user?.userType,
+        email: user?.email,
+        id: user?.id
+      })
+      
       if (!user) {
         // User not authenticated, redirect to employer login
+        console.log('❌ No user found, redirecting to employer-login')
         router.push('/employer-login')
         return
       }
       
+      // Check if user is an employer
       if (user.userType !== 'employer') {
-        // User is not an employer, redirect to appropriate dashboard
+        console.log('❌ User is not employer, userType:', user.userType)
+        console.log('🔄 Redirecting to jobseeker dashboard')
         router.push('/dashboard')
         return
       }
       
+      console.log('✅ User is employer, allowing access to employer dashboard')
       setIsChecking(false)
     }
   }, [user, loading, router])

@@ -432,12 +432,12 @@ class ApiService {
   }
 
   // Company endpoints
-  async getCompanyInfo(companyId: string): Promise<ApiResponse<any>> {
+  async getCompany(companyId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
       headers: this.getAuthHeaders(),
     });
 
-    return this.handleResponse(response);
+    return this.handleResponse<any>(response);
   }
 
   // Job endpoints
@@ -576,7 +576,7 @@ class ApiService {
       
       // If user is an employer, get company information
       if (response.data.user.userType === 'employer' && response.data.user.companyId) {
-        const companyResponse = await this.getCompanyInfo(response.data.user.companyId);
+        const companyResponse = await this.getCompany(response.data.user.companyId);
         if (companyResponse.success && companyResponse.data) {
           localStorage.setItem('company', JSON.stringify(companyResponse.data));
           console.log('✅ OAuth callback - Company data stored:', companyResponse.data);
@@ -597,22 +597,13 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async syncGoogleProfile(): Promise<ApiResponse<{ user: User }>> {
-    const response = await fetch(`${API_BASE_URL}/oauth/sync-google-profile`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<{ user: User }>(response);
-  }
-
-  // Job Applications endpoints
-  async getApplications(): Promise<ApiResponse<JobApplication[]>> {
+  // Applications endpoints
+  async getApplications(): Promise<ApiResponse<any[]>> {
     const response = await fetch(`${API_BASE_URL}/user/applications`, {
       headers: this.getAuthHeaders(),
     });
 
-    return this.handleResponse<JobApplication[]>(response);
+    return this.handleResponse<any[]>(response);
   }
 
   // Job Alerts endpoints
@@ -820,6 +811,34 @@ class ApiService {
     });
 
     return this.handleResponse<{ avatarUrl: string }>(response);
+  }
+
+  // Company endpoints
+  async getCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  // Applications endpoints
+  async getApplications(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/applications`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
+  // Google OAuth sync endpoint
+  async syncGoogleProfile(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/oauth/sync-google-profile`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
   }
 }
 

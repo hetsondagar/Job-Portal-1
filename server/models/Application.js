@@ -177,7 +177,7 @@ const RequirementApplication = sequelize.define('RequirementApplication', {
 });
 
 // Instance methods
-Application.prototype.getStatusColor = function() {
+RequirementApplication.prototype.getStatusColor = function() {
   const statusColors = {
     applied: 'blue',
     reviewing: 'yellow',
@@ -191,7 +191,7 @@ Application.prototype.getStatusColor = function() {
   return statusColors[this.status] || 'gray';
 };
 
-Application.prototype.getStatusText = function() {
+RequirementApplication.prototype.getStatusText = function() {
   const statusTexts = {
     applied: 'Applied',
     reviewing: 'Under Review',
@@ -205,7 +205,7 @@ Application.prototype.getStatusText = function() {
   return statusTexts[this.status] || this.status;
 };
 
-Application.prototype.getTimeSinceApplied = function() {
+RequirementApplication.prototype.getTimeSinceApplied = function() {
   const now = new Date();
   const applied = new Date(this.appliedAt);
   const diffInMs = now - applied;

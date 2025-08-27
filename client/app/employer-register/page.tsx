@@ -57,6 +57,7 @@ export default function EmployerRegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
   const [formData, setFormData] = useState({
     companyName: "",
     fullName: "",
@@ -73,8 +74,77 @@ export default function EmployerRegisterPage() {
   const { employerSignup, loading, error, clearError } = useAuth()
   const router = useRouter()
 
+  // Real-time validation function
+  const validateField = (field: string, value: string) => {
+    const errors: {[key: string]: string} = {}
+    
+    switch (field) {
+      case 'email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (value && !emailRegex.test(value)) {
+          errors.email = 'Please enter a valid email address'
+        }
+        break
+      case 'password':
+        if (value && value.length < 8) {
+          errors.password = 'Password must be at least 8 characters'
+        } else if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+          errors.password = 'Password must contain uppercase, lowercase, and number'
+        }
+        break
+      case 'phone':
+        const phoneRegex = /^[\+]?[0-9\s\-\(\)\.]+$/
+        if (value && value.length < 8) {
+          errors.phone = 'Phone must be at least 8 characters'
+        } else if (value && value.length > 20) {
+          errors.phone = 'Phone must be 20 characters or less'
+        } else if (value && !phoneRegex.test(value)) {
+          errors.phone = 'Use only digits, spaces, dashes, parentheses, and dots'
+        }
+        break
+      case 'fullName':
+        if (value && value.length < 2) {
+          errors.fullName = 'Name must be at least 2 characters'
+        }
+        break
+      case 'companyName':
+        if (value && value.length < 2) {
+          errors.companyName = 'Company name must be at least 2 characters'
+        }
+        break
+    }
+    
+    setValidationErrors(prev => ({ ...prev, ...errors }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Basic frontend validation
+    if (!formData.companyName.trim()) {
+      toast.error('Company name is required')
+      return
+    }
+    
+    if (!formData.fullName.trim()) {
+      toast.error('Full name is required')
+      return
+    }
+    
+    if (!formData.email.trim()) {
+      toast.error('Email is required')
+      return
+    }
+    
+    if (!formData.phone.trim()) {
+      toast.error('Phone number is required')
+      return
+    }
+    
+    if (!formData.password) {
+      toast.error('Password is required')
+      return
+    }
     
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
@@ -114,7 +184,63 @@ export default function EmployerRegisterPage() {
       }
     } catch (error: any) {
       console.error('Registration error:', error)
-      toast.error(error.message || 'Registration failed')
+      
+      // Handle specific validation errors with actionable guidance
+      if (error.message && error.message.includes('Validation failed')) {
+        if (error.errors && Array.isArray(error.errors)) {
+          // Process each validation error and provide specific guidance
+          const errorGuidance = error.errors.map((err: any) => {
+            const field = err.path
+            const message = err.msg
+            
+            // Provide specific guidance for each field
+            switch (field) {
+              case 'email':
+                return '📧 Email: Please enter a valid email address (e.g., john@company.com)'
+              case 'password':
+                if (message.includes('8 characters')) {
+                  return '🔒 Password: Must be at least 8 characters long'
+                } else if (message.includes('uppercase')) {
+                  return '🔒 Password: Must contain uppercase letter, lowercase letter, and number (e.g., MyPass123)'
+                } else {
+                  return '🔒 Password: Must be 8+ characters with uppercase, lowercase, and number'
+                }
+              case 'fullName':
+                return '👤 Full Name: Must be 2-100 characters (e.g., John Doe)'
+              case 'companyName':
+                return '🏢 Company Name: Must be 2-200 characters (e.g., Acme Corporation)'
+              case 'phone':
+                if (message.includes('8 and 20 characters')) {
+                  return '📞 Phone: Must be 8-20 characters (e.g., +1234567890 or 123-456-7890)'
+                } else {
+                  return '📞 Phone: Use only digits, spaces, dashes, parentheses, and dots'
+                }
+              case 'companySize':
+                return '📊 Company Size: Select from the dropdown (1-50, 51-200, etc.)'
+              case 'industry':
+                return '🏭 Industry: Select from the dropdown (Technology, Finance, etc.)'
+              default:
+                return `${field}: ${message}`
+            }
+          }).join('\n\n')
+          
+          toast.error(`Please fix the following issues:\n\n${errorGuidance}`, {
+            duration: 8000, // Show for 8 seconds
+            style: {
+              whiteSpace: 'pre-line',
+              maxWidth: '400px'
+            }
+          })
+        } else {
+          toast.error('Please check your input and try again')
+        }
+      } else if (error.message && error.message.includes('already exists')) {
+        toast.error('❌ An account with this email already exists. Please use a different email or try logging in.')
+      } else if (error.message && error.message.includes('phone number')) {
+        toast.error('📞 Phone: Use only digits, spaces, dashes, parentheses, and dots (e.g., +1234567890 or 123-456-7890)')
+      } else {
+        toast.error(error.message || 'Registration failed. Please try again.')
+      }
     }
   }
 
@@ -143,6 +269,20 @@ export default function EmployerRegisterPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+    
+    // Validate field in real-time
+    if (typeof value === 'string') {
+      validateField(field, value)
+    }
   }
 
   const benefits = [
@@ -209,25 +349,67 @@ export default function EmployerRegisterPage() {
                 <p className="text-slate-600 dark:text-slate-300 mt-2">Start hiring top talent in minutes</p>
               </CardHeader>
 
-              <CardContent className="space-y-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-slate-700 dark:text-slate-300">
-                      Company Name
-                    </Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <Input
-                        id="companyName"
-                        type="text"
-                        placeholder="Enter your company name"
-                        value={formData.companyName}
-                        onChange={(e) => handleInputChange("companyName", e.target.value)}
-                        className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                        required
-                      />
-                    </div>
-                  </div>
+                             <CardContent className="space-y-6">
+                 {/* Validation Status */}
+                 {Object.keys(validationErrors).length > 0 ? (
+                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                     <h3 className="text-red-800 dark:text-red-200 font-medium mb-2 flex items-center">
+                       <span className="mr-2">⚠️</span>
+                       Please fix the following issues:
+                     </h3>
+                     <ul className="text-red-700 dark:text-red-300 text-sm space-y-1">
+                       {Object.entries(validationErrors).map(([field, message]) => (
+                         <li key={field} className="flex items-start">
+                           <span className="mr-2">•</span>
+                           <span className="capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                           <span className="ml-1">{message}</span>
+                         </li>
+                       ))}
+                     </ul>
+                   </div>
+                 ) : (
+                   formData.companyName && formData.fullName && formData.email && formData.phone && formData.password && (
+                     <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                       <h3 className="text-green-800 dark:text-green-200 font-medium mb-2 flex items-center">
+                         <span className="mr-2">✅</span>
+                         All required fields look good!
+                       </h3>
+                       <p className="text-green-700 dark:text-green-300 text-sm">
+                         You can now submit your registration.
+                       </p>
+                     </div>
+                   )
+                 )}
+                 
+                 <form onSubmit={handleSubmit} className="space-y-6">
+                                     <div className="space-y-2">
+                     <Label htmlFor="companyName" className="text-slate-700 dark:text-slate-300">
+                       Company Name
+                     </Label>
+                     <div className="relative">
+                       <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                       <Input
+                         id="companyName"
+                         type="text"
+                         placeholder="Enter your company name"
+                         value={formData.companyName}
+                         onChange={(e) => handleInputChange("companyName", e.target.value)}
+                         className={`pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                           validationErrors.companyName ? 'border-red-500 focus:border-red-500' : ''
+                         }`}
+                         required
+                       />
+                     </div>
+                     {validationErrors.companyName && (
+                       <p className="text-red-500 text-sm mt-1 flex items-center">
+                         <span className="mr-1">⚠️</span>
+                         {validationErrors.companyName}
+                       </p>
+                     )}
+                     <p className="text-slate-500 text-xs">
+                       💡 Example: Acme Corporation, Tech Solutions Inc.
+                     </p>
+                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -248,42 +430,64 @@ export default function EmployerRegisterPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-slate-700 dark:text-slate-300">
-                        Phone Number
-                      </Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="Enter your phone number"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange("phone", e.target.value)}
-                          className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                          required
-                        />
-                      </div>
-                    </div>
+                                         <div className="space-y-2">
+                       <Label htmlFor="phone" className="text-slate-700 dark:text-slate-300">
+                         Phone Number
+                       </Label>
+                       <div className="relative">
+                         <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                         <Input
+                           id="phone"
+                           type="tel"
+                           placeholder="e.g., +1234567890 or 123-456-7890"
+                           value={formData.phone}
+                           onChange={(e) => handleInputChange("phone", e.target.value)}
+                           className={`pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                             validationErrors.phone ? 'border-red-500 focus:border-red-500' : ''
+                           }`}
+                           required
+                         />
+                       </div>
+                       {validationErrors.phone && (
+                         <p className="text-red-500 text-sm mt-1 flex items-center">
+                           <span className="mr-1">⚠️</span>
+                           {validationErrors.phone}
+                         </p>
+                       )}
+                       <p className="text-slate-500 text-xs">
+                         💡 Acceptable formats: +1234567890, 123-456-7890, (123) 456-7890
+                       </p>
+                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
-                      Work Email Address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your work email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                        required
-                      />
-                    </div>
-                  </div>
+                                     <div className="space-y-2">
+                     <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
+                       Work Email Address
+                     </Label>
+                     <div className="relative">
+                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                       <Input
+                         id="email"
+                         type="email"
+                         placeholder="Enter your work email"
+                         value={formData.email}
+                         onChange={(e) => handleInputChange("email", e.target.value)}
+                         className={`pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                           validationErrors.email ? 'border-red-500 focus:border-red-500' : ''
+                         }`}
+                         required
+                       />
+                     </div>
+                     {validationErrors.email && (
+                       <p className="text-red-500 text-sm mt-1 flex items-center">
+                         <span className="mr-1">⚠️</span>
+                         {validationErrors.email}
+                       </p>
+                     )}
+                     <p className="text-slate-500 text-xs">
+                       💡 Example: john.doe@company.com
+                     </p>
+                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -298,11 +502,10 @@ export default function EmployerRegisterPage() {
                           <SelectValue placeholder="Select company size" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1-10">1-10 employees</SelectItem>
-                          <SelectItem value="11-50">11-50 employees</SelectItem>
+                          <SelectItem value="1-50">1-50 employees</SelectItem>
                           <SelectItem value="51-200">51-200 employees</SelectItem>
                           <SelectItem value="201-500">201-500 employees</SelectItem>
-                          <SelectItem value="501-1000">501-1000 employees</SelectItem>
+                          <SelectItem value="500-1000">500-1000 employees</SelectItem>
                           <SelectItem value="1000+">1000+ employees</SelectItem>
                         </SelectContent>
                       </Select>
@@ -348,30 +551,41 @@ export default function EmployerRegisterPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
-                        Password
-                      </Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Create password"
-                          value={formData.password}
-                          onChange={(e) => handleInputChange("password", e.target.value)}
-                          className="pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                    </div>
+                                         <div className="space-y-2">
+                       <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
+                         Password
+                       </Label>
+                       <div className="relative">
+                         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                         <Input
+                           id="password"
+                           type={showPassword ? "text" : "password"}
+                           placeholder="Create password"
+                           value={formData.password}
+                           onChange={(e) => handleInputChange("password", e.target.value)}
+                           className={`pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                             validationErrors.password ? 'border-red-500 focus:border-red-500' : ''
+                           }`}
+                           required
+                         />
+                         <button
+                           type="button"
+                           onClick={() => setShowPassword(!showPassword)}
+                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                         >
+                           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                         </button>
+                       </div>
+                       {validationErrors.password && (
+                         <p className="text-red-500 text-sm mt-1 flex items-center">
+                           <span className="mr-1">⚠️</span>
+                           {validationErrors.password}
+                         </p>
+                       )}
+                       <p className="text-slate-500 text-xs">
+                         💡 Must be 8+ characters with uppercase, lowercase, and number (e.g., MyPass123)
+                       </p>
+                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-300">
@@ -440,12 +654,27 @@ export default function EmployerRegisterPage() {
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
 
-                  {error && (
-                    <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-                      {error}
-                    </div>
-                  )}
-                </form>
+                                     {error && (
+                     <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                       {error}
+                     </div>
+                   )}
+                 </form>
+
+                 {/* Helpful Tips */}
+                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                   <h3 className="text-blue-800 dark:text-blue-200 font-medium mb-2 flex items-center">
+                     <span className="mr-2">💡</span>
+                     Registration Tips
+                   </h3>
+                   <ul className="text-blue-700 dark:text-blue-300 text-sm space-y-1">
+                     <li>• Use your work email address for better verification</li>
+                     <li>• Phone number can include country code, spaces, and dashes</li>
+                     <li>• Password must be strong: 8+ characters with uppercase, lowercase, and number</li>
+                     <li>• Company name should be your official business name</li>
+                     <li>• All fields marked with * are required</li>
+                   </ul>
+                 </div>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
