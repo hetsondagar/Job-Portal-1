@@ -180,6 +180,52 @@ export interface Resume {
   metadata?: any;
 }
 
+export interface Requirement {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  companyId: string;
+  createdBy: string;
+  experience?: string;
+  experienceMin?: number;
+  experienceMax?: number;
+  salary?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  currency?: string;
+  jobType: 'full-time' | 'part-time' | 'contract' | 'internship' | 'freelance';
+  skills?: string[];
+  keySkills?: string[];
+  education?: string;
+  industry?: string;
+  department?: string;
+  validTill?: string;
+  noticePeriod?: string;
+  remoteWork?: 'on-site' | 'remote' | 'hybrid';
+  travelRequired?: boolean;
+  shiftTiming?: 'day' | 'night' | 'rotational' | 'flexible';
+  benefits?: string[];
+  candidateDesignations?: string[];
+  candidateLocations?: string[];
+  includeWillingToRelocate?: boolean;
+  currentSalaryMin?: number;
+  currentSalaryMax?: number;
+  includeNotMentioned?: boolean;
+  status: 'draft' | 'active' | 'paused' | 'closed';
+  isUrgent?: boolean;
+  isFeatured?: boolean;
+  views?: number;
+  matches?: number;
+  applications?: number;
+  publishedAt?: string;
+  closedAt?: string;
+  tags?: string[];
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class ApiService {
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -646,6 +692,14 @@ class ApiService {
   }
 
   // Requirements endpoints
+  async getRequirements(): Promise<ApiResponse<Requirement[]>> {
+    const response = await fetch(`${API_BASE_URL}/requirements`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<Requirement[]>(response);
+  }
+
   async createRequirement(data: any): Promise<ApiResponse<any>> {
     // Ensure companyId is present for employers
     const company = this.getCompanyFromStorage();

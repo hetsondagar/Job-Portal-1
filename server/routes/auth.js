@@ -517,9 +517,28 @@ router.get('/me', async (req, res) => {
       });
     }
 
+    // Map user data to frontend format (camelCase)
+    const userData = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      userType: user.user_type,
+      isEmailVerified: user.is_email_verified,
+      accountStatus: user.account_status,
+      lastLoginAt: user.last_login_at,
+      companyId: user.company_id,
+      phone: user.phone,
+      avatar: user.avatar,
+      currentLocation: user.current_location,
+      headline: user.headline,
+      summary: user.summary,
+      profileCompletion: user.profile_completion
+    };
+
     res.status(200).json({
       success: true,
-      data: { user }
+      data: { user: userData }
     });
 
   } catch (error) {
