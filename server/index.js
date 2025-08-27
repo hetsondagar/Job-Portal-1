@@ -17,6 +17,7 @@ const userRoutes = require('./routes/user');
 const oauthRoutes = require('./routes/oauth');
 const companiesRoutes = require('./routes/companies');
 const jobsRoutes = require('./routes/jobs');
+const requirementsRoutes = require('./routes/requirements');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -113,6 +114,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/companies', companiesRoutes);
 app.use('/api/jobs', jobsRoutes);
+app.use('/api/requirements', requirementsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
