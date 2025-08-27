@@ -44,7 +44,6 @@ User.hasMany(CompanyFollow, { foreignKey: 'userId', as: 'companyFollows' });
 User.hasMany(Subscription, { foreignKey: 'userId', as: 'subscriptions' });
 
 // Company associations
-Company.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
 Company.hasMany(Job, { foreignKey: 'companyId', as: 'jobs' });
 Company.hasMany(CompanyReview, { foreignKey: 'companyId', as: 'reviews' });
 Company.hasMany(CompanyFollow, { foreignKey: 'companyId', as: 'followers' });

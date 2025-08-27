@@ -55,10 +55,10 @@ const validateEmployerSignup = [
     .withMessage('Company name must be between 2 and 200 characters'),
   body('phone')
     .trim()
-    .isLength({ min: 10, max: 15 })
-    .withMessage('Phone number must be between 10 and 15 digits')
-    .matches(/^[\+]?[0-9\s\-\(\)]+$/)
-    .withMessage('Please enter a valid phone number'),
+    .isLength({ min: 8, max: 20 })
+    .withMessage('Phone number must be between 8 and 20 characters')
+    .matches(/^[\+]?[0-9\s\-\(\)\.]+$/)
+    .withMessage('Please enter a valid phone number (digits, spaces, dashes, parentheses, and dots allowed)'),
   body('companySize')
     .optional()
     .isIn(['1-50', '51-200', '201-500', '500-1000', '1000+'])
@@ -66,7 +66,17 @@ const validateEmployerSignup = [
   body('industry')
     .optional()
     .isIn(['technology', 'finance', 'healthcare', 'education', 'retail', 'manufacturing', 'consulting', 'other'])
-    .withMessage('Invalid industry')
+    .withMessage('Invalid industry'),
+  body('agreeToTerms')
+    .custom((value) => {
+      // Handle both boolean and string values
+      const boolValue = value === true || value === 'true' || value === 1;
+      if (!boolValue) {
+        throw new Error('You must agree to the terms and conditions');
+      }
+      return true;
+    })
+    .withMessage('You must agree to the terms and conditions')
 ];
 
 const validateLogin = [

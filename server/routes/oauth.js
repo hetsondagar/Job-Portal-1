@@ -354,17 +354,20 @@ router.get('/google/callback', (req, res) => {
           
           console.log('✅ OAuth data updated for employer user');
         } else {
+          // FORCE jobseeker processing when state is NOT 'employer' (including undefined, null, etc.)
           console.log('📝 Processing jobseeker OAuth - No employer state detected');
           console.log('📝 State value:', state);
           console.log('📝 Session state:', req.session?.oauthState);
           console.log('📝 Query state:', req.query?.state);
           
-          // Ensure jobseekers are set as jobseeker type
-          if (user.user_type !== 'jobseeker') {
-            console.log('🔄 Updating user type to jobseeker');
-            await user.update({ user_type: 'jobseeker' });
-            await user.reload();
-          }
+          // ALWAYS force jobseeker type for jobseeker OAuth flow - regardless of previous user type
+          console.log('🔄 Force updating user type to jobseeker for jobseeker OAuth flow');
+          await user.update({ 
+            user_type: 'jobseeker',
+            // Ensure jobseeker-specific fields are set
+            profile_completion: Math.max(user.profile_completion || 0, 60)
+          });
+          await user.reload();
           
           // Double-check that user type is set correctly for jobseekers
           if (user.user_type !== 'jobseeker') {
@@ -381,6 +384,23 @@ router.get('/google/callback', (req, res) => {
             });
             console.log('✅ Basic profile data set for jobseeker');
           }
+          
+          // Ensure jobseeker has proper account status
+          if (user.account_status !== 'active') {
+            await user.update({ account_status: 'active' });
+            console.log('✅ Account status set to active for jobseeker');
+          }
+          
+          // Update OAuth data for jobseeker
+          await user.update({
+            oauth_provider: 'google',
+            oauth_id: req.user?.oauth_id || user.oauth_id,
+            oauth_access_token: req.user?.oauth_access_token || user.oauth_access_token,
+            oauth_refresh_token: req.user?.oauth_refresh_token || user.oauth_refresh_token,
+            oauth_token_expires_at: req.user?.oauth_token_expires_at || user.oauth_token_expires_at
+          });
+          
+          console.log('✅ OAuth data updated for jobseeker user');
         }
         
         const token = generateToken(user);

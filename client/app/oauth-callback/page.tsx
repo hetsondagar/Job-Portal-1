@@ -107,7 +107,7 @@ export default function OAuthCallbackPage() {
             console.log('✅ Redirecting jobseeker to dashboard')
             setTimeout(() => {
               router.push('/dashboard')
-            }, 2000)
+            }, 1500) // Reduced timeout for better UX
           }
         } else {
           throw new Error('Failed to get user data')
@@ -170,7 +170,7 @@ export default function OAuthCallbackPage() {
         // Always redirect to jobseeker dashboard from this callback
         setTimeout(() => {
           router.push('/dashboard')
-        }, 2000)
+        }, 1500) // Reduced timeout for better UX
       } else {
         throw new Error(response.message || 'Failed to set password')
       }

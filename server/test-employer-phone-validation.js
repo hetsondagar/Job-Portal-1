@@ -1,16 +1,19 @@
 const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:8000/api';
 
-async function testEmployerValidation() {
-  // Test cases with different validation scenarios
+async function testEmployerPhoneValidation() {
+  console.log('🧪 Testing Employer Registration with Various Phone Formats');
+  console.log('==========================================================');
+
+  // Test cases with different phone formats
   const testCases = [
     {
-      name: "Valid employer signup",
+      name: "Valid phone with country code",
       data: {
         fullName: "Test Employer",
         email: `test-employer-${Date.now()}@example.com`,
         password: "TestPassword123",
         companyName: "Test Company",
-        phone: "+1234567890", // Try with country code
+        phone: "+1234567890",
         companySize: "1-50",
         industry: "technology",
         website: "https://testcompany.com",
@@ -19,13 +22,13 @@ async function testEmployerValidation() {
       }
     },
     {
-      name: "Invalid phone format",
+      name: "Valid phone with spaces and dashes",
       data: {
         fullName: "Test Employer",
         email: `test-employer-${Date.now()}@example.com`,
         password: "TestPassword123",
         companyName: "Test Company",
-        phone: "123", // Invalid phone
+        phone: "+1 (234) 567-8900",
         companySize: "1-50",
         industry: "technology",
         website: "https://testcompany.com",
@@ -34,13 +37,58 @@ async function testEmployerValidation() {
       }
     },
     {
-      name: "Missing required fields",
+      name: "Valid phone with dots",
       data: {
         fullName: "Test Employer",
         email: `test-employer-${Date.now()}@example.com`,
         password: "TestPassword123",
         companyName: "Test Company",
-        // Missing phone
+        phone: "+1.234.567.8900",
+        companySize: "1-50",
+        industry: "technology",
+        website: "https://testcompany.com",
+        agreeToTerms: true,
+        subscribeUpdates: true
+      }
+    },
+    {
+      name: "Valid phone without country code",
+      data: {
+        fullName: "Test Employer",
+        email: `test-employer-${Date.now()}@example.com`,
+        password: "TestPassword123",
+        companyName: "Test Company",
+        phone: "1234567890",
+        companySize: "1-50",
+        industry: "technology",
+        website: "https://testcompany.com",
+        agreeToTerms: true,
+        subscribeUpdates: true
+      }
+    },
+    {
+      name: "Invalid phone - too short",
+      data: {
+        fullName: "Test Employer",
+        email: `test-employer-${Date.now()}@example.com`,
+        password: "TestPassword123",
+        companyName: "Test Company",
+        phone: "123",
+        companySize: "1-50",
+        industry: "technology",
+        website: "https://testcompany.com",
+        agreeToTerms: true,
+        subscribeUpdates: true
+      }
+    },
+    {
+      name: "Invalid phone - contains letters",
+      data: {
+        fullName: "Test Employer",
+        email: `test-employer-${Date.now()}@example.com`,
+        password: "TestPassword123",
+        companyName: "Test Company",
+        phone: "123-ABC-4567",
         companySize: "1-50",
         industry: "technology",
         website: "https://testcompany.com",
@@ -50,12 +98,12 @@ async function testEmployerValidation() {
     }
   ];
 
+  let passedTests = 0;
+  let totalTests = testCases.length;
+
   for (const testCase of testCases) {
     console.log(`\n🧪 Testing: ${testCase.name}`);
-    console.log('Data:', {
-      ...testCase.data,
-      password: '[HIDDEN]'
-    });
+    console.log('Phone:', testCase.data.phone);
 
     try {
       const response = await makeRequest(`${API_BASE_URL}/auth/employer-signup`, {
@@ -64,19 +112,31 @@ async function testEmployerValidation() {
       });
 
       if (response.success) {
-        console.log('✅ Test passed - Registration successful');
+        console.log('✅ Test PASSED - Registration successful');
         console.log('User ID:', response.data?.user?.id);
         console.log('Company ID:', response.data?.company?.id);
+        passedTests++;
       } else {
-        console.log('❌ Test failed - Registration failed');
+        console.log('❌ Test FAILED - Registration failed');
         console.log('Error:', response.message);
         if (response.errors) {
-          console.log('Validation errors:', response.errors);
+          console.log('Validation errors:', response.errors.map((err) => `${err.path}: ${err.msg}`).join(', '));
         }
       }
     } catch (error) {
-      console.log('❌ Test failed with error:', error.message);
+      console.log('❌ Test FAILED with error:', error.message);
     }
+  }
+
+  console.log('\n📊 Test Summary:');
+  console.log('================');
+  console.log(`✅ Passed: ${passedTests}/${totalTests}`);
+  console.log(`❌ Failed: ${totalTests - passedTests}/${totalTests}`);
+  
+  if (passedTests === totalTests) {
+    console.log('🎉 All tests passed! Employer registration is working correctly.');
+  } else {
+    console.log('⚠️ Some tests failed. Check the validation logic.');
   }
 }
 
@@ -143,4 +203,4 @@ function makeRequest(url, options = {}) {
   });
 }
 
-testEmployerValidation();
+testEmployerPhoneValidation();
