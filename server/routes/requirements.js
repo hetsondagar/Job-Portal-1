@@ -198,30 +198,29 @@ router.post('/', authenticateToken, async (req, res) => {
 // List Requirements for authenticated employer's company
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 GET /requirements - User:', req.user?.id, 'Email:', req.user?.email);
-    console.log('🔍 User company_id:', req.user?.company_id);
-    console.log('🔍 User type:', req.user?.user_type);
-    
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
-      console.log('❌ User is not an employer, user_type:', req.user.user_type);
       return res.status(403).json({ success: false, message: 'Access denied. Only employers can view requirements.' });
     }
     
     const companyId = req.user.company_id;
     if (!companyId) {
-      console.log('❌ No company_id found for user');
-      return res.status(400).json({ success: false, message: 'Authenticated user has no company associated. Please contact support.' });
+      return res.status(200).json({ success: true, data: [] });
     }
     
-    console.log('🔍 Fetching requirements for company:', companyId);
-    const rows = await Requirement.findAll({ where: { companyId }, order: [['createdAt', 'DESC']] });
-    console.log('✅ Found requirements:', rows.length);
+    const rows = await Requirement.findAll({ 
+      where: { companyId }, 
+      order: [['createdAt', 'DESC']] 
+    });
     
     return res.status(200).json({ success: true, data: rows });
   } catch (error) {
-    console.error('❌ List requirements error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch requirements' });
+    console.error('List requirements error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch requirements',
+      error: { name: error.name, message: error.message }
+    });
   }
 });
 

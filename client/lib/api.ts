@@ -324,6 +324,7 @@ class ApiService {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('company');
 
     return this.handleResponse(response);
   }
@@ -427,6 +428,8 @@ class ApiService {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
+    localStorage.removeItem('company');
 
     return this.handleResponse(response);
   }
