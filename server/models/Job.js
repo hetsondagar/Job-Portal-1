@@ -24,7 +24,7 @@ const Job = sequelize.define('Job', {
       key: 'id'
     }
   },
-  postedBy: {
+  employerId: {
     type: DataTypes.UUID,
     allowNull: false,
     references: {

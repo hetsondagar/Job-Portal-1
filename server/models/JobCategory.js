@@ -80,7 +80,7 @@ JobCategory.prototype.getJobCount = async function() {
   const { Job } = require('../config/index');
   return await Job.count({
     where: {
-      categoryId: this.id,
+      category: this.name,
       status: 'active'
     }
   });

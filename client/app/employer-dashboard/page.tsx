@@ -1,6 +1,7 @@
 "use client"
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Plus,
   Users,
@@ -42,6 +43,7 @@ export default function EmployerDashboard() {
 }
 
 function EmployerDashboardContent({ user }: { user: any }) {
+  const router = useRouter()
   const [stats, setStats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [companyData, setCompanyData] = useState<any>(null)
@@ -64,29 +66,29 @@ function EmployerDashboardContent({ user }: { user: any }) {
         const dashboardStats = [
           {
             title: "Active Jobs",
-            value: statsResponse.data.activeJobs?.toString() || "0",
-            change: "+3 this month",
+            value: (statsResponse.data.activeJobs || 0).toString(),
+            change: (statsResponse.data.activeJobs || 0) > 0 ? `+${statsResponse.data.activeJobs} active` : "No active jobs",
             icon: Briefcase,
             color: "from-blue-500 to-blue-600",
           },
           {
             title: "Total Applications",
-            value: statsResponse.data.totalApplications?.toString() || "0",
-            change: "+18% from last month",
+            value: (statsResponse.data.totalApplications || 0).toString(),
+            change: (statsResponse.data.totalApplications || 0) > 0 ? `${statsResponse.data.totalApplications} received` : "No applications yet",
             icon: Users,
             color: "from-green-500 to-green-600",
           },
           {
             title: "Profile Views",
-            value: statsResponse.data.profileViews?.toString() || "0",
-            change: "+12% this week",
+            value: (statsResponse.data.profileViews || 0).toString(),
+            change: (statsResponse.data.profileViews || 0) > 0 ? `${statsResponse.data.profileViews} views` : "No profile views",
             icon: Eye,
             color: "from-purple-500 to-purple-600",
           },
           {
             title: "Hired Candidates",
-            value: statsResponse.data.hiredCandidates?.toString() || "0",
-            change: "+5 this month",
+            value: (statsResponse.data.hiredCandidates || 0).toString(),
+            change: (statsResponse.data.hiredCandidates || 0) > 0 ? `${statsResponse.data.hiredCandidates} hired` : "No hires yet",
             icon: Award,
             color: "from-orange-500 to-orange-600",
           },
@@ -108,15 +110,41 @@ function EmployerDashboardContent({ user }: { user: any }) {
         }
       }
 
-      // Load recent applications
+      // Load recent applications and jobs for activity feed
       try {
         const applicationsResponse = await apiService.getApplications()
+        const jobsResponse = await apiService.getEmployerJobs({ limit: 5 })
+        
+        let applications = []
+        let jobs = []
+        
         if (applicationsResponse.success && applicationsResponse.data) {
-          setRecentApplications(applicationsResponse.data.slice(0, 5))
-          console.log('✅ Recent applications loaded:', applicationsResponse.data.length)
+          applications = applicationsResponse.data.slice(0, 5)
+          setRecentApplications(applications)
+          console.log('✅ Recent applications loaded:', applications.length)
         }
+        
+        if (jobsResponse.success && jobsResponse.data) {
+          jobs = jobsResponse.data.slice(0, 5)
+          console.log('✅ Recent jobs loaded:', jobs.length)
+        }
+        
+        // Generate recent activity from real data
+        const activityData = generateRecentActivity(applications, jobs)
+        setRecentActivity(activityData)
+        console.log('✅ Recent activity generated:', activityData.length)
+        
       } catch (error) {
-        console.error('❌ Error loading recent applications:', error)
+        console.error('❌ Error loading recent data:', error)
+        // Set default activity if loading fails
+        setRecentActivity([{
+          id: 1,
+          type: "placeholder",
+          title: "No recent activity",
+          description: "Your recent activities will appear here",
+          time: "Just now",
+          icon: Clock,
+        }])
       }
 
       // For Google OAuth users, display Google account details directly
@@ -223,32 +251,49 @@ function EmployerDashboardContent({ user }: { user: any }) {
     },
   ]
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: "application",
-      title: "New application received",
-      description: "Priya Sharma applied for Senior React Developer",
-      time: "2 hours ago",
-      icon: Users,
-    },
-    {
-      id: 2,
-      type: "job",
-      title: "Job posted successfully",
-      description: "Product Manager position is now live",
-      time: "1 day ago",
-      icon: Briefcase,
-    },
-    {
-      id: 3,
-      type: "requirement",
-      title: "Requirement created",
-      description: "Software Engineer requirement added to database",
-      time: "2 days ago",
-      icon: Database,
-    },
-  ]
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+
+  const generateRecentActivity = (applications: any[], jobs: any[]) => {
+    const activities = []
+    
+    // Add recent applications
+    applications.slice(0, 3).forEach((app, index) => {
+      activities.push({
+        id: `app-${index}`,
+        type: "application",
+        title: "New application received",
+        description: `${app.applicantName || 'A candidate'} applied for ${app.job?.title || 'a job'}`,
+        time: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'Recently',
+        icon: Users,
+      })
+    })
+    
+    // Add recent job postings
+    jobs.slice(0, 2).forEach((job, index) => {
+      activities.push({
+        id: `job-${index}`,
+        type: "job",
+        title: "Job posted successfully",
+        description: `${job.title} position is now live`,
+        time: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+        icon: Briefcase,
+      })
+    })
+    
+    // If no real data, show placeholder
+    if (activities.length === 0) {
+      activities.push({
+        id: 1,
+        type: "placeholder",
+        title: "No recent activity",
+        description: "Your recent activities will appear here",
+        time: "Just now",
+        icon: Clock,
+      })
+    }
+    
+    return activities
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
@@ -272,11 +317,11 @@ function EmployerDashboardContent({ user }: { user: any }) {
                   <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
                       <TrendingUp className="w-5 h-5 text-blue-200" />
-                      <span className="text-sm">12 Active Jobs</span>
+                      <span className="text-sm">{stats.find(s => s.title === "Active Jobs")?.value || "0"} Active Jobs</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Users className="w-5 h-5 text-blue-200" />
-                      <span className="text-sm">1,247 Applications</span>
+                      <span className="text-sm">{stats.find(s => s.title === "Total Applications")?.value || "0"} Applications</span>
                     </div>
                   </div>
                 </div>
@@ -424,14 +469,21 @@ function EmployerDashboardContent({ user }: { user: any }) {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-slate-600">Company Profile</span>
-                      <span className="text-sm font-medium text-slate-900">85%</span>
+                      <span className="text-sm font-medium text-slate-900">{user?.profileCompletion || 0}%</span>
                     </div>
-                    <Progress value={85} className="h-2" />
+                    <Progress value={user?.profileCompletion || 0} className="h-2" />
                   </div>
-                  <div className="text-sm text-slate-600">Complete your profile to attract better candidates</div>
-                  <Button variant="outline" size="sm" className="w-full bg-transparent">
-                    Complete Profile
-                  </Button>
+                  <div className="text-sm text-slate-600">
+                    {user?.profileCompletion >= 80 ? 'Great! Your profile is well completed.' : 'Complete your profile to attract better candidates'}
+                  </div>
+                                     <Button 
+                     variant="outline" 
+                     size="sm" 
+                     className="w-full bg-transparent"
+                     onClick={() => router.push('/employer-dashboard/settings')}
+                   >
+                     {user?.profileCompletion >= 80 ? 'View Profile' : 'Complete Profile'}
+                   </Button>
                 </div>
               </CardContent>
             </Card>
@@ -446,20 +498,27 @@ function EmployerDashboardContent({ user }: { user: any }) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Interview with John Doe</p>
-                      <p className="text-xs text-slate-600">Today, 2:00 PM</p>
+                  {recentApplications.length > 0 ? (
+                    recentApplications.slice(0, 2).map((app, index) => (
+                      <div key={index} className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">New application received</p>
+                          <p className="text-xs text-slate-600">
+                            {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'Recently'}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">No upcoming events</p>
+                        <p className="text-xs text-slate-600">Your events will appear here</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Job posting expires</p>
-                      <p className="text-xs text-slate-600">Tomorrow, 11:59 PM</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

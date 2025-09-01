@@ -42,21 +42,21 @@ User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 User.hasMany(CompanyReview, { foreignKey: 'userId', as: 'companyReviews' });
 User.hasMany(CompanyFollow, { foreignKey: 'userId', as: 'companyFollows' });
 User.hasMany(Subscription, { foreignKey: 'userId', as: 'subscriptions' });
+User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 
 // Company associations
 Company.hasMany(Job, { foreignKey: 'companyId', as: 'jobs' });
 Company.hasMany(CompanyReview, { foreignKey: 'companyId', as: 'reviews' });
 Company.hasMany(CompanyFollow, { foreignKey: 'companyId', as: 'followers' });
+Company.hasMany(User, { foreignKey: 'company_id', as: 'employees' });
 
 // Job associations
 Job.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
 Job.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
-Job.belongsTo(JobCategory, { foreignKey: 'categoryId', as: 'category' });
-Job.hasMany(JobApplication, { foreignKey: 'jobId', as: 'applications' });
+Job.hasMany(JobApplication, { foreignKey: 'jobId', as: 'jobApplications' });
 Job.hasMany(JobBookmark, { foreignKey: 'jobId', as: 'bookmarks' });
 
 // JobCategory associations
-JobCategory.hasMany(Job, { foreignKey: 'categoryId', as: 'jobs' });
 JobCategory.belongsTo(JobCategory, { foreignKey: 'parentId', as: 'parent' });
 JobCategory.hasMany(JobCategory, { foreignKey: 'parentId', as: 'children' });
 
@@ -64,7 +64,7 @@ JobCategory.hasMany(JobCategory, { foreignKey: 'parentId', as: 'children' });
 JobApplication.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
 JobApplication.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
 JobApplication.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
-JobApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'resume' });
+JobApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'jobResume' });
 
 // JobBookmark associations
 JobBookmark.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -75,25 +75,25 @@ JobAlert.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Requirement associations
 Requirement.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
-Requirement.hasMany(RequirementApplication, { foreignKey: 'requirementId', as: 'applications' });
+Requirement.hasMany(RequirementApplication, { foreignKey: 'requirementId', as: 'requirementApplications' });
 
 // RequirementApplication associations
 RequirementApplication.belongsTo(User, { foreignKey: 'userId', as: 'candidate' });
 RequirementApplication.belongsTo(Requirement, { foreignKey: 'requirementId', as: 'requirement' });
-RequirementApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'resume' });
+RequirementApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'requirementResume' });
 
 // Resume associations
 Resume.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-Resume.hasMany(WorkExperience, { foreignKey: 'resumeId', as: 'workExperiences' });
-Resume.hasMany(Education, { foreignKey: 'resumeId', as: 'educations' });
+Resume.hasMany(WorkExperience, { foreignKey: 'resumeId', as: 'resumeWorkExperiences' });
+Resume.hasMany(Education, { foreignKey: 'resumeId', as: 'resumeEducations' });
 
 // WorkExperience associations
 WorkExperience.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-WorkExperience.belongsTo(Resume, { foreignKey: 'resumeId', as: 'resume' });
+WorkExperience.belongsTo(Resume, { foreignKey: 'resumeId', as: 'workExperienceResume' });
 
 // Education associations
 Education.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-Education.belongsTo(Resume, { foreignKey: 'resumeId', as: 'resume' });
+Education.belongsTo(Resume, { foreignKey: 'resumeId', as: 'educationResume' });
 
 // Notification associations
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });

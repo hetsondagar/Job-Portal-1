@@ -994,19 +994,15 @@ export default function HomePage() {
                   className="flex-shrink-0 w-72 sm:w-80"
                 >
                   <Link href={`/companies/${company.id}`}>
-                    <Card className={`h-full bg-gradient-to-br ${company.color} hover:${company.hoverColor} backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl transition-all duration-500 group cursor-pointer transform hover:scale-105`}>
+                                         <Card className={`h-full bg-gradient-to-br ${company.color} backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl dark:hover:shadow-white/20 transition-all duration-500 group cursor-pointer transform hover:scale-105`}>
                     <CardContent className="p-6 text-white relative overflow-hidden">
-                      {/* Background pattern */}
-                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
-                      <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8"></div>
                       
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-4">
-                          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                          <div className="w-12 h-12 bg-black/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                             <span className="text-2xl">{company.icon}</span>
                 </div>
-                          <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
+                          <Badge className="bg-black/30 text-white border-0 backdrop-blur-sm">
                             {company.industry}
                           </Badge>
                         </div>
@@ -1042,11 +1038,11 @@ export default function HomePage() {
                         
                         <div className="flex items-center justify-between">
                           <Button
-                            className="bg-white/20 hover:bg-white/30 text-white border-0 shadow-lg transition-all duration-300 group-hover:scale-105 backdrop-blur-sm"
+                            className="bg-black/30 hover:bg-black/40 text-white border-0 shadow-lg transition-all duration-300 group-hover:scale-105 backdrop-blur-sm"
                           >
                             View Jobs
                           </Button>
-                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                          <div className="w-8 h-8 bg-black/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                             <ArrowRight className="w-4 h-4 text-white" />
                 </div>
                         </div>
