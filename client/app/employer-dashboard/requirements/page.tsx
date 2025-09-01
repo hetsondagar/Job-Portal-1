@@ -69,7 +69,10 @@ export default function RequirementsPage() {
         
         if (!token || !user) {
           console.log('❌ Frontend: User not authenticated, redirecting to login')
-          router.push('/employer-login')
+          setError('Please log in to view requirements.')
+          setTimeout(() => {
+            router.push('/employer-login')
+          }, 2000)
           return
         }
         
@@ -132,11 +135,39 @@ export default function RequirementsPage() {
           setRequirements(response.data)
         } else {
           console.error('❌ Frontend: Failed to fetch requirements:', response.message)
-          setError('Failed to load requirements. Please try again later.')
+          
+          // Handle specific error cases
+          if (response.message?.includes('Access denied') || response.message?.includes('Invalid or expired token')) {
+            setError('Your session has expired. Please log in again.')
+            setTimeout(() => {
+              localStorage.removeItem('token')
+              localStorage.removeItem('user')
+              localStorage.removeItem('company')
+              router.push('/employer-login')
+            }, 2000)
+          } else if (response.message?.includes('no company associated')) {
+            setError('Your account is not associated with a company. Please contact support.')
+          } else {
+            setError(response.message || 'Failed to load requirements. Please try again later.')
+          }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ Frontend: Error fetching requirements:', error)
-        setError('Failed to load requirements. Please try again later.')
+        
+        // Handle network errors
+        if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+          setError('Unable to connect to the server. Please check your internet connection and try again.')
+        } else if (error.message?.includes('Access denied') || error.message?.includes('Invalid or expired token')) {
+          setError('Your session has expired. Please log in again.')
+          setTimeout(() => {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            localStorage.removeItem('company')
+            router.push('/employer-login')
+          }, 2000)
+        } else {
+          setError(error.message || 'Failed to load requirements. Please try again later.')
+        }
       } finally {
         setLoading(false)
       }
@@ -413,12 +444,20 @@ export default function RequirementsPage() {
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-2">Error loading requirements</h3>
                       <p className="text-slate-600 mb-4">{error}</p>
-                      <Button 
-                        onClick={() => window.location.reload()} 
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                      >
-                        Try Again
-                      </Button>
+                      <div className="flex space-x-3">
+                        <Button 
+                          onClick={() => window.location.reload()} 
+                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        >
+                          Try Again
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={() => router.push('/employer-login')}
+                        >
+                          Go to Login
+                        </Button>
+                      </div>
                     </motion.div>
                   ) : filteredRequirements.length > 0 ? (
                     filteredRequirements.map((requirement, index) => (

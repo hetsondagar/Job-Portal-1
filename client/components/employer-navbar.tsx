@@ -31,7 +31,7 @@ export function EmployerNavbar() {
     const fetchCompanyData = async () => {
       if (user?.userType === 'employer' && user?.companyId) {
         try {
-          const response = await apiService.getCompanyInfo(user.companyId)
+          const response = await apiService.getCompany(user.companyId)
           if (response.success && response.data) {
             setCompany(response.data)
           }

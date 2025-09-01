@@ -324,6 +324,7 @@ class ApiService {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('company');
 
     return this.handleResponse(response);
   }
@@ -427,6 +428,8 @@ class ApiService {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
+    localStorage.removeItem('company');
 
     return this.handleResponse(response);
   }
@@ -811,24 +814,6 @@ class ApiService {
     });
 
     return this.handleResponse<{ avatarUrl: string }>(response);
-  }
-
-  // Company endpoints
-  async getCompany(companyId: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  // Applications endpoints
-  async getApplications(): Promise<ApiResponse<any[]>> {
-    const response = await fetch(`${API_BASE_URL}/user/applications`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any[]>(response);
   }
 
   // Google OAuth sync endpoint

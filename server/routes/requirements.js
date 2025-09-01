@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 
 const Requirement = require('../models/Requirement');
 const User = require('../models/User');
+const Company = require('../models/Company');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -39,6 +40,11 @@ router.post('/', authenticateToken, async (req, res) => {
     console.log('📝 Create Requirement request by user:', req.user?.id, 'company_id:', req.user?.company_id);
     console.log('📝 Payload:', JSON.stringify(body));
 
+    // Only employers can create requirements
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Only employers can create requirements' });
+    }
+
     const errors = [];
     if (!body.title || String(body.title).trim() === '') errors.push('title is required');
     if (!body.description || String(body.description).trim() === '') errors.push('description is required');
@@ -48,18 +54,27 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Validation failed', errors });
     }
 
-    // Normalize enums to backend values
-    const normalizedJobType = (body.jobType || 'full-time')
+    // Normalize enums to backend values with safe fallbacks
+    const jobTypeAllowed = new Set(['full-time', 'part-time', 'contract', 'internship', 'freelance']);
+    let normalizedJobType = (body.jobType || 'full-time')
       .toString()
       .toLowerCase()
       .replace(/\s+/g, '-');
-    const normalizedRemoteWork = (body.remoteWork || '')
+    if (!jobTypeAllowed.has(normalizedJobType)) normalizedJobType = 'full-time';
+
+    const remoteWorkAllowed = new Set(['on-site', 'remote', 'hybrid']);
+    let normalizedRemoteWork = (body.remoteWork || '')
       .toString()
       .toLowerCase()
-      .replace('on-site', 'on-site'); // ensure exact match casing
-    const normalizedShiftTiming = (body.shiftTiming || '')
+      .replace(/\s+/g, '-');
+    if (!remoteWorkAllowed.has(normalizedRemoteWork)) normalizedRemoteWork = null;
+
+    const shiftTimingAllowed = new Set(['day', 'night', 'rotational', 'flexible']);
+    let normalizedShiftTiming = (body.shiftTiming || '')
       .toString()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/\s+/g, '-');
+    if (!shiftTimingAllowed.has(normalizedShiftTiming)) normalizedShiftTiming = null;
 
     // Normalize travelRequired (UI may send 'No' | 'Occasionally' | 'Frequently')
     let normalizedTravelRequired = undefined;
@@ -70,10 +85,73 @@ router.post('/', authenticateToken, async (req, res) => {
       normalizedTravelRequired = body.travelRequired;
     }
 
-    // Prefer provided companyId, otherwise derive from authenticated user
-    const companyId = body.companyId || req.user.company_id;
+    // Resolve companyId: prefer provided, else user's company, else create/attach one
+    let companyId = body.companyId || req.user.company_id;
     if (!companyId) {
-      return res.status(400).json({ success: false, message: 'companyId is required for requirement creation' });
+      try {
+        // Try from provided companyName
+        let companyRecord = null;
+        const providedCompanyName = (body.companyName || '').toString().trim();
+
+        const generateSlug = async (name) => {
+          let baseSlug = name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+            .substring(0, 50);
+          if (!baseSlug) baseSlug = `company-${Date.now()}`;
+          let slug = baseSlug;
+          let counter = 1;
+          // Ensure uniqueness
+          // eslint-disable-next-line no-constant-condition
+          while (true) {
+            const existing = await Company.findOne({ where: { slug } });
+            if (!existing) break;
+            slug = `${baseSlug}-${counter++}`;
+          }
+          return slug;
+        };
+
+        if (providedCompanyName) {
+          const slug = await generateSlug(providedCompanyName);
+          companyRecord = await Company.create({
+            name: providedCompanyName,
+            slug,
+            industry: body.industry || 'Other',
+            companySize: body.companySize || '1-50',
+            email: req.user.email,
+            contactPerson: `${req.user.first_name} ${req.user.last_name}`.trim(),
+            contactEmail: req.user.email,
+            companyStatus: 'pending_approval',
+            isActive: true
+          });
+        } else {
+          // Derive from email domain as a fallback
+          const emailDomain = (req.user.email || '').split('@')[1] || '';
+          const domainBase = emailDomain.replace(/\..*$/, '').replace(/[^a-zA-Z0-9]+/g, ' ');
+          const derivedName = domainBase ? domainBase.charAt(0).toUpperCase() + domainBase.slice(1) : 'New Company';
+          const slug = await generateSlug(derivedName);
+          companyRecord = await Company.create({
+            name: derivedName,
+            slug,
+            industry: 'Other',
+            companySize: '1-50',
+            email: req.user.email,
+            contactPerson: `${req.user.first_name} ${req.user.last_name}`.trim(),
+            contactEmail: req.user.email,
+            companyStatus: 'pending_approval',
+            isActive: true
+          });
+        }
+
+        // Attach to user for future requests
+        await req.user.update({ company_id: companyRecord.id });
+        companyId = companyRecord.id;
+        console.log('🏢 Created and attached company to employer:', companyId);
+      } catch (companyErr) {
+        console.error('❌ Failed to resolve company for requirement creation:', companyErr);
+        return res.status(400).json({ success: false, message: 'Unable to determine or create company for employer' });
+      }
     }
 
     const requirement = await Requirement.create({
@@ -113,31 +191,36 @@ router.post('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('❌ Requirement creation error:', error);
     const statusCode = error?.name === 'SequelizeUniqueConstraintError' ? 409 : 500;
-    return res.status(statusCode).json({ success: false, message: 'Failed to create requirement', error: error.message });
+    return res.status(statusCode).json({ success: false, message: 'Failed to create requirement', error: { name: error.name, message: error.message } });
   }
 });
 
 // List Requirements for authenticated employer's company
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 GET /requirements - User:', req.user?.id, 'Email:', req.user?.email);
-    console.log('🔍 User company_id:', req.user?.company_id);
-    console.log('🔍 User type:', req.user?.user_type);
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view requirements.' });
+    }
     
     const companyId = req.user.company_id;
     if (!companyId) {
-      console.log('❌ No company_id found for user');
-      return res.status(400).json({ success: false, message: 'Authenticated user has no company associated' });
+      return res.status(200).json({ success: true, data: [] });
     }
     
-    console.log('🔍 Fetching requirements for company:', companyId);
-    const rows = await Requirement.findAll({ where: { companyId }, order: [['createdAt', 'DESC']] });
-    console.log('✅ Found requirements:', rows.length);
+    const rows = await Requirement.findAll({ 
+      where: { companyId }, 
+      order: [['createdAt', 'DESC']] 
+    });
     
     return res.status(200).json({ success: true, data: rows });
   } catch (error) {
-    console.error('❌ List requirements error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch requirements' });
+    console.error('List requirements error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch requirements',
+      error: { name: error.name, message: error.message }
+    });
   }
 });
 
