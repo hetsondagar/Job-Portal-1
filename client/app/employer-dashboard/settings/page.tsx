@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Shield, Bell, CreditCard, Settings, LogOut, Edit, Save, X } from "lucide-react"
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Shield, Bell, CreditCard, Settings, LogOut, Edit, Save, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,29 +17,34 @@ import { Switch } from "@/components/ui/switch"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/useAuth"
+import { apiService } from "@/lib/api"
+import { toast } from "sonner"
 
 export default function EmployerSettingsPage() {
   const router = useRouter()
-  const { toast } = useToast()
+  const { toast: toastNotification } = useToast()
+  const { user, loading } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
 
-  // Mock user data - in real app, this would come from context/API
+  // Dynamic user data from API
   const [userData, setUserData] = useState({
-    firstName: "Keshav",
-    lastName: "Encon",
-    email: "keshav.encon@techcorp.com",
-    phone: "+91 98765 43210",
-    company: "TechCorp Solutions",
-    designation: "Senior HR Manager",
-    location: "Bangalore, Karnataka",
-    avatar: "/placeholder-user.jpg",
-    companyLogo: "/placeholder-logo.png",
-    companySize: "500-1000",
-    industry: "Technology",
-    website: "www.techcorp.com",
-    address: "Tech Park, Whitefield, Bangalore - 560066",
-    about: "Leading technology company specializing in innovative software solutions for enterprises.",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    company: "",
+    designation: "",
+    location: "",
+    avatar: "",
+    companyLogo: "",
+    companySize: "",
+    industry: "",
+    website: "",
+    address: "",
+    about: "",
     notifications: {
       email: true,
       sms: false,
@@ -50,14 +55,93 @@ export default function EmployerSettingsPage() {
       marketing: false
     },
     subscription: {
-      plan: "Premium",
+      plan: "Basic",
       status: "Active",
-      nextBilling: "2025-02-15",
-      features: ["Unlimited Job Postings", "Advanced Analytics", "Priority Support", "Custom Branding"]
+      nextBilling: "",
+      features: ["Job Postings", "Basic Analytics", "Email Support"]
     }
   })
 
   const [formData, setFormData] = useState(userData)
+
+  // Load user and company data
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!user) return
+      
+      try {
+        setLoadingData(true)
+        console.log('🔄 Loading employer profile data for user:', user.id)
+
+        // Load user profile data
+        const userProfileResponse = await apiService.getUserProfile()
+        if (userProfileResponse.success && userProfileResponse.data?.user) {
+          const userProfile = userProfileResponse.data.user
+          console.log('✅ User profile loaded:', userProfile)
+          
+          // Load company data if user has a company
+          let companyData = null
+          if (userProfile.companyId) {
+            try {
+              const companyResponse = await apiService.getCompany(userProfile.companyId)
+              if (companyResponse.success && companyResponse.data) {
+                companyData = companyResponse.data
+                console.log('✅ Company data loaded:', companyData)
+              }
+            } catch (error) {
+              console.error('❌ Error loading company data:', error)
+            }
+          }
+
+          // Combine user and company data
+          const combinedData = {
+            firstName: userProfile.firstName || '',
+            lastName: userProfile.lastName || '',
+            email: userProfile.email || '',
+            phone: userProfile.phone || '',
+            company: companyData?.name || '',
+            designation: userProfile.headline || '',
+            location: userProfile.currentLocation || '',
+            avatar: userProfile.avatar || '',
+            companyLogo: companyData?.logo || '',
+            companySize: companyData?.companySize || '',
+            industry: companyData?.industry || '',
+            website: companyData?.website || '',
+            address: companyData?.address || '',
+            about: companyData?.description || '',
+            notifications: {
+              email: true,
+              sms: false,
+              push: true,
+              jobApplications: true,
+              candidateMatches: true,
+              systemUpdates: false,
+              marketing: false
+            },
+            subscription: {
+              plan: "Basic",
+              status: "Active",
+              nextBilling: "",
+              features: ["Job Postings", "Basic Analytics", "Email Support"]
+            }
+          }
+
+          setUserData(combinedData)
+          setFormData(combinedData)
+          console.log('✅ Profile data combined and set:', combinedData)
+        }
+      } catch (error) {
+        console.error('❌ Error loading profile data:', error)
+        toast.error('Failed to load profile data')
+      } finally {
+        setLoadingData(false)
+      }
+    }
+
+    if (user && !loading) {
+      loadProfileData()
+    }
+  }, [user, loading])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -79,20 +163,54 @@ export default function EmployerSettingsPage() {
   const handleSave = async () => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setUserData(formData)
-      setIsEditing(false)
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
-      })
+      console.log('💾 Saving employer profile data:', formData)
+
+      // Update user profile
+      const userUpdateData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        currentLocation: formData.location,
+        headline: formData.designation
+      }
+
+      const userResponse = await apiService.updateProfile(userUpdateData)
+      
+      if (userResponse.success) {
+        console.log('✅ User profile updated successfully')
+        
+        // Update company data if user has a company
+        if (user?.companyId) {
+          try {
+            const companyUpdateData = {
+              name: formData.company,
+              industry: formData.industry,
+              companySize: formData.companySize,
+              website: formData.website,
+              description: formData.about,
+              address: formData.address
+            }
+
+            const companyResponse = await apiService.updateCompany(user.companyId, companyUpdateData)
+            if (companyResponse.success) {
+              console.log('✅ Company data updated successfully')
+            }
+          } catch (error) {
+            console.error('❌ Error updating company data:', error)
+            // Don't fail the entire save if company update fails
+          }
+        }
+
+        setUserData(formData)
+        setIsEditing(false)
+        toast.success('Profile updated successfully!')
+        console.log('✅ Profile update completed')
+      } else {
+        throw new Error(userResponse.message || 'Failed to update profile')
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      })
+      console.error('❌ Error saving profile:', error)
+      toast.error('Failed to update profile. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -105,6 +223,27 @@ export default function EmployerSettingsPage() {
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  }
+
+  // Show loading state while checking authentication or loading data
+  if (loading || loadingData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <EmployerNavbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+            <p className="text-slate-600">Loading profile data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    router.push('/login')
+    return null
   }
 
   return (

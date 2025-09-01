@@ -25,7 +25,10 @@ export default function PostJobPage() {
   const { user, loading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [publishing, setPublishing] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [loadingDraft, setLoadingDraft] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [editingJobId, setEditingJobId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     department: "",
@@ -46,6 +49,57 @@ export default function PostJobPage() {
     { id: 4, title: "Review & Post", description: "Final review" },
   ]
 
+  // Load job data when editing
+  useEffect(() => {
+    const loadJobData = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const jobId = urlParams.get('draft') || urlParams.get('job');
+      
+      if (jobId && user) {
+        try {
+          setLoadingDraft(true);
+          console.log('🔍 Loading job data for job ID:', jobId);
+          
+          const response = await apiService.getJobForEdit(jobId);
+          
+          if (response.success) {
+            const jobData = response.data;
+            console.log('✅ Job data loaded:', jobData);
+            
+            setEditingJobId(jobId);
+            setFormData({
+              title: jobData.title || '',
+              department: jobData.department || '',
+              location: jobData.location || '',
+              type: jobData.jobType || jobData.type || '',
+              experience: jobData.experience || jobData.experienceLevel || '',
+              salary: jobData.salary || '',
+              description: jobData.description || '',
+              requirements: jobData.requirements || '',
+              benefits: jobData.benefits || '',
+              skills: jobData.skills || [],
+            });
+            
+            const isDraft = jobData.status === 'draft';
+            toast.success(`${isDraft ? 'Draft' : 'Job'} loaded successfully! Continue editing where you left off.`);
+          } else {
+            console.error('❌ Failed to load job:', response);
+            toast.error('Failed to load job. Please try again.');
+          }
+        } catch (error: any) {
+          console.error('❌ Error loading job:', error);
+          toast.error('Failed to load job. Please try again.');
+        } finally {
+          setLoadingDraft(false);
+        }
+      }
+    };
+
+    if (user && !loading) {
+      loadJobData();
+    }
+  }, [user, loading]);
+
   const handleNext = () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1)
@@ -57,6 +111,82 @@ export default function PostJobPage() {
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    // Check authentication when trying to save draft
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+    
+    if (user.userType !== 'employer') {
+      toast.error('Only employers can save job drafts')
+      setShowAuthDialog(true)
+      return
+    }
+
+    try {
+      setSavingDraft(true)
+      console.log('💾 Saving job:', formData)
+      
+      const jobData = {
+        title: formData.title || 'Untitled Job',
+        description: formData.description || '',
+        requirements: formData.requirements || '',
+        location: formData.location || '',
+        type: formData.type || 'full-time',
+        experience: formData.experience || 'fresher',
+        salary: formData.salary || '',
+        benefits: formData.benefits || '',
+        skills: formData.skills || [],
+        department: formData.department || '',
+        status: editingJobId ? undefined : 'draft' // Only set to draft for new jobs, preserve existing status for edits
+      }
+
+      let response;
+      if (editingJobId) {
+        // Update existing job
+        console.log('🔄 Updating existing job:', editingJobId);
+        response = await apiService.updateJob(editingJobId, jobData);
+      } else {
+        // Create new draft
+        console.log('🆕 Creating new draft');
+        response = await apiService.postJob(jobData);
+      }
+      
+      if (response.success) {
+        const action = editingJobId ? 'updated' : 'saved';
+        const jobType = editingJobId ? 'job' : 'draft';
+        toast.success(`${jobType.charAt(0).toUpperCase() + jobType.slice(1)} ${action} successfully!`)
+        console.log(`✅ ${jobType.charAt(0).toUpperCase() + jobType.slice(1)} ${action}:`, response.data)
+        
+        // Redirect to manage jobs page after saving
+        router.push('/employer-dashboard/manage-jobs')
+      } else {
+        console.error('❌ Job saving failed:', response)
+        toast.error(response.message || 'Failed to save job')
+      }
+    } catch (error: any) {
+      console.error('❌ Job saving error:', error)
+      
+      // Handle specific error types
+      if (error.message?.includes('DATABASE_CONNECTION_ERROR')) {
+        toast.error('Database connection error. Please try again later.')
+      } else if (error.message?.includes('MISSING_COMPANY_ASSOCIATION')) {
+        toast.error('Company association required. Please contact support.')
+      } else if (error.message?.includes('DUPLICATE_JOB_TITLE')) {
+        toast.error('A job with this title already exists. Please use a different title.')
+      } else if (error.message?.includes('INVALID_FOREIGN_KEY')) {
+        toast.error('Invalid company or user reference. Please try logging in again.')
+      } else if (error.message?.includes('Validation failed')) {
+        toast.error('Please check your input and try again.')
+      } else {
+        toast.error(error.message || 'Failed to save job. Please try again later.')
+      }
+    } finally {
+      setSavingDraft(false)
     }
   }
 
@@ -81,6 +211,8 @@ export default function PostJobPage() {
 
     try {
       setPublishing(true)
+      console.log('📝 Submitting job data:', formData)
+      
       const jobData = {
         title: formData.title,
         description: formData.description,
@@ -91,35 +223,66 @@ export default function PostJobPage() {
         salary: formData.salary,
         benefits: formData.benefits,
         skills: formData.skills,
-        department: formData.department
+        department: formData.department,
+        status: 'active' // Explicitly set status to active for publishing
       }
 
-      const response = await apiService.postJob(jobData)
+             let response;
+       if (editingJobId) {
+         // Update existing job to active status
+         console.log('🔄 Publishing existing job:', editingJobId);
+         response = await apiService.updateJob(editingJobId, jobData);
+       } else {
+         // Create new job
+         console.log('🆕 Creating new job');
+         response = await apiService.postJob(jobData);
+       }
       
-      if (response.success) {
-        toast.success('Job posted successfully!')
-        // Reset form
-        setFormData({
-          title: "",
-          department: "",
-          location: "",
-          type: "",
-          experience: "",
-          salary: "",
-          description: "",
-          requirements: "",
-          benefits: "",
-          skills: [],
-        })
-        setCurrentStep(1)
-        // Optionally redirect to jobs list
-        // router.push('/employer-dashboard/my-jobs')
-      } else {
+             if (response.success) {
+         const action = editingJobId ? 'updated' : 'posted';
+         toast.success(`Job ${action} successfully!`)
+         console.log(`✅ Job ${action}:`, response.data)
+         
+         if (!editingJobId) {
+           // Only reset form for new jobs, not when editing
+           setFormData({
+             title: "",
+             department: "",
+             location: "",
+             type: "",
+             experience: "",
+             salary: "",
+             description: "",
+             requirements: "",
+             benefits: "",
+             skills: [],
+           })
+           setCurrentStep(1)
+         }
+         
+         // Redirect to jobs list after successful creation/update
+         router.push('/employer-dashboard/manage-jobs')
+       } else {
+        console.error('❌ Job posting failed:', response)
         toast.error(response.message || 'Failed to post job')
       }
     } catch (error: any) {
-      console.error('Job posting error:', error)
-      toast.error(error.message || 'Failed to post job')
+      console.error('❌ Job posting error:', error)
+      
+      // Handle specific error types
+      if (error.message?.includes('DATABASE_CONNECTION_ERROR')) {
+        toast.error('Database connection error. Please try again later.')
+      } else if (error.message?.includes('MISSING_COMPANY_ASSOCIATION')) {
+        toast.error('Company association required. Please contact support.')
+      } else if (error.message?.includes('DUPLICATE_JOB_TITLE')) {
+        toast.error('A job with this title already exists. Please use a different title.')
+      } else if (error.message?.includes('INVALID_FOREIGN_KEY')) {
+        toast.error('Invalid company or user reference. Please try logging in again.')
+      } else if (error.message?.includes('Validation failed')) {
+        toast.error('Please check your input and try again.')
+      } else {
+        toast.error(error.message || 'Failed to post job. Please try again later.')
+      }
     } finally {
       setPublishing(false)
     }
@@ -357,15 +520,17 @@ export default function PostJobPage() {
     }
   }
 
-  // Show loading state while checking authentication
-  if (loading) {
+  // Show loading state while checking authentication or loading draft
+  if (loading || loadingDraft) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
         <EmployerNavbar />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-slate-600">Loading...</p>
+            <p className="mt-4 text-slate-600">
+              {loadingDraft ? 'Loading your draft...' : 'Loading...'}
+            </p>
           </div>
         </div>
       </div>
@@ -386,10 +551,17 @@ export default function PostJobPage() {
                 Back to Dashboard
               </Button>
             </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Post a New Job</h1>
-              <p className="text-gray-600">Create and publish your job posting</p>
-            </div>
+                         <div>
+               <h1 className="text-3xl font-bold text-gray-900">
+                 {editingJobId ? 'Edit Job' : 'Post a New Job'}
+               </h1>
+               <p className="text-gray-600">
+                 {editingJobId 
+                   ? 'Update your job details and save changes' 
+                   : 'Create and publish your job posting'
+                 }
+               </p>
+             </div>
           </div>
         </div>
 
@@ -450,42 +622,46 @@ export default function PostJobPage() {
                   {renderStepContent()}
                 </motion.div>
 
-                {/* Navigation Buttons */}
-                <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-                  <div>
-                    {currentStep > 1 && (
-                      <Button variant="outline" onClick={handlePrevious}>
-                        Previous
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Button variant="outline">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Draft
-                    </Button>
-                    {currentStep < steps.length ? (
-                      <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
-                        Next Step
-                      </Button>
-                    ) : (
-                      <div className="flex space-x-2">
-                        <Button variant="outline">
-                          <Eye className="w-4 h-4 mr-2" />
-                          Preview
-                        </Button>
-                        <Button 
-                          onClick={handlePublishJob} 
-                          disabled={publishing}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Send className="w-4 h-4 mr-2" />
-                          {publishing ? 'Publishing...' : 'Publish Job'}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                                 {/* Navigation Buttons */}
+                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+                   <div>
+                     {currentStep > 1 && (
+                       <Button variant="outline" onClick={handlePrevious}>
+                         Previous
+                       </Button>
+                     )}
+                   </div>
+                   <div className="flex items-center space-x-3">
+                     <Button 
+                       variant="outline" 
+                       onClick={handleSaveDraft}
+                       disabled={savingDraft}
+                     >
+                       <Save className="w-4 h-4 mr-2" />
+                       {savingDraft ? 'Saving...' : editingJobId ? 'Save Changes' : 'Save Draft'}
+                     </Button>
+                     {currentStep < steps.length ? (
+                       <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+                         Next Step
+                       </Button>
+                     ) : (
+                       <div className="flex space-x-2">
+                         <Button variant="outline">
+                           <Eye className="w-4 h-4 mr-2" />
+                           Preview
+                         </Button>
+                         <Button 
+                           onClick={handlePublishJob} 
+                           disabled={publishing}
+                           className="bg-green-600 hover:bg-green-700"
+                         >
+                           <Send className="w-4 h-4 mr-2" />
+                           {publishing ? 'Publishing...' : editingJobId ? 'Update Job' : 'Publish Job'}
+                         </Button>
+                       </div>
+                     )}
+                   </div>
+                 </div>
               </CardContent>
             </Card>
           </div>

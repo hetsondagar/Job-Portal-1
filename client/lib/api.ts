@@ -152,6 +152,10 @@ export interface DashboardStats {
   applicationCount: number;
   profileViews: number;
   recentApplications: JobApplication[];
+  // Employer-specific stats
+  activeJobs?: number;
+  totalApplications?: number;
+  hiredCandidates?: number;
 }
 
 export interface SearchHistory {
@@ -246,7 +250,21 @@ class ApiService {
 
     if (!response.ok) {
       console.error('❌ API error:', { url, status: response.status, statusText: response.statusText, body: data });
-      throw new Error((data && data.message) || `Request failed (${response.status})`);
+      
+      // Create a more detailed error message
+      let errorMessage = 'Request failed';
+      if (data && data.message) {
+        errorMessage = data.message;
+      } else if (data && data.error) {
+        errorMessage = data.error;
+      } else {
+        errorMessage = `Request failed (${response.status})`;
+      }
+      
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      (error as any).data = data;
+      throw error;
     }
 
     return data as ApiResponse<T>;
@@ -443,6 +461,16 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async updateCompany(companyId: string, data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   // Job endpoints
   async postJob(data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/jobs/create`, {
@@ -513,6 +541,43 @@ class ApiService {
     });
     return this.handleResponse<any>(response);
   }
+
+  async getEmployerJobs(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<ApiResponse<any>> {
+    console.log('🔍 API: Fetching employer jobs with params:', params);
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    const url = `/jobs/employer/manage-jobs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getJobForEdit(jobId: string): Promise<ApiResponse<any>> {
+    console.log('🔍 API: Fetching job for edit:', jobId);
+    const response = await fetch(`${API_BASE_URL}/jobs/edit/${jobId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+
 
   // Utility methods
   isAuthenticated(): boolean {

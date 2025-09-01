@@ -10,9 +10,11 @@ const {
   createJob,
   getAllJobs,
   getJobById,
+  getJobForEdit,
   updateJob,
   deleteJob,
   getJobsByCompany,
+  getJobsByEmployer,
   updateJobStatus
 } = require('../controller/JobController');
 
@@ -56,6 +58,8 @@ router.get('/:id', getJobById);
 router.get('/company/:companyId', getJobsByCompany);
 
 // Protected routes (require authentication)
+router.get('/employer/manage-jobs', authenticateToken, getJobsByEmployer);
+router.get('/edit/:id', authenticateToken, getJobForEdit);
 router.post('/create', authenticateToken, createJob);
 router.put('/:id', authenticateToken, updateJob);
 router.delete('/:id', authenticateToken, deleteJob);

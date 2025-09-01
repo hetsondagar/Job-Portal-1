@@ -78,6 +78,12 @@ export function EmployerNavbar() {
       description: "Post your job for free and reach thousands of candidates",
     },
     {
+      name: "Job Drafts",
+      href: "/employer-dashboard/drafts",
+      icon: FileText,
+      description: "View and manage your unpublished job drafts",
+    },
+    {
       name: "Post a Hot Vacancy",
       href: "/employer-dashboard/post-job?type=hot",
       icon: Briefcase,
