@@ -273,6 +273,10 @@ const Job = sequelize.define('Job', {
     type: DataTypes.DECIMAL(3, 2),
     defaultValue: 0
   },
+  bookmarkCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
   // Advanced Features
   isATSEnabled: {
     type: DataTypes.BOOLEAN,

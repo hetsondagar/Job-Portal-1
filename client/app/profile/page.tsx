@@ -32,7 +32,7 @@ import { toast } from 'sonner'
 import { apiService } from '@/lib/api'
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth()
+  const { user, loading, updateUser, refreshUser, debouncedRefreshUser, refreshing } = useAuth()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
@@ -41,7 +41,12 @@ export default function ProfilePage() {
     phone: '',
     currentLocation: '',
     headline: '',
-    summary: ''
+    summary: '',
+    skills: '',
+    languages: '',
+    expectedSalary: '',
+    noticePeriod: '',
+    willingToRelocate: false
   })
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -62,11 +67,26 @@ export default function ProfilePage() {
         phone: user.phone || '',
         currentLocation: user.currentLocation || '',
         headline: user.headline || '',
-        summary: user.summary || ''
+        summary: user.summary || '',
+        skills: Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || '',
+        languages: Array.isArray(user.languages) ? user.languages.join(', ') : user.languages || '',
+        expectedSalary: user.expectedSalary || '',
+        noticePeriod: user.noticePeriod || '',
+        willingToRelocate: user.willingToRelocate || false
       })
       calculateProfileCompletion()
     }
   }, [user])
+
+  // Refresh user data when component mounts to ensure we have the latest data
+  useEffect(() => {
+    if (!loading && user) {
+      refreshUser()
+    }
+  }, [loading, user, refreshUser])
+
+  // Remove the aggressive 30-second interval that was causing rate limiting
+  // Instead, we'll refresh only when needed (after updates, etc.)
 
   const calculateProfileCompletion = () => {
     if (!user) return
@@ -79,10 +99,18 @@ export default function ProfilePage() {
       user.currentLocation,
       user.headline,
       user.summary,
-      user.avatar
+      user.avatar,
+      user.skills,
+      user.languages
     ]
     
-    const completedFields = fields.filter(field => field && field.trim() !== '').length
+    const completedFields = fields.filter(field => {
+      if (Array.isArray(field)) {
+        return field.length > 0
+      }
+      return field && field.toString().trim() !== ''
+    }).length
+    
     const completion = Math.round((completedFields / fields.length) * 100)
     setProfileCompletion(completion)
   }
@@ -106,15 +134,48 @@ export default function ProfilePage() {
 
     try {
       setUploadingAvatar(true)
+      console.log('🔍 Uploading avatar file:', file.name, file.size, file.type)
+      console.log('🔍 Current user avatar before upload:', user?.avatar)
+      
       const response = await apiService.uploadAvatar(file)
+      console.log('🔍 Avatar upload response:', response)
+      
       if (response.success) {
+        console.log('🔍 Response data:', response.data)
+        
+        // Update user data in context and localStorage immediately
+        if (response.data?.user) {
+          console.log('🔍 Updating user with new avatar:', response.data.user.avatar)
+          updateUser(response.data.user)
+          
+          // Force a re-render by updating local state
+          setFormData(prev => ({
+            ...prev,
+            // Trigger re-render
+            _avatarUpdated: Date.now()
+          }))
+        }
+        
         toast.success('Profile photo updated successfully')
-        // Refresh user data
-        window.location.reload()
+        
+        // Refresh user data from server to ensure consistency
+        setTimeout(async () => {
+          try {
+            await refreshUser()
+            calculateProfileCompletion()
+            console.log('🔍 User avatar after refresh:', user?.avatar)
+          } catch (error) {
+            console.error('Error refreshing user data:', error)
+          }
+        }, 1000)
+        
+        console.log('🔍 User avatar after upload:', user?.avatar)
+      } else {
+        throw new Error(response.message || 'Upload failed')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading avatar:', error)
-      toast.error('Failed to upload profile photo')
+      toast.error(error.message || 'Failed to upload profile photo')
     } finally {
       setUploadingAvatar(false)
       if (fileInputRef.current) {
@@ -126,18 +187,39 @@ export default function ProfilePage() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      const response = await apiService.updateProfile(formData)
-      if (response.success) {
+      
+      // Format data for backend
+      const profileData = {
+        ...formData,
+        skills: formData.skills ? formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '') : [],
+        languages: formData.languages ? formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang !== '') : [],
+        expectedSalary: formData.expectedSalary ? parseFloat(formData.expectedSalary.replace(/[^0-9.]/g, '')) || null : null,
+        noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) || null : null
+      }
+      
+      console.log('🔍 Saving profile data:', profileData)
+      
+      const response = await apiService.updateProfile(profileData)
+      console.log('🔍 Profile update response:', response)
+      
+      if (response.success && response.data?.user) {
+        updateUser(response.data.user)
         toast.success('Profile updated successfully')
         calculateProfileCompletion()
+        // Use debounced refresh to avoid rate limiting
+        debouncedRefreshUser()
+      } else {
+        throw new Error(response.message || 'Update failed')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error)
-      toast.error('Failed to update profile')
+      toast.error(error.message || 'Failed to update profile')
     } finally {
       setSaving(false)
     }
   }
+
+
 
   const getInitials = () => {
     if (!user) return ''
@@ -184,12 +266,18 @@ export default function ProfilePage() {
                   Update your personal information and professional details
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="text-sm">
-                  <Star className="w-3 h-3 mr-1" />
-                  {profileCompletion}% Complete
-                </Badge>
-              </div>
+                             <div className="flex items-center space-x-2">
+                 <Badge variant="outline" className="text-sm">
+                   <Star className="w-3 h-3 mr-1" />
+                   {profileCompletion}% Complete
+                 </Badge>
+                 {refreshing && (
+                   <Badge variant="secondary" className="text-sm">
+                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                     Syncing...
+                   </Badge>
+                 )}
+               </div>
             </div>
           </div>
 
@@ -206,15 +294,26 @@ export default function ProfilePage() {
                 <CardContent>
                   <div className="flex flex-col items-center space-y-4">
                     <div className="relative group">
-                      <Avatar className="w-32 h-32 border-4 border-white dark:border-slate-700 shadow-lg">
+                      <Avatar className="w-32 h-32 border-4 border-white dark:border-slate-700 shadow-lg" key={user?.avatar || 'no-avatar'}>
                         <AvatarImage 
                           src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
                           alt={`${user.firstName} ${user.lastName}`}
+                          onLoad={() => console.log('✅ Avatar image loaded successfully')}
+                          onError={(e) => {
+                            console.error('❌ Avatar image failed to load:', e);
+                            console.log('🔍 Avatar URL that failed:', user.avatar);
+                            console.log('🔍 Full avatar URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}`);
+                          }}
                         />
                         <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                           {getInitials()}
                         </AvatarFallback>
                       </Avatar>
+                      {!user.avatar && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                          No Photo
+                        </div>
+                      )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                         <Camera className="w-6 h-6 text-white" />
                       </div>
@@ -237,7 +336,7 @@ export default function ProfilePage() {
                       className="hidden"
                     />
                     
-                    <div className="text-center">
+                    <div className="text-center space-y-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -257,9 +356,14 @@ export default function ProfilePage() {
                           </>
                         )}
                       </Button>
-                      <p className="text-xs text-slate-500 mt-2">
+                      <p className="text-xs text-slate-500">
                         JPG, PNG, GIF up to 2MB
                       </p>
+                      {user.avatar && (
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          ✓ Profile photo uploaded
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -297,6 +401,12 @@ export default function ProfilePage() {
                       <span className="text-sm text-slate-600 dark:text-slate-300">Status</span>
                       <Badge variant={user.accountStatus === 'active' ? 'default' : 'destructive'}>
                         {user.accountStatus}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-300">Profile Photo</span>
+                      <Badge variant={user.avatar ? 'default' : 'secondary'}>
+                        {user.avatar ? 'Uploaded' : 'Not set'}
                       </Badge>
                     </div>
                   </div>
@@ -399,16 +509,96 @@ export default function ProfilePage() {
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 resize-none"
                       />
                     </div>
+                    
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="skills" className="flex items-center space-x-2">
+                        <Briefcase className="w-4 h-4" />
+                        <span>Skills</span>
+                      </Label>
+                      <Input
+                        id="skills"
+                        value={formData.skills}
+                        onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                        placeholder="e.g., JavaScript, React, Node.js, Python"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="languages" className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4" />
+                        <span>Languages</span>
+                      </Label>
+                      <Input
+                        id="languages"
+                        value={formData.languages}
+                        onChange={(e) => setFormData({ ...formData, languages: e.target.value })}
+                        placeholder="e.g., English, Spanish, French"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="expectedSalary" className="flex items-center space-x-2">
+                        <Briefcase className="w-4 h-4" />
+                        <span>Expected Salary</span>
+                      </Label>
+                      <Input
+                        id="expectedSalary"
+                        value={formData.expectedSalary}
+                        onChange={(e) => setFormData({ ...formData, expectedSalary: e.target.value })}
+                        placeholder="e.g., $50,000 - $70,000"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="noticePeriod" className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4" />
+                        <span>Notice Period (days)</span>
+                      </Label>
+                      <Input
+                        id="noticePeriod"
+                        value={formData.noticePeriod}
+                        onChange={(e) => setFormData({ ...formData, noticePeriod: e.target.value })}
+                        placeholder="e.g., 30"
+                        type="number"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>Willing to Relocate</span>
+                      </Label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="willingToRelocate"
+                          checked={formData.willingToRelocate}
+                          onChange={(e) => setFormData({ ...formData, willingToRelocate: e.target.checked })}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <Label htmlFor="willingToRelocate" className="text-sm text-slate-600 dark:text-slate-300">
+                          Yes, I'm willing to relocate for the right opportunity
+                        </Label>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="flex justify-end mt-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-8 space-y-4 sm:space-y-0">
+                    <div className="text-sm text-slate-600 dark:text-slate-300">
+                      <p>💡 <strong>Profile Photo:</strong> Click the camera icon above to upload a new profile picture</p>
+                      <p>💾 <strong>Auto-save:</strong> Profile photo uploads are saved immediately</p>
+                    </div>
                     <Button 
                       onClick={handleSave} 
                       disabled={saving}
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8"
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {saving ? 'Saving...' : 'Save Changes'}
+                      {saving ? 'Saving...' : 'Save Profile Changes'}
                     </Button>
                   </div>
                 </CardContent>

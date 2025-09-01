@@ -23,6 +23,21 @@ export interface User {
   profileCompletion?: number;
   lastLoginAt?: string;
   companyId?: string;
+  skills?: string[];
+  languages?: string[];
+  expectedSalary?: number;
+  noticePeriod?: number;
+  willingToRelocate?: boolean;
+  gender?: 'male' | 'female' | 'other';
+  profileVisibility?: 'public' | 'private' | 'connections_only';
+  contactVisibility?: 'public' | 'private' | 'connections_only';
+  certifications?: any[];
+  socialLinks?: any;
+  preferences?: any;
+  oauthProvider?: string;
+  oauthId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Company {
@@ -146,6 +161,8 @@ export interface JobBookmark {
   priority: 'low' | 'medium' | 'high';
   isApplied: boolean;
   job?: Job;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DashboardStats {
@@ -229,26 +246,49 @@ export interface Requirement {
 class ApiService {
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    return {
+    console.log('🔍 getAuthHeaders - Token present:', !!token);
+    
+    const headers = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
     };
+    
+    console.log('🔍 getAuthHeaders - Headers:', headers);
+    return headers;
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const url = (response as any)?.url || 'unknown-url';
-    let data: any = null;
+    const url = response.url;
+    let data: any;
+    
     try {
       data = await response.json();
-    } catch (e) {
-      console.error('❌ Failed to parse JSON for', url, e);
+    } catch (error) {
+      console.error('❌ Failed to parse response as JSON:', error);
+      throw new Error(`Invalid response format: ${response.statusText}`);
     }
+
+    console.log('🔍 handleResponse - Parsed data:', data);
 
     if (!response.ok) {
       console.error('❌ API error:', { url, status: response.status, statusText: response.statusText, body: data });
-      throw new Error((data && data.message) || `Request failed (${response.status})`);
+      
+      // Handle rate limiting specifically
+      if (response.status === 429) {
+        console.warn('⚠️ Rate limit exceeded - too many requests');
+        throw new Error('Too many requests from this IP, please try again later.');
+      }
+      
+      // Handle validation errors
+      if (data && data.errors && Array.isArray(data.errors)) {
+        const errorMessages = data.errors.map((err: any) => err.msg || err.message).join(', ');
+        throw new Error(`Validation failed: ${errorMessages}`);
+      }
+      
+      throw new Error((data && data.message) || `Request failed (${response.status}): ${response.statusText}`);
     }
 
+    console.log('✅ handleResponse - Success:', data);
     return data as ApiResponse<T>;
   }
 
@@ -363,11 +403,20 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      console.log('🔍 API Service - Getting current user...')
+      const response = await fetch(`${API_BASE_URL}/user/profile`, {
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse<{ user: User }>(response);
+      console.log('🔍 API Service - Response status:', response.status)
+      const result = await this.handleResponse<{ user: User }>(response);
+      console.log('🔍 API Service - Result:', result)
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - getCurrentUser error:', error)
+      throw error;
+    }
   }
 
   // User profile endpoints
@@ -380,19 +429,27 @@ class ApiService {
   }
 
   async updateProfile(data: ProfileUpdateData): Promise<ApiResponse<{ user: User }>> {
-    const response = await fetch(`${API_BASE_URL}/user/profile`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
+    try {
+      console.log('🔍 API Service - Updating profile...');
+      const response = await fetch(`${API_BASE_URL}/user/profile`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
 
-    const result = await this.handleResponse<{ user: User }>(response);
-    
-    if (result.success && result.data?.user) {
-      localStorage.setItem('user', JSON.stringify(result.data.user));
+      console.log('🔍 API Service - Profile update response status:', response.status);
+      const result = await this.handleResponse<{ user: User }>(response);
+      console.log('🔍 API Service - Profile update result:', result);
+      
+      if (result.success && result.data?.user) {
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - updateProfile error:', error);
+      throw error;
     }
-
-    return result;
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse> {
@@ -646,40 +703,167 @@ class ApiService {
 
   // Job Bookmarks endpoints
   async getBookmarks(): Promise<ApiResponse<JobBookmark[]>> {
-    const response = await fetch(`${API_BASE_URL}/user/bookmarks`, {
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/bookmarks`, {
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse<JobBookmark[]>(response);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return this.handleResponse<JobBookmark[]>(response);
+    } catch (error) {
+      // Fallback to localStorage if API is not available
+      console.warn('API not available, using localStorage fallback for bookmarks');
+      
+      const user = this.getCurrentUserFromStorage();
+      if (!user) {
+        return {
+          success: true,
+          data: [],
+          message: 'No bookmarks found'
+        };
+      }
+
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+      const userBookmarks = bookmarks.filter((bookmark: JobBookmark) => bookmark.userId === user.id);
+
+      return {
+        success: true,
+        data: userBookmarks,
+        message: 'Bookmarks retrieved successfully'
+      };
+    }
   }
 
   async createBookmark(data: Partial<JobBookmark>): Promise<ApiResponse<JobBookmark>> {
-    const response = await fetch(`${API_BASE_URL}/user/bookmarks`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/bookmarks`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
 
-    return this.handleResponse<JobBookmark>(response);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return this.handleResponse<JobBookmark>(response);
+    } catch (error) {
+      // Fallback to localStorage if API is not available
+      console.warn('API not available, using localStorage fallback for bookmarks');
+      
+      const user = this.getCurrentUserFromStorage();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+             const bookmark: JobBookmark = {
+         id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+         userId: user.id,
+         jobId: data.jobId || '',
+         folder: data.folder || 'Saved Jobs',
+         notes: data.notes || '',
+         priority: data.priority || 'medium',
+         isApplied: false,
+         createdAt: new Date().toISOString(),
+       };
+
+      // Store in localStorage
+      const existingBookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+      existingBookmarks.push(bookmark);
+      localStorage.setItem('bookmarks', JSON.stringify(existingBookmarks));
+
+      return {
+        success: true,
+        data: bookmark,
+        message: 'Bookmark created successfully'
+      };
+    }
   }
 
   async updateBookmark(id: string, data: Partial<JobBookmark>): Promise<ApiResponse<JobBookmark>> {
-    const response = await fetch(`${API_BASE_URL}/user/bookmarks/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/bookmarks/${id}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
 
-    return this.handleResponse<JobBookmark>(response);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return this.handleResponse<JobBookmark>(response);
+    } catch (error) {
+      // Fallback to localStorage if API is not available
+      console.warn('API not available, using localStorage fallback for bookmark update');
+      
+      const user = this.getCurrentUserFromStorage();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+      const bookmarkIndex = bookmarks.findIndex((bookmark: JobBookmark) => 
+        bookmark.id === id && bookmark.userId === user.id
+      );
+
+      if (bookmarkIndex === -1) {
+        throw new Error('Bookmark not found');
+      }
+
+      // Update the bookmark
+      const updatedBookmark = {
+        ...bookmarks[bookmarkIndex],
+        ...data,
+        updatedAt: new Date().toISOString(),
+      };
+
+      bookmarks[bookmarkIndex] = updatedBookmark;
+      localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+
+      return {
+        success: true,
+        data: updatedBookmark,
+        message: 'Bookmark updated successfully'
+      };
+    }
   }
 
   async deleteBookmark(id: string): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/user/bookmarks/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/bookmarks/${id}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse(response);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return this.handleResponse(response);
+    } catch (error) {
+      // Fallback to localStorage if API is not available
+      console.warn('API not available, using localStorage fallback for bookmark deletion');
+      
+      const user = this.getCurrentUserFromStorage();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+      const updatedBookmarks = bookmarks.filter((bookmark: JobBookmark) => 
+        bookmark.id !== id && bookmark.userId === user.id
+      );
+      localStorage.setItem('bookmarks', JSON.stringify(updatedBookmarks));
+
+      return {
+        success: true,
+        message: 'Bookmark deleted successfully'
+      };
+    }
   }
 
   // Search History endpoints
@@ -734,6 +918,14 @@ class ApiService {
     });
 
     return this.handleResponse<Resume[]>(response);
+  }
+
+  async getResumeStats(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
   }
 
   async createResume(data: Partial<Resume>): Promise<ApiResponse<Resume>> {
@@ -793,24 +985,59 @@ class ApiService {
     return this.handleResponse<Resume>(response);
   }
 
-  // Avatar upload endpoint
-  async uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
-    const formData = new FormData();
-    formData.append('avatar', file);
-
+  async downloadResume(id: string): Promise<void> {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers: HeadersInit = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/user/avatar`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/user/resumes/${id}/download`, {
       headers,
-      body: formData,
     });
 
-    return this.handleResponse<{ avatarUrl: string }>(response);
+    if (!response.ok) {
+      throw new Error('Failed to download resume');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'resume.pdf';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+
+  // Avatar upload endpoint
+  async uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string; user: User }>> {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      console.log('🔍 API Service - Uploading avatar...');
+      const response = await fetch(`${API_BASE_URL}/user/avatar`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      console.log('🔍 API Service - Avatar upload response status:', response.status);
+      const result = await this.handleResponse<{ avatarUrl: string; user: User }>(response);
+      console.log('🔍 API Service - Avatar upload result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - uploadAvatar error:', error);
+      throw error;
+    }
   }
 
   // Company endpoints
@@ -829,6 +1056,28 @@ class ApiService {
     });
 
     return this.handleResponse<any[]>(response);
+  }
+
+  // Job application endpoint
+  async applyJob(jobId: string, applicationData?: {
+    coverLetter?: string;
+    expectedSalary?: number;
+    noticePeriod?: number;
+    availableFrom?: string;
+    isWillingToRelocate?: boolean;
+    preferredLocations?: string[];
+    resumeId?: string;
+  }): Promise<ApiResponse<{ applicationId: string; status: string; appliedAt: string }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/apply`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(applicationData || {}),
+    });
+
+    return this.handleResponse<{ applicationId: string; status: string; appliedAt: string }>(response);
   }
 
   // Google OAuth sync endpoint
