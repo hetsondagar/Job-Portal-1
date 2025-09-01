@@ -585,65 +585,6 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
-  // Job application endpoint
-  async applyJob(jobId: string, applicationData?: {
-    coverLetter?: string;
-    expectedSalary?: number;
-    noticePeriod?: number;
-    availableFrom?: string;
-    isWillingToRelocate?: boolean;
-    preferredLocations?: string[];
-    resumeId?: string;
-  }): Promise<ApiResponse<{ applicationId: string; status: string; appliedAt: string }>> {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/apply`, {
-      method: 'POST',
-      headers: {
-        ...this.getAuthHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(applicationData || {}),
-    });
-
-    return this.handleResponse<{ applicationId: string; status: string; appliedAt: string }>(response);
-  }
-
-  async getEmployerJobs(params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    search?: string;
-    sortBy?: string;
-    sortOrder?: string;
-  }): Promise<ApiResponse<any>> {
-    console.log('🔍 API: Fetching employer jobs with params:', params);
-    const queryParams = new URLSearchParams();
-    
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.search) queryParams.append('search', params.search);
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-    
-    const url = `/jobs/employer/manage-jobs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async getJobForEdit(jobId: string): Promise<ApiResponse<any>> {
-    console.log('🔍 API: Fetching job for edit:', jobId);
-    const response = await fetch(`${API_BASE_URL}/jobs/edit/${jobId}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-    return this.handleResponse<any>(response);
-  }
-
-
-
   async getEmployerJobs(params?: {
     page?: number;
     limit?: number;
