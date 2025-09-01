@@ -133,11 +133,11 @@ module.exports = (sequelize) => {
     timestamps: true,
     indexes: [
       {
-        fields: ['createdBy']
+                  fields: ['created_by']
       },
-      {
-        fields: ['companyId']
-      },
+          {
+      fields: ['company_id']
+    },
       {
         fields: ['status']
       },

@@ -78,19 +78,19 @@ module.exports = (sequelize) => {
     timestamps: true,
     indexes: [
       {
-        fields: ['createdBy']
+        fields: ['created_by']
       },
       {
-        fields: ['companyId']
+        fields: ['company_id']
       },
       {
         fields: ['category']
       },
       {
-        fields: ['isPublic']
+        fields: ['is_public']
       },
       {
-        fields: ['isActive']
+        fields: ['is_active']
       }
     ]
   });

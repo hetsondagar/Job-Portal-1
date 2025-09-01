@@ -303,6 +303,20 @@ exports.getAllJobs = async (req, res, next) => {
 
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'employer',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+          required: false
+        }
+      ],
       order: [[sortBy, sortOrder]],
       limit: parseInt(limit),
       offset: parseInt(offset)

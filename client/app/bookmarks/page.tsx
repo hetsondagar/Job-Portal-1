@@ -30,6 +30,7 @@ import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, JobBookmark } from '@/lib/api'
 import { getJobById, Job } from '@/lib/mockJobs'
+import { sampleJobManager } from '@/lib/sampleJobManager'
 
 export default function BookmarksPage() {
   const { user, loading } = useAuth()
@@ -65,10 +66,21 @@ export default function BookmarksPage() {
   const fetchBookmarks = async () => {
     try {
       setBookmarksLoading(true)
-      const response = await apiService.getBookmarks()
-      if (response.success && response.data) {
-        setBookmarks(response.data)
+      
+      // Get backend bookmarks
+      let backendBookmarks: any[] = []
+      try {
+        const response = await apiService.getBookmarks()
+        if (response.success && response.data) {
+          backendBookmarks = response.data
+        }
+      } catch (error) {
+        console.error('Error fetching backend bookmarks:', error)
       }
+      
+      // Get sample bookmarks and combine with backend
+      const combinedBookmarks = sampleJobManager.getCombinedBookmarks(backendBookmarks)
+      setBookmarks(combinedBookmarks)
     } catch (error) {
       console.error('Error fetching bookmarks:', error)
       toast.error('Failed to load bookmarks')
@@ -81,6 +93,21 @@ export default function BookmarksPage() {
     if (!editingBookmark) return
 
     try {
+      // Check if this is a sample bookmark
+      if (editingBookmark.isSample) {
+        const success = sampleJobManager.updateBookmark(editingBookmark.id, formData)
+        if (success) {
+          toast.success('Bookmark updated successfully')
+          setEditingBookmark(null)
+          resetForm()
+          fetchBookmarks()
+        } else {
+          toast.error('Failed to update bookmark')
+        }
+        return
+      }
+
+      // For backend bookmarks
       const response = await apiService.updateBookmark(editingBookmark.id, formData)
       if (response.success) {
         toast.success('Bookmark updated successfully')
@@ -96,6 +123,20 @@ export default function BookmarksPage() {
 
   const handleDeleteBookmark = async (bookmarkId: string) => {
     try {
+      // Check if this is a sample bookmark
+      const bookmark = bookmarks.find(b => b.id === bookmarkId)
+      if (bookmark?.isSample) {
+        const success = sampleJobManager.deleteBookmark(bookmarkId)
+        if (success) {
+          toast.success('Bookmark deleted successfully')
+          fetchBookmarks()
+        } else {
+          toast.error('Failed to delete bookmark')
+        }
+        return
+      }
+
+      // For backend bookmarks
       const response = await apiService.deleteBookmark(bookmarkId)
       if (response.success) {
         toast.success('Bookmark deleted successfully')

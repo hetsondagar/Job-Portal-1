@@ -34,6 +34,7 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
+import { sampleJobManager } from "@/lib/sampleJobManager"
 
 // Types for state management
 interface FilterState {
@@ -48,7 +49,7 @@ interface FilterState {
 }
 
 interface Job {
-  id: number
+  id: string
   title: string
   company: {
     name: string
@@ -77,6 +78,8 @@ export default function JobsPage() {
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set())
   const [sortBy, setSortBy] = useState("recent")
   const [isStickyVisible, setIsStickyVisible] = useState(false)
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [jobsLoading, setJobsLoading] = useState(true)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -95,77 +98,251 @@ export default function JobsPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
       const category = urlParams.get('category')
-                  const type = urlParams.get('type')
-            const location = urlParams.get('location')
+      const type = urlParams.get('type')
+      const location = urlParams.get('location')
 
-            if (category) {
-              setFilters(prev => ({ ...prev, category }))
-            }
-            if (type) {
-              setFilters(prev => ({ ...prev, type }))
-            }
-            if (location) {
-              setFilters(prev => ({ ...prev, location }))
-            }
+      if (category || type || location) {
+        setFilters(prev => ({
+          ...prev,
+          category: category || "",
+          type: type || "",
+          location: location || "",
+        }))
+      }
     }
   }, [])
 
-  // Load saved jobs when user is authenticated
-  useEffect(() => {
-    if (user && !loading) {
-      loadSavedJobs()
+  // Sample jobs data
+  const sampleJobs: Job[] = [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      title: "Senior Frontend Developer",
+      company: { name: "TechCorp Solutions", id: "550e8400-e29b-41d4-a716-446655440101" },
+      location: "Mumbai, Maharashtra",
+      experience: "3-5 years",
+      salary: "₹12-18 LPA",
+      skills: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
+      logo: "/companies/techcorp.png",
+      posted: "2 days ago",
+      applicants: 45,
+      description: "We are looking for a talented Senior Frontend Developer to join our team and help build amazing user experiences.",
+      type: "Full-time",
+      remote: false,
+      urgent: true,
+      featured: true,
+      companyRating: 4.5,
+      category: "Technology"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      title: "Product Manager",
+      company: { name: "InnovateLabs", id: "550e8400-e29b-41d4-a716-446655440102" },
+      location: "Bangalore, Karnataka",
+      experience: "5-8 years",
+      salary: "₹20-35 LPA",
+      skills: ["Product Strategy", "Agile", "User Research", "Data Analysis"],
+      logo: "/companies/innovatelabs.png",
+      posted: "1 week ago",
+      applicants: 32,
+      description: "Lead product development initiatives and drive innovation across our platform.",
+      type: "Full-time",
+      remote: true,
+      urgent: false,
+      featured: true,
+      companyRating: 4.8,
+      category: "Product"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      title: "DevOps Engineer",
+      company: { name: "CloudTech Systems", id: "550e8400-e29b-41d4-a716-446655440103" },
+      location: "Pune, Maharashtra",
+      experience: "2-4 years",
+      salary: "₹8-15 LPA",
+      skills: ["AWS", "Docker", "Kubernetes", "Jenkins"],
+      logo: "/companies/cloudtech.png",
+      posted: "3 days ago",
+      applicants: 28,
+      description: "Join our DevOps team to build and maintain scalable infrastructure solutions.",
+      type: "Full-time",
+      remote: false,
+      urgent: true,
+      featured: false,
+      companyRating: 4.2,
+      category: "Technology"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440004",
+      title: "UX/UI Designer",
+      company: { name: "DesignStudio Pro", id: "550e8400-e29b-41d4-a716-446655440104" },
+      location: "Delhi, NCR",
+      experience: "2-5 years",
+      salary: "₹6-12 LPA",
+      skills: ["Figma", "Adobe Creative Suite", "User Research", "Prototyping"],
+      logo: "/companies/designstudio.png",
+      posted: "5 days ago",
+      applicants: 56,
+      description: "Create beautiful and intuitive user interfaces for our digital products.",
+      type: "Full-time",
+      remote: true,
+      urgent: false,
+      featured: false,
+      companyRating: 4.6,
+      category: "Design"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440005",
+      title: "Data Scientist",
+      company: { name: "DataViz Analytics", id: "550e8400-e29b-41d4-a716-446655440105" },
+      location: "Hyderabad, Telangana",
+      experience: "3-6 years",
+      salary: "₹15-25 LPA",
+      skills: ["Python", "Machine Learning", "SQL", "Statistics"],
+      logo: "/companies/dataviz.png",
+      posted: "1 day ago",
+      applicants: 38,
+      description: "Work on cutting-edge data science projects and build predictive models.",
+      type: "Full-time",
+      remote: false,
+      urgent: true,
+      featured: true,
+      companyRating: 4.7,
+      category: "Data Science"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440006",
+      title: "Marketing Manager",
+      company: { name: "GrowthMasters", id: "550e8400-e29b-41d4-a716-446655440106" },
+      location: "Chennai, Tamil Nadu",
+      experience: "4-7 years",
+      salary: "₹10-18 LPA",
+      skills: ["Digital Marketing", "SEO", "Content Strategy", "Analytics"],
+      logo: "/companies/growthmasters.png",
+      posted: "4 days ago",
+      applicants: 42,
+      description: "Lead marketing campaigns and drive brand growth across multiple channels.",
+      type: "Full-time",
+      remote: false,
+      urgent: false,
+      featured: false,
+      companyRating: 4.3,
+      category: "Marketing"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440007",
+      title: "Mobile App Developer",
+      company: { name: "AppCraft Mobile", id: "550e8400-e29b-41d4-a716-446655440107" },
+      location: "Gurgaon, Haryana",
+      experience: "2-4 years",
+      salary: "₹8-16 LPA",
+      skills: ["React Native", "Flutter", "iOS", "Android"],
+      logo: "/companies/appcraft.png",
+      posted: "6 days ago",
+      applicants: 35,
+      description: "Build innovative mobile applications for iOS and Android platforms.",
+      type: "Full-time",
+      remote: true,
+      urgent: false,
+      featured: false,
+      companyRating: 4.4,
+      category: "Technology"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440008",
+      title: "Sales Executive",
+      company: { name: "SalesForce India", id: "550e8400-e29b-41d4-a716-446655440108" },
+      location: "Kolkata, West Bengal",
+      experience: "1-3 years",
+      salary: "₹4-8 LPA + Commission",
+      skills: ["Sales", "CRM", "Negotiation", "Customer Relations"],
+      logo: "/companies/salesforce.png",
+      posted: "2 weeks ago",
+      applicants: 67,
+      description: "Drive sales growth and build strong customer relationships.",
+      type: "Full-time",
+      remote: false,
+      urgent: false,
+      featured: false,
+      companyRating: 4.1,
+      category: "Sales"
     }
-  }, [user, loading])
+  ]
 
-  const loadSavedJobs = async () => {
+  // Set jobs data and fetch saved jobs
+  useEffect(() => {
+    setJobs(sampleJobs)
+    setJobsLoading(false)
+    
+    // Fetch existing bookmarks if user is logged in
+    if (user) {
+      fetchSavedJobs()
+    }
+  }, [user])
+
+  const fetchSavedJobs = async () => {
     try {
+      // Get backend bookmarks
       const response = await apiService.getBookmarks()
+      const backendBookmarkIds = new Set<string>()
+      
       if (response.success && response.data) {
-        const savedJobIds = new Set(response.data.map(bookmark => bookmark.jobId))
-        setSavedJobs(savedJobIds)
+        response.data.forEach(bookmark => backendBookmarkIds.add(bookmark.jobId))
       }
+      
+      // Get sample job bookmarks
+      const sampleBookmarkIds = new Set<string>()
+      sampleJobManager.getBookmarks().forEach(bookmark => sampleBookmarkIds.add(bookmark.jobId))
+      
+      // Combine both sets
+      const allBookmarkIds = new Set([...backendBookmarkIds, ...sampleBookmarkIds])
+      setSavedJobs(allBookmarkIds)
     } catch (error) {
-      console.error('Error loading saved jobs:', error)
+      console.error('Error fetching saved jobs:', error)
+      // Fallback to just sample jobs if backend fails
+      const sampleBookmarkIds = new Set<string>()
+      sampleJobManager.getBookmarks().forEach(bookmark => sampleBookmarkIds.add(bookmark.jobId))
+      setSavedJobs(sampleBookmarkIds)
     }
   }
 
-  const handleSaveJob = async (jobId: number, job: Job) => {
+  const handleSaveJob = async (jobId: string) => {
     if (!user) {
       setShowAuthDialog(true)
       return
     }
 
     try {
-      const jobIdString = jobId.toString()
-      if (savedJobs.has(jobIdString)) {
-        // Remove from saved jobs
-        const bookmark = await apiService.getBookmarks()
-        if (bookmark.success && bookmark.data) {
-          const bookmarkToDelete = bookmark.data.find(b => b.jobId === jobIdString)
-          if (bookmarkToDelete) {
-            await apiService.deleteBookmark(bookmarkToDelete.id)
-            setSavedJobs(prev => {
-              const newSet = new Set(prev)
-              newSet.delete(jobIdString)
-              return newSet
-            })
-            toast.success('Job removed from saved jobs')
-          }
-        }
+      // Find the job data
+      const job = jobs.find(j => j.id === jobId)
+      if (!job) {
+        toast.error('Job not found')
+        return
+      }
+
+      // Check if this is a sample job (UUID format starting with 550e8400)
+      if (jobId.startsWith('550e8400')) {
+        // For sample jobs, use the sample job manager
+        sampleJobManager.addBookmark({
+          jobId,
+          jobTitle: job.title,
+          companyName: job.company.name,
+          location: job.location,
+          salary: job.salary,
+          type: job.type
+        })
+        setSavedJobs(prev => new Set([...prev, jobId]))
+        toast.success('Job saved successfully! (Sample Job)')
+        console.log('Sample job saved:', jobId)
+        return
+      }
+      
+      // For real jobs, call the backend
+      const response = await apiService.createBookmark({ jobId })
+      if (response.success) {
+        setSavedJobs(prev => new Set([...prev, jobId]))
+        toast.success('Job saved successfully!')
       } else {
-        // Add to saved jobs
-        const bookmarkData = {
-          jobId: jobIdString,
-          folder: 'Saved Jobs',
-          notes: '',
-          priority: 'medium' as 'low' | 'medium' | 'high'
-        }
-        
-        const response = await apiService.createBookmark(bookmarkData)
-        if (response.success) {
-          setSavedJobs(prev => new Set([...prev, jobIdString]))
-          toast.success('Job saved successfully!')
-        }
+        toast.error(response.message || 'Failed to save job')
       }
     } catch (error) {
       console.error('Error saving job:', error)
@@ -173,7 +350,7 @@ export default function JobsPage() {
     }
   }
 
-  const handleApply = async (jobId: number) => {
+  const handleApply = async (jobId: string) => {
     if (!user) {
       setShowAuthDialog(true)
       return
@@ -182,7 +359,31 @@ export default function JobsPage() {
     try {
       console.log(`Applying for job ${jobId}...`)
       
-      const response = await apiService.applyJob(jobId.toString())
+      // Find the job data
+      const job = jobs.find(j => j.id === jobId)
+      if (!job) {
+        toast.error('Job not found')
+        return
+      }
+      
+      // Check if this is a sample job (UUID format starting with 550e8400)
+      if (jobId.startsWith('550e8400')) {
+        // For sample jobs, use the sample job manager
+        sampleJobManager.addApplication({
+          jobId,
+          jobTitle: job.title,
+          companyName: job.company.name,
+          location: job.location,
+          salary: job.salary,
+          type: job.type
+        })
+        toast.success('Application submitted successfully! (Sample Job)')
+        console.log('Sample job application submitted:', jobId)
+        return
+      }
+      
+      // For real jobs, call the backend
+      const response = await apiService.applyJob(jobId)
       
       if (response.success) {
         toast.success('Application submitted successfully!')
@@ -240,161 +441,6 @@ export default function JobsPage() {
     "Work from home",
   ]
 
-  const jobs: Job[] = [
-    {
-      id: 1,
-      title: "Senior Full Stack Developer",
-      company: { name: "TechCorp Solutions" },
-      location: "Bangalore",
-      experience: "4-7 years",
-      salary: "15-25 LPA",
-      skills: ["React", "Node.js", "Python", "AWS"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 45,
-      description: "We are looking for a skilled Full Stack Developer to join our dynamic team...",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: true,
-      companyRating: 4.2,
-      category: "software",
-    },
-    {
-      id: 2,
-      title: "Product Manager - Growth",
-      company: { name: "InnovateTech" },
-      location: "Mumbai",
-      experience: "5-8 years",
-      salary: "20-35 LPA",
-      skills: ["Product Strategy", "Analytics", "Leadership", "Growth Hacking"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 32,
-      description: "Drive product growth and user acquisition strategies...",
-      type: "Full-time",
-      remote: false,
-      urgent: true,
-      featured: false,
-      companyRating: 4.5,
-      category: "product",
-    },
-    {
-      id: 3,
-      title: "Data Scientist - ML",
-      company: { name: "DataDriven Inc" },
-      location: "Hyderabad",
-      experience: "3-6 years",
-      salary: "12-22 LPA",
-      skills: ["Python", "Machine Learning", "SQL", "TensorFlow"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "3 days ago",
-      applicants: 28,
-      description: "Build and deploy machine learning models at scale...",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: false,
-      companyRating: 4.1,
-      category: "data",
-    },
-    {
-      id: 4,
-      title: "Frontend Developer",
-      company: { name: "WebSolutions Ltd" },
-      location: "Pune",
-      experience: "2-4 years",
-      salary: "8-15 LPA",
-      skills: ["React", "TypeScript", "CSS", "Next.js"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 38,
-      description: "Create beautiful and responsive user interfaces...",
-      type: "Full-time",
-      remote: false,
-      urgent: false,
-      featured: true,
-      companyRating: 4.3,
-      category: "software",
-    },
-    {
-      id: 5,
-      title: "UX Designer",
-      company: { name: "DesignStudio" },
-      location: "Delhi",
-      experience: "3-5 years",
-      salary: "10-18 LPA",
-      skills: ["Figma", "Adobe XD", "User Research", "Prototyping"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 25,
-      description: "Design intuitive and engaging user experiences...",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: false,
-      companyRating: 4.0,
-      category: "design",
-    },
-    {
-      id: 6,
-      title: "DevOps Engineer",
-      company: { name: "CloudTech" },
-      location: "Bangalore",
-      experience: "4-6 years",
-      salary: "18-28 LPA",
-      skills: ["Docker", "Kubernetes", "AWS", "Jenkins"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 22,
-      description: "Build and maintain scalable infrastructure...",
-      type: "Full-time",
-      remote: false,
-      urgent: true,
-      featured: false,
-      companyRating: 4.4,
-      category: "devops",
-    },
-    {
-      id: 7,
-      title: "Sales Manager",
-      company: { name: "SalesForce Inc" },
-      location: "Mumbai",
-      experience: "5-8 years",
-      salary: "15-25 LPA",
-      skills: ["Sales Strategy", "CRM", "Leadership", "Client Relations"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "3 days ago",
-      applicants: 35,
-      description: "Lead sales team and drive revenue growth...",
-      type: "Full-time",
-      remote: false,
-      urgent: false,
-      featured: true,
-      companyRating: 4.2,
-      category: "sales",
-    },
-    {
-      id: 8,
-      title: "Marketing Specialist",
-      company: { name: "Digital Marketing Pro" },
-      location: "Gurgaon",
-      experience: "2-4 years",
-      salary: "6-12 LPA",
-      skills: ["Digital Marketing", "SEO", "Social Media", "Analytics"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 42,
-      description: "Execute digital marketing campaigns...",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: false,
-      companyRating: 3.9,
-      category: "marketing",
-    },
-  ]
-
   // Filter functions
   const handleFilterChange = useCallback((filterType: keyof FilterState, value: any) => {
     setFilters(prev => ({
@@ -403,34 +449,7 @@ export default function JobsPage() {
     }))
   }, [])
 
-  const handleExperienceToggle = useCallback((level: string) => {
-    setFilters(prev => ({
-      ...prev,
-      experienceLevels: prev.experienceLevels.includes(level)
-        ? prev.experienceLevels.filter(l => l !== level)
-        : [...prev.experienceLevels, level]
-    }))
-  }, [])
-
-  const handleJobTypeToggle = useCallback((type: string) => {
-    setFilters(prev => ({
-      ...prev,
-      jobTypes: prev.jobTypes.includes(type)
-        ? prev.jobTypes.filter(t => t !== type)
-        : [...prev.jobTypes, type]
-    }))
-  }, [])
-
-  const handleLocationToggle = useCallback((location: string) => {
-    setFilters(prev => ({
-      ...prev,
-      locations: prev.locations.includes(location)
-        ? prev.locations.filter(l => l !== location)
-        : [...prev.locations, location]
-    }))
-  }, [])
-
-  const clearAllFilters = useCallback(() => {
+  const clearFilters = useCallback(() => {
     setFilters({
       search: "",
       location: "",
@@ -445,15 +464,15 @@ export default function JobsPage() {
 
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
-    let filtered = jobs
+    let filtered = [...jobs]
 
     // Search filter
     if (filters.search) {
+      const searchLower = filters.search.toLowerCase()
       filtered = filtered.filter(job =>
-        job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.company.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.skills.some(skill => skill.toLowerCase().includes(filters.search.toLowerCase()))
+        job.title.toLowerCase().includes(searchLower) ||
+        job.company.name.toLowerCase().includes(searchLower) ||
+        job.skills.some(skill => skill.toLowerCase().includes(searchLower))
       )
     }
 
@@ -467,636 +486,413 @@ export default function JobsPage() {
     // Experience level filter
     if (filters.experienceLevels.length > 0) {
       filtered = filtered.filter(job =>
-        filters.experienceLevels.some(level => {
-          if (level === "Fresher") return job.experience.includes("0") || job.experience.includes("Fresher")
-          if (level === "1-3 years") return job.experience.includes("1-3") || job.experience.includes("2-4")
-          if (level === "3-5 years") return job.experience.includes("3-5") || job.experience.includes("4-6")
-          if (level === "5-8 years") return job.experience.includes("5-8") || job.experience.includes("6-8")
-          if (level === "8-12 years") return job.experience.includes("8-12") || job.experience.includes("8+")
-          if (level === "12+ years") return job.experience.includes("12+") || job.experience.includes("10+")
-          return false
-        })
+        filters.experienceLevels.some(level => job.experience.includes(level))
       )
     }
 
     // Job type filter
     if (filters.jobTypes.length > 0) {
       filtered = filtered.filter(job =>
-        filters.jobTypes.some(type => {
-          if (type === "Remote") return job.remote
-          if (type === "Work from home") return job.remote
-          return job.type === type
-        })
+        filters.jobTypes.includes(job.type)
       )
     }
 
-    // Location filter (from checkbox)
-    if (filters.locations.length > 0) {
-      filtered = filtered.filter(job =>
-        filters.locations.some(location => {
-          if (location === "Remote") return job.remote
-          if (location === "Work from home") return job.remote
-          return job.location === location
-        })
-      )
-    }
-
-    // Salary range filter
-    if (filters.salaryRange) {
-      filtered = filtered.filter(job => {
-        const range = filters.salaryRange
-        if (range === "0-5") return job.salary.includes("3-") || job.salary.includes("4-") || job.salary.includes("5")
-        if (range === "5-10") return job.salary.includes("6-") || job.salary.includes("8-") || job.salary.includes("10")
-        if (range === "10-15") return job.salary.includes("12-") || job.salary.includes("15")
-        if (range === "15-25") return job.salary.includes("18-") || job.salary.includes("20-") || job.salary.includes("25")
-        if (range === "25+") return job.salary.includes("25+") || job.salary.includes("30") || job.salary.includes("35")
-        return true
-      })
-    }
-
-    // Category filter (from URL)
+    // Category filter
     if (filters.category) {
       filtered = filtered.filter(job => job.category === filters.category)
     }
 
-    // Type filter (from URL)
+    // Type filter
     if (filters.type) {
-      filtered = filtered.filter(job => {
-        if (filters.type === "fresher") return job.experience.includes("0") || job.experience.includes("Fresher")
-        if (filters.type === "remote") return job.remote
-        if (filters.type === "wfh") return job.remote
-        if (filters.type === "walkin") return job.type === "Walk-in"
-        if (filters.type === "parttime") return job.type === "Part-time"
-        return job.type === filters.type
-      })
+      filtered = filtered.filter(job => job.type === filters.type)
     }
 
     // Sort jobs
     switch (sortBy) {
       case "recent":
-        // Sort by posted date (mock implementation)
+        filtered.sort((a, b) => new Date(b.posted).getTime() - new Date(a.posted).getTime())
+        break
+      case "salary":
         filtered.sort((a, b) => {
-          const aDays = parseInt(a.posted.split(' ')[0])
-          const bDays = parseInt(b.posted.split(' ')[0])
-          return aDays - bDays
+          const salaryA = parseInt(a.salary.split('-')[0].replace(/\D/g, ''))
+          const salaryB = parseInt(b.salary.split('-')[0].replace(/\D/g, ''))
+          return salaryB - salaryA
         })
         break
-      case "relevant":
-        // Sort by company rating
+      case "applicants":
+        filtered.sort((a, b) => b.applicants - a.applicants)
+        break
+      case "rating":
         filtered.sort((a, b) => b.companyRating - a.companyRating)
         break
-      case "salary-high":
-        // Sort by salary (mock implementation)
-        filtered.sort((a, b) => {
-          const aSalary = parseInt(a.salary.split('-')[1])
-          const bSalary = parseInt(b.salary.split('-')[1])
-          return bSalary - aSalary
-        })
-        break
-      case "salary-low":
-        // Sort by salary (mock implementation)
-        filtered.sort((a, b) => {
-          const aSalary = parseInt(a.salary.split('-')[0])
-          const bSalary = parseInt(b.salary.split('-')[0])
-          return aSalary - bSalary
-        })
-        break
-      default:
-        filtered.sort((a, b) => {
-          const aDays = parseInt(a.posted.split(' ')[0])
-          const bDays = parseInt(b.posted.split(' ')[0])
-          return aDays - bDays
-        })
     }
 
     return filtered
   }, [jobs, filters, sortBy])
 
+  const getSectorColor = (sector: string) => {
+    const colors: { [key: string]: string } = {
+      software: "from-blue-500 to-cyan-500",
+      product: "from-purple-500 to-pink-500",
+      data: "from-green-500 to-emerald-500",
+      design: "from-orange-500 to-red-500",
+      devops: "from-indigo-500 to-purple-500",
+      sales: "from-yellow-500 to-orange-500",
+      marketing: "from-pink-500 to-rose-500",
+      default: "from-slate-500 to-gray-500"
+    }
+    return colors[sector] || colors.default
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
-      <div className="sticky top-0 z-50">
-        <Navbar />
-      </div>
-
-      {/* Header */}
-      <div className="pt-20 pb-8 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl shadow-sm border-b border-slate-200/50 dark:border-slate-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-6 sm:mb-8"
-          >
-            <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">Find Your Dream Job</h1>
-            <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300">
-              Discover opportunities that match your skills and aspirations
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <Navbar />
+      
+      {/* Hero Section */}
+      <div className="relative pt-16 pb-12">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              Find Your Dream Job
+            </h1>
+            <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+              Discover thousands of job opportunities with all the information you need
             </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="flex flex-col lg:flex-row gap-4"
-          >
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
-                <Input
-                  placeholder="Job title, keywords, or company"
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="pl-10 sm:pl-12 h-10 sm:h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm text-sm sm:text-base"
-                />
-              </div>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
-                <Input
-                  placeholder="Location"
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange("location", e.target.value)}
-                  className="pl-10 sm:pl-12 h-10 sm:h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm text-sm sm:text-base"
-                />
-              </div>
-              <Button className="h-10 sm:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg text-sm sm:text-base">
-                <Search className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Search Jobs
-              </Button>
-            </div>
-            <Button
-              variant="outline"
-              className="lg:hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              Filters
-            </Button>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Sticky Search Bar - Appears on scroll */}
-      <motion.div
-        initial={{ opacity: 0, y: -100 }}
-        animate={{ 
-          opacity: isStickyVisible ? 1 : 0, 
-          y: isStickyVisible ? 0 : -100 
-        }}
-        transition={{ duration: 0.3 }}
-        className={`fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-lg transform transition-all duration-300 ${
-          isStickyVisible ? 'pointer-events-auto' : 'pointer-events-none'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col lg:flex-row gap-3">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Search and Filters */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        {/* Search Bar */}
+        <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8 transition-all duration-300 ${isStickyVisible ? 'sticky top-4 z-50' : ''}`}>
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <Input
-                  placeholder="Job title, keywords, or company"
+                  placeholder="Search jobs, companies, or keywords..."
                   value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm"
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="pl-10 h-12 border-0 bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-600"
                 />
               </div>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input
-                  placeholder="Location"
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange("location", e.target.value)}
-                  className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm"
-                />
-              </div>
-              <Button className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg text-sm">
-                <Search className="w-4 h-4 mr-2" />
-                Search Jobs
-              </Button>
             </div>
-            <Button
-              variant="outline"
-              className="lg:hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600 h-12"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* JobAtPace Premium Banner */}
-      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/jobatpace">
-            <div className="flex flex-col sm:flex-row items-center justify-between text-white cursor-pointer group">
-              <div className="flex items-center mb-2 sm:mb-0">
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                <span className="font-semibold text-sm sm:text-base">JobAtPace Premium</span>
-                <span className="ml-2 text-xs sm:text-sm opacity-90">Get priority applications & exclusive jobs</span>
-              </div>
-              <Button
-                size="sm"
-                className="bg-white text-orange-600 hover:bg-orange-50 shadow-lg transition-all duration-300 group-hover:scale-105 text-xs sm:text-sm"
-              >
-                Upgrade Now
-                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-              </Button>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="flex gap-6 sm:gap-8">
-          {/* Filters Sidebar - Sticky */}
-          <div className={`w-full lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}>
-            <div className="sticky top-32 z-10 h-fit">
-              <Card className="border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg flex items-center justify-between">
-                    <div className="flex items-center">
-                    <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    Filters
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {(filters.experienceLevels.length > 0 || filters.jobTypes.length > 0 || filters.locations.length > 0 || filters.salaryRange || filters.category || filters.type) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearAllFilters}
-                          className="text-xs text-red-600 hover:text-red-700"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Clear
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowFilters(false)}
-                        className="lg:hidden text-slate-500 hover:text-slate-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6">
-                  <div className="space-y-4 sm:space-y-6">
-                      {/* Experience Level */}
-                      <div>
-                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Experience Level</h3>
-                        <div className="space-y-2">
-                          {experienceLevels.map((level) => (
-                            <div key={level} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={level} 
-                                  checked={filters.experienceLevels.includes(level)}
-                                  onCheckedChange={() => handleExperienceToggle(level)}
-                                />
-                              <label
-                                htmlFor={level}
-                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                              >
-                                {level}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      {/* Job Type */}
-                      <div>
-                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Job Type</h3>
-                        <div className="space-y-2">
-                          {jobTypes.map((type) => (
-                            <div key={type} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={type} 
-                                  checked={filters.jobTypes.includes(type)}
-                                  onCheckedChange={() => handleJobTypeToggle(type)}
-                                />
-                              <label
-                                htmlFor={type}
-                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                              >
-                                {type}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      {/* Location */}
-                      <div>
-                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Location</h3>
-                        <div className="space-y-2">
-                          {locations.map((location) => (
-                            <div key={location} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={location} 
-                                  checked={filters.locations.includes(location)}
-                                  onCheckedChange={() => handleLocationToggle(location)}
-                                />
-                              <label
-                                htmlFor={location}
-                                className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                              >
-                                {location}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      {/* Salary Range */}
-                      <div>
-                        <h3 className="font-semibold mb-3 text-sm sm:text-base">Salary Range</h3>
-                          <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange("salaryRange", value)}>
-                          <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
-                            <SelectValue placeholder="Select salary range" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0-5">0-5 LPA</SelectItem>
-                            <SelectItem value="5-10">5-10 LPA</SelectItem>
-                            <SelectItem value="10-15">10-15 LPA</SelectItem>
-                            <SelectItem value="15-25">15-25 LPA</SelectItem>
-                            <SelectItem value="25+">25+ LPA</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Job Listings */}
-          <div className="flex-1 min-w-0">
-            {/* Active Filters Summary */}
-            {(filters.experienceLevels.length > 0 || filters.jobTypes.length > 0 || filters.locations.length > 0 || filters.salaryRange || filters.category || filters.type) && (
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Active Filters:</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllFilters}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    Clear All
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {filters.category && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      Category: {filters.category}
-                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("category", "")} />
-                    </Badge>
-                  )}
-                  {filters.type && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      Type: {filters.type}
-                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("type", "")} />
-                    </Badge>
-                  )}
-                  {filters.experienceLevels.map((level) => (
-                    <Badge key={level} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      Experience: {level}
-                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleExperienceToggle(level)} />
-                    </Badge>
-                  ))}
-                  {filters.jobTypes.map((type) => (
-                    <Badge key={type} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      Type: {type}
-                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleJobTypeToggle(type)} />
-                    </Badge>
-                  ))}
-                  {filters.locations.map((location) => (
-                    <Badge key={location} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      Location: {location}
-                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleLocationToggle(location)} />
-                    </Badge>
-                  ))}
-                  {filters.salaryRange && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      Salary: {filters.salaryRange} LPA
-                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("salaryRange", "")} />
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-4">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Job Opportunities</h1>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">{filteredJobs.length} jobs found</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="lg:hidden"
-                  >
-                    <Filter className="w-4 h-4 mr-2" />
-                    {showFilters ? 'Hide' : 'Show'} Filters
-                  </Button>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-48 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600">
-                  <SelectValue />
+            <div className="flex gap-4">
+              <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
+                <SelectTrigger className="w-48 h-12 border-0 bg-slate-50 dark:bg-slate-700">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="relevant">Most Relevant</SelectItem>
-                  <SelectItem value="salary-high">Salary: High to Low</SelectItem>
-                  <SelectItem value="salary-low">Salary: Low to High</SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location} value={location}>
+                      {location}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              </div>
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                variant="outline"
+                className="h-12 px-6 border-0 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+              </Button>
             </div>
+          </div>
+        </div>
 
-            {/* No Results Message */}
-            {filteredJobs.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                  <Search className="w-8 h-8 text-slate-400" />
+        {/* Advanced Filters */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Experience Level */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Experience Level</h3>
+                <div className="space-y-2">
+                  {experienceLevels.map((level) => (
+                    <div key={level} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={level}
+                        checked={filters.experienceLevels.includes(level)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            handleFilterChange('experienceLevels', [...filters.experienceLevels, level])
+                          } else {
+                            handleFilterChange('experienceLevels', filters.experienceLevels.filter(l => l !== level))
+                          }
+                        }}
+                      />
+                      <label htmlFor={level} className="text-sm text-slate-600 dark:text-slate-300">
+                        {level}
+                      </label>
+                    </div>
+                  ))}
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No jobs found</h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-4">
-                  Try adjusting your filters or search terms to find more jobs.
-                </p>
-                <Button onClick={clearAllFilters} variant="outline">
-                  Clear All Filters
+              </div>
+
+              {/* Job Type */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Job Type</h3>
+                <div className="space-y-2">
+                  {jobTypes.map((type) => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={type}
+                        checked={filters.jobTypes.includes(type)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            handleFilterChange('jobTypes', [...filters.jobTypes, type])
+                          } else {
+                            handleFilterChange('jobTypes', filters.jobTypes.filter(t => t !== type))
+                          }
+                        }}
+                      />
+                      <label htmlFor={type} className="text-sm text-slate-600 dark:text-slate-300">
+                        {type}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Salary Range */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Salary Range</h3>
+                <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange('salaryRange', value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0-5">0-5 LPA</SelectItem>
+                    <SelectItem value="5-10">5-10 LPA</SelectItem>
+                    <SelectItem value="10-20">10-20 LPA</SelectItem>
+                    <SelectItem value="20-50">20-50 LPA</SelectItem>
+                    <SelectItem value="50+">50+ LPA</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex items-end">
+                <Button
+                  onClick={clearFilters}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear Filters
                 </Button>
               </div>
-            ) : (
-            <div className="space-y-4 sm:space-y-6 min-h-screen">
-                {filteredJobs.map((job, index) => (
+            </div>
+          </motion.div>
+        )}
+
+        {/* Results Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {filteredJobs.length} Jobs Found
+            </h2>
+            <p className="text-slate-600 dark:text-slate-300">
+              Showing results for your search
+            </p>
+          </div>
+          <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+            <span className="text-sm text-slate-600 dark:text-slate-300">Sort by:</span>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Most Recent</SelectItem>
+                <SelectItem value="salary">Highest Salary</SelectItem>
+                <SelectItem value="applicants">Most Applicants</SelectItem>
+                <SelectItem value="rating">Company Rating</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Jobs Grid */}
+        <div className="space-y-6">
+          {jobsLoading ? (
+            <div className="space-y-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                          <div>
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-48 mb-2"></div>
+                            <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredJobs.length === 0 ? (
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+              <CardContent className="p-12 text-center">
+                <Briefcase className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                  No jobs found
+                </h3>
+                <p className="text-slate-600 dark:text-slate-300 mb-6">
+                  Try adjusting your search criteria or filters
+                </p>
+                <Button onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {filteredJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.6 }}
-                  whileHover={{ y: -5 }}
+                  transition={{ delay: index * 0.1 }}
                 >
                   <Link href={`/jobs/${job.id}`}>
-                    <Card
-                      className={`group cursor-pointer border-0 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden relative ${
-                        job.urgent
-                          ? "bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 ring-2 ring-red-200 dark:ring-red-800 shadow-red-500/10"
-                          : "bg-white/70 dark:bg-slate-800/70 hover:shadow-blue-500/10"
-                      }`}
-                    >
-                      {/* Badges positioned to avoid overlap */}
-                      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                        {job.urgent && (
-                          <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white animate-pulse text-xs">
-                            <Zap className="w-3 h-3 mr-1" />
-                            Urgent Hiring
-                          </Badge>
-                        )}
-                        {job.featured && !job.urgent && (
-                          <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs">
-                            <Sparkles className="w-3 h-3 mr-1" />
-                            Featured
-                          </Badge>
-                        )}
-                      </div>
-
-                      <CardContent className="p-4 sm:p-6 lg:p-8">
-                        <div className="flex flex-col lg:flex-row gap-4">
-                          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
-                            <Avatar className="w-12 h-12 sm:w-16 sm:h-16 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 flex-shrink-0">
-                              <AvatarImage src={job.logo || "/placeholder.svg"} alt={job.company.name} />
-                              <AvatarFallback>{job.company.name[0]}</AvatarFallback>
+                    <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-4 flex-1">
+                            <Avatar className="w-12 h-12 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300">
+                              <AvatarImage src={job.logo} alt={job.company.name} />
+                              <AvatarFallback className="text-sm font-bold">{job.company.name[0]}</AvatarFallback>
                             </Avatar>
+                            
                             <div className="flex-1 min-w-0">
-                              <h3
-                                className={`text-lg sm:text-xl lg:text-2xl font-bold mb-2 transition-colors duration-300 ${
-                                  job.urgent
-                                    ? "text-red-700 dark:text-red-400"
-                                    : "text-slate-900 dark:text-white group-hover:text-blue-600"
-                                } line-clamp-2`}
-                              >
-                                {job.title}
-                              </h3>
-                              <div className="flex items-center space-x-2 mb-3">
-                                <p className="text-slate-600 dark:text-slate-300 font-medium text-sm sm:text-base lg:text-lg truncate">
-                                  {job.company.name}
-                                </p>
-                                <div className="flex items-center flex-shrink-0">
-                                  <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current mr-1" />
-                                  <span className="text-xs sm:text-sm font-medium">{job.companyRating}</span>
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
+                                    {job.title}
+                                  </h3>
+                                  <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
+                                    {job.company.name}
+                                  </p>
                                 </div>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-slate-600 dark:text-slate-300 mb-4 text-xs sm:text-sm">
-                                <div className="flex items-center">
-                                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                                  <span className="truncate">{job.location}</span>
-                                  {job.remote && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="ml-2 text-xs bg-green-50 text-green-700 border-green-200"
-                                    >
-                                      Remote
+                                <div className="flex items-center space-x-2 ml-4">
+                                  {job.urgent && (
+                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                      Urgent
+                                    </Badge>
+                                  )}
+                                  {job.featured && (
+                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
+                                      Featured
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center">
-                                  <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                                  <span className="truncate">{job.experience}</span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-3">
+                                <div className="flex items-center space-x-1">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{job.location}</span>
                                 </div>
-                                <div className="flex items-center">
-                                  <IndianRupee className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                                  <span className="truncate">{job.salary}</span>
+                                <div className="flex items-center space-x-1">
+                                  <Briefcase className="w-4 h-4" />
+                                  <span>{job.experience}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <IndianRupee className="w-4 h-4" />
+                                  <span>{job.salary}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{job.posted}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Users className="w-4 h-4" />
+                                  <span>{job.applicants} applicants</span>
                                 </div>
                               </div>
-                              <p className="text-slate-700 dark:text-slate-300 mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base">
-                                {job.description}
-                              </p>
-                              <div className="flex flex-wrap gap-1 sm:gap-2 mb-4">
-                                {job.skills.slice(0, 4).map((skill, skillIndex) => (
-                                  <Badge
-                                    key={skillIndex}
-                                    variant="secondary"
-                                    className="text-xs bg-slate-100 dark:bg-slate-700"
-                                  >
+
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {job.skills.slice(0, 3).map((skill, skillIndex) => (
+                                  <Badge key={skillIndex} variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
                                     {skill}
                                   </Badge>
                                 ))}
-                                {job.skills.length > 4 && (
-                                  <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
-                                      +{job.skills.length - 4} more
+                                {job.skills.length > 3 && (
+                                  <Badge variant="secondary" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
+                                    +{job.skills.length - 3} more
                                   </Badge>
                                 )}
                               </div>
 
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 gap-2">
-                                  <div className="flex items-center space-x-4">
-                                    <span className="text-xs sm:text-sm text-slate-500">
-                                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
-                                      {job.posted}
-                                    </span>
-                                    <span className="text-xs sm:text-sm text-slate-500">
-                                      <Users className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
-                                      {job.applicants} applicants
-                                    </span>
+                              <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2 mb-4">
+                                {job.description}
+                              </p>
                             </div>
-                                  <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    handleSaveJob(job.id, job)
-                                  }}
-                                  className={`text-xs sm:text-sm ${
-                                    savedJobs.has(job.id.toString()) 
-                                      ? 'border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20' 
-                                      : ''
-                                  }`}
-                                >
-                                  {savedJobs.has(job.id.toString()) ? (
-                                    <>
-                                      <BookmarkCheck className="w-4 h-4 mr-1" />
-                                      Saved
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Bookmark className="w-4 h-4 mr-1" />
-                                      Save
-                                    </>
-                                  )}
-                                </Button>
-                                <Button
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                        handleApply(job.id)
-                                      }}
-                                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
-                                    >
-                                      Apply Now
+                          </div>
+
+                          <div className="flex flex-col space-y-2 ml-4">
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleSaveJob(job.id)
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="text-xs"
+                            >
+                              {savedJobs.has(job.id) ? (
+                                <>
+                                  <BookmarkCheck className="w-4 h-4 mr-1" />
+                                  Saved
+                                </>
+                              ) : (
+                                <>
+                                  <Bookmark className="w-4 h-4 mr-1" />
+                                  Save
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleApply(job.id)
+                              }}
+                              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
+                            >
+                              Apply Now
                             </Button>
                           </div>
-                        </div>
-                            </div>
-                            </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1104,8 +900,7 @@ export default function JobsPage() {
                 </motion.div>
               ))}
             </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -1119,16 +914,16 @@ export default function JobsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
-              <Link href="/register" className="w-full">
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                  Register Now
-                </Button>
-              </Link>
-              <Link href="/login" className="w-full">
-                <Button variant="outline" className="w-full bg-transparent">
-                  Login
-                </Button>
-              </Link>
+            <Link href="/register" className="w-full">
+              <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                Register Now
+              </Button>
+            </Link>
+            <Link href="/login" className="w-full">
+              <Button variant="outline" className="w-full bg-transparent">
+                Login
+              </Button>
+            </Link>
           </div>
         </DialogContent>
       </Dialog>
@@ -1139,39 +934,39 @@ export default function JobsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-semibold mb-4">JobPortal</h3>
-              <p className="text-slate-300 text-sm">
-                India's leading job portal connecting talent with opportunities.
+              <p className="text-slate-400">
+                Find your dream job with the best companies and opportunities.
               </p>
-                </div>
+            </div>
             <div>
               <h4 className="font-semibold mb-4">For Job Seekers</h4>
-              <ul className="space-y-2 text-sm text-slate-300">
+              <ul className="space-y-2 text-slate-400">
                 <li><Link href="/jobs" className="hover:text-white transition-colors">Browse Jobs</Link></li>
-                <li><Link href="/register" className="hover:text-white transition-colors">Create Profile</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white transition-colors">Job Alerts</Link></li>
+                <li><Link href="/companies" className="hover:text-white transition-colors">Companies</Link></li>
+                <li><Link href="/salary-guide" className="hover:text-white transition-colors">Salary Guide</Link></li>
                 <li><Link href="/career-advice" className="hover:text-white transition-colors">Career Advice</Link></li>
               </ul>
-                </div>
+            </div>
             <div>
               <h4 className="font-semibold mb-4">For Employers</h4>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li><Link href="/employer-dashboard/post-job" className="hover:text-white transition-colors">Post a Job</Link></li>
-                <li><Link href="/employer-dashboard/requirements" className="hover:text-white transition-colors">Browse Candidates</Link></li>
+              <ul className="space-y-2 text-slate-400">
+                <li><Link href="/post-job" className="hover:text-white transition-colors">Post a Job</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/resources" className="hover:text-white transition-colors">Resources</Link></li>
+                <li><Link href="/recruitment-solutions" className="hover:text-white transition-colors">Recruitment Solutions</Link></li>
+                <li><Link href="/employer-resources" className="hover:text-white transition-colors">Resources</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm text-slate-300">
+              <ul className="space-y-2 text-slate-400">
                 <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                </ul>
-              </div>
+              </ul>
+            </div>
           </div>
-          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-sm text-slate-400">
+          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400">
             <p>&copy; 2024 JobPortal. All rights reserved.</p>
           </div>
         </div>

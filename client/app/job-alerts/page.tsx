@@ -40,15 +40,20 @@ export default function JobAlertsPage() {
     locations: '',
     categories: '',
     experienceLevel: '',
+    jobType: '',
     salaryMin: '',
     salaryMax: '',
-    frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
+    currency: 'INR',
+    remoteWork: 'any' as 'on_site' | 'hybrid' | 'remote' | 'any',
+    maxResults: 10,
+    frequency: 'weekly' as 'daily' | 'weekly' | 'monthly',
     emailEnabled: true,
-    pushEnabled: false,
+    pushEnabled: true,
     smsEnabled: false
   })
 
   useEffect(() => {
+    console.log('🔍 JobAlertsPage - Auth state:', { user: !!user, loading, userId: user?.id });
     if (!loading && !user) {
       toast.error('Please sign in to manage job alerts')
       router.push('/login')
@@ -78,14 +83,23 @@ export default function JobAlertsPage() {
 
   const handleCreateAlert = async () => {
     try {
+      console.log('🔍 handleCreateAlert - Starting with formData:', formData);
+      console.log('🔍 handleCreateAlert - User:', user);
+      
       const alertData = {
         ...formData,
         keywords: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : [],
         locations: formData.locations ? formData.locations.split(',').map(l => l.trim()) : [],
         categories: formData.categories ? formData.categories.split(',').map(c => c.trim()) : [],
+        jobType: formData.jobType ? formData.jobType.split(',').map(t => t.trim()) : [],
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
-        salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined
+        salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined,
+        currency: formData.currency,
+        remoteWork: formData.remoteWork,
+        maxResults: formData.maxResults
       }
+      
+      console.log('🔍 handleCreateAlert - Processed alertData:', alertData);
 
       const response = await apiService.createJobAlert(alertData)
       if (response.success) {
@@ -93,10 +107,17 @@ export default function JobAlertsPage() {
         setShowCreateForm(false)
         resetForm()
         fetchAlerts()
+      } else {
+        toast.error(response.message || 'Failed to create job alert')
       }
     } catch (error) {
       console.error('Error creating alert:', error)
-      toast.error('Failed to create job alert')
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        data: alertData
+      })
+      toast.error(error.message || 'Failed to create job alert')
     }
   }
 
@@ -109,8 +130,12 @@ export default function JobAlertsPage() {
         keywords: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : [],
         locations: formData.locations ? formData.locations.split(',').map(l => l.trim()) : [],
         categories: formData.categories ? formData.categories.split(',').map(c => c.trim()) : [],
+        jobType: formData.jobType ? formData.jobType.split(',').map(t => t.trim()) : [],
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
-        salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined
+        salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined,
+        currency: formData.currency,
+        remoteWork: formData.remoteWork,
+        maxResults: formData.maxResults
       }
 
       const response = await apiService.updateJobAlert(editingAlert.id, alertData)
@@ -119,6 +144,8 @@ export default function JobAlertsPage() {
         setEditingAlert(null)
         resetForm()
         fetchAlerts()
+      } else {
+        toast.error(response.message || 'Failed to update job alert')
       }
     } catch (error) {
       console.error('Error updating alert:', error)
@@ -132,10 +159,27 @@ export default function JobAlertsPage() {
       if (response.success) {
         toast.success('Job alert deleted successfully')
         fetchAlerts()
+      } else {
+        toast.error(response.message || 'Failed to delete job alert')
       }
     } catch (error) {
       console.error('Error deleting alert:', error)
       toast.error('Failed to delete job alert')
+    }
+  }
+
+  const handleToggleAlert = async (alertId: string) => {
+    try {
+      const response = await apiService.toggleJobAlert(alertId)
+      if (response.success) {
+        toast.success('Job alert status updated successfully')
+        fetchAlerts()
+      } else {
+        toast.error(response.message || 'Failed to update job alert status')
+      }
+    } catch (error) {
+      console.error('Error toggling alert:', error)
+      toast.error('Failed to update job alert status')
     }
   }
 
@@ -146,9 +190,13 @@ export default function JobAlertsPage() {
       keywords: alert.keywords?.join(', ') || '',
       locations: alert.locations?.join(', ') || '',
       categories: alert.categories?.join(', ') || '',
+      jobType: alert.jobType?.join(', ') || '',
       experienceLevel: alert.experienceLevel || '',
       salaryMin: alert.salaryMin?.toString() || '',
       salaryMax: alert.salaryMax?.toString() || '',
+      currency: alert.currency || 'INR',
+      remoteWork: alert.remoteWork || 'any',
+      maxResults: alert.maxResults || 10,
       frequency: alert.frequency,
       emailEnabled: alert.emailEnabled,
       pushEnabled: alert.pushEnabled,
@@ -162,15 +210,21 @@ export default function JobAlertsPage() {
       keywords: '',
       locations: '',
       categories: '',
+      jobType: '',
       experienceLevel: '',
       salaryMin: '',
       salaryMax: '',
-      frequency: 'daily',
+      currency: 'INR',
+      remoteWork: 'any',
+      maxResults: 10,
+      frequency: 'weekly',
       emailEnabled: true,
-      pushEnabled: false,
+      pushEnabled: true,
       smsEnabled: false
     })
   }
+
+
 
   if (loading) {
     return (
@@ -263,6 +317,15 @@ export default function JobAlertsPage() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="jobType">Job Type</Label>
+                    <Input
+                      id="jobType"
+                      value={formData.jobType}
+                      onChange={(e) => setFormData({ ...formData, jobType: e.target.value })}
+                      placeholder="e.g., Full-time, Part-time, Contract"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="experienceLevel">Experience Level</Label>
                     <Select value={formData.experienceLevel} onValueChange={(value) => setFormData({ ...formData, experienceLevel: value })}>
                       <SelectTrigger>
@@ -291,6 +354,18 @@ export default function JobAlertsPage() {
                     </Select>
                   </div>
                   <div>
+                    <Label htmlFor="maxResults">Max Results per Alert</Label>
+                    <Input
+                      id="maxResults"
+                      type="number"
+                      value={formData.maxResults || 10}
+                      onChange={(e) => setFormData({ ...formData, maxResults: parseInt(e.target.value) || 10 })}
+                      placeholder="e.g., 10"
+                      min="1"
+                      max="50"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="salaryMin">Minimum Salary</Label>
                     <Input
                       id="salaryMin"
@@ -309,6 +384,33 @@ export default function JobAlertsPage() {
                       onChange={(e) => setFormData({ ...formData, salaryMax: e.target.value })}
                       placeholder="e.g., 150000"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select value={formData.currency || 'INR'} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INR">INR (₹)</SelectItem>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="EUR">EUR (€)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="remoteWork">Remote Work Preference</Label>
+                    <Select value={formData.remoteWork || 'any'} onValueChange={(value) => setFormData({ ...formData, remoteWork: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="on_site">On-site Only</SelectItem>
+                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                        <SelectItem value="remote">Remote Only</SelectItem>
+                        <SelectItem value="any">Any</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -441,10 +543,20 @@ export default function JobAlertsPage() {
                           {alert.emailEnabled && <span>📧 Email</span>}
                           {alert.pushEnabled && <span>🔔 Push</span>}
                           {alert.smsEnabled && <span>📱 SMS</span>}
+                          {alert.currency && <span>💰 {alert.currency}</span>}
+                          {alert.remoteWork && <span>🏢 {alert.remoteWork.replace('_', ' ')}</span>}
+                          {alert.maxResults && <span>📊 Max: {alert.maxResults}</span>}
                         </div>
                       </div>
 
                       <div className="flex flex-col space-y-2 ml-4">
+                        <Button 
+                          variant={alert.isActive ? "outline" : "default"} 
+                          size="sm" 
+                          onClick={() => handleToggleAlert(alert.id)}
+                        >
+                          {alert.isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => handleEditAlert(alert)}>
                           <Edit className="w-4 h-4 mr-1" />
                           Edit

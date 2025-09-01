@@ -56,12 +56,12 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
   underscored: true,
   indexes: [
     {
-      fields: ['userId', 'companyId'],
+      fields: ['user_id', 'company_id'],
       unique: true,
       name: 'unique_user_company_follow'
     },
     {
-      fields: ['companyId']
+      fields: ['company_id']
     },
     {
       fields: ['followedAt']

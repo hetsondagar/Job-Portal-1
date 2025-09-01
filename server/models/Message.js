@@ -84,16 +84,16 @@ const Message = sequelize.define('Message', {
   tableName: 'messages',
   indexes: [
     {
-      fields: ['conversationId']
+      fields: ['conversation_id']
     },
     {
-      fields: ['senderId']
+      fields: ['sender_id']
     },
     {
-      fields: ['receiverId']
+      fields: ['receiver_id']
     },
     {
-      fields: ['isRead']
+      fields: ['is_read']
     },
     {
       fields: ['createdAt']

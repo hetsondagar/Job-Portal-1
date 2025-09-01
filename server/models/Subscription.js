@@ -118,16 +118,16 @@ const Subscription = sequelize.define('Subscription', {
   underscored: true,
   indexes: [
     {
-      fields: ['userId', 'status']
+      fields: ['user_id', 'status']
     },
     {
       fields: ['status']
     },
     {
-      fields: ['nextBillingDate']
+      fields: ['next_billing_date']
     },
     {
-      fields: ['paymentGatewayId']
+      fields: ['payment_gateway_id']
     }
   ],
   hooks: {

@@ -112,14 +112,14 @@ module.exports = (sequelize) => {
     tableName: 'featured_jobs',
     timestamps: true,
     indexes: [
+          {
+      fields: ['job_id']
+    },
       {
-        fields: ['jobId']
+                  fields: ['promotion_type']
       },
       {
-        fields: ['promotionType']
-      },
-      {
-        fields: ['isActive']
+                  fields: ['is_active']
       },
       {
         fields: ['startDate', 'endDate']
@@ -128,7 +128,7 @@ module.exports = (sequelize) => {
         fields: ['priority']
       },
       {
-        fields: ['createdBy']
+                  fields: ['created_by']
       }
     ]
   });

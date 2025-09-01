@@ -113,7 +113,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
     const application = await JobApplication.create({
       jobId,
       userId,
-      employerId: job.createdBy, // Assuming job has createdBy field
+      employerId: job.employerId, // Use employerId from job
       status: 'applied',
       coverLetter,
       expectedSalary,

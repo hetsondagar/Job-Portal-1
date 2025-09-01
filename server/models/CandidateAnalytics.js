@@ -153,13 +153,13 @@ module.exports = (sequelize) => {
     timestamps: true,
     indexes: [
       {
-        fields: ['employerId']
+                  fields: ['employer_id']
       },
+          {
+      fields: ['company_id']
+    },
       {
-        fields: ['companyId']
-      },
-      {
-        fields: ['searchType']
+                  fields: ['search_type']
       },
       {
         fields: ['createdAt']

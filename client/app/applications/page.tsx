@@ -24,6 +24,7 @@ import {
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, JobApplication } from '@/lib/api'
+import { sampleJobManager } from '@/lib/sampleJobManager'
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -61,10 +62,21 @@ export default function ApplicationsPage() {
   const fetchApplications = async () => {
     try {
       setApplicationsLoading(true)
-      const response = await apiService.getApplications()
-      if (response.success && response.data) {
-        setApplications(response.data)
+      
+      // Get backend applications
+      let backendApplications: any[] = []
+      try {
+        const response = await apiService.getApplications()
+        if (response.success && response.data) {
+          backendApplications = response.data
+        }
+      } catch (error) {
+        console.error('Error fetching backend applications:', error)
       }
+      
+      // Get sample applications and combine with backend
+      const combinedApplications = sampleJobManager.getCombinedApplications(backendApplications)
+      setApplications(combinedApplications)
     } catch (error) {
       console.error('Error fetching applications:', error)
       toast.error('Failed to load applications')

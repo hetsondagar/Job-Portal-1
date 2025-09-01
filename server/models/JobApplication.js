@@ -141,7 +141,7 @@ const JobApplication = sequelize.define('JobApplication', {
   underscored: true,
   indexes: [
     {
-      fields: ['jobId', 'userId'],
+      fields: ['job_id', 'user_id'],
       unique: true,
       name: 'unique_job_application'
     },
@@ -149,10 +149,10 @@ const JobApplication = sequelize.define('JobApplication', {
       fields: ['status']
     },
     {
-      fields: ['appliedAt']
+      fields: ['applied_at']
     },
     {
-      fields: ['employerId', 'status']
+      fields: ['employer_id', 'status']
     }
   ],
   hooks: {

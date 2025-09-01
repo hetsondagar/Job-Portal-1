@@ -154,13 +154,13 @@ const Interview = sequelize.define('Interview', {
       fields: ['jobApplicationId']
     },
     {
-      fields: ['employerId']
+      fields: ['employer_id']
     },
     {
       fields: ['candidateId']
     },
     {
-      fields: ['jobId']
+      fields: ['job_id']
     },
     {
       fields: ['status']
