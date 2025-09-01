@@ -120,12 +120,26 @@ Key Responsibilities:
     },
   ]
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!isAuthenticated) {
       setShowAuthDialog(true)
-    } else {
-      // Handle job application
+      return
+    }
+
+    try {
       console.log("Applying for job...")
+      
+      const response = await apiService.applyJob(job.id.toString())
+      
+      if (response.success) {
+        toast.success('Application submitted successfully!')
+        console.log('Application submitted:', response.data)
+      } else {
+        toast.error(response.message || 'Failed to submit application')
+      }
+    } catch (error) {
+      console.error('Error applying for job:', error)
+      toast.error('Failed to submit application. Please try again.')
     }
   }
 

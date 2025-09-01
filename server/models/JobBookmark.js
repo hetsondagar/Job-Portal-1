@@ -62,25 +62,25 @@ const JobBookmark = sequelize.define('JobBookmark', {
   underscored: true,
   indexes: [
     {
-      fields: ['userId', 'jobId'],
+      fields: ['user_id', 'job_id'],
       unique: true,
       name: 'unique_user_job_bookmark'
     },
     {
-      fields: ['userId', 'folder']
+      fields: ['user_id', 'folder']
     },
     {
-      fields: ['userId', 'priority']
+      fields: ['user_id', 'priority']
     },
     {
-      fields: ['reminderDate']
+      fields: ['reminder_date']
     }
   ],
   hooks: {
     afterCreate: async (bookmark) => {
       // Update job bookmark count
       const { Job } = require('../config/index');
-      const job = await Job.findByPk(bookmark.jobId);
+      const job = await Job.findByPk(bookmark.job_id);
       if (job) {
         await job.increment('bookmarkCount');
       }
@@ -88,7 +88,7 @@ const JobBookmark = sequelize.define('JobBookmark', {
     afterDestroy: async (bookmark) => {
       // Update job bookmark count
       const { Job } = require('../config/index');
-      const job = await Job.findByPk(bookmark.jobId);
+      const job = await Job.findByPk(bookmark.job_id);
       if (job) {
         await job.decrement('bookmarkCount');
       }

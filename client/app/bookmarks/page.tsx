@@ -23,11 +23,13 @@ import {
   Save,
   Star,
   Eye,
-  Briefcase
+  Briefcase,
+  FileText
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, JobBookmark } from '@/lib/api'
+import { getJobById, Job } from '@/lib/mockJobs'
 
 export default function BookmarksPage() {
   const { user, loading } = useAuth()
@@ -41,7 +43,11 @@ export default function BookmarksPage() {
     priority: 'medium' as 'low' | 'medium' | 'high'
   })
   const [filterFolder, setFilterFolder] = useState('all')
+  const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [filterApplied, setFilterApplied] = useState<'all' | 'applied' | 'not-applied'>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'title' | 'company'>('date')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -101,6 +107,21 @@ export default function BookmarksPage() {
     }
   }
 
+  const handleToggleApplied = async (bookmark: JobBookmark) => {
+    try {
+      const response = await apiService.updateBookmark(bookmark.id, {
+        isApplied: !bookmark.isApplied
+      })
+      if (response.success) {
+        toast.success(bookmark.isApplied ? 'Marked as not applied' : 'Marked as applied')
+        fetchBookmarks()
+      }
+    } catch (error) {
+      console.error('Error updating bookmark:', error)
+      toast.error('Failed to update bookmark')
+    }
+  }
+
   const handleEditBookmark = (bookmark: JobBookmark) => {
     setEditingBookmark(bookmark)
     setFormData({
@@ -137,13 +158,56 @@ export default function BookmarksPage() {
   }
 
   const filteredBookmarks = bookmarks.filter(bookmark => {
+    const jobDetails = getJobById(bookmark.jobId)
     const matchesSearch = searchTerm === '' || 
-      bookmark.job?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bookmark.job?.company?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      jobDetails?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobDetails?.company?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bookmark.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bookmark.folder?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesFolder = filterFolder === 'all' || bookmark.folder === filterFolder
+    const matchesPriority = filterPriority === 'all' || bookmark.priority === filterPriority
+    const matchesApplied = filterApplied === 'all' || 
+      (filterApplied === 'applied' && bookmark.isApplied) ||
+      (filterApplied === 'not-applied' && !bookmark.isApplied)
     
-    return matchesSearch && matchesFolder
+    return matchesSearch && matchesFolder && matchesPriority && matchesApplied
+  })
+
+  // Sort bookmarks
+  const sortedBookmarks = [...filteredBookmarks].sort((a, b) => {
+    const jobA = getJobById(a.jobId)
+    const jobB = getJobById(b.jobId)
+    
+    switch (sortBy) {
+      case 'date':
+        const dateA = new Date(a.createdAt || 0)
+        const dateB = new Date(b.createdAt || 0)
+        return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
+      
+      case 'priority':
+        const priorityOrder = { high: 3, medium: 2, low: 1 }
+        const priorityA = priorityOrder[a.priority] || 0
+        const priorityB = priorityOrder[b.priority] || 0
+        return sortOrder === 'asc' ? priorityA - priorityB : priorityB - priorityA
+      
+      case 'title':
+        const titleA = jobA?.title?.toLowerCase() || ''
+        const titleB = jobB?.title?.toLowerCase() || ''
+        return sortOrder === 'asc' 
+          ? titleA.localeCompare(titleB)
+          : titleB.localeCompare(titleA)
+      
+      case 'company':
+        const companyA = jobA?.company?.name?.toLowerCase() || ''
+        const companyB = jobB?.company?.name?.toLowerCase() || ''
+        return sortOrder === 'asc' 
+          ? companyA.localeCompare(companyB)
+          : companyB.localeCompare(companyA)
+      
+      default:
+        return 0
+    }
   })
 
   const folders = Array.from(new Set(bookmarks.map(b => b.folder).filter(Boolean)))
@@ -186,28 +250,81 @@ export default function BookmarksPage() {
             </p>
           </div>
 
-          {/* Filters */}
-          <div className="mb-6 flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search bookmarks..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+          {/* Filters and Sorting */}
+          <div className="mb-6 space-y-4">
+            {/* Search and Filter Row */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search bookmarks by title, company, notes, or folder..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Select value={filterFolder} onValueChange={setFilterFolder}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Folders</SelectItem>
+                    {folders.map(folder => (
+                      <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterPriority} onValueChange={(value: 'all' | 'high' | 'medium' | 'low') => setFilterPriority(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="high">High Priority</SelectItem>
+                    <SelectItem value="medium">Medium Priority</SelectItem>
+                    <SelectItem value="low">Low Priority</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterApplied} onValueChange={(value: 'all' | 'applied' | 'not-applied') => setFilterApplied(value)}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="applied">Applied</SelectItem>
+                    <SelectItem value="not-applied">Not Applied</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Select value={filterFolder} onValueChange={setFilterFolder}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by folder" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Folders</SelectItem>
-                  {folders.map(folder => (
-                    <SelectItem key={folder} value={folder}>{folder}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            {/* Sorting Row */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600 dark:text-slate-300">Sort by:</span>
+                <Select value={sortBy} onValueChange={(value: 'date' | 'priority' | 'title' | 'company') => setSortBy(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Date Added</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="title">Job Title</SelectItem>
+                    <SelectItem value="company">Company</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="w-8 h-8 p-0"
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </Button>
+              </div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                {sortedBookmarks.length} bookmark{sortedBookmarks.length !== 1 ? 's' : ''} found
+              </div>
             </div>
           </div>
 
@@ -282,7 +399,7 @@ export default function BookmarksPage() {
                 </Card>
               ))}
             </div>
-          ) : filteredBookmarks.length === 0 ? (
+          ) : sortedBookmarks.length === 0 ? (
             <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
               <CardContent className="p-12 text-center">
                 <Bookmark className="w-16 h-16 text-slate-400 mx-auto mb-4" />
@@ -301,90 +418,130 @@ export default function BookmarksPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {filteredBookmarks.map((bookmark) => (
-                <Card key={bookmark.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                            {bookmark.job?.title || 'Job Title'}
-                          </h3>
-                          <Badge className={getPriorityColor(bookmark.priority)}>
-                            <span className="flex items-center space-x-1">
-                              {getPriorityIcon(bookmark.priority)}
-                              <span className="capitalize">{bookmark.priority}</span>
-                            </span>
-                          </Badge>
-                          {bookmark.folder && (
-                            <Badge variant="outline">
-                              {bookmark.folder}
+                         <div className="space-y-4">
+               {sortedBookmarks.map((bookmark) => {
+                const jobDetails = getJobById(bookmark.jobId)
+                return (
+                  <Card key={bookmark.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                              {jobDetails?.title || 'Job Title'}
+                            </h3>
+                            <Badge className={getPriorityColor(bookmark.priority)}>
+                              <span className="flex items-center space-x-1">
+                                {getPriorityIcon(bookmark.priority)}
+                                <span className="capitalize">{bookmark.priority}</span>
+                              </span>
                             </Badge>
-                          )}
-                          {bookmark.isApplied && (
-                            <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                              Applied
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-300 mb-3">
-                          <div className="flex items-center space-x-1">
-                            <Building2 className="w-4 h-4" />
-                            <span>{bookmark.job?.company?.name || 'Company Name'}</span>
+                            {bookmark.folder && (
+                              <Badge variant="outline">
+                                {bookmark.folder}
+                              </Badge>
+                            )}
+                            {bookmark.isApplied && (
+                              <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Applied
+                              </Badge>
+                            )}
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="w-4 h-4" />
-                            <span>{bookmark.job?.location || 'Location'}</span>
-                          </div>
-                          {bookmark.job?.salaryMin && (
+                          
+                          <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-300 mb-3">
+                            <div className="flex items-center space-x-1">
+                              <Building2 className="w-4 h-4" />
+                              <span>{jobDetails?.company?.name || 'Company Name'}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <MapPin className="w-4 h-4" />
+                              <span>{jobDetails?.location || 'Location'}</span>
+                            </div>
                             <div className="flex items-center space-x-1">
                               <DollarSign className="w-4 h-4" />
-                              <span>
-                                ${bookmark.job.salaryMin.toLocaleString()}
-                                {bookmark.job.salaryMax && ` - $${bookmark.job.salaryMax.toLocaleString()}`}
-                              </span>
+                              <span>{jobDetails?.salary || 'Salary'}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Briefcase className="w-4 h-4" />
+                              <span>{jobDetails?.experience || 'Experience'}</span>
+                            </div>
+                          </div>
+
+                          {jobDetails?.description && (
+                            <div className="mb-3">
+                              <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
+                                {jobDetails.description}
+                              </p>
                             </div>
                           )}
+
+                          {jobDetails?.skills && jobDetails.skills.length > 0 && (
+                            <div className="mb-3">
+                              <div className="flex flex-wrap gap-1">
+                                {jobDetails.skills.slice(0, 4).map((skill, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                                {jobDetails.skills.length > 4 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{jobDetails.skills.length - 4} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {bookmark.notes && (
+                            <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                              <p className="text-sm text-slate-600 dark:text-slate-300">
+                                <strong>Notes:</strong> {bookmark.notes}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>Posted: {jobDetails?.posted || 'Recently'}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Eye className="w-4 h-4" />
+                              <span>{jobDetails?.applicants || 0} applicants</span>
+                            </div>
+                          </div>
                         </div>
 
-                        {bookmark.notes && (
-                          <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                            <p className="text-sm text-slate-600 dark:text-slate-300">
-                              <strong>Notes:</strong> {bookmark.notes}
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Saved: {new Date(bookmark.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col space-y-2 ml-4">
-                        <Link href={`/jobs/${bookmark.jobId}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            View Job
+                        <div className="flex flex-col space-y-2 ml-4">
+                          <Link href={`/jobs/${bookmark.jobId}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View Job
+                            </Button>
+                          </Link>
+                          <Button 
+                            variant={bookmark.isApplied ? "default" : "outline"} 
+                            size="sm" 
+                            onClick={() => handleToggleApplied(bookmark)}
+                            className={bookmark.isApplied ? "bg-green-600 hover:bg-green-700" : ""}
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            {bookmark.isApplied ? 'Applied' : 'Mark Applied'}
                           </Button>
-                        </Link>
-                        <Button variant="outline" size="sm" onClick={() => handleEditBookmark(bookmark)}>
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDeleteBookmark(bookmark.id)}>
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Remove
-                        </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEditBookmark(bookmark)}>
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteBookmark(bookmark.id)}>
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>

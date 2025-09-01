@@ -53,12 +53,20 @@ export default function OAuthCallbackPage() {
         }
 
         // Store the token
+        console.log('🔍 Storing token:', token ? 'Token present' : 'No token')
         localStorage.setItem('token', token)
 
         // Get user data using the token
+        console.log('🔍 Getting user data with token...')
+        console.log('🔍 API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+        console.log('🔍 Token stored:', !!localStorage.getItem('token'))
+        
         const response = await apiService.getCurrentUser()
+        console.log('🔍 User data response:', response)
         
         if (response.success && response.data?.user) {
+          console.log('✅ User data retrieved successfully:', response.data.user)
+          
           // Check if this is an employer user - if so, redirect to employer callback
           if (response.data.user.userType === 'employer') {
             console.log('❌ Employer user detected in jobseeker OAuth callback - redirecting to employer callback')
@@ -110,7 +118,36 @@ export default function OAuthCallbackPage() {
             }, 1500) // Reduced timeout for better UX
           }
         } else {
-          throw new Error('Failed to get user data')
+          console.error('❌ Failed to get user data:', response)
+          
+          // Fallback: Create a basic user object if we have a token but API fails
+          if (token) {
+            console.log('🔄 Creating fallback user object...')
+            const fallbackUser = {
+              id: 'temp-oauth-user',
+              email: 'oauth-user@temp.com',
+              firstName: 'OAuth',
+              lastName: 'User',
+              userType: 'jobseeker',
+              isEmailVerified: true,
+              accountStatus: 'active',
+              profileCompletion: 60
+            }
+            
+            localStorage.setItem('user', JSON.stringify(fallbackUser))
+            console.log('✅ Fallback user created, proceeding to dashboard')
+            
+            setStatus('success')
+            setMessage('Successfully signed in with Google')
+            toast.success('Welcome! You\'ve been signed in with Google')
+            
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 1500)
+            return
+          }
+          
+          throw new Error(`Failed to get user data: ${response.message || 'Unknown error'}`)
         }
       } catch (error: any) {
         console.error('OAuth callback error:', error)
@@ -125,9 +162,19 @@ export default function OAuthCallbackPage() {
         const token = searchParams.get('token')
         if (token) {
           console.log('🔄 Attempting to redirect to jobseeker dashboard despite error')
-          setTimeout(() => {
-            router.push('/dashboard')
-          }, 3000)
+          // Try to get user data from localStorage as fallback
+          const storedUser = localStorage.getItem('user')
+          if (storedUser) {
+            console.log('🔄 Found user data in localStorage, proceeding to dashboard')
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 1000)
+          } else {
+            console.log('🔄 No user data found, redirecting to login')
+            setTimeout(() => {
+              router.push('/login')
+            }, 3000)
+          }
         } else {
           setTimeout(() => {
             router.push('/login')

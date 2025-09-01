@@ -3,11 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun } from "lucide-react"
+import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun, User, LogOut, Settings, Bell, Bookmark, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -15,6 +19,7 @@ export function Navbar() {
   const [showCompaniesDropdown, setShowCompaniesDropdown] = useState(false)
   const { theme, setTheme } = useTheme()
   const pathname = usePathname()
+  const { user, logout } = useAuth()
 
   // Check if we're on login or register pages
   const isLoginPage = pathname === "/login"
@@ -37,8 +42,6 @@ export function Navbar() {
     { name: "Walk-in jobs", href: "/jobs?type=walkin" },
     { name: "Part-time jobs", href: "/jobs?type=parttime" },
   ]
-
-
 
   const exploreCategories = [
     { name: "Unicorn", href: "/companies?category=unicorn" },
@@ -69,6 +72,15 @@ export function Navbar() {
     { name: "Post a job", href: "/employer-dashboard/post-job", badge: "FREE" },
     { name: "Employer Login", href: "/employer-login" },
   ]
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast.success('Logged out successfully')
+    } catch (error) {
+      toast.error('Logout failed')
+    }
+  }
 
   return (
     <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50">
@@ -242,19 +254,83 @@ export function Navbar() {
               </div>
             </div>
 
-            {!isLoginPage && !isRegisterPage && (
-              <>
-            <Link href="/login">
-                  <Button variant="ghost" className="text-slate-700 dark:text-slate-300">
-                Login
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                Register
-              </Button>
-            </Link>
-              </>
+            {/* User Menu - Show when logged in */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage 
+                        src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
+                        alt={`${user.firstName} ${user.lastName}`}
+                      />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                        {`${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.firstName} {user.lastName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Account Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/applications" className="flex items-center">
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>My Applications</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/bookmarks" className="flex items-center">
+                      <Bookmark className="mr-2 h-4 w-4" />
+                      <span>Saved Jobs</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/notifications" className="flex items-center">
+                      <Bell className="mr-2 h-4 w-4" />
+                      <span>Notifications</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              // Show login/register buttons when not logged in
+              !isLoginPage && !isRegisterPage && (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className="text-slate-700 dark:text-slate-300">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                      Register
+                    </Button>
+                  </Link>
+                </>
+              )
             )}
           </div>
 
@@ -274,23 +350,83 @@ export function Navbar() {
                 <Link href="/companies" className="text-lg font-medium text-slate-900 dark:text-white">
                   Companies
                 </Link>
-                <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">
-                  <Link href="/employer-login">
-                    <Button variant="outline" className="w-full bg-transparent">
-                      For Employers
+                
+                {/* Mobile User Menu */}
+                {user ? (
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">
+                    <div className="flex items-center space-x-3 pb-4">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage 
+                          src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
+                          alt={`${user.firstName} ${user.lastName}`}
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                          {`${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">{user.firstName} {user.lastName}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+                      </div>
+                    </div>
+                    <Link href="/dashboard">
+                      <Button variant="outline" className="w-full justify-start">
+                        <User className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link href="/profile">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Profile Settings
+                      </Button>
+                    </Link>
+                    <Link href="/applications">
+                      <Button variant="outline" className="w-full justify-start">
+                        <FileText className="mr-2 h-4 w-4" />
+                        My Applications
+                      </Button>
+                    </Link>
+                    <Link href="/bookmarks">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Bookmark className="mr-2 h-4 w-4" />
+                        Saved Jobs
+                      </Button>
+                    </Link>
+                    <Link href="/notifications">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Bell className="mr-2 h-4 w-4" />
+                        Notifications
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
                     </Button>
-                  </Link>
-                  <Link href="/login">
-                    <Button variant="outline" className="w-full bg-transparent">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                      Register
-                    </Button>
-                  </Link>
-                </div>
+                  </div>
+                ) : (
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">
+                    <Link href="/employer-login">
+                      <Button variant="outline" className="w-full bg-transparent">
+                        For Employers
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button variant="outline" className="w-full bg-transparent">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/register">
+                      <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                        Register
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </SheetContent>
           </Sheet>

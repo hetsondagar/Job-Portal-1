@@ -5,6 +5,9 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const JobApplication = require('../models/JobApplication');
+const Job = require('../models/Job');
+const Resume = require('../models/Resume');
 
 const {
   createJob,
@@ -64,5 +67,83 @@ router.post('/create', authenticateToken, createJob);
 router.put('/:id', authenticateToken, updateJob);
 router.delete('/:id', authenticateToken, deleteJob);
 router.patch('/:id/status', authenticateToken, updateJobStatus);
+
+// Job application endpoint
+router.post('/:id/apply', authenticateToken, async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    const userId = req.user.id;
+    const { coverLetter, expectedSalary, noticePeriod, availableFrom, isWillingToRelocate, preferredLocations, resumeId } = req.body;
+
+    console.log('🔍 Job application request:', { jobId, userId });
+
+    // Check if job exists
+    const job = await Job.findByPk(jobId);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Check if user has already applied for this job
+    const existingApplication = await JobApplication.findOne({
+      where: { jobId, userId }
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already applied for this job'
+      });
+    }
+
+    // Get user's default resume if no resumeId provided
+    let selectedResumeId = resumeId;
+    if (!selectedResumeId) {
+      const defaultResume = await Resume.findOne({
+        where: { userId, isDefault: true }
+      });
+      if (defaultResume) {
+        selectedResumeId = defaultResume.id;
+      }
+    }
+
+    // Create job application
+    const application = await JobApplication.create({
+      jobId,
+      userId,
+      employerId: job.createdBy, // Assuming job has createdBy field
+      status: 'applied',
+      coverLetter,
+      expectedSalary,
+      noticePeriod,
+      availableFrom,
+      isWillingToRelocate,
+      preferredLocations,
+      resumeId: selectedResumeId,
+      source: 'website'
+    });
+
+    console.log('✅ Job application created:', application.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Application submitted successfully',
+      data: {
+        applicationId: application.id,
+        status: application.status,
+        appliedAt: application.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error applying for job:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit application: ' + error.message
+    });
+  }
+});
 
 module.exports = router;

@@ -15,6 +15,8 @@ import {
   Star,
   ArrowRight,
   X,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +31,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
+import { apiService } from "@/lib/api"
 
 // Types for state management
 interface FilterState {
@@ -45,7 +50,10 @@ interface FilterState {
 interface Job {
   id: number
   title: string
-  company: string
+  company: {
+    name: string
+    id?: string
+  }
   location: string
   experience: string
   salary: string
@@ -63,9 +71,10 @@ interface Job {
 }
 
 export default function JobsPage() {
+  const { user, loading } = useAuth()
   const [showFilters, setShowFilters] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set())
   const [sortBy, setSortBy] = useState("recent")
   const [isStickyVisible, setIsStickyVisible] = useState(false)
 
@@ -100,6 +109,92 @@ export default function JobsPage() {
             }
     }
   }, [])
+
+  // Load saved jobs when user is authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      loadSavedJobs()
+    }
+  }, [user, loading])
+
+  const loadSavedJobs = async () => {
+    try {
+      const response = await apiService.getBookmarks()
+      if (response.success && response.data) {
+        const savedJobIds = new Set(response.data.map(bookmark => bookmark.jobId))
+        setSavedJobs(savedJobIds)
+      }
+    } catch (error) {
+      console.error('Error loading saved jobs:', error)
+    }
+  }
+
+  const handleSaveJob = async (jobId: number, job: Job) => {
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+
+    try {
+      const jobIdString = jobId.toString()
+      if (savedJobs.has(jobIdString)) {
+        // Remove from saved jobs
+        const bookmark = await apiService.getBookmarks()
+        if (bookmark.success && bookmark.data) {
+          const bookmarkToDelete = bookmark.data.find(b => b.jobId === jobIdString)
+          if (bookmarkToDelete) {
+            await apiService.deleteBookmark(bookmarkToDelete.id)
+            setSavedJobs(prev => {
+              const newSet = new Set(prev)
+              newSet.delete(jobIdString)
+              return newSet
+            })
+            toast.success('Job removed from saved jobs')
+          }
+        }
+      } else {
+        // Add to saved jobs
+        const bookmarkData = {
+          jobId: jobIdString,
+          folder: 'Saved Jobs',
+          notes: '',
+          priority: 'medium' as 'low' | 'medium' | 'high'
+        }
+        
+        const response = await apiService.createBookmark(bookmarkData)
+        if (response.success) {
+          setSavedJobs(prev => new Set([...prev, jobIdString]))
+          toast.success('Job saved successfully!')
+        }
+      }
+    } catch (error) {
+      console.error('Error saving job:', error)
+      toast.error('Failed to save job')
+    }
+  }
+
+  const handleApply = async (jobId: number) => {
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+
+    try {
+      console.log(`Applying for job ${jobId}...`)
+      
+      const response = await apiService.applyJob(jobId.toString())
+      
+      if (response.success) {
+        toast.success('Application submitted successfully!')
+        console.log('Application submitted:', response.data)
+      } else {
+        toast.error(response.message || 'Failed to submit application')
+      }
+    } catch (error) {
+      console.error('Error applying for job:', error)
+      toast.error('Failed to submit application. Please try again.')
+    }
+  }
 
   // Scroll event listener for sticky search bar
   useEffect(() => {
@@ -149,7 +244,7 @@ export default function JobsPage() {
     {
       id: 1,
       title: "Senior Full Stack Developer",
-      company: "TechCorp Solutions",
+      company: { name: "TechCorp Solutions" },
       location: "Bangalore",
       experience: "4-7 years",
       salary: "15-25 LPA",
@@ -168,7 +263,7 @@ export default function JobsPage() {
     {
       id: 2,
       title: "Product Manager - Growth",
-      company: "InnovateTech",
+      company: { name: "InnovateTech" },
       location: "Mumbai",
       experience: "5-8 years",
       salary: "20-35 LPA",
@@ -187,7 +282,7 @@ export default function JobsPage() {
     {
       id: 3,
       title: "Data Scientist - ML",
-      company: "DataDriven Inc",
+      company: { name: "DataDriven Inc" },
       location: "Hyderabad",
       experience: "3-6 years",
       salary: "12-22 LPA",
@@ -206,7 +301,7 @@ export default function JobsPage() {
     {
       id: 4,
       title: "Frontend Developer",
-      company: "WebSolutions Ltd",
+      company: { name: "WebSolutions Ltd" },
       location: "Pune",
       experience: "2-4 years",
       salary: "8-15 LPA",
@@ -225,7 +320,7 @@ export default function JobsPage() {
     {
       id: 5,
       title: "UX Designer",
-      company: "DesignStudio",
+      company: { name: "DesignStudio" },
       location: "Delhi",
       experience: "3-5 years",
       salary: "10-18 LPA",
@@ -244,7 +339,7 @@ export default function JobsPage() {
     {
       id: 6,
       title: "DevOps Engineer",
-      company: "CloudTech",
+      company: { name: "CloudTech" },
       location: "Bangalore",
       experience: "4-6 years",
       salary: "18-28 LPA",
@@ -263,7 +358,7 @@ export default function JobsPage() {
     {
       id: 7,
       title: "Sales Manager",
-      company: "SalesForce Inc",
+      company: { name: "SalesForce Inc" },
       location: "Mumbai",
       experience: "5-8 years",
       salary: "15-25 LPA",
@@ -282,7 +377,7 @@ export default function JobsPage() {
     {
       id: 8,
       title: "Marketing Specialist",
-      company: "Digital Marketing Pro",
+      company: { name: "Digital Marketing Pro" },
       location: "Gurgaon",
       experience: "2-4 years",
       salary: "6-12 LPA",
@@ -356,7 +451,7 @@ export default function JobsPage() {
     if (filters.search) {
       filtered = filtered.filter(job =>
         job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.company.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.company.name.toLowerCase().includes(filters.search.toLowerCase()) ||
         job.description.toLowerCase().includes(filters.search.toLowerCase()) ||
         job.skills.some(skill => skill.toLowerCase().includes(filters.search.toLowerCase()))
       )
@@ -476,14 +571,6 @@ export default function JobsPage() {
 
     return filtered
   }, [jobs, filters, sortBy])
-
-  const handleApply = (jobId: number) => {
-    if (!isAuthenticated) {
-      setShowAuthDialog(true)
-    } else {
-      console.log(`Applying for job ${jobId}...`)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
@@ -894,8 +981,8 @@ export default function JobsPage() {
                         <div className="flex flex-col lg:flex-row gap-4">
                           <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
                             <Avatar className="w-12 h-12 sm:w-16 sm:h-16 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 flex-shrink-0">
-                              <AvatarImage src={job.logo || "/placeholder.svg"} alt={job.company} />
-                              <AvatarFallback>{job.company[0]}</AvatarFallback>
+                              <AvatarImage src={job.logo || "/placeholder.svg"} alt={job.company.name} />
+                              <AvatarFallback>{job.company.name[0]}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <h3
@@ -909,7 +996,7 @@ export default function JobsPage() {
                               </h3>
                               <div className="flex items-center space-x-2 mb-3">
                                 <p className="text-slate-600 dark:text-slate-300 font-medium text-sm sm:text-base lg:text-lg truncate">
-                                  {job.company}
+                                  {job.company.name}
                                 </p>
                                 <div className="flex items-center flex-shrink-0">
                                   <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current mr-1" />
@@ -976,10 +1063,25 @@ export default function JobsPage() {
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
+                                    handleSaveJob(job.id, job)
                                   }}
-                                      className="text-xs sm:text-sm"
+                                  className={`text-xs sm:text-sm ${
+                                    savedJobs.has(job.id.toString()) 
+                                      ? 'border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20' 
+                                      : ''
+                                  }`}
                                 >
+                                  {savedJobs.has(job.id.toString()) ? (
+                                    <>
+                                      <BookmarkCheck className="w-4 h-4 mr-1" />
+                                      Saved
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Bookmark className="w-4 h-4 mr-1" />
                                       Save
+                                    </>
+                                  )}
                                 </Button>
                                 <Button
                                   onClick={(e) => {
@@ -1013,16 +1115,20 @@ export default function JobsPage() {
           <DialogHeader>
             <DialogTitle>Login Required</DialogTitle>
             <DialogDescription>
-              You need to be logged in to apply for jobs. Please register or login to continue.
+              You need to be logged in to save jobs and apply for positions. Please register or login to continue.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
-              <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                Register Now
-              </Button>
-              <Button variant="outline" className="w-full bg-transparent">
-                Login
-              </Button>
+              <Link href="/register" className="w-full">
+                <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  Register Now
+                </Button>
+              </Link>
+              <Link href="/login" className="w-full">
+                <Button variant="outline" className="w-full bg-transparent">
+                  Login
+                </Button>
+              </Link>
           </div>
         </DialogContent>
       </Dialog>

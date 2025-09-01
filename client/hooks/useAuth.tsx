@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback, useRef } from 'react';
 import { apiService, User, SignupData, EmployerSignupData, LoginData, AuthResponse } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +14,9 @@ interface AuthContextType {
   login: (data: LoginData) => Promise<AuthResponse | undefined>;
   logout: () => Promise<void>;
   clearError: () => void;
+  updateUser: (userData: User) => void;
+  refreshUser: () => Promise<void>;
+  refreshing: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,7 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Rate limiting: minimum 5 seconds between refresh calls
+  const MIN_REFRESH_INTERVAL = 5000; // 5 seconds
 
   // Normalize backend /auth/me response (snake_case) to frontend User (camelCase)
   const mapUserFromApi = (u: any): User => ({
@@ -40,6 +49,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profileCompletion: u.profile_completion ?? u.profileCompletion,
     lastLoginAt: u.last_login_at ?? u.lastLoginAt,
     companyId: u.company_id ?? u.companyId,
+    skills: u.skills,
+    languages: u.languages,
+    expectedSalary: u.expected_salary ?? u.expectedSalary,
+    noticePeriod: u.notice_period ?? u.noticePeriod,
+    willingToRelocate: u.willing_to_relocate ?? u.willingToRelocate,
+    gender: u.gender,
+    profileVisibility: u.profile_visibility ?? u.profileVisibility,
+    contactVisibility: u.contact_visibility ?? u.contactVisibility,
+    certifications: u.certifications,
+    socialLinks: u.social_links ?? u.socialLinks,
+    preferences: u.preferences,
+    oauthProvider: u.oauth_provider ?? u.oauthProvider,
+    oauthId: u.oauth_id ?? u.oauthId,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
   });
 
   useEffect(() => {
@@ -73,6 +97,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
+  }, []);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
   }, []);
 
   const signup = async (data: SignupData) => {
@@ -170,6 +203,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUser = (userData: User) => {
+    const normalized = mapUserFromApi(userData as any);
+    setUser(normalized);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(normalized));
+    }
+  };
+
+  const refreshUser = useCallback(async () => {
+    const now = Date.now();
+    
+    // Check if enough time has passed since last refresh
+    if (now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
+      console.log('🔄 Rate limiting refreshUser - too soon since last refresh');
+      toast.info('Please wait a moment before refreshing user data.');
+      return;
+    }
+
+    // Clear any pending refresh timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
+
+    try {
+      setRefreshing(true);
+      setLastRefreshTime(now);
+      
+      if (apiService.isAuthenticated()) {
+        const response = await apiService.getCurrentUser();
+        if (response.success && response.data?.user) {
+          const normalized = mapUserFromApi(response.data.user as any);
+          setUser(normalized);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(normalized));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      
+      // If it's a rate limit error, schedule a retry with exponential backoff
+      if (error.message && error.message.includes('Too many requests')) {
+        console.log('🔄 Rate limited - scheduling retry with backoff');
+        toast.warning('Too many requests. Retrying automatically in a moment...');
+        const retryDelay = Math.min(30000, MIN_REFRESH_INTERVAL * 2); // Max 30 seconds
+        
+        refreshTimeoutRef.current = setTimeout(() => {
+          console.log('🔄 Retrying refresh after rate limit');
+          refreshUser();
+        }, retryDelay);
+      }
+      
+      // Don't update lastRefreshTime on error to allow retry
+      setLastRefreshTime(now - MIN_REFRESH_INTERVAL);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [lastRefreshTime]);
+
+  // Debounced refresh function for use in intervals
+  const debouncedRefreshUser = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshUser();
+    }, 1000); // 1 second debounce
+  }, [refreshUser]);
+
+  // Manual refresh function that bypasses rate limiting for user-initiated refreshes
+  const manualRefreshUser = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      
+      if (apiService.isAuthenticated()) {
+        const response = await apiService.getCurrentUser();
+        if (response.success && response.data?.user) {
+          const normalized = mapUserFromApi(response.data.user as any);
+          setUser(normalized);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(normalized));
+          }
+          toast.success('User data refreshed successfully');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error manually refreshing user data:', error);
+      toast.error(error.message || 'Failed to refresh user data');
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   const clearError = () => {
     setError(null);
   };
@@ -183,6 +311,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     clearError,
+    updateUser,
+    refreshUser,
+    debouncedRefreshUser,
+    manualRefreshUser,
+    refreshing,
   };
 
   return (

@@ -12,29 +12,30 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
   User, 
-  Briefcase, 
   FileText, 
   Building2, 
   Bell, 
   Settings, 
   LogOut,
   Search,
-  Plus,
   TrendingUp,
   Bookmark,
-  X
+  X,
+  Upload
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 
 import { toast } from 'sonner'
-import { apiService, DashboardStats, Resume } from '@/lib/api'
+import { apiService, DashboardStats, Resume, JobBookmark } from '@/lib/api'
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
   const [resumes, setResumes] = useState<Resume[]>([])
+  const [bookmarks, setBookmarks] = useState<JobBookmark[]>([])
+  const [bookmarksLoading, setBookmarksLoading] = useState(true)
   const [showResumeModal, setShowResumeModal] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -52,8 +53,16 @@ export default function DashboardPage() {
       setCurrentUser(user)
       fetchDashboardStats()
       fetchResumes()
+      fetchBookmarks()
     }
   }, [user, loading])
+
+  // Refresh user data when component mounts to ensure we have the latest data
+  useEffect(() => {
+    if (!loading && user) {
+      debouncedRefreshUser()
+    }
+  }, [loading, user, debouncedRefreshUser])
 
   const fetchDashboardStats = async () => {
     try {
@@ -81,21 +90,54 @@ export default function DashboardPage() {
     }
   }
 
+  const fetchBookmarks = async () => {
+    try {
+      setBookmarksLoading(true)
+      const response = await apiService.getBookmarks()
+      if (response.success && response.data) {
+        setBookmarks(response.data)
+      }
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error)
+    } finally {
+      setBookmarksLoading(false)
+    }
+  }
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+
+    // File validation
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    const maxSize = 5 * 1024 * 1024 // 5MB
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload PDF, DOC, or DOCX files only.')
+      return
+    }
+
+    if (file.size > maxSize) {
+      toast.error('File size too large. Please upload a file smaller than 5MB.')
+      return
+    }
 
     try {
       setUploading(true)
       const response = await apiService.uploadResumeFile(file)
       if (response.success) {
-        toast.success('Resume uploaded successfully')
+        toast.success('Resume uploaded successfully!')
         fetchResumes()
         setShowResumeModal(false)
+        
+        // If this is the first resume, show additional info
+        if (resumes.length === 0) {
+          toast.success('This resume has been set as your default resume.')
+        }
       }
     } catch (error) {
       console.error('Error uploading resume:', error)
-      toast.error('Failed to upload resume')
+      toast.error('Failed to upload resume. Please try again.')
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -105,7 +147,7 @@ export default function DashboardPage() {
   }
 
   const handleEditProfile = () => {
-    router.push('/profile')
+    router.push('/account')
   }
 
   const handleNotificationSettings = () => {
@@ -122,6 +164,28 @@ export default function DashboardPage() {
       toast.success('Logged out successfully')
     } catch (error) {
       toast.error('Logout failed')
+    }
+  }
+
+
+
+
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+    }
+  }
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'high': return <Star className="w-4 h-4 fill-current" />
+      case 'medium': return <Star className="w-4 h-4" />
+      case 'low': return <Star className="w-4 h-4" />
+      default: return <Star className="w-4 h-4" />
     }
   }
 
@@ -207,8 +271,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-
-
           {/* Quick Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
             <Link href="/jobs">
@@ -236,7 +298,9 @@ export default function DashboardPage() {
                   </div>
                   <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Applications</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">Track your progress</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {statsLoading ? 'Loading...' : `${stats?.applicationCount || 0} applications submitted`}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -259,21 +323,23 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/bookmarks">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
-                <CardContent className="p-6 h-full flex flex-col justify-center">
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Bookmark className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Saved Jobs</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">View bookmarks</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                         <Link href="/bookmarks">
+               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+                 <CardContent className="p-6 h-full flex flex-col justify-center">
+                   <div className="flex flex-col items-center text-center space-y-3">
+                     <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                       <Bookmark className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                     </div>
+                     <div>
+                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Saved Jobs</h3>
+                       <p className="text-sm text-slate-600 dark:text-slate-300">
+                         {bookmarksLoading ? 'Loading...' : `${bookmarks.length} jobs saved`}
+                       </p>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             </Link>
 
             <Link href="/search-history">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
@@ -291,21 +357,51 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/resumes">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
-                <CardContent className="p-6 h-full flex flex-col justify-center">
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FileText className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Resumes</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">Manage CVs</p>
-                    </div>
+            <Card 
+              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full"
+              onClick={() => router.push('/resumes')}
+            >
+              <CardContent className="p-6 h-full flex flex-col justify-center">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <FileText className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Resumes</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {resumes.length === 0 ? 'Upload your first resume' : `${resumes.length} resume${resumes.length !== 1 ? 's' : ''} uploaded`}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleUploadResume()
+                      }}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      <Upload className="w-3 h-3 mr-1" />
+                      Upload
+                    </Button>
+                    {resumes.length > 0 && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          router.push('/resumes')
+                        }}
+                      >
+                        View All
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Link href="/companies">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
@@ -339,6 +435,8 @@ export default function DashboardPage() {
             </Card>
             </Link>
           </div>
+
+
 
           {/* Stats and Recent Activity */}
            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
@@ -376,14 +474,16 @@ export default function DashboardPage() {
                        {statsLoading ? (
                          <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
                        ) : (
-                         stats?.recentApplications?.length || 0
+                         bookmarks.length
                        )}
                   </div>
-                     <div className="text-sm text-slate-600 dark:text-slate-300">Recent</div>
+                     <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+
 
             <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
               <CardHeader>
@@ -394,20 +494,20 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                   <Button 
+                                      <Button 
                      variant="outline" 
                      className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                      onClick={handleEditProfile}
                    >
                      <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                     <span className="text-sm font-medium">Edit Profile</span>
+                     <span className="text-sm font-medium">Account Settings</span>
                   </Button>
                    <Button 
                      variant="outline" 
                      className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                      onClick={handleUploadResume}
                    >
-                     <Briefcase className="w-5 h-5 text-green-600 dark:text-green-400" />
+                     <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
                      <span className="text-sm font-medium">Upload Resume</span>
                   </Button>
                    <Button 
@@ -457,6 +557,7 @@ export default function DashboardPage() {
                       accept=".pdf,.doc,.docx"
                       onChange={handleFileUpload}
                       ref={fileInputRef}
+                      disabled={uploading}
                     />
                     <p className="text-sm text-slate-500 mt-1">
                       Supported formats: PDF, DOC, DOCX (max 5MB)
@@ -464,16 +565,27 @@ export default function DashboardPage() {
                   </div>
 
                   {uploading && (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm text-slate-600">Uploading...</span>
+                      <span className="text-sm text-blue-600 dark:text-blue-400">Uploading resume...</span>
                     </div>
                   )}
+
+                  <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                    <h4 className="font-medium text-slate-900 dark:text-white mb-2">Upload Tips:</h4>
+                    <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                      <li>• Use PDF format for best compatibility</li>
+                      <li>• Keep file size under 5MB</li>
+                      <li>• Ensure your resume is up-to-date</li>
+                      <li>• First upload will be set as default</li>
+                    </ul>
+                  </div>
 
                   <div className="flex justify-end space-x-2">
                     <Button 
                       variant="outline" 
                       onClick={() => setShowResumeModal(false)}
+                      disabled={uploading}
                     >
                       Cancel
                     </Button>
@@ -482,6 +594,8 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
+
         </div>
       </div>
     </div>
