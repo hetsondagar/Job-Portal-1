@@ -110,11 +110,26 @@ export default function DepartmentJobsPage() {
     return colors[sector as keyof typeof colors] || "from-gray-500 to-slate-500"
   }
 
-  const handleApply = (jobId: number) => {
+  const handleApply = async (jobId: number) => {
     if (!isAuthenticated) {
       setShowAuthDialog(true)
-    } else {
+      return
+    }
+
+    try {
       console.log(`Applying for job ${jobId}...`)
+      
+      const response = await apiService.applyJob(jobId.toString())
+      
+      if (response.success) {
+        toast.success('Application submitted successfully!')
+        console.log('Application submitted:', response.data)
+      } else {
+        toast.error(response.message || 'Failed to submit application')
+      }
+    } catch (error) {
+      console.error('Error applying for job:', error)
+      toast.error('Failed to submit application. Please try again.')
     }
   }
 

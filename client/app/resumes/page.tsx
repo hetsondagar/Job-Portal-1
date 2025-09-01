@@ -65,16 +65,35 @@ export default function ResumesPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // File validation
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    const maxSize = 5 * 1024 * 1024 // 5MB
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload PDF, DOC, or DOCX files only.')
+      return
+    }
+
+    if (file.size > maxSize) {
+      toast.error('File size too large. Please upload a file smaller than 5MB.')
+      return
+    }
+
     try {
       setUploading(true)
       const response = await apiService.uploadResumeFile(file)
       if (response.success) {
-        toast.success('Resume uploaded successfully')
+        toast.success('Resume uploaded successfully!')
         fetchResumes()
+        
+        // If this is the first resume, show additional info
+        if (resumes.length === 0) {
+          toast.success('This resume has been set as your default resume.')
+        }
       }
     } catch (error) {
       console.error('Error uploading resume:', error)
-      toast.error('Failed to upload resume')
+      toast.error('Failed to upload resume. Please try again.')
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -108,6 +127,16 @@ export default function ResumesPage() {
     } catch (error) {
       console.error('Error setting default resume:', error)
       toast.error('Failed to set default resume')
+    }
+  }
+
+  const handleDownloadResume = async (resumeId: string) => {
+    try {
+      await apiService.downloadResume(resumeId)
+      toast.success('Resume downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading resume:', error)
+      toast.error('Failed to download resume')
     }
   }
 
@@ -271,6 +300,15 @@ export default function ResumesPage() {
                        </div>
 
                        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                         <Button 
+                           variant="outline" 
+                           size="sm"
+                           onClick={() => handleDownloadResume(resume.id)}
+                           className="flex-1 sm:flex-none"
+                         >
+                           <Download className="w-4 h-4 mr-1" />
+                           Download
+                         </Button>
                          {!resume.isDefault && (
                            <Button 
                              variant="outline" 

@@ -44,14 +44,19 @@ const upload = multer({
 const avatarStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../uploads/avatars');
+    // Ensure directory exists
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
+      console.log('📁 Created uploads/avatars directory');
     }
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+    const extension = path.extname(file.originalname);
+    const filename = 'avatar-' + uniqueSuffix + extension;
+    console.log('📄 Generated filename:', filename);
+    cb(null, filename);
   }
 });
 
@@ -63,6 +68,7 @@ const avatarUpload = multer({
   fileFilter: function (req, file, cb) {
     const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const ext = path.extname(file.originalname).toLowerCase();
+    console.log('🔍 File type check:', ext, 'Allowed:', allowedTypes);
     if (allowedTypes.includes(ext)) {
       cb(null, true);
     } else {
@@ -146,11 +152,23 @@ const validateProfileUpdate = [
     .withMessage('Summary must be less than 1000 characters'),
   body('expectedSalary')
     .optional()
-    .isNumeric()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Allow empty/null values
+      }
+      const numValue = parseFloat(value);
+      return !isNaN(numValue) && numValue >= 0;
+    })
     .withMessage('Expected salary must be a valid number'),
   body('noticePeriod')
     .optional()
-    .isInt({ min: 0, max: 365 })
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Allow empty/null values
+      }
+      const numValue = parseInt(value);
+      return !isNaN(numValue) && numValue >= 0 && numValue <= 365;
+    })
     .withMessage('Notice period must be between 0 and 365 days'),
   body('willingToRelocate')
     .optional()
@@ -192,13 +210,24 @@ router.get('/profile', authenticateToken, async (req, res) => {
       profileCompletion: req.user.profile_completion,
       oauthProvider: req.user.oauth_provider,
       oauthId: req.user.oauth_id,
+      skills: req.user.skills,
+      languages: req.user.languages,
+      expectedSalary: req.user.expected_salary,
+      noticePeriod: req.user.notice_period,
+      willingToRelocate: req.user.willing_to_relocate,
+      gender: req.user.gender,
+      profileVisibility: req.user.profile_visibility,
+      contactVisibility: req.user.contact_visibility,
+      certifications: req.user.certifications,
+      socialLinks: req.user.social_links,
+      preferences: req.user.preferences,
       createdAt: req.user.createdAt,
       updatedAt: req.user.updatedAt
     };
 
     res.status(200).json({
       success: true,
-      data: userData
+      data: { user: userData }
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -222,17 +251,32 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       });
     }
 
-    const allowedFields = [
-      'firstName', 'lastName', 'phone', 'currentLocation', 'headline', 
-      'summary', 'expectedSalary', 'noticePeriod', 'willingToRelocate',
-      'gender', 'profileVisibility', 'contactVisibility', 'skills',
-      'languages', 'certifications', 'socialLinks', 'preferences'
-    ];
+    // Map frontend field names to database field names
+    const fieldMapping = {
+      'firstName': 'first_name',
+      'lastName': 'last_name',
+      'phone': 'phone',
+      'currentLocation': 'current_location',
+      'headline': 'headline',
+      'summary': 'summary',
+      'expectedSalary': 'expected_salary',
+      'noticePeriod': 'notice_period',
+      'willingToRelocate': 'willing_to_relocate',
+      'gender': 'gender',
+      'profileVisibility': 'profile_visibility',
+      'contactVisibility': 'contact_visibility',
+      'skills': 'skills',
+      'languages': 'languages',
+      'certifications': 'certifications',
+      'socialLinks': 'social_links',
+      'preferences': 'preferences'
+    };
 
     const updateData = {};
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-        updateData[field] = req.body[field];
+    Object.keys(fieldMapping).forEach(frontendField => {
+      if (req.body[frontendField] !== undefined) {
+        const dbField = fieldMapping[frontendField];
+        updateData[dbField] = req.body[frontendField];
       }
     });
 
@@ -241,13 +285,14 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
 
     // Calculate profile completion percentage
     const profileFields = [
-      'firstName', 'lastName', 'email', 'phone', 'currentLocation',
+      'first_name', 'last_name', 'email', 'phone', 'current_location',
       'headline', 'summary', 'skills', 'languages'
     ];
     
     let completedFields = 0;
     profileFields.forEach(field => {
-      if (req.user[field] || (req.body[field] && req.body[field].length > 0)) {
+      const fieldValue = req.user[field] || (req.body[fieldMapping[field]] && req.body[fieldMapping[field]].length > 0);
+      if (fieldValue) {
         completedFields++;
       }
     });
@@ -256,15 +301,38 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
 
     await req.user.update(updateData);
 
-    // Fetch updated user data
+    // Fetch updated user data and transform to camelCase format
     const updatedUser = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
 
+    // Transform user data to camelCase format to match frontend expectations
+    const userData = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.first_name,
+      lastName: updatedUser.last_name,
+      userType: updatedUser.user_type,
+      isEmailVerified: updatedUser.is_email_verified,
+      accountStatus: updatedUser.account_status,
+      lastLoginAt: updatedUser.last_login_at,
+      companyId: updatedUser.company_id,
+      phone: updatedUser.phone,
+      avatar: updatedUser.avatar,
+      currentLocation: updatedUser.current_location,
+      headline: updatedUser.headline,
+      summary: updatedUser.summary,
+      profileCompletion: updatedUser.profile_completion,
+      oauthProvider: updatedUser.oauth_provider,
+      oauthId: updatedUser.oauth_id,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt
+    };
+
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: { user: updatedUser }
+      data: { user: userData }
     });
 
   } catch (error) {
@@ -886,6 +954,58 @@ router.get('/resumes', authenticateToken, async (req, res) => {
   }
 });
 
+// Get resume statistics for dashboard
+router.get('/resumes/stats', authenticateToken, async (req, res) => {
+  try {
+    const totalResumes = await Resume.count({
+      where: { userId: req.user.id }
+    });
+
+    const defaultResume = await Resume.findOne({
+      where: { userId: req.user.id, isDefault: true }
+    });
+
+    const recentResumes = await Resume.findAll({
+      where: { userId: req.user.id },
+      order: [['lastUpdated', 'DESC']],
+      limit: 3
+    });
+
+    const totalViews = await Resume.sum('views', {
+      where: { userId: req.user.id }
+    }) || 0;
+
+    const totalDownloads = await Resume.sum('downloads', {
+      where: { userId: req.user.id }
+    }) || 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalResumes,
+        hasDefaultResume: !!defaultResume,
+        defaultResumeId: defaultResume?.id || null,
+        recentResumes: recentResumes.map(resume => ({
+          id: resume.id,
+          title: resume.title,
+          lastUpdated: resume.lastUpdated,
+          isDefault: resume.isDefault,
+          views: resume.views,
+          downloads: resume.downloads
+        })),
+        totalViews,
+        totalDownloads
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching resume stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch resume statistics'
+    });
+  }
+});
+
 router.post('/resumes', authenticateToken, async (req, res) => {
   try {
     const { title, summary, objective, skills, languages, certifications, projects, achievements } = req.body;
@@ -987,42 +1107,71 @@ router.delete('/resumes/:id', authenticateToken, async (req, res) => {
 
 router.post('/resumes/upload', authenticateToken, upload.single('resume'), async (req, res) => {
   try {
+    console.log('🔍 Resume upload request received');
+    console.log('🔍 File:', req.file);
+    console.log('🔍 User:', req.user.id);
+
     if (!req.file) {
+      console.log('❌ No file uploaded');
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
       });
     }
 
-    const { title } = req.body;
+    const { title, description } = req.body;
     const filename = req.file.filename;
     const originalName = req.file.originalname;
+    const fileSize = req.file.size;
+    const mimeType = req.file.mimetype;
 
+    // Check if this is the first resume (make it default)
+    const existingResumes = await Resume.count({
+      where: { userId: req.user.id }
+    });
+
+    const isDefault = existingResumes === 0;
+
+    // Create resume record
     const resume = await Resume.create({
       userId: req.user.id,
-      title: title || `Resume - ${originalName}`,
-      isDefault: false,
+      title: title || `Resume - ${originalName.replace(/\.[^/.]+$/, '')}`,
+      summary: description || `Resume uploaded on ${new Date().toLocaleDateString()}`,
+      isDefault: isDefault,
       isPublic: true,
       metadata: {
         filename,
         originalName,
-        fileSize: req.file.size,
-        mimeType: req.file.mimetype
+        fileSize,
+        mimeType,
+        uploadDate: new Date().toISOString(),
+        filePath: `/uploads/resumes/${filename}`
       }
     });
+
+    console.log('✅ Resume created successfully:', resume.id);
+
+    // If this is the first resume, ensure it's set as default
+    if (isDefault) {
+      console.log('✅ Setting as default resume (first upload)');
+    }
 
     res.status(201).json({
       success: true,
       data: {
         resumeId: resume.id,
-        filename
+        filename,
+        title: resume.title,
+        isDefault: resume.isDefault,
+        fileSize: fileSize,
+        originalName: originalName
       }
     });
   } catch (error) {
-    console.error('Error uploading resume:', error);
+    console.error('❌ Error uploading resume:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to upload resume'
+      message: 'Failed to upload resume: ' + error.message
     });
   }
 });
@@ -1062,10 +1211,70 @@ router.put('/resumes/:id/set-default', authenticateToken, async (req, res) => {
   }
 });
 
+// Download resume file
+router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
+  try {
+    const resume = await Resume.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+
+    const metadata = resume.metadata || {};
+    const filename = metadata.filename;
+    const originalName = metadata.originalName;
+
+    if (!filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/resumes', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found on server'
+      });
+    }
+
+    // Increment download count
+    await resume.update({
+      downloads: resume.downloads + 1
+    });
+
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download resume'
+    });
+  }
+});
+
 // Avatar upload endpoint
 router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (req, res) => {
   try {
+    console.log('🔍 Avatar upload request received');
+    console.log('🔍 File:', req.file);
+    console.log('🔍 User:', req.user.id);
+
     if (!req.file) {
+      console.log('❌ No file uploaded');
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
@@ -1074,22 +1283,82 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
 
     const filename = req.file.filename;
     const avatarUrl = `/uploads/avatars/${filename}`;
+    
+    console.log('🔍 Generated avatar URL:', avatarUrl);
 
-    // Update user's avatar
-    await req.user.update({ avatar: avatarUrl });
+    // Update user's avatar in database
+    const updateResult = await req.user.update({ 
+      avatar: avatarUrl,
+      updatedAt: new Date()
+    });
+    
+    console.log('🔍 Database update result:', updateResult);
+
+    // Fetch updated user data and transform to camelCase format
+    const updatedUser = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password'] }
+    });
+
+    console.log('🔍 Updated user from database:', updatedUser.avatar);
+
+    // Transform user data to camelCase format to match frontend expectations
+    const userData = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.first_name,
+      lastName: updatedUser.last_name,
+      userType: updatedUser.user_type,
+      isEmailVerified: updatedUser.is_email_verified,
+      accountStatus: updatedUser.account_status,
+      lastLoginAt: updatedUser.last_login_at,
+      companyId: updatedUser.company_id,
+      phone: updatedUser.phone,
+      avatar: updatedUser.avatar,
+      currentLocation: updatedUser.current_location,
+      headline: updatedUser.headline,
+      summary: updatedUser.summary,
+      profileCompletion: updatedUser.profile_completion,
+      oauthProvider: updatedUser.oauth_provider,
+      oauthId: updatedUser.oauth_id,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt
+    };
+
+    console.log('🔍 Sending response with user data:', userData.avatar);
 
     res.status(200).json({
       success: true,
       message: 'Avatar uploaded successfully',
-      data: { avatarUrl }
+      data: { 
+        avatarUrl, 
+        user: userData 
+      }
     });
   } catch (error) {
-    console.error('Error uploading avatar:', error);
+    console.error('❌ Error uploading avatar:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to upload avatar'
+      message: 'Failed to upload avatar: ' + error.message
     });
   }
+});
+
+// Error handling middleware for multer
+router.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    console.error('❌ Multer error:', error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 2MB.'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error: ' + error.message
+    });
+  }
+  next(error);
 });
 
 module.exports = router;
