@@ -364,6 +364,7 @@ class ApiService {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('company');
 
     return this.handleResponse(response);
   }
@@ -485,6 +486,8 @@ class ApiService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
 
+    localStorage.removeItem('company');
+
     return this.handleResponse(response);
   }
 
@@ -566,6 +569,28 @@ class ApiService {
       body: JSON.stringify({ status }),
     });
     return this.handleResponse<any>(response);
+  }
+
+  // Job application endpoint
+  async applyJob(jobId: string, applicationData?: {
+    coverLetter?: string;
+    expectedSalary?: number;
+    noticePeriod?: number;
+    availableFrom?: string;
+    isWillingToRelocate?: boolean;
+    preferredLocations?: string[];
+    resumeId?: string;
+  }): Promise<ApiResponse<{ applicationId: string; status: string; appliedAt: string }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/apply`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(applicationData || {}),
+    });
+
+    return this.handleResponse<{ applicationId: string; status: string; appliedAt: string }>(response);
   }
 
   // Utility methods
@@ -1040,45 +1065,6 @@ class ApiService {
     }
   }
 
-  // Company endpoints
-  async getCompany(companyId: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  // Applications endpoints
-  async getApplications(): Promise<ApiResponse<any[]>> {
-    const response = await fetch(`${API_BASE_URL}/user/applications`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any[]>(response);
-  }
-
-  // Job application endpoint
-  async applyJob(jobId: string, applicationData?: {
-    coverLetter?: string;
-    expectedSalary?: number;
-    noticePeriod?: number;
-    availableFrom?: string;
-    isWillingToRelocate?: boolean;
-    preferredLocations?: string[];
-    resumeId?: string;
-  }): Promise<ApiResponse<{ applicationId: string; status: string; appliedAt: string }>> {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/apply`, {
-      method: 'POST',
-      headers: {
-        ...this.getAuthHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(applicationData || {}),
-    });
-
-    return this.handleResponse<{ applicationId: string; status: string; appliedAt: string }>(response);
-  }
 
   // Google OAuth sync endpoint
   async syncGoogleProfile(): Promise<ApiResponse<any>> {
