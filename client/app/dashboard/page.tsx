@@ -26,7 +26,8 @@ import {
 import { Navbar } from '@/components/navbar'
 
 import { toast } from 'sonner'
-import { apiService, DashboardStats, Resume, JobBookmark } from '@/lib/api'
+import { apiService, DashboardStats, Resume, JobBookmark, JobAlert } from '@/lib/api'
+import { sampleJobManager } from '@/lib/sampleJobManager'
 
 export default function DashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -36,6 +37,8 @@ export default function DashboardPage() {
   const [resumes, setResumes] = useState<Resume[]>([])
   const [bookmarks, setBookmarks] = useState<JobBookmark[]>([])
   const [bookmarksLoading, setBookmarksLoading] = useState(true)
+  const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([])
+  const [jobAlertsLoading, setJobAlertsLoading] = useState(true)
   const [showResumeModal, setShowResumeModal] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -54,6 +57,7 @@ export default function DashboardPage() {
       fetchDashboardStats()
       fetchResumes()
       fetchBookmarks()
+      fetchJobAlerts()
     }
   }, [user, loading])
 
@@ -93,14 +97,39 @@ export default function DashboardPage() {
   const fetchBookmarks = async () => {
     try {
       setBookmarksLoading(true)
-      const response = await apiService.getBookmarks()
-      if (response.success && response.data) {
-        setBookmarks(response.data)
+      
+      // Get backend bookmarks
+      let backendBookmarks: any[] = []
+      try {
+        const response = await apiService.getBookmarks()
+        if (response.success && response.data) {
+          backendBookmarks = response.data
+        }
+      } catch (error) {
+        console.error('Error fetching backend bookmarks:', error)
       }
+      
+      // Get sample bookmarks and combine with backend
+      const combinedBookmarks = sampleJobManager.getCombinedBookmarks(backendBookmarks)
+      setBookmarks(combinedBookmarks)
     } catch (error) {
       console.error('Error fetching bookmarks:', error)
     } finally {
       setBookmarksLoading(false)
+    }
+  }
+
+  const fetchJobAlerts = async () => {
+    try {
+      setJobAlertsLoading(true)
+      const response = await apiService.getJobAlerts()
+      if (response.success && response.data) {
+        setJobAlerts(response.data)
+      }
+    } catch (error) {
+      console.error('Error fetching job alerts:', error)
+    } finally {
+      setJobAlertsLoading(false)
     }
   }
 
@@ -316,7 +345,9 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Job Alerts</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">Manage notifications</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {jobAlertsLoading ? 'Loading...' : `${jobAlerts.length} alert${jobAlerts.length !== 1 ? 's' : ''} active`}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -448,7 +479,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                        {statsLoading ? (
@@ -476,9 +507,19 @@ export default function DashboardPage() {
                        ) : (
                          bookmarks.length
                        )}
-                  </div>
+                     </div>
                      <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
-                  </div>
+                   </div>
+                   <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
+                     <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                       {jobAlertsLoading ? (
+                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                       ) : (
+                         jobAlerts.length
+                       )}
+                     </div>
+                     <div className="text-sm text-slate-600 dark:text-slate-300">Job Alerts</div>
+                   </div>
                 </div>
               </CardContent>
             </Card>

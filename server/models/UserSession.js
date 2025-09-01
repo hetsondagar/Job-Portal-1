@@ -71,19 +71,19 @@ const UserSession = sequelize.define('UserSession', {
   tableName: 'user_sessions',
   indexes: [
     {
-      fields: ['userId']
+      fields: ['user_id']
     },
     {
-      fields: ['sessionToken']
+      fields: ['session_token']
     },
     {
-      fields: ['refreshToken']
+      fields: ['refresh_token']
     },
     {
-      fields: ['isActive']
+      fields: ['is_active']
     },
     {
-      fields: ['expiresAt']
+      fields: ['expires_at']
     }
   ],
   hooks: {

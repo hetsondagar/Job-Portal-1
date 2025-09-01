@@ -101,13 +101,13 @@ const Conversation = sequelize.define('Conversation', {
       fields: ['jobApplicationId']
     },
     {
-      fields: ['jobId']
+      fields: ['job_id']
     },
     {
       fields: ['lastMessageAt']
     },
     {
-      fields: ['isActive']
+      fields: ['is_active']
     },
     {
       unique: true,

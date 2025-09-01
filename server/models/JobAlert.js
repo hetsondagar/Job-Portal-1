@@ -104,10 +104,10 @@ const JobAlert = sequelize.define('JobAlert', {
   underscored: true,
   indexes: [
     {
-      fields: ['userId', 'isActive']
+      fields: ['user_id', 'is_active']
     },
     {
-      fields: ['nextSendAt']
+      fields: ['next_send_at']
     },
     {
       fields: ['frequency']

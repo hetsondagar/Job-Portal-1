@@ -120,22 +120,22 @@ const Payment = sequelize.define('Payment', {
   tableName: 'payments',
   indexes: [
     {
-      fields: ['userId']
+      fields: ['user_id']
     },
     {
-      fields: ['subscriptionId']
+      fields: ['subscription_id']
     },
     {
       fields: ['status']
     },
     {
-      fields: ['paymentGateway']
+      fields: ['payment_gateway']
     },
     {
-      fields: ['gatewayTransactionId']
+      fields: ['gateway_transaction_id']
     },
     {
-      fields: ['createdAt']
+      fields: ['created_at']
     }
   ],
   hooks: {

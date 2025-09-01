@@ -510,12 +510,23 @@ router.get('/applications', authenticateToken, async (req, res) => {
           include: [
             {
               model: Company,
-              as: 'company'
+              as: 'company',
+              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+            },
+            {
+              model: User,
+              as: 'employer',
+                             attributes: ['id', 'first_name', 'last_name', 'email']
             }
           ]
+        },
+        {
+          model: Resume,
+          as: 'jobResume',
+          attributes: ['id', 'title', 'summary', 'isDefault', 'lastUpdated']
         }
       ],
-      order: [['appliedAt', 'DESC']]
+      order: [['applied_at', 'DESC']]
     });
 
     res.json({
@@ -833,28 +844,28 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
     // Get recent applications with error handling
     let recentApplications = [];
     try {
-      recentApplications = await JobApplication.findAll({
-        where: { userId: req.user.id },
-        order: [['appliedAt', 'DESC']],
-        limit: 5,
-        include: [
-          {
-            model: Job,
-            as: 'job',
-            attributes: ['id', 'title', 'company', 'location', 'salary_min', 'salary_max']
-          }
-        ]
-      });
+             recentApplications = await JobApplication.findAll({
+         where: { userId: req.user.id },
+         order: [['applied_at', 'DESC']],
+         limit: 5,
+         include: [
+           {
+             model: Job,
+             as: 'job',
+             attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax']
+           }
+         ]
+       });
       console.log('✅ Recent applications:', recentApplications.length);
     } catch (error) {
       console.error('❌ Error fetching recent applications:', error);
       // Try without the include if it fails
       try {
-        recentApplications = await JobApplication.findAll({
-          where: { userId: req.user.id },
-          order: [['appliedAt', 'DESC']],
-          limit: 5
-        });
+                 recentApplications = await JobApplication.findAll({
+           where: { userId: req.user.id },
+           order: [['applied_at', 'DESC']],
+           limit: 5
+         });
         console.log('✅ Recent applications (without job details):', recentApplications.length);
       } catch (fallbackError) {
         console.error('❌ Fallback recent applications also failed:', fallbackError);

@@ -143,13 +143,21 @@ export interface JobAlert {
   locations?: string[];
   categories?: string[];
   experienceLevel?: string;
+  jobType?: string[];
   salaryMin?: number;
   salaryMax?: number;
+  currency?: string;
+  remoteWork?: 'on_site' | 'hybrid' | 'remote' | 'any';
+  maxResults?: number;
   frequency: 'daily' | 'weekly' | 'monthly';
   isActive: boolean;
   emailEnabled: boolean;
   pushEnabled: boolean;
   smsEnabled: boolean;
+  lastSentAt?: string;
+  nextSendAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface JobBookmark {
@@ -740,7 +748,7 @@ class ApiService {
 
   // Job Alerts endpoints
   async getJobAlerts(): Promise<ApiResponse<JobAlert[]>> {
-    const response = await fetch(`${API_BASE_URL}/user/job-alerts`, {
+    const response = await fetch(`${API_BASE_URL}/job-alerts`, {
       headers: this.getAuthHeaders(),
     });
 
@@ -748,17 +756,23 @@ class ApiService {
   }
 
   async createJobAlert(data: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
-    const response = await fetch(`${API_BASE_URL}/user/job-alerts`, {
+    console.log('🔍 createJobAlert - Sending data:', data);
+    console.log('🔍 createJobAlert - Headers:', this.getAuthHeaders());
+    
+    const response = await fetch(`${API_BASE_URL}/job-alerts`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
+    console.log('🔍 createJobAlert - Response status:', response.status);
+    console.log('🔍 createJobAlert - Response headers:', response.headers);
+    
     return this.handleResponse<JobAlert>(response);
   }
 
   async updateJobAlert(id: string, data: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
-    const response = await fetch(`${API_BASE_URL}/user/job-alerts/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/job-alerts/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -768,12 +782,21 @@ class ApiService {
   }
 
   async deleteJobAlert(id: string): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/user/job-alerts/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/job-alerts/${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
 
     return this.handleResponse(response);
+  }
+
+  async toggleJobAlert(id: string): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/job-alerts/${id}/toggle`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobAlert>(response);
   }
 
   // Job Bookmarks endpoints

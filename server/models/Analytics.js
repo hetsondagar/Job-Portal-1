@@ -108,28 +108,28 @@ const Analytics = sequelize.define('Analytics', {
   tableName: 'analytics',
   indexes: [
     {
-      fields: ['userId']
+      fields: ['user_id']
     },
     {
-      fields: ['sessionId']
+      fields: ['session_id']
     },
     {
-      fields: ['eventType']
+      fields: ['event_type']
     },
     {
-      fields: ['eventCategory']
+      fields: ['event_category']
     },
     {
-      fields: ['jobId']
+      fields: ['job_id']
     },
     {
-      fields: ['companyId']
+      fields: ['company_id']
     },
     {
-      fields: ['createdAt']
+      fields: ['created_at']
     },
     {
-      fields: ['deviceType']
+      fields: ['device_type']
     }
   ],
   hooks: {
