@@ -88,6 +88,39 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Get company jobs
+router.get('/:id/jobs', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Job = require('../models/Job');
+    
+    const jobs = await Job.findAll({
+      where: { 
+        companyId: id,
+        status: 'active'
+      },
+      order: [['createdAt', 'DESC']],
+      attributes: [
+        'id', 'title', 'location', 'jobType', 'experienceLevel', 
+        'salaryMin', 'salaryMax', 'description', 'requirements',
+        'createdAt', 'isUrgent'
+      ]
+    });
+
+    res.json({
+      success: true,
+      data: jobs
+    });
+
+  } catch (error) {
+    console.error('Get company jobs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Update company information
 router.put('/:id', authenticateToken, async (req, res) => {
   try {

@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Bookmark,
   X,
-  Upload
+  Upload,
+  RefreshCw
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 
@@ -82,6 +83,37 @@ export default function DashboardPage() {
       setStatsLoading(false)
     }
   }
+
+  // Function to refresh dashboard data
+  const refreshDashboard = async () => {
+    await fetchDashboardStats()
+    await fetchResumes()
+    await fetchBookmarks()
+    await fetchJobAlerts()
+  }
+
+  // Listen for storage changes to refresh dashboard when applications are submitted
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sampleJobApplications' || e.key === 'sampleJobBookmarks') {
+        refreshDashboard()
+      }
+    }
+
+    // Add listener to sample job manager
+    const handleApplicationUpdate = () => {
+      refreshDashboard()
+    }
+
+    sampleJobManager.addListener(handleApplicationUpdate)
+
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      sampleJobManager.removeListener(handleApplicationUpdate)
+    }
+  }, [])
 
   const fetchResumes = async () => {
     try {
@@ -243,12 +275,26 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Welcome Section */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Welcome back, {user.firstName}!
-            </h1>
-            <p className="text-slate-600 dark:text-slate-300">
-              Here's what's happening with your job search
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                  Welcome back, {user.firstName}!
+                </h1>
+                <p className="text-slate-600 dark:text-slate-300">
+                  Here's what's happening with your job search
+                </p>
+              </div>
+              <Button
+                onClick={refreshDashboard}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+                disabled={statsLoading}
+              >
+                <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </Button>
+            </div>
           </div>
 
           {/* User Info Card */}
@@ -324,16 +370,21 @@ export default function DashboardPage() {
                   <div className="flex flex-col items-center text-center space-y-3">
                     <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                       <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Applications</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {statsLoading ? 'Loading...' : `${stats?.applicationCount || 0} applications submitted`}
-                    </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {statsLoading ? 'Loading...' : `${stats?.applicationCount || 0} applications submitted`}
+                      </p>
+                      {stats?.recentApplications && stats.recentApplications.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                          {stats.recentApplications.filter(app => app.status === 'reviewing' || app.status === 'shortlisted').length} under review
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             </Link>
 
             <Link href="/job-alerts">
@@ -469,57 +520,124 @@ export default function DashboardPage() {
 
 
 
-          {/* Stats and Recent Activity */}
-           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+          {/* Stats Overview - Enhanced for Jobseekers */}
+          {user.userType === 'jobseeker' && (
+            <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <TrendingUp className="w-5 h-5" />
-                  <span>Job Search Stats</span>
+                  <span>Application Overview</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
-                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                       {statsLoading ? (
-                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                       ) : (
-                         stats?.applicationCount || 0
-                       )}
-                     </div>
-                     <div className="text-sm text-slate-600 dark:text-slate-300">Applications</div>
-                   </div>
-                   <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
-                     <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                       {statsLoading ? (
-                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                       ) : (
-                         stats?.profileViews || 0
-                       )}
-                     </div>
-                     <div className="text-sm text-slate-600 dark:text-slate-300">Profile Views</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                      {statsLoading ? (
+                        <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                      ) : (
+                        stats?.applicationCount || 0
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-600 dark:text-slate-300">Total Applications</div>
                   </div>
-                   <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
-                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                       {statsLoading ? (
-                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                       ) : (
-                         bookmarks.length
-                       )}
-                     </div>
-                     <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
+                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                      {statsLoading ? (
+                        <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                      ) : (
+                        stats?.recentApplications?.filter(app => app.status === 'reviewing' || app.status === 'shortlisted').length || 0
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-600 dark:text-slate-300">Under Review</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                      {statsLoading ? (
+                        <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                      ) : (
+                        stats?.recentApplications?.filter(app => app.status === 'interviewed').length || 0
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-600 dark:text-slate-300">Interviews</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                      {statsLoading ? (
+                        <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                      ) : (
+                        stats?.recentApplications?.filter(app => app.status === 'offered' || app.status === 'hired').length || 0
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-600 dark:text-slate-300">Offers</div>
+                  </div>
+                </div>
+                
+                {/* Quick Actions for Applications */}
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link href="/applications">
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <FileText className="w-4 h-4 mr-2" />
+                      View All Applications
+                    </Button>
+                  </Link>
+                  <Link href="/jobs">
+                    <Button variant="outline">
+                      <Search className="w-4 h-4 mr-2" />
+                      Find More Jobs
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* General Stats Overview */}
+          <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5" />
+                <span>Activity Overview</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
+                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                     {statsLoading ? (
+                       <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                     ) : (
+                       stats?.applicationCount || 0
+                     )}
                    </div>
-                   <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
-                     <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                       {jobAlertsLoading ? (
-                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                       ) : (
-                         jobAlerts.length
-                       )}
-                     </div>
-                     <div className="text-sm text-slate-600 dark:text-slate-300">Job Alerts</div>
+                   <div className="text-sm text-slate-600 dark:text-slate-300">Applications</div>
+                 </div>
+                 <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
+                   <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                     {statsLoading ? (
+                       <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                     ) : (
+                       stats?.profileViews || 0
+                     )}
                    </div>
+                   <div className="text-sm text-slate-600 dark:text-slate-300">Profile Views</div>
+                </div>
+                 <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
+                   <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                     {bookmarks.length}
+                   </div>
+                   <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
+                 </div>
+                 <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
+                   <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                     {jobAlertsLoading ? (
+                       <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                     ) : (
+                       jobAlerts.length
+                     )}
+                   </div>
+                   <div className="text-sm text-slate-600 dark:text-slate-300">Job Alerts</div>
+                 </div>
                 </div>
               </CardContent>
             </Card>
@@ -568,6 +686,83 @@ export default function DashboardPage() {
                      <span className="text-sm font-medium">Sign Out</span>
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Applications */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>Recent Applications</span>
+                  {stats?.recentApplications && stats.recentApplications.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {stats.recentApplications.length}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {statsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : stats?.recentApplications && stats.recentApplications.length > 0 ? (
+                  <div className="space-y-3">
+                    {stats.recentApplications.slice(0, 5).map((application, index) => (
+                      <div key={application.id || index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              application.status === 'applied' ? 'bg-blue-500' :
+                              application.status === 'reviewing' ? 'bg-yellow-500' :
+                              application.status === 'shortlisted' ? 'bg-green-500' :
+                              application.status === 'interviewed' ? 'bg-purple-500' :
+                              application.status === 'offered' ? 'bg-emerald-500' :
+                              application.status === 'hired' ? 'bg-green-600' :
+                              application.status === 'rejected' ? 'bg-red-500' :
+                              'bg-gray-500'
+                            }`}></div>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                              {application.job?.title || 'Job Title'}
+                            </p>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                            {application.job?.location || 'Location'} • {application.status || 'Applied'}
+                          </p>
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+                          {application.appliedAt ? new Date(application.appliedAt).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                    {stats.recentApplications.length > 5 && (
+                      <div className="text-center pt-2">
+                        <Link href="/applications">
+                          <Button variant="outline" size="sm" className="text-xs">
+                            View All ({stats.recentApplications.length})
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No applications yet</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Start applying to jobs to see your applications here</p>
+                    <Link href="/jobs" className="mt-3 inline-block">
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        Browse Jobs
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

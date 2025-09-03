@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useState, useEffect, useCallback } from "react"
+import { useParams, useRouter } from "next/navigation"
 import {
   Star,
   MapPin,
@@ -19,6 +19,8 @@ import {
   LinkIcon,
   Mail,
   MessageCircle,
+  ArrowLeft,
+  CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,17 +33,150 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
+import { apiService, Job, Company } from '@/lib/api'
+import { sampleJobManager } from '@/lib/sampleJobManager'
+import { toast } from "sonner"
 
 export default function CompanyDetailPage() {
   const params = useParams()
+  const router = useRouter()
+  const { user, loading } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [company, setCompany] = useState<any>(null)
+  const [companyJobs, setCompanyJobs] = useState<any[]>([])
+  const [loadingCompany, setLoadingCompany] = useState(true)
+  const [loadingJobs, setLoadingJobs] = useState(true)
+  const [showApplicationDialog, setShowApplicationDialog] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<any>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [applicationData, setApplicationData] = useState({
+    expectedSalary: '',
+    noticePeriod: '',
+    coverLetter: '',
+    willingToRelocate: false
+  })
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+
+  // Fetch company data
+  useEffect(() => {
+    if (params.id) {
+      fetchCompanyData()
+      fetchCompanyJobs()
+    }
+  }, [params.id, fetchCompanyData, fetchCompanyJobs])
+
+  const fetchCompanyData = useCallback(async () => {
+    try {
+      setLoadingCompany(true)
+      // Try to fetch from API first, fallback to mock data
+      try {
+        const response = await apiService.getCompany(params.id as string)
+        if (response.success && response.data) {
+          setCompany(response.data)
+          return
+        }
+      } catch (apiError) {
+        console.log('API call failed, using mock data:', apiError)
+      }
+      
+      // Fallback to mock data
+      const companyData = getCompanyData(params.id as string)
+      setCompany(companyData)
+    } catch (error) {
+      console.error('Error fetching company data:', error)
+      toast.error('Failed to load company information')
+    } finally {
+      setLoadingCompany(false)
+    }
+  }, [params.id])
+
+  const fetchCompanyJobs = useCallback(async () => {
+    try {
+      setLoadingJobs(true)
+      // Try to fetch from API first, fallback to mock data
+      try {
+        const response = await apiService.getCompanyJobs(params.id as string)
+        if (response.success && response.data) {
+          setCompanyJobs(response.data)
+          return
+        }
+      } catch (apiError) {
+        console.log('API call failed, using mock data:', apiError)
+      }
+      
+      // Fallback to mock data
+      const mockJobs = getMockCompanyJobs(params.id as string)
+      setCompanyJobs(mockJobs)
+    } catch (error) {
+      console.error('Error fetching company jobs:', error)
+      toast.error('Failed to load company jobs')
+    } finally {
+      setLoadingJobs(false)
+    }
+  }, [params.id])
+
+  const handleApply = useCallback(async (jobId: number) => {
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+
+    if (user.userType !== 'jobseeker') {
+      toast.error('Only jobseekers can apply for jobs')
+      return
+    }
+
+    // Find the job details
+    const job = companyJobs.find(j => j.id === jobId)
+    if (job) {
+      setSelectedJob(job)
+      setShowApplicationDialog(true)
+    }
+  }, [user, companyJobs])
+
+  const handleSubmitApplication = useCallback(async () => {
+    if (!selectedJob) return
+
+    setSubmitting(true)
+    try {
+      const response = await apiService.applyJob(selectedJob.id.toString(), {
+        coverLetter: applicationData.coverLetter,
+        expectedSalary: applicationData.expectedSalary ? parseInt(applicationData.expectedSalary) : undefined,
+        noticePeriod: applicationData.noticePeriod ? parseInt(applicationData.noticePeriod) : undefined,
+        isWillingToRelocate: applicationData.willingToRelocate
+      })
+      
+      if (response.success) {
+        toast.success(`Application submitted successfully for ${selectedJob.title}!`, {
+          description: 'Your application has been submitted and is under review.',
+          duration: 5000,
+        })
+        setShowApplicationDialog(false)
+        setApplicationData({
+          expectedSalary: '',
+          noticePeriod: '',
+          coverLetter: '',
+          willingToRelocate: false
+        })
+        // Refresh jobs to update application status
+        fetchCompanyJobs()
+      } else {
+        toast.error(response.message || 'Failed to submit application')
+      }
+    } catch (error) {
+      console.error('Error applying for job:', error)
+      toast.error('Failed to submit application. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [selectedJob, applicationData, fetchCompanyJobs])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -84,6 +219,8 @@ export default function CompanyDetailPage() {
     }
     return colors[sector as keyof typeof colors] || colors.technology
   }
+
+
 
   // Mock company data - in real app, fetch based on params.id
   const getCompanyData = (id: string) => {
@@ -247,9 +384,24 @@ export default function CompanyDetailPage() {
     return companies[id as keyof typeof companies] || null
   }
 
-  const company = getCompanyData(params.id as string)
-
   // Handle company not found
+  if (loadingCompany) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Navbar />
+        
+        <div className="pt-20 pb-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-slate-600 dark:text-slate-300">Loading company information...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!company) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -323,79 +475,7 @@ export default function CompanyDetailPage() {
     },
   ]
 
-  const jobs = [
-    {
-      id: 1,
-      title: "JR - Admin",
-      department: "Engineering - Software & QA",
-      location: "Bangalore",
-      experience: "0-2 years",
-      salary: "3-6 LPA",
-      skills: ["Administration", "Office Management", "Communication", "MS Office"],
-      posted: "2 days ago",
-      applicants: 45,
-      type: "Full-time",
-      description: "Seeking a junior administrator to support daily office operations and administrative tasks.",
-      requirements: [
-        "Bachelor's degree",
-        "Strong communication skills",
-        "Proficiency in MS Office",
-        "Attention to detail",
-      ],
-    },
-    {
-      id: 2,
-      title: "React Developer",
-      department: "Engineering - Software & QA",
-      location: "Bangalore",
-      experience: "2-4 years",
-      salary: "8-15 LPA",
-      skills: ["React", "JavaScript", "HTML/CSS", "Node.js"],
-      posted: "1 day ago",
-      applicants: 32,
-      type: "Full-time",
-      description: "Looking for an experienced React developer to build modern web applications.",
-      requirements: [
-        "2+ years React experience",
-        "Strong JavaScript skills",
-        "Experience with REST APIs",
-        "Git proficiency",
-      ],
-    },
-    {
-      id: 3,
-      title: "Accounts Payable",
-      department: "Finance & Accounting",
-      location: "Bangalore",
-      experience: "1-3 years",
-      salary: "4-8 LPA",
-      skills: ["Accounting", "Tally", "Excel", "Financial Analysis"],
-      posted: "3 days ago",
-      applicants: 28,
-      type: "Full-time",
-      description: "Managing accounts payable processes and vendor relationships.",
-      requirements: ["Commerce background", "Tally experience", "Excel proficiency", "Attention to detail"],
-    },
-    {
-      id: 4,
-      title: "Key Account Manager",
-      department: "Sales & Business Development",
-      location: "Bangalore",
-      experience: "3-6 years",
-      salary: "10-18 LPA",
-      skills: ["Account Management", "Sales", "Client Relations", "Business Development"],
-      posted: "1 day ago",
-      applicants: 19,
-      type: "Full-time",
-      description: "Managing key client accounts and driving business growth through strategic partnerships.",
-      requirements: [
-        "3+ years account management",
-        "Strong communication",
-        "Sales experience",
-        "Client relationship skills",
-      ],
-    },
-  ]
+  // Use companyJobs state instead of hardcoded jobs
 
   const employeeSpeak = [
     {
@@ -522,6 +602,18 @@ export default function CompanyDetailPage() {
       {/* Company Header */}
       <div className="pt-20 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Companies
+            </Button>
+          </div>
+          
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl overflow-hidden">
               <div className={`h-32 bg-gradient-to-r ${sectorColors.bg} relative`}>
@@ -616,7 +708,7 @@ export default function CompanyDetailPage() {
               Overview
             </TabsTrigger>
             <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              Jobs ({jobs.length})
+              Jobs ({companyJobs.length})
             </TabsTrigger>
           </TabsList>
 
@@ -828,14 +920,14 @@ export default function CompanyDetailPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {jobs.length} job openings at {company.name}
+                  {companyJobs.length} job openings at {company.name}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">Departments hiring at {company.name}</p>
               </div>
               <Badge
                 className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
               >
-                {jobs.length} Active Jobs
+                {companyJobs.length} Active Jobs
               </Badge>
             </div>
 
@@ -856,7 +948,22 @@ export default function CompanyDetailPage() {
             </div>
 
             <div className="space-y-4">
-              {jobs.map((job, index) => (
+              {loadingJobs ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                        <CardContent className="p-6">
+                          <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-4"></div>
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-4"></div>
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3"></div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ))}
+                </div>
+              ) : companyJobs.length > 0 ? (
+                companyJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -878,10 +985,6 @@ export default function CompanyDetailPage() {
                                 </div>
                                 <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-400 mb-4">
                                   <div className="flex items-center">
-                                    <Building2 className="w-4 h-4 mr-1" />
-                                    {job.department}
-                                  </div>
-                                  <div className="flex items-center">
                                     <MapPin className="w-4 h-4 mr-1" />
                                     {job.location}
                                   </div>
@@ -893,6 +996,10 @@ export default function CompanyDetailPage() {
                                     <IndianRupee className="w-4 h-4 mr-1" />
                                     {job.salary}
                                   </div>
+                                  <div className="flex items-center">
+                                    <Clock className="w-4 h-4 mr-1" />
+                                    {job.type}
+                                  </div>
                                 </div>
                               </div>
                               <div className="flex flex-col space-y-2">
@@ -902,9 +1009,21 @@ export default function CompanyDetailPage() {
                                     e.stopPropagation()
                                     handleApply(job.id)
                                   }}
-                                  className={`h-10 px-6 bg-gradient-to-r ${sectorColors.bg} hover:shadow-lg transition-all duration-300`}
+                                  className={`h-10 px-6 ${
+                                    sampleJobManager.hasApplied(job.id.toString())
+                                      ? 'bg-green-600 hover:bg-green-700 cursor-default'
+                                      : `bg-gradient-to-r ${sectorColors.bg} hover:shadow-lg transition-all duration-300`
+                                  }`}
+                                  disabled={sampleJobManager.hasApplied(job.id.toString())}
                                 >
-                                  Apply now
+                                  {sampleJobManager.hasApplied(job.id.toString()) ? (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Applied
+                                    </>
+                                  ) : (
+                                    'Apply now'
+                                  )}
                                 </Button>
                                 {!isAuthenticated && (
                                   <div className="flex space-x-2">
@@ -940,9 +1059,9 @@ export default function CompanyDetailPage() {
                             <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{job.description}</p>
 
                             <div className="flex flex-wrap gap-2 mb-4">
-                              {job.skills.map((skill, skillIndex) => (
-                                <Badge key={skillIndex} variant="secondary" className="text-xs">
-                                  {skill}
+                              {job.requirements.map((requirement, reqIndex) => (
+                                <Badge key={reqIndex} variant="secondary" className="text-xs">
+                                  {requirement}
                                 </Badge>
                               ))}
                             </div>
@@ -951,19 +1070,34 @@ export default function CompanyDetailPage() {
                               <div className="flex items-center space-x-4 text-sm text-slate-500">
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
-                                  {job.posted}
-                                </div>
-                                <div className="flex items-center">
-                                  <Users className="w-4 h-4 mr-1" />
-                                  {job.applicants} applicants
+                                  {job.postedDate}
                                 </div>
                                 <Badge variant="outline" className="text-xs">
-                                  {job.type}
+                                  {job.urgent ? "Urgent" : "Regular"}
                                 </Badge>
                               </div>
-                              <Button variant="outline" size="sm">
-                                Save
-                              </Button>
+                              <div className="flex items-center space-x-2">
+                                <Button variant="outline" size="sm">
+                                  Save
+                                </Button>
+                                {user && user.userType === 'jobseeker' ? (
+                                  <Button
+                                    size="sm"
+                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                                    onClick={() => handleApply(job.id)}
+                                  >
+                                    Apply Now
+                                  </Button>
+                                ) : !user ? (
+                                  <Button
+                                    size="sm"
+                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                                    onClick={() => setShowAuthDialog(true)}
+                                  >
+                                    Apply Now
+                                  </Button>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -971,7 +1105,20 @@ export default function CompanyDetailPage() {
                     </Card>
                   </Link>
                 </motion.div>
-              ))}
+              )) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                    <Briefcase className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Open Positions</h3>
+                  <p className="text-slate-600 dark:text-slate-300 mb-4">
+                    This company doesn't have any open positions at the moment.
+                  </p>
+                  <Button variant="outline" onClick={() => window.location.reload()}>
+                    Check Again
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Interview Questions */}
@@ -1015,13 +1162,95 @@ export default function CompanyDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
-            <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              Register Now
-            </Button>
-            <Button variant="outline" className="w-full bg-transparent">
-              Login
-            </Button>
+            <Link href="/register">
+              <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                Register Now
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="outline" className="w-full bg-transparent">
+                Login
+              </Button>
+            </Link>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Job Application Dialog */}
+      <Dialog open={showApplicationDialog} onOpenChange={setShowApplicationDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Apply for {selectedJob?.title}</DialogTitle>
+            <DialogDescription>
+              Submit your application for this position. Make sure your profile and resume are up to date.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Expected Salary (LPA)
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g., 8-12"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  value={applicationData.expectedSalary}
+                  onChange={(e) => setApplicationData({...applicationData, expectedSalary: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Notice Period (Days)
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g., 30"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  value={applicationData.noticePeriod}
+                  onChange={(e) => setApplicationData({...applicationData, noticePeriod: e.target.value})}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Cover Letter
+              </label>
+              <textarea
+                placeholder="Tell us why you're interested in this position and what makes you a great fit..."
+                rows={4}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                value={applicationData.coverLetter}
+                onChange={(e) => setApplicationData({...applicationData, coverLetter: e.target.value})}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="willingToRelocate"
+                checked={applicationData.willingToRelocate}
+                onChange={(e) => setApplicationData({...applicationData, willingToRelocate: e.target.checked})}
+                className="rounded border-slate-300 dark:border-slate-600"
+              />
+              <label htmlFor="willingToRelocate" className="text-sm text-slate-700 dark:text-slate-300">
+                I am willing to relocate for this position
+              </label>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowApplicationDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                onClick={handleSubmitApplication}
+                disabled={submitting}
+              >
+                {submitting ? 'Submitting...' : 'Submit Application'}
+              </Button>
+            </div>
         </DialogContent>
       </Dialog>
 

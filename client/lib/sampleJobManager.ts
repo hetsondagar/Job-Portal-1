@@ -30,6 +30,7 @@ class SampleJobManager {
   private static instance: SampleJobManager;
   private applications: SampleJobApplication[] = [];
   private bookmarks: SampleJobBookmark[] = [];
+  private listeners: Array<() => void> = [];
 
   private constructor() {
     this.loadFromStorage();
@@ -40,6 +41,21 @@ class SampleJobManager {
       SampleJobManager.instance = new SampleJobManager();
     }
     return SampleJobManager.instance;
+  }
+
+  // Add listener for updates
+  addListener(callback: () => void) {
+    this.listeners.push(callback);
+  }
+
+  // Remove listener
+  removeListener(callback: () => void) {
+    this.listeners = this.listeners.filter(listener => listener !== callback);
+  }
+
+  // Notify all listeners
+  private notifyListeners() {
+    this.listeners.forEach(callback => callback());
   }
 
   private loadFromStorage() {
@@ -91,6 +107,7 @@ class SampleJobManager {
     }
 
     this.saveToStorage();
+    this.notifyListeners(); // Notify listeners of the change
     return application;
   }
 

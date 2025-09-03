@@ -1009,6 +1009,8 @@ class ApiService {
     return this.handleResponse<DashboardStats>(response);
   }
 
+
+
   // Resume endpoints
   async getResumes(): Promise<ApiResponse<Resume[]>> {
     const response = await fetch(`${API_BASE_URL}/user/resumes`, {
