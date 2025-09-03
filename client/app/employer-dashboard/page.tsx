@@ -59,8 +59,18 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
     }
   }, [user])
 
+  // Debounced dashboard data loading to prevent rapid API calls
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
   const loadDashboardData = async () => {
+    // Prevent multiple simultaneous refresh calls
+    if (isRefreshing) {
+      console.log('🔄 Dashboard refresh already in progress, skipping...')
+      return
+    }
+    
     try {
+      setIsRefreshing(true)
       setLoading(true)
       console.log('🔄 Loading employer dashboard data for user:', user.id)
 
@@ -170,9 +180,15 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error loading dashboard data:', error)
-      toast.error('Failed to load dashboard data')
+      
+      // Handle rate limiting specifically
+      if (error.message && error.message.includes('Rate limit exceeded')) {
+        toast.error('Too many requests. Please wait a moment before refreshing.')
+      } else {
+        toast.error('Failed to load dashboard data')
+      }
       
       // Set default stats if loading fails
       setStats([
@@ -207,6 +223,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       ])
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -403,9 +420,9 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           <h2 className="text-xl font-semibold text-slate-900">Dashboard Statistics</h2>
           <button
             onClick={loadDashboardData}
-            disabled={loading}
+            disabled={loading || isRefreshing}
             className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-            title="Refresh dashboard data"
+            title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span className="text-sm">Refresh</span>
@@ -479,9 +496,9 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                   </CardTitle>
                   <button
                     onClick={loadDashboardData}
-                    disabled={loading}
+                    disabled={loading || isRefreshing}
                     className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                    title="Refresh dashboard data"
+                    title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
                   >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
@@ -529,9 +546,9 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                   </CardTitle>
                   <button
                     onClick={loadDashboardData}
-                    disabled={loading}
+                    disabled={loading || isRefreshing}
                     className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                    title="Refresh activity data"
+                    title={isRefreshing ? "Refresh in progress..." : "Refresh activity data"}
                   >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
@@ -578,9 +595,9 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                   </CardTitle>
                   <button
                     onClick={loadDashboardData}
-                    disabled={loading}
+                    disabled={loading || isRefreshing}
                     className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                    title="Refresh dashboard data"
+                    title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
                   >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
@@ -620,9 +637,9 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                   </CardTitle>
                   <button
                     onClick={loadDashboardData}
-                    disabled={loading}
+                    disabled={loading || isRefreshing}
                     className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                    title="Refresh events data"
+                    title={isRefreshing ? "Refresh in progress..." : "Refresh events data"}
                   >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
