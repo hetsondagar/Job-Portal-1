@@ -34,6 +34,7 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
   const [company, setCompany] = useState<CompanyInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     const fetchCompanyInfo = async () => {
@@ -48,7 +49,13 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
         }
       } catch (err: any) {
         console.error('Error fetching company info:', err)
-        setError(err.message || 'Failed to load company information')
+        
+        // Handle rate limiting specifically
+        if (err.message && err.message.includes('Rate limit exceeded')) {
+          setError('Too many requests. Please wait a moment before refreshing.')
+        } else {
+          setError(err.message || 'Failed to load company information')
+        }
       } finally {
         setLoading(false)
       }
@@ -61,8 +68,15 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
 
   // Refresh company data when needed
   const refreshCompanyData = async () => {
+    // Prevent multiple simultaneous refresh calls
+    if (isRefreshing) {
+      console.log('🔄 Company info refresh already in progress, skipping...')
+      return
+    }
+    
     if (companyId) {
       try {
+        setIsRefreshing(true)
         setLoading(true)
         setError(null)
         const response = await apiService.getCompany(companyId)
@@ -73,9 +87,16 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
         }
       } catch (err: any) {
         console.error('Error refreshing company info:', err)
-        setError(err.message || 'Failed to load company information')
+        
+        // Handle rate limiting specifically
+        if (err.message && err.message.includes('Rate limit exceeded')) {
+          setError('Too many requests. Please wait a moment before refreshing.')
+        } else {
+          setError(err.message || 'Failed to load company information')
+        }
       } finally {
         setLoading(false)
+        setIsRefreshing(false)
       }
     }
   }
@@ -141,9 +162,9 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
           </CardTitle>
           <button
             onClick={refreshCompanyData}
-            disabled={loading}
+            disabled={loading || isRefreshing}
             className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-            title="Refresh company data"
+            title={isRefreshing ? "Refresh in progress..." : "Refresh company data"}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>

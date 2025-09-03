@@ -256,6 +256,56 @@ export interface Requirement {
 }
 
 class ApiService {
+  private baseURL: string
+  private authToken: string | null = null
+  private requestQueue: Map<string, Promise<any>> = new Map()
+  private lastRequestTime: Map<string, number> = new Map()
+  private readonly MIN_REQUEST_INTERVAL = 2000 // 2 seconds between requests to same endpoint (balanced for rate limiting)
+
+  constructor() {
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+  }
+
+  // Rate limiting helper
+  private async throttleRequest(endpoint: string): Promise<void> {
+    const now = Date.now()
+    const lastRequest = this.lastRequestTime.get(endpoint) || 0
+    const timeSinceLastRequest = now - lastRequest
+
+    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+      const waitTime = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+    }
+
+    this.lastRequestTime.set(endpoint, Date.now())
+  }
+
+  // Deduplicate requests to same endpoint
+  private async makeRequest<T>(endpoint: string, requestFn: () => Promise<T>): Promise<T> {
+    // Check if there's already a request in progress for this endpoint
+    if (this.requestQueue.has(endpoint)) {
+      console.log(`🔄 Request to ${endpoint} already in progress, waiting...`)
+      return this.requestQueue.get(endpoint)!
+    }
+
+    // Throttle requests to prevent rate limiting
+    await this.throttleRequest(endpoint)
+
+    // Create the request promise
+    const requestPromise = requestFn()
+    
+    // Store it in the queue
+    this.requestQueue.set(endpoint, requestPromise)
+    
+    try {
+      const result = await requestPromise
+      return result
+    } finally {
+      // Remove from queue when done
+      this.requestQueue.delete(endpoint)
+    }
+  }
+
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     console.log('🔍 getAuthHeaders - Token present:', !!token);
@@ -288,7 +338,15 @@ class ApiService {
       // Handle rate limiting specifically
       if (response.status === 429) {
         console.warn('⚠️ Rate limit exceeded - too many requests');
-        throw new Error('Too many requests from this IP, please try again later.');
+        
+        // Add exponential backoff for rate-limited requests
+        const retryAfter = response.headers.get('Retry-After');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+        
+        console.log(`⏳ Waiting ${waitTime}ms before retrying...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        
+        throw new Error(`Rate limit exceeded. Please wait ${Math.ceil(waitTime/1000)} seconds before trying again.`);
       }
       
       // Handle validation errors
@@ -571,10 +629,14 @@ class ApiService {
           .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
           .join('&')
       : '';
-    const response = await fetch(`${API_BASE_URL}/jobs/company/${finalCompanyId}${query}`, {
-      headers: this.getAuthHeaders(),
+    const endpoint = `/jobs/company/${finalCompanyId}${query}`;
+    
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<any>(response);
     });
-    return this.handleResponse<any>(response);
   }
 
   async updateJob(id: string, data: any): Promise<ApiResponse<any>> {
@@ -622,12 +684,15 @@ class ApiService {
     if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-    const url = `/jobs/employer/manage-jobs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
+    const endpoint = `/jobs/employer/manage-jobs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<any>(response);
     });
-    return this.handleResponse<any>(response);
   }
 
   async getJobForEdit(jobId: string): Promise<ApiResponse<any>> {
@@ -1012,11 +1077,15 @@ class ApiService {
 
   // Dashboard Stats endpoint
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-    const response = await fetch(`${API_BASE_URL}/user/dashboard-stats`, {
-      headers: this.getAuthHeaders(),
-    });
+    const endpoint = '/user/dashboard-stats';
+    
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse<DashboardStats>(response);
+      return this.handleResponse<DashboardStats>(response);
+    });
   }
 
 

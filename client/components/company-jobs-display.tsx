@@ -19,13 +19,21 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
   const [jobs, setJobs] = useState<any[]>([])
   const [loading, setIsLoading] = useState(true)
   const [deletingJob, setDeletingJob] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     loadCompanyJobs()
   }, [companyId])
 
   const loadCompanyJobs = async () => {
+    // Prevent multiple simultaneous refresh calls
+    if (isRefreshing) {
+      console.log('🔄 Company jobs refresh already in progress, skipping...')
+      return
+    }
+    
     try {
+      setIsRefreshing(true)
       setIsLoading(true)
       const response = await apiService.getCompanyJobs(companyId)
       if (response.success && response.data) {
@@ -35,9 +43,16 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
       }
     } catch (error: any) {
       console.error("Error loading company jobs:", error)
-      toast.error("Failed to load company jobs")
+      
+      // Handle rate limiting specifically
+      if (error.message && error.message.includes('Rate limit exceeded')) {
+        toast.error('Too many requests. Please wait a moment before refreshing.')
+      } else {
+        toast.error("Failed to load company jobs")
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -113,9 +128,9 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
           <div className="flex items-center space-x-2">
             <button
               onClick={loadCompanyJobs}
-              disabled={loading}
+              disabled={loading || isRefreshing}
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Refresh jobs"
+              title={isRefreshing ? "Refresh in progress..." : "Refresh jobs"}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>

@@ -80,6 +80,18 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.'
   }
 });
+
+// More lenient rate limiter for OAuth endpoints
+const oauthLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 50, // limit each IP to 50 OAuth requests per 5 minutes
+  message: {
+    success: false,
+    message: 'Too many OAuth requests, please try again later.'
+  }
+});
+
+app.use('/api/oauth', oauthLimiter);
 app.use('/api/', limiter);
 
 // Compression
