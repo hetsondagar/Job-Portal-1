@@ -2,6 +2,8 @@
 // This works alongside the backend data to provide a seamless experience
 
 interface SampleJobApplication {
+  id: string;
+  userId: string; // Add user ID to tie applications to specific accounts
   jobId: string;
   appliedAt: string;
   status: string;
@@ -14,6 +16,7 @@ interface SampleJobApplication {
 
 interface SampleJobBookmark {
   id: string;
+  userId: string; // Add user ID to tie bookmarks to specific accounts
   jobId: string;
   createdAt: string;
   jobTitle: string;
@@ -31,6 +34,7 @@ class SampleJobManager {
   private applications: SampleJobApplication[] = [];
   private bookmarks: SampleJobBookmark[] = [];
   private listeners: Array<() => void> = [];
+  private currentUserId: string | null = null;
 
   private constructor() {
     this.loadFromStorage();
@@ -41,6 +45,23 @@ class SampleJobManager {
       SampleJobManager.instance = new SampleJobManager();
     }
     return SampleJobManager.instance;
+  }
+
+  // Set current user ID - call this when user logs in
+  setCurrentUser(userId: string | null) {
+    this.currentUserId = userId;
+    // Clear data if user logs out
+    if (!userId) {
+      this.applications = [];
+      this.bookmarks = [];
+      this.saveToStorage();
+      this.notifyListeners();
+    }
+  }
+
+  // Get current user ID
+  getCurrentUserId(): string | null {
+    return this.currentUserId;
   }
 
   // Add listener for updates
@@ -83,6 +104,28 @@ class SampleJobManager {
     }
   }
 
+  // Initialize with user data from localStorage (call this on app startup)
+  initializeFromStorage() {
+    try {
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          if (user && user.id) {
+            this.currentUserId = user.id;
+            // Filter applications and bookmarks to only show current user's data
+            this.applications = this.applications.filter(app => app.userId === user.id);
+            this.bookmarks = this.bookmarks.filter(book => book.userId === user.id);
+            this.saveToStorage();
+            this.notifyListeners();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing sample job manager from storage:', error);
+    }
+  }
+
   // Application methods
   addApplication(jobData: {
     jobId: string;
@@ -91,15 +134,25 @@ class SampleJobManager {
     location: string;
     salary: string;
     type: string;
-  }): SampleJobApplication {
+  }): SampleJobApplication | null {
+    // Only allow applications if user is logged in
+    if (!this.currentUserId) {
+      console.warn('Cannot add application: No user logged in');
+      return null;
+    }
+
     const application: SampleJobApplication = {
+      id: `sample-app-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      userId: this.currentUserId,
       ...jobData,
       appliedAt: new Date().toISOString(),
       status: 'applied'
     };
 
-    // Check if already applied
-    const existingIndex = this.applications.findIndex(app => app.jobId === jobData.jobId);
+    // Check if already applied by this user
+    const existingIndex = this.applications.findIndex(
+      app => app.jobId === jobData.jobId && app.userId === this.currentUserId
+    );
     if (existingIndex >= 0) {
       this.applications[existingIndex] = application;
     } else {
@@ -112,16 +165,32 @@ class SampleJobManager {
   }
 
   getApplications(): SampleJobApplication[] {
-    return [...this.applications];
+    // Only return applications for current user
+    if (!this.currentUserId) {
+      return [];
+    }
+    return this.applications.filter(app => app.userId === this.currentUserId);
   }
 
   hasApplied(jobId: string): boolean {
-    return this.applications.some(app => app.jobId === jobId);
+    // Only check if current user has applied
+    if (!this.currentUserId) {
+      return false;
+    }
+    return this.applications.some(
+      app => app.jobId === jobId && app.userId === this.currentUserId
+    );
   }
 
   removeApplication(jobId: string): boolean {
+    if (!this.currentUserId) {
+      return false;
+    }
+    
     const initialLength = this.applications.length;
-    this.applications = this.applications.filter(app => app.jobId !== jobId);
+    this.applications = this.applications.filter(
+      app => !(app.jobId === jobId && app.userId === this.currentUserId)
+    );
     const removed = this.applications.length < initialLength;
     if (removed) {
       this.saveToStorage();
@@ -138,9 +207,16 @@ class SampleJobManager {
     location: string;
     salary: string;
     type: string;
-  }): SampleJobBookmark {
+  }): SampleJobBookmark | null {
+    // Only allow bookmarks if user is logged in
+    if (!this.currentUserId) {
+      console.warn('Cannot add bookmark: No user logged in');
+      return null;
+    }
+
     const bookmark: SampleJobBookmark = {
-      id: `sample-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `sample-book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      userId: this.currentUserId,
       ...jobData,
       createdAt: new Date().toISOString(),
       folder: 'General',
@@ -148,8 +224,10 @@ class SampleJobManager {
       priority: 'medium'
     };
 
-    // Check if already bookmarked
-    const existingIndex = this.bookmarks.findIndex(book => book.jobId === jobData.jobId);
+    // Check if already bookmarked by this user
+    const existingIndex = this.bookmarks.findIndex(
+      book => book.jobId === jobData.jobId && book.userId === this.currentUserId
+    );
     if (existingIndex >= 0) {
       this.bookmarks[existingIndex] = bookmark;
     } else {
@@ -157,88 +235,97 @@ class SampleJobManager {
     }
 
     this.saveToStorage();
+    this.notifyListeners();
     return bookmark;
   }
 
   removeBookmark(jobId: string): boolean {
+    if (!this.currentUserId) {
+      return false;
+    }
+    
     const initialLength = this.bookmarks.length;
-    this.bookmarks = this.bookmarks.filter(book => book.jobId !== jobId);
+    this.bookmarks = this.bookmarks.filter(
+      book => !(book.jobId === jobId && book.userId === this.currentUserId)
+    );
     const removed = this.bookmarks.length < initialLength;
     if (removed) {
       this.saveToStorage();
+      this.notifyListeners();
     }
     return removed;
   }
 
   getBookmarks(): SampleJobBookmark[] {
-    return [...this.bookmarks];
+    // Only return bookmarks for current user
+    if (!this.currentUserId) {
+      return [];
+    }
+    return this.bookmarks.filter(book => book.userId === this.currentUserId);
   }
 
   isBookmarked(jobId: string): boolean {
-    return this.bookmarks.some(book => book.jobId === jobId);
+    // Only check if current user has bookmarked
+    if (!this.currentUserId) {
+      return false;
+    }
+    return this.bookmarks.some(
+      book => book.jobId === jobId && book.userId === this.currentUserId
+    );
   }
 
   updateBookmark(bookmarkId: string, updates: Partial<SampleJobBookmark>): boolean {
-    const index = this.bookmarks.findIndex(book => book.id === bookmarkId);
+    if (!this.currentUserId) {
+      return false;
+    }
+    
+    const index = this.bookmarks.findIndex(
+      book => book.id === bookmarkId && book.userId === this.currentUserId
+    );
     if (index >= 0) {
       this.bookmarks[index] = { ...this.bookmarks[index], ...updates };
       this.saveToStorage();
+      this.notifyListeners();
       return true;
     }
     return false;
   }
 
   deleteBookmark(bookmarkId: string): boolean {
+    if (!this.currentUserId) {
+      return false;
+    }
+    
     const initialLength = this.bookmarks.length;
-    this.bookmarks = this.bookmarks.filter(book => book.id !== bookmarkId);
+    this.bookmarks = this.bookmarks.filter(
+      book => !(book.id === bookmarkId && book.userId === this.currentUserId)
+    );
     const deleted = this.bookmarks.length < initialLength;
     if (deleted) {
       this.saveToStorage();
+      this.notifyListeners();
     }
     return deleted;
   }
 
-  // Combined methods for dashboard
-  getCombinedApplications(backendApplications: any[] = []): any[] {
-    const sampleApps = this.applications.map(app => ({
-      ...app,
-      isSample: true,
-      id: `sample-${app.jobId}`,
-      job: {
-        id: app.jobId,
-        title: app.jobTitle,
-        company: { name: app.companyName },
-        location: app.location,
-        salary: app.salary,
-        type: app.type
-      }
-    }));
-
-    return [...sampleApps, ...backendApplications];
+  // Clear all data for current user (useful for logout)
+  clearUserData() {
+    if (this.currentUserId) {
+      this.applications = this.applications.filter(app => app.userId !== this.currentUserId);
+      this.bookmarks = this.bookmarks.filter(book => book.userId !== this.currentUserId);
+      this.saveToStorage();
+      this.notifyListeners();
+    }
   }
 
-  getCombinedBookmarks(backendBookmarks: any[] = []): any[] {
-    const sampleBooks = this.bookmarks.map(book => ({
-      ...book,
-      isSample: true,
-      job: {
-        id: book.jobId,
-        title: book.jobTitle,
-        company: { name: book.companyName },
-        location: book.location,
-        salary: book.salary,
-        type: book.type
-      }
-    }));
-
-    return [...sampleBooks, ...backendBookmarks];
+  // Get all applications (for admin purposes)
+  getAllApplications(): SampleJobApplication[] {
+    return [...this.applications];
   }
 
-  // Clear all data (for testing)
-  clearAllData() {
-    this.applications = [];
-    this.bookmarks = [];
-    this.saveToStorage();
+  // Get all bookmarks (for admin purposes)
+  getAllBookmarks(): SampleJobBookmark[] {
+    return [...this.bookmarks];
   }
 }
 

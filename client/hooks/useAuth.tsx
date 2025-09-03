@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext, useCallback, useRef } f
 import { apiService, User, SignupData, EmployerSignupData, LoginData, AuthResponse } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { sampleJobManager } from '@/lib/sampleJobManager';
 
 interface AuthContextType {
   user: User | null;
@@ -68,6 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    // Initialize sample job manager from storage first
+    sampleJobManager.initializeFromStorage();
+    
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
@@ -77,6 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (response.success && response.data?.user) {
             const normalized = mapUserFromApi(response.data.user as any);
             setUser(normalized);
+            // Sync with sample job manager
+            sampleJobManager.setCurrentUser(normalized.id);
             // Keep storage in sync in camelCase to prevent future stale shape
             if (typeof window !== 'undefined') {
               localStorage.setItem('user', JSON.stringify(normalized));
@@ -84,14 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             apiService.clearAuth();
             setUser(null);
+            // Clear sample job manager data
+            sampleJobManager.setCurrentUser(null);
           }
         } else {
           setUser(null);
+          // Clear sample job manager data
+          sampleJobManager.setCurrentUser(null);
         }
       } catch (error) {
         console.error('Auth check error:', error);
         apiService.clearAuth();
         setUser(null);
+        // Clear sample job manager data
+        sampleJobManager.setCurrentUser(null);
       } finally {
         setLoading(false);
       }
@@ -119,6 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data?.user) {
         const normalized = mapUserFromApi(response.data.user as any);
         setUser(normalized);
+        // Sync with sample job manager
+        sampleJobManager.setCurrentUser(normalized.id);
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(normalized));
         }
@@ -146,6 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data?.user) {
         const normalized = mapUserFromApi(response.data.user as any);
         setUser(normalized);
+        // Sync with sample job manager
+        sampleJobManager.setCurrentUser(normalized.id);
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(normalized));
         }
@@ -175,6 +191,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data?.user) {
         const normalized = mapUserFromApi(response.data.user as any);
         setUser(normalized);
+        // Sync with sample job manager
+        sampleJobManager.setCurrentUser(normalized.id);
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(normalized));
         }
@@ -199,6 +217,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      // Clear sample job manager data
+      sampleJobManager.setCurrentUser(null);
       apiService.clearAuth();
       router.push('/');
     }
@@ -207,6 +227,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = (userData: User) => {
     const normalized = mapUserFromApi(userData as any);
     setUser(normalized);
+    // Sync with sample job manager
+    sampleJobManager.setCurrentUser(normalized.id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(normalized));
     }
@@ -237,6 +259,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.success && response.data?.user) {
           const normalized = mapUserFromApi(response.data.user as any);
           setUser(normalized);
+          // Sync with sample job manager
+          sampleJobManager.setCurrentUser(normalized.id);
           if (typeof window !== 'undefined') {
             localStorage.setItem('user', JSON.stringify(normalized));
           }
@@ -285,6 +309,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.success && response.data?.user) {
           const normalized = mapUserFromApi(response.data.user as any);
           setUser(normalized);
+          // Sync with sample job manager
+          sampleJobManager.setCurrentUser(normalized.id);
           if (typeof window !== 'undefined') {
             localStorage.setItem('user', JSON.stringify(normalized));
           }

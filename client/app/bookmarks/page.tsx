@@ -79,7 +79,23 @@ export default function BookmarksPage() {
       }
       
       // Get sample bookmarks and combine with backend
-      const combinedBookmarks = sampleJobManager.getCombinedBookmarks(backendBookmarks)
+      const sampleBookmarks = sampleJobManager.getBookmarks()
+      const combinedBookmarks = [
+        ...sampleBookmarks.map(book => ({
+          ...book,
+          isSample: true,
+          id: `sample-${book.jobId}`,
+          job: {
+            id: book.jobId,
+            title: book.jobTitle,
+            company: { name: book.companyName },
+            location: book.location,
+            salary: book.salary,
+            type: book.type
+          }
+        })),
+        ...backendBookmarks
+      ]
       setBookmarks(combinedBookmarks)
     } catch (error) {
       console.error('Error fetching bookmarks:', error)

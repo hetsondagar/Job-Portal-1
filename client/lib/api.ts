@@ -309,13 +309,14 @@ class ApiService {
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     console.log('🔍 getAuthHeaders - Token present:', !!token);
+    console.log('🔍 getAuthHeaders - Token value:', token ? `${token.substring(0, 20)}...` : 'null');
     
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
     };
     
-    console.log('🔍 getAuthHeaders - Headers:', headers);
+    console.log('🔍 getAuthHeaders - Final headers:', headers);
     return headers;
   }
 
@@ -833,17 +834,46 @@ class ApiService {
   async createJobAlert(data: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
     console.log('🔍 createJobAlert - Sending data:', data);
     console.log('🔍 createJobAlert - Headers:', this.getAuthHeaders());
+    console.log('🔍 createJobAlert - API URL:', `${API_BASE_URL}/job-alerts`);
     
-    const response = await fetch(`${API_BASE_URL}/job-alerts`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/job-alerts`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
 
-    console.log('🔍 createJobAlert - Response status:', response.status);
-    console.log('🔍 createJobAlert - Response headers:', response.headers);
-    
-    return this.handleResponse<JobAlert>(response);
+      console.log('🔍 createJobAlert - Response status:', response.status);
+      console.log('🔍 createJobAlert - Response statusText:', response.statusText);
+      console.log('🔍 createJobAlert - Response headers:', response.headers);
+      console.log('🔍 createJobAlert - Response ok:', response.ok);
+      
+      // Log the raw response text for debugging
+      const responseText = await response.text();
+      console.log('🔍 createJobAlert - Raw response text:', responseText);
+      
+      // Try to parse as JSON if possible
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+        console.log('🔍 createJobAlert - Parsed response data:', responseData);
+      } catch (parseError) {
+        console.error('❌ createJobAlert - Failed to parse response as JSON:', parseError);
+        console.log('🔍 createJobAlert - Response was not valid JSON');
+      }
+      
+      // Create a new response object with the parsed data
+      const newResponse = new Response(responseText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
+      
+      return this.handleResponse<JobAlert>(newResponse);
+    } catch (fetchError) {
+      console.error('❌ createJobAlert - Fetch error:', fetchError);
+      throw fetchError;
+    }
   }
 
   async updateJobAlert(id: string, data: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {

@@ -104,7 +104,23 @@ export default function DashboardPage() {
       }
       
       // Get sample applications and combine with backend
-      const combinedApplications = sampleJobManager.getCombinedApplications(backendApplications)
+      const sampleApplications = sampleJobManager.getApplications()
+      const combinedApplications = [
+        ...sampleApplications.map(app => ({
+          ...app,
+          isSample: true,
+          id: `sample-${app.jobId}`,
+          job: {
+            id: app.jobId,
+            title: app.jobTitle,
+            company: { name: app.companyName },
+            location: app.location,
+            salary: app.salary,
+            type: app.type
+          }
+        })),
+        ...backendApplications
+      ]
       setApplications(combinedApplications)
     } catch (error) {
       console.error('Error fetching applications:', error)
@@ -172,7 +188,23 @@ export default function DashboardPage() {
       }
       
       // Get sample bookmarks and combine with backend
-      const combinedBookmarks = sampleJobManager.getCombinedBookmarks(backendBookmarks)
+      const sampleBookmarks = sampleJobManager.getBookmarks()
+      const combinedBookmarks = [
+        ...sampleBookmarks.map(book => ({
+          ...book,
+          isSample: true,
+          id: `sample-${book.jobId}`,
+          job: {
+            id: book.jobId,
+            title: book.jobTitle,
+            company: { name: book.companyName },
+            location: book.location,
+            salary: book.salary,
+            type: book.type
+          }
+        })),
+        ...backendBookmarks
+      ]
       setBookmarks(combinedBookmarks)
     } catch (error) {
       console.error('Error fetching bookmarks:', error)
@@ -423,11 +455,11 @@ export default function DashboardPage() {
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Applications</h3>
                       <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {statsLoading ? 'Loading...' : `${stats?.applicationCount || 0} applications submitted`}
+                        {statsLoading ? 'Loading...' : `${applications.length} applications submitted`}
                       </p>
-                      {stats?.recentApplications && stats.recentApplications.length > 0 && (
+                      {applications.length > 0 && (
                         <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          {stats.recentApplications.filter(app => app.status === 'reviewing' || app.status === 'shortlisted').length} under review
+                          {applications.filter(app => app.status === 'reviewing' || app.status === 'shortlisted').length} under review
                         </div>
                       )}
                     </div>

@@ -1681,14 +1681,13 @@ export default function CompaniesPage() {
                     onHoverStart={() => setSelectedCompany(company.id)}
                     onHoverEnd={() => setSelectedCompany(null)}
                   >
-                    <Link href={`/companies/${company.id}`}>
-                      <Card
-                        className={`group cursor-pointer border-0 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden relative ${
-                          company.urgent
-                            ? "bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 ring-2 ring-red-200 dark:ring-red-800"
-                            : "bg-white/70 dark:bg-slate-800/70"
-                        } ${sectorColors.border}`}
-                      >
+                    <Card
+                      className={`group cursor-pointer border-0 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden relative ${
+                        company.urgent
+                          ? "bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 ring-2 ring-red-200 dark:ring-red-800"
+                          : "bg-white/70 dark:bg-slate-800/70"
+                      } ${sectorColors.border}`}
+                    >
                         {/* Badges positioned above follow button */}
                         {(company.featured || company.urgent) && (
                           <div className="absolute top-4 right-4 z-10">
@@ -1851,7 +1850,6 @@ export default function CompaniesPage() {
                           </div>
                         </CardContent>
                       </Card>
-                    </Link>
                   </motion.div>
                 )
               }))}
