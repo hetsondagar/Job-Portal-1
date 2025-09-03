@@ -18,6 +18,7 @@ import {
   Mail,
   Phone,
   Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,6 +27,9 @@ import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { CompanyInfoDisplay } from "@/components/company-info-display"
+import { CompanyRegistration } from "@/components/company-registration"
+import { CompanyManagement } from "@/components/company-management"
+import { CompanyJobsDisplay } from "@/components/company-jobs-display"
 import { toast } from "sonner"
 
 import { apiService } from "@/lib/api"
@@ -33,16 +37,16 @@ import { useAuth } from "@/hooks/useAuth"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function EmployerDashboard() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
 
   return (
     <EmployerAuthGuard>
-      <EmployerDashboardContent user={user} />
+      <EmployerDashboardContent user={user} refreshUser={refreshUser} />
     </EmployerAuthGuard>
   )
 }
 
-function EmployerDashboardContent({ user }: { user: any }) {
+function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUser: () => Promise<void> }) {
   const router = useRouter()
   const [stats, setStats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,9 +102,9 @@ function EmployerDashboardContent({ user }: { user: any }) {
       }
 
       // Load company data if user has a company
-      if (user.company_id) {
+      if (user.companyId) {
         try {
-          const companyResponse = await apiService.getCompany(user.company_id)
+          const companyResponse = await apiService.getCompany(user.companyId)
           if (companyResponse.success && companyResponse.data) {
             setCompanyData(companyResponse.data)
             console.log('✅ Company data loaded:', companyResponse.data)
@@ -253,6 +257,38 @@ function EmployerDashboardContent({ user }: { user: any }) {
 
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
+  // Calculate profile completion based on user and company data
+  const calculateProfileCompletion = () => {
+    if (!user) return 0
+    
+    let completion = 0
+    
+    // User profile fields (40% of total)
+    const userFields = [
+      user.firstName, user.lastName, user.email, user.phone,
+      user.currentLocation, user.headline, user.summary
+    ]
+    userFields.forEach(field => {
+      if (field && field.trim() !== '') completion += 5.7
+    })
+    
+    // Company profile fields (60% of total)
+    if (user.companyId && companyData) {
+      const companyFields = [
+        companyData.name, companyData.industry, companyData.companySize,
+        companyData.website, companyData.description, companyData.address
+      ]
+      companyFields.forEach(field => {
+        if (field && field.trim() !== '') completion += 10
+      })
+    } else if (user.companyId) {
+      // If user has companyId but companyData is not loaded yet, show partial completion
+      completion += 30
+    }
+    
+    return Math.min(100, Math.round(completion))
+  }
+
   const generateRecentActivity = (applications: any[], jobs: any[]) => {
     const activities = []
     
@@ -335,7 +371,46 @@ function EmployerDashboardContent({ user }: { user: any }) {
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90"></div>
           </motion.div>
 
+        {/* Company Registration Section */}
+        {!user?.companyId && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-8"
+          >
+            <CompanyRegistration 
+              onCompanyCreated={async () => {
+                // Wait a moment for backend to complete user update
+                setTimeout(async () => {
+                  try {
+                    await refreshUser()
+                    toast.success('Company created successfully! User data refreshed.')
+                  } catch (error) {
+                    console.error('Error refreshing user data:', error)
+                    // Fallback to page reload
+                    window.location.reload()
+                  }
+                }, 1000) // Wait 1 second for backend to complete
+              }}
+              userId={user?.id || ''}
+            />
+          </motion.div>
+        )}
+
         {/* Stats Cards */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-slate-900">Dashboard Statistics</h2>
+          <button
+            onClick={loadDashboardData}
+            disabled={loading}
+            className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh dashboard data"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="text-sm">Refresh</span>
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {loading ? (
             <div className="col-span-full flex justify-center items-center py-12">
@@ -377,13 +452,40 @@ function EmployerDashboardContent({ user }: { user: any }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Quick Actions */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Company Jobs Section */}
+            {user?.companyId && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <CompanyJobsDisplay 
+                  companyId={user.companyId}
+                  onJobUpdated={() => {
+                    // Refresh dashboard data
+                    loadDashboardData()
+                  }}
+                />
+              </motion.div>
+            )}
+
             {/* Quick Actions */}
             <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
               <CardHeader>
-                <CardTitle className="text-slate-900 flex items-center">
-                  <Plus className="w-5 h-5 mr-2" />
-                  Quick Actions
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-slate-900 flex items-center">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Quick Actions
+                  </CardTitle>
+                  <button
+                    onClick={loadDashboardData}
+                    disabled={loading}
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="Refresh dashboard data"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -420,10 +522,20 @@ function EmployerDashboardContent({ user }: { user: any }) {
             {/* Recent Activity */}
             <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
               <CardHeader>
-                <CardTitle className="text-slate-900 flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Recent Activity
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-slate-900 flex items-center">
+                    <Clock className="w-5 h-5 mr-2" />
+                    Recent Activity
+                  </CardTitle>
+                  <button
+                    onClick={loadDashboardData}
+                    disabled={loading}
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="Refresh activity data"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -449,9 +561,9 @@ function EmployerDashboardContent({ user }: { user: any }) {
 
           {/* Right Column - Profile & Support */}
           <div className="space-y-8">
-            {/* Company Information */}
-            {user?.company_id && (
-              <CompanyInfoDisplay companyId={user.company_id} />
+                          {/* Company Information */}
+              {user?.companyId && (
+                              <CompanyInfoDisplay companyId={user.companyId} />
             )}
 
 
@@ -459,31 +571,41 @@ function EmployerDashboardContent({ user }: { user: any }) {
             {/* Profile Completion */}
             <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
               <CardHeader>
-                <CardTitle className="text-slate-900 flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Profile Completion
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-slate-900 flex items-center">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Profile Completion
+                  </CardTitle>
+                  <button
+                    onClick={loadDashboardData}
+                    disabled={loading}
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="Refresh dashboard data"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-slate-600">Company Profile</span>
-                      <span className="text-sm font-medium text-slate-900">{user?.profileCompletion || 0}%</span>
+                      <span className="text-sm font-medium text-slate-900">{calculateProfileCompletion()}%</span>
                     </div>
-                    <Progress value={user?.profileCompletion || 0} className="h-2" />
+                    <Progress value={calculateProfileCompletion()} className="h-2" />
                   </div>
                   <div className="text-sm text-slate-600">
-                    {user?.profileCompletion >= 80 ? 'Great! Your profile is well completed.' : 'Complete your profile to attract better candidates'}
+                    {calculateProfileCompletion() >= 80 ? 'Great! Your profile is well completed.' : 'Complete your profile to attract better candidates'}
                   </div>
-                                     <Button 
-                     variant="outline" 
-                     size="sm" 
-                     className="w-full bg-transparent"
-                     onClick={() => router.push('/employer-dashboard/settings')}
-                   >
-                     {user?.profileCompletion >= 80 ? 'View Profile' : 'Complete Profile'}
-                   </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full bg-transparent"
+                    onClick={() => router.push('/employer-dashboard/settings')}
+                  >
+                    {calculateProfileCompletion() >= 80 ? 'View Profile' : 'Complete Profile'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -491,10 +613,20 @@ function EmployerDashboardContent({ user }: { user: any }) {
             {/* Upcoming Events */}
             <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
               <CardHeader>
-                <CardTitle className="text-slate-900 flex items-center">
-                  <Calendar className="w-5 h-5 mr-2" />
-                  Upcoming Events
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-slate-900 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Upcoming Events
+                  </CardTitle>
+                  <button
+                    onClick={loadDashboardData}
+                    disabled={loading}
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="Refresh events data"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">

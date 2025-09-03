@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Shield, Bell, CreditCard, Settings, LogOut, Edit, Save, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -20,11 +20,13 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { CompanyManagement } from "@/components/company-management"
+import { CompanyRegistration } from "@/components/company-registration"
 
 export default function EmployerSettingsPage() {
   const router = useRouter()
   const { toast: toastNotification } = useToast()
-  const { user, loading } = useAuth()
+  const { user, loading, refreshUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
@@ -65,83 +67,84 @@ export default function EmployerSettingsPage() {
   const [formData, setFormData] = useState(userData)
 
   // Load user and company data
-  useEffect(() => {
-    const loadProfileData = async () => {
-      if (!user) return
-      
-      try {
-        setLoadingData(true)
-        console.log('🔄 Loading employer profile data for user:', user.id)
+  const loadProfileData = useCallback(async () => {
+    if (!user) return
+    
+    try {
+      setLoadingData(true)
+      console.log('🔄 Loading employer profile data for user:', user.id)
 
-        // Load user profile data
-        const userProfileResponse = await apiService.getUserProfile()
-        if (userProfileResponse.success && userProfileResponse.data?.user) {
-          const userProfile = userProfileResponse.data.user
-          console.log('✅ User profile loaded:', userProfile)
-          
-          // Load company data if user has a company
-          let companyData = null
-          if (userProfile.companyId) {
-            try {
-              const companyResponse = await apiService.getCompany(userProfile.companyId)
-              if (companyResponse.success && companyResponse.data) {
-                companyData = companyResponse.data
-                console.log('✅ Company data loaded:', companyData)
-              }
-            } catch (error) {
-              console.error('❌ Error loading company data:', error)
+      // Load user profile data
+      const userProfileResponse = await apiService.getUserProfile()
+      if (userProfileResponse.success && userProfileResponse.data?.user) {
+        const userProfile = userProfileResponse.data.user
+        console.log('✅ User profile loaded:', userProfile)
+        
+        // Load company data if user has a company
+        let companyData = null
+        if (userProfile.companyId) {
+          try {
+            const companyResponse = await apiService.getCompany(userProfile.companyId)
+            if (companyResponse.success && companyResponse.data) {
+              companyData = companyResponse.data
+              console.log('✅ Company data loaded:', companyData)
             }
+          } catch (error) {
+            console.error('❌ Error loading company data:', error)
           }
-
-          // Combine user and company data
-          const combinedData = {
-            firstName: userProfile.firstName || '',
-            lastName: userProfile.lastName || '',
-            email: userProfile.email || '',
-            phone: userProfile.phone || '',
-            company: companyData?.name || '',
-            designation: userProfile.headline || '',
-            location: userProfile.currentLocation || '',
-            avatar: userProfile.avatar || '',
-            companyLogo: companyData?.logo || '',
-            companySize: companyData?.companySize || '',
-            industry: companyData?.industry || '',
-            website: companyData?.website || '',
-            address: companyData?.address || '',
-            about: companyData?.description || '',
-            notifications: {
-              email: true,
-              sms: false,
-              push: true,
-              jobApplications: true,
-              candidateMatches: true,
-              systemUpdates: false,
-              marketing: false
-            },
-            subscription: {
-              plan: "Basic",
-              status: "Active",
-              nextBilling: "",
-              features: ["Job Postings", "Basic Analytics", "Email Support"]
-            }
-          }
-
-          setUserData(combinedData)
-          setFormData(combinedData)
-          console.log('✅ Profile data combined and set:', combinedData)
         }
-      } catch (error) {
-        console.error('❌ Error loading profile data:', error)
-        toast.error('Failed to load profile data')
-      } finally {
-        setLoadingData(false)
-      }
-    }
 
+        // Combine user and company data
+        const combinedData = {
+          firstName: userProfile.firstName || '',
+          lastName: userProfile.lastName || '',
+          email: userProfile.email || '',
+          phone: userProfile.phone || '',
+          company: companyData?.name || '',
+          designation: userProfile.headline || '',
+          location: userProfile.currentLocation || '',
+          avatar: userProfile.avatar || '',
+          companyLogo: companyData?.logo || '',
+          companySize: companyData?.companySize || '',
+          industry: companyData?.industry || '',
+          website: companyData?.website || '',
+          address: companyData?.address || '',
+          about: companyData?.description || '',
+          notifications: {
+            email: true,
+            sms: false,
+            push: true,
+            jobApplications: true,
+            candidateMatches: true,
+            systemUpdates: false,
+            marketing: false
+          },
+          subscription: {
+            plan: "Basic",
+            status: "Active",
+            nextBilling: "",
+            features: ["Job Postings", "Basic Analytics", "Email Support"]
+          }
+        }
+
+        setUserData(combinedData)
+        setFormData(combinedData)
+        console.log('✅ Profile data combined and set:', combinedData)
+      }
+    } catch (error) {
+      console.error('❌ Error loading profile data:', error)
+      toast.error('Failed to load profile data')
+    } finally {
+      setLoadingData(false)
+    }
+  }, [user])
+
+  // Load profile data on component mount
+  useEffect(() => {
     if (user && !loading) {
       loadProfileData()
     }
-  }, [user, loading])
+  }, [user, loading, loadProfileData])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -400,117 +403,46 @@ export default function EmployerSettingsPage() {
 
           {/* Company Tab */}
           <TabsContent value="company" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building2 className="w-5 h-5" />
-                  <span>Company Information</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Company Logo Section */}
-                <div className="flex items-center space-x-6">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={userData.companyLogo} alt={userData.company} />
-                    <AvatarFallback className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-white">
-                      {userData.company.split(' ').map(word => word[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{userData.company}</h3>
-                    <p className="text-slate-600">{userData.industry} • {userData.companySize} employees</p>
+            {user?.companyId ? (
+              <CompanyManagement 
+                companyId={user.companyId}
+                onCompanyUpdated={() => {
+                  // Refresh user data
+                  loadProfileData()
+                }}
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <Building2 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <h3 className="text-lg font-medium text-slate-900 mb-2">
+                      No Company Registered
+                    </h3>
+                    <p className="text-slate-600 mb-4">
+                      You need to register a company to access company features
+                    </p>
+                    <CompanyRegistration 
+                      onCompanyCreated={async () => {
+                        // Wait a moment for backend to complete user update
+                        setTimeout(async () => {
+                          try {
+                            await refreshUser()
+                            toast.success('Company created successfully! User data refreshed.')
+                          } catch (error) {
+                            console.error('Error refreshing user data:', error)
+                            // Fallback to page reload
+                            window.location.reload()
+                          }
+                        }, 1000) // Wait 1 second for backend to complete
+                      }}
+                      userId={user?.id || ''}
+                    />
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            )}
 
-                <Separator />
-
-                {/* Company Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="company">Company Name</Label>
-                    <Input
-                      id="company"
-                      value={formData.company}
-                      onChange={(e) => handleInputChange('company', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-2"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="designation">Your Designation</Label>
-                    <Input
-                      id="designation"
-                      value={formData.designation}
-                      onChange={(e) => handleInputChange('designation', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-2"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="industry">Industry</Label>
-                    <Select value={formData.industry} onValueChange={(value) => handleInputChange('industry', value)} disabled={!isEditing}>
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Technology">Technology</SelectItem>
-                        <SelectItem value="Healthcare">Healthcare</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="companySize">Company Size</Label>
-                    <Select value={formData.companySize} onValueChange={(value) => handleInputChange('companySize', value)} disabled={!isEditing}>
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-50">1-50 employees</SelectItem>
-                        <SelectItem value="51-200">51-200 employees</SelectItem>
-                        <SelectItem value="201-500">201-500 employees</SelectItem>
-                        <SelectItem value="500-1000">500-1000 employees</SelectItem>
-                        <SelectItem value="1000+">1000+ employees</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="website">Website</Label>
-                    <Input
-                      id="website"
-                      value={formData.website}
-                      onChange={(e) => handleInputChange('website', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="address">Company Address</Label>
-                    <Textarea
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-2"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="about">About Company</Label>
-                    <Textarea
-                      id="about"
-                      value={formData.about}
-                      onChange={(e) => handleInputChange('about', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-2"
-                      rows={4}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Notifications Tab */}

@@ -187,7 +187,7 @@ export default function AccountPage() {
                     <div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">Member Since</p>
                       <p className="font-medium text-slate-900 dark:text-white">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                   </div>

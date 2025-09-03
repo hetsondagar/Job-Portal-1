@@ -39,6 +39,119 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// Create a new company
+router.post('/', authenticateToken, async (req, res) => {
+  try {
+    const { name, industry, companySize, website, description, address, city, state, country, email, phone } = req.body;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only employers can create companies'
+      });
+    }
+
+    // Check if user already has a company
+    if (req.user.company_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already has a company registered'
+      });
+    }
+
+    // Generate unique slug from company name
+    const generateSlug = async (companyName) => {
+      let baseSlug = companyName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .substring(0, 50);
+      
+      let slug = baseSlug;
+      let counter = 1;
+      
+      // Check if slug exists and generate unique one
+      while (true) {
+        const existingCompany = await Company.findOne({ where: { slug } });
+        if (!existingCompany) {
+          break;
+        }
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      
+      return slug;
+    };
+
+    const companySlug = await generateSlug(name);
+    
+    // Create company record
+    const company = await Company.create({
+      name,
+      slug: companySlug,
+      industry: industry || 'Other',
+      companySize: companySize || '1-50',
+      website,
+      email: email || req.user.email,
+      phone: phone || req.user.phone,
+      description,
+      address,
+      city,
+      state,
+      country: country || 'India',
+      contactPerson: `${req.user.first_name} ${req.user.last_name}`,
+      contactEmail: req.user.email,
+      contactPhone: req.user.phone,
+      companyStatus: 'pending_approval',
+      isActive: true
+    });
+
+    // Update user with company_id
+    await req.user.update({ company_id: company.id });
+
+    // Fetch the updated user data
+    const updatedUser = await User.findByPk(req.user.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Company created successfully',
+      data: {
+        company: {
+          id: company.id,
+          name: company.name,
+          industry: company.industry,
+          companySize: company.companySize,
+          website: company.website,
+          email: company.email,
+          phone: company.phone,
+          description: company.description,
+          address: company.address,
+          city: company.city,
+          state: company.state,
+          country: company.country
+        },
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          first_name: updatedUser.first_name,
+          last_name: updatedUser.last_name,
+          user_type: updatedUser.user_type,
+          company_id: updatedUser.company_id,
+          // Add other user fields as needed
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Create company error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Get company information by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
