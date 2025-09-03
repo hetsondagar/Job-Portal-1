@@ -51,6 +51,7 @@ export default function JobAlertsPage() {
     pushEnabled: true,
     smsEnabled: false
   })
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     console.log('🔍 JobAlertsPage - Auth state:', { user: !!user, loading, userId: user?.id });
@@ -83,15 +84,21 @@ export default function JobAlertsPage() {
 
   const handleCreateAlert = async () => {
     try {
-      console.log('🔍 handleCreateAlert - Starting with formData:', formData);
-      console.log('🔍 handleCreateAlert - User:', user);
+      setSubmitting(true)
       
+      // Validate form data
+      if (!formData.name.trim()) {
+        toast.error('Alert name is required')
+        return
+      }
+
       const alertData = {
         ...formData,
         keywords: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : [],
         locations: formData.locations ? formData.locations.split(',').map(l => l.trim()) : [],
         categories: formData.categories ? formData.categories.split(',').map(c => c.trim()) : [],
         jobType: formData.jobType ? formData.jobType.split(',').map(t => t.trim()) : [],
+        experienceLevel: formData.experienceLevel && formData.experienceLevel.trim() && formData.experienceLevel !== 'any' ? formData.experienceLevel : null,
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
         salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined,
         currency: formData.currency,
@@ -100,8 +107,12 @@ export default function JobAlertsPage() {
       }
       
       console.log('🔍 handleCreateAlert - Processed alertData:', alertData);
+      console.log('🔍 handleCreateAlert - User authenticated:', !!user);
+      console.log('🔍 handleCreateAlert - API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
 
       const response = await apiService.createJobAlert(alertData)
+      console.log('🔍 handleCreateAlert - API Response:', response);
+      
       if (response.success) {
         toast.success('Job alert created successfully')
         setShowCreateForm(false)
@@ -111,13 +122,31 @@ export default function JobAlertsPage() {
         toast.error(response.message || 'Failed to create job alert')
       }
     } catch (error) {
-      console.error('Error creating alert:', error)
-      console.error('Error details:', {
+      console.error('❌ Error creating alert:', error)
+      console.error('❌ Error details:', {
         message: error.message,
         stack: error.stack,
+        name: error.name,
         data: alertData
       })
+      
+      // Check if it's an authentication error
+      if (error.message && error.message.includes('401')) {
+        toast.error('Authentication failed. Please log in again.')
+        // Redirect to login
+        router.push('/login')
+        return
+      }
+      
+      // Check if it's a network error
+      if (error.message && error.message.includes('fetch')) {
+        toast.error('Network error. Please check your connection and try again.')
+        return
+      }
+      
       toast.error(error.message || 'Failed to create job alert')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -131,6 +160,7 @@ export default function JobAlertsPage() {
         locations: formData.locations ? formData.locations.split(',').map(l => l.trim()) : [],
         categories: formData.categories ? formData.categories.split(',').map(c => c.trim()) : [],
         jobType: formData.jobType ? formData.jobType.split(',').map(t => t.trim()) : [],
+        experienceLevel: formData.experienceLevel && formData.experienceLevel.trim() && formData.experienceLevel !== 'any' ? formData.experienceLevel : null,
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
         salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined,
         currency: formData.currency,
@@ -191,7 +221,7 @@ export default function JobAlertsPage() {
       locations: alert.locations?.join(', ') || '',
       categories: alert.categories?.join(', ') || '',
       jobType: alert.jobType?.join(', ') || '',
-      experienceLevel: alert.experienceLevel || '',
+      experienceLevel: alert.experienceLevel || 'any',
       salaryMin: alert.salaryMin?.toString() || '',
       salaryMax: alert.salaryMax?.toString() || '',
       currency: alert.currency || 'INR',
@@ -211,7 +241,7 @@ export default function JobAlertsPage() {
       locations: '',
       categories: '',
       jobType: '',
-      experienceLevel: '',
+      experienceLevel: 'any',
       salaryMin: '',
       salaryMax: '',
       currency: 'INR',
@@ -331,13 +361,15 @@ export default function JobAlertsPage() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select experience level" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="entry">Entry Level</SelectItem>
-                        <SelectItem value="mid">Mid Level</SelectItem>
-                        <SelectItem value="senior">Senior Level</SelectItem>
-                        <SelectItem value="lead">Lead</SelectItem>
-                        <SelectItem value="executive">Executive</SelectItem>
-                      </SelectContent>
+                                             <SelectContent>
+                         <SelectItem value="any">Any Experience Level</SelectItem>
+                         <SelectItem value="entry">Entry Level</SelectItem>
+                         <SelectItem value="junior">Junior Level</SelectItem>
+                         <SelectItem value="mid">Mid Level</SelectItem>
+                         <SelectItem value="senior">Senior Level</SelectItem>
+                         <SelectItem value="lead">Lead</SelectItem>
+                         <SelectItem value="executive">Executive</SelectItem>
+                       </SelectContent>
                     </Select>
                   </div>
                   <div>
@@ -443,7 +475,7 @@ export default function JobAlertsPage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button onClick={editingAlert ? handleUpdateAlert : handleCreateAlert}>
+                  <Button onClick={editingAlert ? handleUpdateAlert : handleCreateAlert} disabled={submitting}>
                     <Save className="w-4 h-4 mr-2" />
                     {editingAlert ? 'Update Alert' : 'Create Alert'}
                   </Button>

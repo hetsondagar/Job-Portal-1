@@ -323,7 +323,7 @@ export default function JobsPage() {
       // Check if this is a sample job (UUID format starting with 550e8400)
       if (jobId.startsWith('550e8400')) {
         // For sample jobs, use the sample job manager
-        sampleJobManager.addBookmark({
+        const bookmark = sampleJobManager.addBookmark({
           jobId,
           jobTitle: job.title,
           companyName: job.company.name,
@@ -331,9 +331,14 @@ export default function JobsPage() {
           salary: job.salary,
           type: job.type
         })
-        setSavedJobs(prev => new Set([...prev, jobId]))
-        toast.success('Job saved successfully! (Sample Job)')
-        console.log('Sample job saved:', jobId)
+        
+        if (bookmark) {
+          setSavedJobs(prev => new Set([...prev, jobId]))
+          toast.success('Job saved successfully! (Sample Job)')
+          console.log('Sample job saved:', jobId)
+        } else {
+          toast.error('Failed to save job. Please try again.')
+        }
         return
       }
       
@@ -370,7 +375,7 @@ export default function JobsPage() {
       // Check if this is a sample job (UUID format starting with 550e8400)
       if (jobId.startsWith('550e8400')) {
         // For sample jobs, use the sample job manager
-        sampleJobManager.addApplication({
+        const application = sampleJobManager.addApplication({
           jobId,
           jobTitle: job.title,
           companyName: job.company.name,
@@ -378,13 +383,18 @@ export default function JobsPage() {
           salary: job.salary,
           type: job.type
         })
-        toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
-          description: 'Your application has been saved and will appear in your dashboard.',
-          duration: 5000,
-        })
-        console.log('Sample job application submitted:', jobId)
-        // Force re-render to update button state
-        setJobs([...jobs])
+        
+        if (application) {
+          toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
+            description: 'Your application has been saved and will appear in your dashboard.',
+            duration: 5000,
+          })
+          console.log('Sample job application submitted:', jobId)
+          // Force re-render to update button state
+          setJobs([...jobs])
+        } else {
+          toast.error('Failed to submit application. Please try again.')
+        }
         return
       }
       

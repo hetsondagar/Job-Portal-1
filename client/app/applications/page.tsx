@@ -75,7 +75,23 @@ export default function ApplicationsPage() {
       }
       
       // Get sample applications and combine with backend
-      const combinedApplications = sampleJobManager.getCombinedApplications(backendApplications)
+      const sampleApplications = sampleJobManager.getApplications()
+      const combinedApplications = [
+        ...sampleApplications.map(app => ({
+          ...app,
+          isSample: true,
+          id: `sample-${app.jobId}`,
+          job: {
+            id: app.jobId,
+            title: app.jobTitle,
+            company: { name: app.companyName },
+            location: app.location,
+            salary: app.salary,
+            type: app.type
+          }
+        })),
+        ...backendApplications
+      ]
       setApplications(combinedApplications)
     } catch (error) {
       console.error('Error fetching applications:', error)
