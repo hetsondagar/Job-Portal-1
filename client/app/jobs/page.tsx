@@ -915,6 +915,28 @@ export default function JobsPage() {
                                 'Apply Now'
                               )}
                             </Button>
+                            
+                            {/* Show undo button if already applied */}
+                            {sampleJobManager.hasApplied(job.id) && (
+                              <Button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  if (sampleJobManager.removeApplication(job.id)) {
+                                    toast.success('Application withdrawn successfully')
+                                    setJobs([...jobs]) // Force re-render to update button state
+                                  } else {
+                                    toast.error('Failed to withdraw application')
+                                  }
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700"
+                              >
+                                <X className="w-3 h-3 mr-1" />
+                                Undo
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>

@@ -552,28 +552,7 @@ export default function CompanyDetailPage() {
     },
   ]
 
-  const handleApply = async (jobId: number) => {
-    if (!isAuthenticated) {
-      setShowAuthDialog(true)
-      return
-    }
-
-    try {
-      console.log(`Applying for job ${jobId}...`)
-      
-      const response = await apiService.applyJob(jobId.toString())
-      
-      if (response.success) {
-        toast.success('Application submitted successfully!')
-        console.log('Application submitted:', response.data)
-      } else {
-        toast.error(response.message || 'Failed to submit application')
-      }
-    } catch (error) {
-      console.error('Error applying for job:', error)
-      toast.error('Failed to submit application. Please try again.')
-    }
-  }
+  
 
   const handleShare = (platform: string) => {
     const companyUrl = `${window.location.origin}/companies/${company.id}`
@@ -592,6 +571,8 @@ export default function CompanyDetailPage() {
         break
     }
   }
+
+  
 
   const sectorColors = getSectorColor(company.sector)
 
@@ -1105,7 +1086,8 @@ export default function CompanyDetailPage() {
                     </Card>
                   </Link>
                 </motion.div>
-              )) : (
+              ))
+              ) : (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
                     <Briefcase className="w-8 h-8 text-slate-400" />
@@ -1251,6 +1233,7 @@ export default function CompanyDetailPage() {
                 {submitting ? 'Submitting...' : 'Submit Application'}
               </Button>
             </div>
+          </div>
         </DialogContent>
       </Dialog>
 
