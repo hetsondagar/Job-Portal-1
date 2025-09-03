@@ -119,6 +119,17 @@ class SampleJobManager {
     return this.applications.some(app => app.jobId === jobId);
   }
 
+  removeApplication(jobId: string): boolean {
+    const initialLength = this.applications.length;
+    this.applications = this.applications.filter(app => app.jobId !== jobId);
+    const removed = this.applications.length < initialLength;
+    if (removed) {
+      this.saveToStorage();
+      this.notifyListeners(); // Notify listeners of the change
+    }
+    return removed;
+  }
+
   // Bookmark methods
   addBookmark(jobData: {
     jobId: string;

@@ -22,7 +22,8 @@ import {
   Bookmark,
   X,
   Upload,
-  RefreshCw
+  RefreshCw,
+  Star
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 
@@ -44,6 +45,8 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [applications, setApplications] = useState<any[]>([])
+  const [applicationsLoading, setApplicationsLoading] = useState(true)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,6 +62,7 @@ export default function DashboardPage() {
       fetchResumes()
       fetchBookmarks()
       fetchJobAlerts()
+      fetchApplications()
     }
   }, [user, loading])
 
@@ -84,12 +88,38 @@ export default function DashboardPage() {
     }
   }
 
+  const fetchApplications = async () => {
+    try {
+      setApplicationsLoading(true)
+      
+      // Get backend applications
+      let backendApplications: any[] = []
+      try {
+        const response = await apiService.getApplications()
+        if (response.success && response.data) {
+          backendApplications = response.data
+        }
+      } catch (error) {
+        console.error('Error fetching backend applications:', error)
+      }
+      
+      // Get sample applications and combine with backend
+      const combinedApplications = sampleJobManager.getCombinedApplications(backendApplications)
+      setApplications(combinedApplications)
+    } catch (error) {
+      console.error('Error fetching applications:', error)
+    } finally {
+      setApplicationsLoading(false)
+    }
+  }
+
   // Function to refresh dashboard data
   const refreshDashboard = async () => {
     await fetchDashboardStats()
     await fetchResumes()
     await fetchBookmarks()
     await fetchJobAlerts()
+    await fetchApplications()
   }
 
   // Listen for storage changes to refresh dashboard when applications are submitted
@@ -207,6 +237,28 @@ export default function DashboardPage() {
     }
   }
 
+  const handleUndoApplication = async (application: any) => {
+    try {
+      if (application.isSample) {
+        // For sample applications, remove from local storage
+        const removed = sampleJobManager.removeApplication(application.job.id)
+        if (removed) {
+          toast.success('Application withdrawn successfully')
+          fetchApplications() // Refresh applications list
+        } else {
+          toast.error('Failed to withdraw application')
+        }
+      } else {
+        // For real applications, call backend API to withdraw
+        // Note: This would require a backend endpoint for withdrawing applications
+        toast.error('Withdrawing real applications is not yet supported')
+      }
+    } catch (error) {
+      console.error('Error withdrawing application:', error)
+      toast.error('Failed to withdraw application')
+    }
+  }
+
   const handleEditProfile = () => {
     router.push('/account')
   }
@@ -223,14 +275,11 @@ export default function DashboardPage() {
     try {
       await logout()
       toast.success('Logged out successfully')
+      router.push('/login')
     } catch (error) {
       toast.error('Logout failed')
     }
   }
-
-
-
-
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -306,41 +355,41 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                 <div className="flex-shrink-0">
-                   <Avatar className="w-16 h-16 border-4 border-white dark:border-slate-700 shadow-lg">
-                     <AvatarImage 
-                       src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
-                       alt={`${user.firstName} ${user.lastName}`}
-                     />
-                     <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                       {`${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()}
-                     </AvatarFallback>
-                   </Avatar>
-                 </div>
-                 <div className="flex-1 min-w-0">
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Name</p>
-                       <p className="font-medium text-slate-900 dark:text-white">{user.firstName} {user.lastName}</p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="flex-shrink-0">
+                  <Avatar className="w-16 h-16 border-4 border-white dark:border-slate-700 shadow-lg">
+                    <AvatarImage 
+                      src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
+                      alt={`${user.firstName} ${user.lastName}`}
+                    />
+                    <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      {`${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Email</p>
-                       <p className="font-medium text-slate-900 dark:text-white truncate">{user.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Account Type</p>
-                  <Badge variant="secondary" className="capitalize">
-                    {user.userType}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Status</p>
-                  <Badge variant={user.accountStatus === 'active' ? 'default' : 'destructive'}>
-                    {user.accountStatus}
-                  </Badge>
-                     </div>
-                   </div>
+                <div className="flex-1 min-w-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Name</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{user.firstName} {user.lastName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Email</p>
+                      <p className="font-medium text-slate-900 dark:text-white truncate">{user.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Account Type</p>
+                      <Badge variant="secondary" className="capitalize">
+                        {user.userType}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Status</p>
+                      <Badge variant={user.accountStatus === 'active' ? 'default' : 'destructive'}>
+                        {user.accountStatus}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -405,23 +454,23 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-                         <Link href="/bookmarks">
-               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
-                 <CardContent className="p-6 h-full flex flex-col justify-center">
-                   <div className="flex flex-col items-center text-center space-y-3">
-                     <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                       <Bookmark className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                     </div>
-                     <div>
-                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Saved Jobs</h3>
-                       <p className="text-sm text-slate-600 dark:text-slate-300">
-                         {bookmarksLoading ? 'Loading...' : `${bookmarks.length} jobs saved`}
-                       </p>
-                     </div>
-                   </div>
-                 </CardContent>
-               </Card>
-             </Link>
+            <Link href="/bookmarks">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-6 h-full flex flex-col justify-center">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Bookmark className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Saved Jobs</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {bookmarksLoading ? 'Loading...' : `${bookmarks.length} jobs saved`}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
             <Link href="/search-history">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
@@ -491,14 +540,14 @@ export default function DashboardPage() {
                   <div className="flex flex-col items-center text-center space-y-3">
                     <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Companies</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">Explore employers</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">Explore employers</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             </Link>
 
             <Link href="/notifications">
@@ -507,18 +556,16 @@ export default function DashboardPage() {
                   <div className="flex flex-col items-center text-center space-y-3">
                     <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Bell className="w-6 h-6 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Notifications</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">Stay updated</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">Stay updated</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             </Link>
           </div>
-
-
 
           {/* Stats Overview - Enhanced for Jobseekers */}
           {user.userType === 'jobseeker' && (
@@ -533,43 +580,43 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                      {statsLoading ? (
+                      {applicationsLoading ? (
                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
                       ) : (
-                        stats?.applicationCount || 0
+                        applications.length
                       )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-300">Total Applications</div>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                      {statsLoading ? (
+                      {applicationsLoading ? (
                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
                       ) : (
-                        stats?.recentApplications?.filter(app => app.status === 'reviewing' || app.status === 'shortlisted').length || 0
+                        applications.filter(app => app.status === 'reviewing' || app.status === 'shortlisted').length
                       )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-300">Under Review</div>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                      {statsLoading ? (
+                      {applicationsLoading ? (
                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
                       ) : (
-                        stats?.recentApplications?.filter(app => app.status === 'interviewed').length || 0
+                        applications.filter(app => app.status === 'interviewed').length
                       )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-300">Interviews</div>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
                     <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                      {statsLoading ? (
+                      {applicationsLoading ? (
                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
                       ) : (
-                        stats?.recentApplications?.filter(app => app.status === 'offered' || app.status === 'hired').length || 0
+                        applications.filter(app => app.status === 'offered' || app.status === 'hired').length
                       )}
                     </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-300">Offers</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">Offers</div>
                   </div>
                 </div>
                 
@@ -601,239 +648,251 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
-                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                     {statsLoading ? (
-                       <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                     ) : (
-                       stats?.applicationCount || 0
-                     )}
-                   </div>
-                   <div className="text-sm text-slate-600 dark:text-slate-300">Applications</div>
-                 </div>
-                 <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
-                   <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                     {statsLoading ? (
-                       <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                     ) : (
-                       stats?.profileViews || 0
-                     )}
-                   </div>
-                   <div className="text-sm text-slate-600 dark:text-slate-300">Profile Views</div>
-                </div>
-                 <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
-                   <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                     {bookmarks.length}
-                   </div>
-                   <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
-                 </div>
-                 <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
-                   <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                     {jobAlertsLoading ? (
-                       <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                     ) : (
-                       jobAlerts.length
-                     )}
-                   </div>
-                   <div className="text-sm text-slate-600 dark:text-slate-300">Job Alerts</div>
-                 </div>
-                </div>
-              </CardContent>
-            </Card>
-
-
-
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Settings className="w-5 h-5" />
-                  <span>Account Actions</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      <Button 
-                     variant="outline" 
-                     className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                     onClick={handleEditProfile}
-                   >
-                     <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                     <span className="text-sm font-medium">Account Settings</span>
-                  </Button>
-                   <Button 
-                     variant="outline" 
-                     className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                     onClick={handleUploadResume}
-                   >
-                     <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
-                     <span className="text-sm font-medium">Upload Resume</span>
-                  </Button>
-                   <Button 
-                     variant="outline" 
-                     className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                     onClick={handleNotificationSettings}
-                   >
-                     <Bell className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                     <span className="text-sm font-medium">Notifications</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                     className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 hover:text-red-700"
-                    onClick={handleLogout}
-                  >
-                     <LogOut className="w-5 h-5" />
-                     <span className="text-sm font-medium">Sign Out</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Applications */}
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <FileText className="w-5 h-5" />
-                  <span>Recent Applications</span>
-                  {stats?.recentApplications && stats.recentApplications.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {stats.recentApplications.length}
-                    </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {statsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : stats?.recentApplications && stats.recentApplications.length > 0 ? (
-                  <div className="space-y-3">
-                    {stats.recentApplications.slice(0, 5).map((application, index) => (
-                      <div key={application.id || index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              application.status === 'applied' ? 'bg-blue-500' :
-                              application.status === 'reviewing' ? 'bg-yellow-500' :
-                              application.status === 'shortlisted' ? 'bg-green-500' :
-                              application.status === 'interviewed' ? 'bg-purple-500' :
-                              application.status === 'offered' ? 'bg-emerald-500' :
-                              application.status === 'hired' ? 'bg-green-600' :
-                              application.status === 'rejected' ? 'bg-red-500' :
-                              'bg-gray-500'
-                            }`}></div>
-                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                              {application.job?.title || 'Job Title'}
-                            </p>
-                          </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                            {application.job?.location || 'Location'} • {application.status || 'Applied'}
-                          </p>
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-                          {application.appliedAt ? new Date(application.appliedAt).toLocaleDateString() : 'N/A'}
-                        </div>
-                      </div>
-                    ))}
-                    {stats.recentApplications.length > 5 && (
-                      <div className="text-center pt-2">
-                        <Link href="/applications">
-                          <Button variant="outline" size="sm" className="text-xs">
-                            View All ({stats.recentApplications.length})
-                          </Button>
-                        </Link>
-                      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                    {applicationsLoading ? (
+                      <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                    ) : (
+                      applications.length
                     )}
                   </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No applications yet</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Start applying to jobs to see your applications here</p>
-                    <Link href="/jobs" className="mt-3 inline-block">
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        Browse Jobs
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Resume Upload Modal */}
-          {showResumeModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                    Upload Resume
-                  </h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setShowResumeModal(false)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  <div className="text-sm text-slate-600 dark:text-slate-300">Applications</div>
                 </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="resume-file">Select File</Label>
-                    <Input
-                      id="resume-file"
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileUpload}
-                      ref={fileInputRef}
-                      disabled={uploading}
-                    />
-                    <p className="text-sm text-slate-500 mt-1">
-                      Supported formats: PDF, DOC, DOCX (max 5MB)
-                    </p>
+                <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                    {statsLoading ? (
+                      <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                    ) : (
+                      stats?.profileViews || 0
+                    )}
                   </div>
-
-                  {uploading && (
-                    <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm text-blue-600 dark:text-blue-400">Uploading resume...</span>
-                    </div>
-                  )}
-
-                  <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
-                    <h4 className="font-medium text-slate-900 dark:text-white mb-2">Upload Tips:</h4>
-                    <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
-                      <li>• Use PDF format for best compatibility</li>
-                      <li>• Keep file size under 5MB</li>
-                      <li>• Ensure your resume is up-to-date</li>
-                      <li>• First upload will be set as default</li>
-                    </ul>
+                  <div className="text-sm text-slate-600 dark:text-slate-300">Profile Views</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                    {bookmarks.length}
                   </div>
-
-                  <div className="flex justify-end space-x-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowResumeModal(false)}
-                      disabled={uploading}
-                    >
-                      Cancel
-                    </Button>
+                  <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                    {jobAlertsLoading ? (
+                      <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
+                    ) : (
+                      jobAlerts.length
+                    )}
                   </div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300">Job Alerts</div>
                 </div>
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
 
+          {/* Account Actions */}
+          <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="w-5 h-5" />
+                <span>Account Actions</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  onClick={handleEditProfile}
+                >
+                  <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium">Account Settings</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                  onClick={handleUploadResume}
+                >
+                  <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium">Upload Resume</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                  onClick={handleNotificationSettings}
+                >
+                  <Bell className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <span className="text-sm font-medium">Notifications</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 hover:text-red-700"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sign Out</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Recent Applications */}
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="w-5 h-5" />
+                <span>Recent Applications</span>
+                {applications.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {applications.length}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {applicationsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : applications && applications.length > 0 ? (
+                <div className="space-y-3">
+                  {applications.slice(0, 5).map((application, index) => (
+                    <div key={application.id || index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            application.status === 'applied' ? 'bg-blue-500' :
+                            application.status === 'reviewing' ? 'bg-yellow-500' :
+                            application.status === 'shortlisted' ? 'bg-green-500' :
+                            application.status === 'interviewed' ? 'bg-purple-500' :
+                            application.status === 'offered' ? 'bg-emerald-500' :
+                            application.status === 'hired' ? 'bg-green-600' :
+                            application.status === 'rejected' ? 'bg-red-500' :
+                            'bg-gray-500'
+                          }`}></div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                            {application.job?.title || application.jobTitle || 'Job Title'}
+                          </p>
+                          {application.isSample && (
+                            <Badge variant="outline" className="text-xs">Sample</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                          {application.job?.company?.name || application.companyName || 'Company'} • {application.job?.location || application.location || 'Location'} • {application.status || 'Applied'}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {application.appliedAt ? new Date(application.appliedAt).toLocaleDateString() : 'N/A'}
+                        </div>
+                        {application.isSample && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUndoApplication(application)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Undo
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {applications.length > 5 && (
+                    <div className="text-center pt-2">
+                      <Link href="/applications">
+                        <Button variant="outline" size="sm" className="text-xs">
+                          View All ({applications.length})
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No applications yet</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Start applying to jobs to see your applications here</p>
+                  <Link href="/jobs" className="mt-3 inline-block">
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      Browse Jobs
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Resume Upload Modal */}
+      {showResumeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Upload Resume
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowResumeModal(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="resume-file">Select File</Label>
+                <Input
+                  id="resume-file"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleFileUpload}
+                  ref={fileInputRef}
+                  disabled={uploading}
+                />
+                <p className="text-sm text-slate-500 mt-1">
+                  Supported formats: PDF, DOC, DOCX (max 5MB)
+                </p>
+              </div>
+
+              {uploading && (
+                <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-blue-600 dark:text-blue-400">Uploading resume...</span>
+                </div>
+              )}
+
+              <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                <h4 className="font-medium text-slate-900 dark:text-white mb-2">Upload Tips:</h4>
+                <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                  <li>• Use PDF format for best compatibility</li>
+                  <li>• Keep file size under 5MB</li>
+                  <li>• Ensure your resume is up-to-date</li>
+                  <li>• First upload will be set as default</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowResumeModal(false)}
+                  disabled={uploading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
