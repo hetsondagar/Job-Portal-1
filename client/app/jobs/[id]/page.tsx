@@ -29,6 +29,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import { apiService } from '@/lib/api'
+import { sampleJobManager } from '@/lib/sampleJobManager'
 
 export default function JobDetailPage() {
   const params = useParams()
@@ -36,6 +38,7 @@ export default function JobDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false) // This would come from your auth context
+  const [forceUpdate, setForceUpdate] = useState(false) // State to force re-render for button
 
   // Mock job data - in real app, fetch based on params.id
   const job = {
@@ -129,11 +132,38 @@ Key Responsibilities:
     try {
       console.log("Applying for job...")
       
+      // Check if this is a sample job
+      if (job.id.toString().startsWith('550e8400')) {
+        // For sample jobs, use the sample job manager
+        sampleJobManager.addApplication({
+          jobId: job.id.toString(),
+          jobTitle: job.title,
+          companyName: job.company,
+          location: job.location,
+          salary: job.salary,
+          type: job.type
+        })
+        toast.success(`Application submitted successfully for ${job.title} at ${job.company}!`, {
+          description: 'Your application has been saved and will appear in your dashboard.',
+          duration: 5000,
+        })
+        console.log('Sample job application submitted:', job.id)
+        // Force re-render to update button state
+        setForceUpdate(prev => !prev)
+        return
+      }
+      
+      // For real jobs, call the backend
       const response = await apiService.applyJob(job.id.toString())
       
       if (response.success) {
-        toast.success('Application submitted successfully!')
+        toast.success(`Application submitted successfully for ${job.title} at ${job.company}!`, {
+          description: 'Your application has been submitted and is under review.',
+          duration: 5000,
+        })
         console.log('Application submitted:', response.data)
+        // Force re-render to update button state
+        setForceUpdate(prev => !prev)
       } else {
         toast.error(response.message || 'Failed to submit application')
       }
@@ -296,12 +326,24 @@ Key Responsibilities:
                       ))}
                     </div>
 
-                    <Button
-                      onClick={handleApply}
-                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                      Apply Now
-                    </Button>
+                  <Button
+                    onClick={handleApply}
+                    className={`w-full ${
+                      sampleJobManager.hasApplied(job.id.toString())
+                        ? 'bg-green-600 hover:bg-green-700 cursor-default'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                    }`}
+                    disabled={sampleJobManager.hasApplied(job.id.toString())}
+                  >
+                    {sampleJobManager.hasApplied(job.id.toString()) ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Applied
+                      </>
+                    ) : (
+                      'Apply Now'
+                    )}
+                  </Button>
                   </CardContent>
                 </Card>
               </motion.div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, MapPin, Briefcase, Clock, IndianRupee, Star, Building2, Users, Filter } from "lucide-react"
+import { ArrowLeft, MapPin, Briefcase, Clock, IndianRupee, Star, Building2, Users, Filter, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { apiService, Job, Company } from '@/lib/api'
+import { sampleJobManager } from '@/lib/sampleJobManager'
 
 export default function DepartmentJobsPage() {
   const params = useParams()
@@ -280,9 +282,21 @@ export default function DepartmentJobsPage() {
                                   e.stopPropagation()
                                   handleApply(job.id)
                                 }}
-                                className={`h-10 px-6 bg-gradient-to-r ${getSectorColor(company.sector)} hover:shadow-lg transition-all duration-300`}
+                                className={`h-10 px-6 ${
+                                  sampleJobManager.hasApplied(job.id.toString())
+                                    ? 'bg-green-600 hover:bg-green-700 cursor-default'
+                                    : `bg-gradient-to-r ${getSectorColor(company.sector)} hover:shadow-lg transition-all duration-300`
+                                }`}
+                                disabled={sampleJobManager.hasApplied(job.id.toString())}
                               >
-                                Apply Now
+                                {sampleJobManager.hasApplied(job.id.toString()) ? (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Applied
+                                  </>
+                                ) : (
+                                  'Apply Now'
+                                )}
                               </Button>
                               {!isAuthenticated && (
                                 <div className="flex space-x-2">

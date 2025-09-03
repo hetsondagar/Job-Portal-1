@@ -17,6 +17,7 @@ import {
   X,
   Bookmark,
   BookmarkCheck,
+  CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -377,8 +378,13 @@ export default function JobsPage() {
           salary: job.salary,
           type: job.type
         })
-        toast.success('Application submitted successfully! (Sample Job)')
+        toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
+          description: 'Your application has been saved and will appear in your dashboard.',
+          duration: 5000,
+        })
         console.log('Sample job application submitted:', jobId)
+        // Force re-render to update button state
+        setJobs([...jobs])
         return
       }
       
@@ -386,8 +392,13 @@ export default function JobsPage() {
       const response = await apiService.applyJob(jobId)
       
       if (response.success) {
-        toast.success('Application submitted successfully!')
+        toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
+          description: 'Your application has been submitted and is under review.',
+          duration: 5000,
+        })
         console.log('Application submitted:', response.data)
+        // Force re-render to update button state
+        setJobs([...jobs])
       } else {
         toast.error(response.message || 'Failed to submit application')
       }
@@ -888,9 +899,21 @@ export default function JobsPage() {
                                 e.stopPropagation()
                                 handleApply(job.id)
                               }}
-                              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
+                              className={`text-xs sm:text-sm ${
+                                sampleJobManager.hasApplied(job.id) 
+                                  ? 'bg-green-600 hover:bg-green-700 cursor-default' 
+                                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                              }`}
+                              disabled={sampleJobManager.hasApplied(job.id)}
                             >
-                              Apply Now
+                              {sampleJobManager.hasApplied(job.id) ? (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Applied
+                                </>
+                              ) : (
+                                'Apply Now'
+                              )}
                             </Button>
                           </div>
                         </div>

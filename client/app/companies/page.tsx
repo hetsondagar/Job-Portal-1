@@ -1783,12 +1783,14 @@ export default function CompaniesPage() {
                                     <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                                     Follow
                                   </Button>
-                                  <Button
-                                    className={`w-full sm:w-auto bg-gradient-to-r ${sectorColors.bg} ${sectorColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm`}
-                                  >
-                                    <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                    View ({company.openings})
-                                  </Button>
+                                  <Link href={`/companies/${company.id}`}>
+                                    <Button
+                                      className={`w-full sm:w-auto bg-gradient-to-r ${sectorColors.bg} ${sectorColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm`}
+                                    >
+                                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                      View ({company.openings})
+                                    </Button>
+                                  </Link>
                                 </div>
                               </div>
 
