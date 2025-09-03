@@ -33,7 +33,7 @@ User.hasMany(JobApplication, { foreignKey: 'userId', as: 'jobApplications' });
 User.hasMany(JobApplication, { foreignKey: 'employerId', as: 'receivedApplications' });
 User.hasMany(JobBookmark, { foreignKey: 'userId', as: 'jobBookmarks' });
 User.hasMany(JobAlert, { foreignKey: 'userId', as: 'jobAlerts' });
-User.hasMany(Requirement, { foreignKey: 'employerId', as: 'requirements' });
+User.hasMany(Requirement, { foreignKey: 'createdBy', as: 'requirements' });
 User.hasMany(RequirementApplication, { foreignKey: 'userId', as: 'requirementApplications' });
 User.hasMany(Resume, { foreignKey: 'userId', as: 'resumes' });
 User.hasMany(WorkExperience, { foreignKey: 'userId', as: 'workExperiences' });
@@ -74,7 +74,7 @@ JobBookmark.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 JobAlert.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Requirement associations
-Requirement.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
+Requirement.belongsTo(User, { foreignKey: 'createdBy', as: 'employer' });
 Requirement.hasMany(RequirementApplication, { foreignKey: 'requirementId', as: 'requirementApplications' });
 
 // RequirementApplication associations

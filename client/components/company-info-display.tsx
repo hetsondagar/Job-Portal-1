@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Building2, MapPin, Phone, Mail, Globe, Users, Calendar, Star } from 'lucide-react'
+import { Building2, MapPin, Phone, Mail, Globe, Users, Calendar, Star, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -39,13 +39,15 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
     const fetchCompanyInfo = async () => {
       try {
         setLoading(true)
-        const response = await apiService.getCompanyInfo(companyId)
+        setError(null)
+        const response = await apiService.getCompany(companyId)
         if (response.success && response.data) {
           setCompany(response.data)
         } else {
-          setError('Failed to load company information')
+          setError(response.message || 'Failed to load company information')
         }
       } catch (err: any) {
+        console.error('Error fetching company info:', err)
         setError(err.message || 'Failed to load company information')
       } finally {
         setLoading(false)
@@ -56,6 +58,27 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
       fetchCompanyInfo()
     }
   }, [companyId])
+
+  // Refresh company data when needed
+  const refreshCompanyData = async () => {
+    if (companyId) {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await apiService.getCompany(companyId)
+        if (response.success && response.data) {
+          setCompany(response.data)
+        } else {
+          setError(response.message || 'Failed to load company information')
+        }
+      } catch (err: any) {
+        console.error('Error refreshing company info:', err)
+        setError(err.message || 'Failed to load company information')
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
 
   if (loading) {
     return (
@@ -111,10 +134,20 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
   return (
     <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Building2 className="w-5 h-5 mr-2" />
-          Company Information
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <Building2 className="w-5 h-5 mr-2" />
+            Company Information
+          </CardTitle>
+          <button
+            onClick={refreshCompanyData}
+            disabled={loading}
+            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh company data"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Company Header */}

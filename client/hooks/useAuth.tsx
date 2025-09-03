@@ -22,6 +22,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -245,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error refreshing user data:', error);
       
       // If it's a rate limit error, schedule a retry with exponential backoff
-      if (error.message && error.message.includes('Too many requests')) {
+      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('Too many requests')) {
         console.log('🔄 Rate limited - scheduling retry with backoff');
         toast.warning('Too many requests. Retrying automatically in a moment...');
         const retryDelay = Math.min(30000, MIN_REFRESH_INTERVAL * 2); // Max 30 seconds

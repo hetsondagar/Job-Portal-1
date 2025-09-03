@@ -504,6 +504,16 @@ class ApiService {
   }
 
   // Company endpoints
+  async createCompany(data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   async getCompany(companyId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
       headers: this.getAuthHeaders(),
