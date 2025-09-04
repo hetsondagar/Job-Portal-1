@@ -1413,7 +1413,6 @@ class ApiService {
 
     return this.handleResponse<any>(response);
   }
-  }
 
   async createJobFromTemplate(id: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/job-templates/${id}/create-job`, {
