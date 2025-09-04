@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, Filter, Edit, Copy, Trash2, Eye, BookOpen, Users, Star, Clock } from "lucide-react"
+import { Plus, Search, Filter, Edit, Copy, Trash2, Eye, BookOpen, Users, Star, Clock, Globe, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,9 +13,12 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
+import { toast } from "sonner"
+import { useAuth } from "@/hooks/useAuth"
 
 interface JobTemplate {
-  id: number
+  id: string
   name: string
   description: string
   category: string
@@ -23,51 +26,155 @@ interface JobTemplate {
   usageCount: number
   lastUsedAt: string
   tags: string[]
+  templateData: any
+  createdBy: string
+  createdAt: string
+  updatedAt: string
 }
 
 export default function JobTemplatesPage() {
+  const { user } = useAuth()
   const [templates, setTemplates] = useState<JobTemplate[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-
-  // Mock data for templates
-  const mockTemplates = [
-    {
-      id: 1,
-      name: "Senior Software Engineer",
-      description: "Template for senior software engineering positions",
-      category: "technical",
-      isPublic: false,
-      usageCount: 15,
-      lastUsedAt: "2024-01-15",
-      tags: ["engineering", "senior", "full-stack"]
-    },
-    {
-      id: 2,
-      name: "Marketing Manager",
-      description: "Template for marketing management roles",
-      category: "non-technical",
-      isPublic: true,
-      usageCount: 42,
-      lastUsedAt: "2024-01-20",
-      tags: ["marketing", "management", "strategy"]
-    },
-    {
-      id: 3,
-      name: "Frontend Developer",
-      description: "Template for frontend development positions",
-      category: "technical",
-      isPublic: false,
-      usageCount: 8,
-      lastUsedAt: "2024-01-10",
-      tags: ["frontend", "react", "javascript"]
-    }
-  ]
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<JobTemplate | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
-    setTemplates(mockTemplates)
-  }, [])
+    if (user) {
+      fetchTemplates()
+    }
+  }, [user])
+
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getJobTemplates({
+        category: selectedCategory === 'all' ? undefined : selectedCategory,
+        search: searchQuery || undefined
+      })
+      
+      if (response.success) {
+        setTemplates(response.data || [])
+      } else {
+        toast.error('Failed to fetch templates')
+      }
+    } catch (error) {
+      console.error('Error fetching templates:', error)
+      toast.error('Failed to fetch templates')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = () => {
+    fetchTemplates()
+  }
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    fetchTemplates()
+  }
+
+  const handleCreateTemplate = async (formData: any) => {
+    try {
+      setCreating(true)
+      const response = await apiService.createJobTemplate(formData)
+      
+      if (response.success) {
+        toast.success('Template created successfully')
+        setIsCreateDialogOpen(false)
+        fetchTemplates()
+      } else {
+        toast.error(response.message || 'Failed to create template')
+      }
+    } catch (error) {
+      console.error('Error creating template:', error)
+      toast.error('Failed to create template')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleUpdateTemplate = async (id: string, formData: any) => {
+    try {
+      setUpdating(true)
+      const response = await apiService.updateJobTemplate(id, formData)
+      
+      if (response.success) {
+        toast.success('Template updated successfully')
+        setIsEditDialogOpen(false)
+        setEditingTemplate(null)
+        fetchTemplates()
+      } else {
+        toast.error(response.message || 'Failed to update template')
+      }
+    } catch (error) {
+      console.error('Error updating template:', error)
+      toast.error('Failed to update template')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this template?')) return
+    
+    try {
+      const response = await apiService.deleteJobTemplate(id)
+      
+      if (response.success) {
+        toast.success('Template deleted successfully')
+        fetchTemplates()
+      } else {
+        toast.error(response.message || 'Failed to delete template')
+      }
+    } catch (error) {
+      console.error('Error deleting template:', error)
+      toast.error('Failed to delete template')
+    }
+  }
+
+  const handleTogglePublic = async (id: string) => {
+    try {
+      const response = await apiService.toggleTemplatePublic(id)
+      
+      if (response.success) {
+        toast.success(response.message || 'Template visibility updated')
+        fetchTemplates()
+      } else {
+        toast.error(response.message || 'Failed to update template visibility')
+      }
+    } catch (error) {
+      console.error('Error toggling template visibility:', error)
+      toast.error('Failed to update template visibility')
+    }
+  }
+
+  const handleUseTemplate = async (id: string) => {
+    try {
+      const response = await apiService.useJobTemplate(id)
+      
+      if (response.success) {
+        toast.success('Template usage recorded')
+        fetchTemplates()
+      } else {
+        toast.error(response.message || 'Failed to record template usage')
+      }
+    } catch (error) {
+      console.error('Error recording template usage:', error)
+      toast.error('Failed to record template usage')
+    }
+  }
+
+  const handleEditTemplate = (template: JobTemplate) => {
+    setEditingTemplate(template)
+    setIsEditDialogOpen(true)
+  }
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,6 +199,21 @@ export default function JobTemplatesPage() {
       case "management": return "bg-purple-100 text-purple-800"
       default: return "bg-gray-100 text-gray-800"
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <EmployerNavbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading templates...</p>
+          </div>
+        </div>
+        <EmployerFooter />
+      </div>
+    )
   }
 
   return (
@@ -119,7 +241,7 @@ export default function JobTemplatesPage() {
                   Create a reusable template for job postings
                 </DialogDescription>
               </DialogHeader>
-              <CreateTemplateForm />
+              <CreateTemplateForm onSubmit={handleCreateTemplate} loading={creating} />
             </DialogContent>
           </Dialog>
         </div>
@@ -136,13 +258,14 @@ export default function JobTemplatesPage() {
                     placeholder="Search templates..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                     className="pl-10"
                   />
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium mb-2 block">Category</Label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -155,9 +278,9 @@ export default function JobTemplatesPage() {
                 </Select>
               </div>
               <div className="flex items-end">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={handleSearch}>
                   <Filter className="w-4 h-4 mr-2" />
-                  More Filters
+                  Search
                 </Button>
               </div>
             </div>
@@ -176,11 +299,19 @@ export default function JobTemplatesPage() {
                       {template.category}
                     </Badge>
                   </div>
-                  {template.isPublic && (
-                    <Badge variant="outline" className="text-xs">
-                      Public
-                    </Badge>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {template.isPublic ? (
+                      <Badge variant="outline" className="text-xs flex items-center">
+                        <Globe className="w-3 h-3 mr-1" />
+                        Public
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs flex items-center">
+                        <Lock className="w-3 h-3 mr-1" />
+                        Private
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <CardTitle className="text-lg">{template.name}</CardTitle>
                 <CardDescription>{template.description}</CardDescription>
@@ -207,17 +338,33 @@ export default function JobTemplatesPage() {
 
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex space-x-2">
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleEditTemplate(template)}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleUseTemplate(template.id)}
+                      >
                         <Copy className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline">
-                        <Eye className="w-4 h-4" />
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleTogglePublic(template.id)}
+                      >
+                        {template.isPublic ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
                       </Button>
                     </div>
-                    <Button size="sm" variant="destructive">
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleDeleteTemplate(template.id)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -228,42 +375,116 @@ export default function JobTemplatesPage() {
         </div>
 
         {/* Empty State */}
-        {filteredTemplates.length === 0 && (
+        {filteredTemplates.length === 0 && !loading && (
           <Card className="text-center py-12">
             <CardContent>
               <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 mb-2">No templates found</h3>
               <p className="text-slate-600 mb-4">
-                Create your first job template to get started
+                {searchQuery || selectedCategory !== 'all' 
+                  ? 'Try adjusting your search criteria'
+                  : 'Create your first job template to get started'
+                }
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Template
-              </Button>
+              {!searchQuery && selectedCategory === 'all' && (
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Template
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* Edit Template Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+            <DialogDescription>
+              Update your job template
+            </DialogDescription>
+          </DialogHeader>
+          {editingTemplate && (
+            <EditTemplateForm 
+              template={editingTemplate} 
+              onSubmit={(data) => handleUpdateTemplate(editingTemplate.id, data)}
+              loading={updating}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <EmployerFooter />
     </div>
   )
 }
 
-function CreateTemplateForm() {
+function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => void, loading: boolean }) {
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    category: "",
+    isPublic: false,
+    tags: [] as string[],
+    templateData: {
+      title: "",
+      department: "",
+      location: "",
+      type: "",
+      experience: "",
+      salary: "",
+      description: "",
+      requirements: "",
+      benefits: "",
+      skills: []
+    }
+  })
+  const [currentTag, setCurrentTag] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name || !formData.category) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    onSubmit(formData)
+  }
+
+  const handleAddTag = () => {
+    if (currentTag.trim() && !formData.tags.includes(currentTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, currentTag.trim()]
+      }))
+      setCurrentTag("")
+    }
+  }
+
+  const handleRemoveTag = (tag: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(t => t !== tag)
+    }))
+  }
+
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="name">Template Name</Label>
+          <Label htmlFor="name">Template Name *</Label>
           <Input
             id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="e.g., Senior Software Engineer"
+            required
           />
         </div>
         <div>
-          <Label htmlFor="category">Category</Label>
-          <Select>
+          <Label htmlFor="category">Category *</Label>
+          <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
@@ -280,20 +501,181 @@ function CreateTemplateForm() {
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           placeholder="Describe what this template is for..."
           rows={3}
         />
       </div>
 
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <div className="flex space-x-2 mb-2">
+          <Input
+            value={currentTag}
+            onChange={(e) => setCurrentTag(e.target.value)}
+            placeholder="Add a tag..."
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+          />
+          <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {formData.tags.map((tag, index) => (
+            <Badge key={index} variant="outline" className="flex items-center">
+              {tag}
+              <button
+                type="button"
+                onClick={() => handleRemoveTag(tag)}
+                className="ml-2 text-red-500 hover:text-red-700"
+              >
+                ×
+              </button>
+            </Badge>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center space-x-2">
-        <Checkbox id="isPublic" />
+        <Checkbox 
+          id="isPublic" 
+          checked={formData.isPublic}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+        />
         <Label htmlFor="isPublic">Make this template public</Label>
       </div>
 
       <div className="flex justify-end space-x-3">
-        <Button variant="outline">Cancel</Button>
-        <Button>Create Template</Button>
+        <Button type="button" variant="outline">Cancel</Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Creating...' : 'Create Template'}
+        </Button>
       </div>
-    </div>
+    </form>
+  )
+}
+
+function EditTemplateForm({ template, onSubmit, loading }: { 
+  template: JobTemplate, 
+  onSubmit: (data: any) => void, 
+  loading: boolean 
+}) {
+  const [formData, setFormData] = useState({
+    name: template.name,
+    description: template.description,
+    category: template.category,
+    isPublic: template.isPublic,
+    tags: template.tags,
+    templateData: template.templateData
+  })
+  const [currentTag, setCurrentTag] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name || !formData.category) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    onSubmit(formData)
+  }
+
+  const handleAddTag = () => {
+    if (currentTag.trim() && !formData.tags.includes(currentTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, currentTag.trim()]
+      }))
+      setCurrentTag("")
+    }
+  }
+
+  const handleRemoveTag = (tag: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(t => t !== tag)
+    }))
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">Template Name *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g., Senior Software Engineer"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="category">Category *</Label>
+          <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="technical">Technical</SelectItem>
+              <SelectItem value="non-technical">Non-Technical</SelectItem>
+              <SelectItem value="management">Management</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Describe what this template is for..."
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <div className="flex space-x-2 mb-2">
+          <Input
+            value={currentTag}
+            onChange={(e) => setCurrentTag(e.target.value)}
+            placeholder="Add a tag..."
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+          />
+          <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {formData.tags.map((tag, index) => (
+            <Badge key={index} variant="outline" className="flex items-center">
+              {tag}
+              <button
+                type="button"
+                onClick={() => handleRemoveTag(tag)}
+                className="ml-2 text-red-500 hover:text-red-700"
+              >
+                ×
+              </button>
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id="isPublic" 
+          checked={formData.isPublic}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+        />
+        <Label htmlFor="isPublic">Make this template public</Label>
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <Button type="button" variant="outline">Cancel</Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Updating...' : 'Update Template'}
+        </Button>
+      </div>
+    </form>
   )
 }
