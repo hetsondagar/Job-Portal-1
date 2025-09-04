@@ -18,6 +18,7 @@ import {
   Bookmark,
   BookmarkCheck,
   CheckCircle,
+  Camera,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,7 +36,6 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
-import { sampleJobManager } from "@/lib/sampleJobManager"
 
 // Types for state management
 interface FilterState {
@@ -77,6 +77,7 @@ export default function JobsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set())
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
   const [sortBy, setSortBy] = useState("recent")
   const [isStickyVisible, setIsStickyVisible] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
@@ -269,40 +270,87 @@ export default function JobsPage() {
     }
   ]
 
-  // Set jobs data and fetch saved jobs
+  // Fetch jobs from backend and user data
   useEffect(() => {
-    setJobs(sampleJobs)
-    setJobsLoading(false)
+    fetchJobs()
     
-    // Fetch existing bookmarks if user is logged in
+    // Fetch existing bookmarks and applications if user is logged in
     if (user) {
-      fetchSavedJobs()
+      fetchUserData()
     }
   }, [user])
 
-  const fetchSavedJobs = async () => {
+  const fetchJobs = async () => {
     try {
-      // Get backend bookmarks
-      const response = await apiService.getBookmarks()
-      const backendBookmarkIds = new Set<string>()
+      setJobsLoading(true)
+      
+      // Fetch jobs from backend
+      const response = await apiService.getJobs({
+        status: 'active',
+        limit: 50 // Get more jobs to show
+      })
       
       if (response.success && response.data) {
-        response.data.forEach(bookmark => backendBookmarkIds.add(bookmark.jobId))
+        // Transform backend jobs to match frontend format
+        const transformedJobs = response.data.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          company: {
+            id: job.company?.id || 'unknown',
+            name: job.company?.name || 'Unknown Company'
+          },
+          location: job.location,
+          experience: job.experienceLevel || 'Not specified',
+          salary: job.salaryMin && job.salaryMax 
+            ? `₹${job.salaryMin}-${job.salaryMax} LPA`
+            : 'Not specified',
+          skills: job.skills || [],
+          logo: job.company?.logo || '/companies/default.png',
+          posted: new Date(job.createdAt).toLocaleDateString(),
+          applicants: job.applications || 0,
+          description: job.description,
+          type: job.jobType || 'Full-time',
+          remote: job.remoteWork === 'remote',
+          urgent: job.isUrgent || false,
+          featured: job.isFeatured || false,
+          companyRating: 4.5, // Default rating
+          category: job.category || 'General',
+          photos: job.photos || [] // Include job photos
+        }))
+        
+        // Combine with sample jobs for demonstration
+        const combinedJobs = [...transformedJobs, ...sampleJobs]
+        setJobs(combinedJobs)
+      } else {
+        // Fallback to sample jobs if backend fails
+        setJobs(sampleJobs)
       }
-      
-      // Get sample job bookmarks
-      const sampleBookmarkIds = new Set<string>()
-      sampleJobManager.getBookmarks().forEach(bookmark => sampleBookmarkIds.add(bookmark.jobId))
-      
-      // Combine both sets
-      const allBookmarkIds = new Set([...backendBookmarkIds, ...sampleBookmarkIds])
-      setSavedJobs(allBookmarkIds)
     } catch (error) {
-      console.error('Error fetching saved jobs:', error)
-      // Fallback to just sample jobs if backend fails
-      const sampleBookmarkIds = new Set<string>()
-      sampleJobManager.getBookmarks().forEach(bookmark => sampleBookmarkIds.add(bookmark.jobId))
-      setSavedJobs(sampleBookmarkIds)
+      console.error('Error fetching jobs:', error)
+      // Fallback to sample jobs
+      setJobs(sampleJobs)
+    } finally {
+      setJobsLoading(false)
+    }
+  }
+
+  const fetchUserData = async () => {
+    try {
+      // Fetch applications
+      const applicationsResponse = await apiService.getApplications()
+      if (applicationsResponse.success && applicationsResponse.data) {
+        const appliedJobIds = new Set(applicationsResponse.data.map((app: any) => app.jobId))
+        setAppliedJobs(appliedJobIds)
+      }
+
+      // Fetch bookmarks
+      const bookmarksResponse = await apiService.getBookmarks()
+      if (bookmarksResponse.success && bookmarksResponse.data) {
+        const savedJobIds = new Set(bookmarksResponse.data.map((bookmark: any) => bookmark.jobId))
+        setSavedJobs(savedJobIds)
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
     }
   }
 
@@ -320,35 +368,14 @@ export default function JobsPage() {
         return
       }
 
-      // Check if this is a sample job (UUID format starting with 550e8400)
-      if (jobId.startsWith('550e8400')) {
-        // For sample jobs, use the sample job manager
-        const bookmark = sampleJobManager.addBookmark({
-          jobId,
-          jobTitle: job.title,
-          companyName: job.company.name,
-          location: job.location,
-          salary: job.salary,
-          type: job.type
-        })
-        
-        if (bookmark) {
-          setSavedJobs(prev => new Set([...prev, jobId]))
-          toast.success('Job saved successfully! (Sample Job)')
-          console.log('Sample job saved:', jobId)
-        } else {
-          toast.error('Failed to save job. Please try again.')
-        }
-        return
-      }
-      
-      // For real jobs, call the backend
+      // Save job to database for all jobs
       const response = await apiService.createBookmark({ jobId })
       if (response.success) {
         setSavedJobs(prev => new Set([...prev, jobId]))
         toast.success('Job saved successfully!')
+        console.log('Job saved:', jobId)
       } else {
-        toast.error(response.message || 'Failed to save job')
+        toast.error(response.message || 'Failed to save job. Please try again.')
       }
     } catch (error) {
       console.error('Error saving job:', error)
@@ -372,45 +399,30 @@ export default function JobsPage() {
         return
       }
       
-      // Check if this is a sample job (UUID format starting with 550e8400)
-      if (jobId.startsWith('550e8400')) {
-        // For sample jobs, use the sample job manager
-        const application = sampleJobManager.addApplication({
-          jobId,
-          jobTitle: job.title,
-          companyName: job.company.name,
-          location: job.location,
-          salary: job.salary,
-          type: job.type
-        })
-        
-        if (application) {
-          toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
-            description: 'Your application has been saved and will appear in your dashboard.',
-            duration: 5000,
-          })
-          console.log('Sample job application submitted:', jobId)
-          // Force re-render to update button state
-          setJobs([...jobs])
-        } else {
-          toast.error('Failed to submit application. Please try again.')
-        }
-        return
-      }
-      
-      // For real jobs, call the backend
-      const response = await apiService.applyJob(jobId)
+      // Submit application to database for all jobs
+      const response = await apiService.createApplication({
+        jobId,
+        coverLetter: `I am interested in the ${job.title} position at ${job.company.name}.`,
+        expectedSalary: null,
+        noticePeriod: 30,
+        availableFrom: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        isWillingToRelocate: false,
+        preferredLocations: [job.location],
+        resumeId: null
+      })
       
       if (response.success) {
         toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
-          description: 'Your application has been submitted and is under review.',
+          description: 'Your application has been saved and will appear in your dashboard.',
           duration: 5000,
         })
-        console.log('Application submitted:', response.data)
+        console.log('Job application submitted:', jobId)
+        // Update applied jobs state
+        setAppliedJobs(prev => new Set([...prev, jobId]))
         // Force re-render to update button state
         setJobs([...jobs])
       } else {
-        toast.error(response.message || 'Failed to submit application')
+        toast.error(response.message || 'Failed to submit application. Please try again.')
       }
     } catch (error) {
       console.error('Error applying for job:', error)
@@ -461,58 +473,6 @@ export default function JobsPage() {
     "Remote",
     "Work from home",
   ]
-
-  // Filter functions
-  const handleFilterChange = useCallback((filterType: keyof FilterState, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value
-    }))
-
-    // Record search when search query changes
-    if (filterType === 'search' && value && user) {
-      recordSearch(value);
-    }
-  }, [user])
-
-  // Record search in database
-  const recordSearch = useCallback(async (searchQuery: string) => {
-    if (!user || !searchQuery.trim()) return;
-
-    try {
-      const searchData = {
-        searchQuery: searchQuery.trim(),
-        filters: {
-          location: filters.location,
-          experienceLevels: filters.experienceLevels,
-          jobTypes: filters.jobTypes,
-          salaryRange: filters.salaryRange,
-          category: filters.category,
-          type: filters.type
-        },
-        resultsCount: filteredJobs.length,
-        searchType: 'job_search'
-      };
-
-      await apiService.recordSearch(searchData);
-    } catch (error) {
-      console.error('Error recording search:', error);
-      // Don't show error to user as this is background functionality
-    }
-  }, [user, filters, filteredJobs.length]);
-
-  const clearFilters = useCallback(() => {
-    setFilters({
-      search: "",
-      location: "",
-      experienceLevels: [],
-      jobTypes: [],
-      locations: [],
-      salaryRange: "",
-      category: "",
-      type: "",
-    })
-  }, [])
 
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
@@ -581,6 +541,58 @@ export default function JobsPage() {
 
     return filtered
   }, [jobs, filters, sortBy])
+
+  // Record search in database
+  const recordSearch = useCallback(async (searchQuery: string) => {
+    if (!user || !searchQuery.trim()) return;
+
+    try {
+      const searchData = {
+        searchQuery: searchQuery.trim(),
+        filters: {
+          location: filters.location,
+          experienceLevels: filters.experienceLevels,
+          jobTypes: filters.jobTypes,
+          salaryRange: filters.salaryRange,
+          category: filters.category,
+          type: filters.type
+        },
+        resultsCount: filteredJobs.length,
+        searchType: 'job_search'
+      };
+
+      await apiService.recordSearch(searchData);
+    } catch (error) {
+      console.error('Error recording search:', error);
+      // Don't show error to user as this is background functionality
+    }
+  }, [user, filters, filteredJobs.length]);
+
+  // Filter functions
+  const handleFilterChange = useCallback((filterType: keyof FilterState, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }))
+
+    // Record search when search query changes
+    if (filterType === 'search' && value && user) {
+      recordSearch(value);
+    }
+  }, [user, recordSearch])
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      search: "",
+      location: "",
+      experienceLevels: [],
+      jobTypes: [],
+      locations: [],
+      salaryRange: "",
+      category: "",
+      type: "",
+    })
+  }, [])
 
   const getSectorColor = (sector: string) => {
     const colors: { [key: string]: string } = {
@@ -908,6 +920,34 @@ export default function JobsPage() {
                               <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2 mb-4">
                                 {job.description}
                               </p>
+
+                              {/* Job Photos Showcase */}
+                              {job.photos && job.photos.length > 0 && (
+                                <div className="mb-4">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <Camera className="w-4 h-4 text-slate-500" />
+                                    <span className="text-xs text-slate-500 font-medium">Job Showcase</span>
+                                  </div>
+                                  <div className="flex space-x-2 overflow-x-auto">
+                                    {job.photos.slice(0, 3).map((photo: any, photoIndex: number) => (
+                                      <div key={photo.id} className="flex-shrink-0">
+                                        <img
+                                          src={photo.fileUrl}
+                                          alt={photo.altText || `Job photo ${photoIndex + 1}`}
+                                          className="w-16 h-16 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
+                                        />
+                                      </div>
+                                    ))}
+                                    {job.photos.length > 3 && (
+                                      <div className="flex-shrink-0 w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                                        <span className="text-xs text-slate-500 font-medium">
+                                          +{job.photos.length - 3}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -941,13 +981,13 @@ export default function JobsPage() {
                                 handleApply(job.id)
                               }}
                               className={`text-xs sm:text-sm ${
-                                sampleJobManager.hasApplied(job.id) 
+                                appliedJobs.has(job.id)
                                   ? 'bg-green-600 hover:bg-green-700 cursor-default' 
                                   : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                               }`}
-                              disabled={sampleJobManager.hasApplied(job.id)}
+                              disabled={appliedJobs.has(job.id)}
                             >
-                              {sampleJobManager.hasApplied(job.id) ? (
+                              {appliedJobs.has(job.id) ? (
                                 <>
                                   <CheckCircle className="w-4 h-4 mr-1" />
                                   Applied
@@ -958,17 +998,14 @@ export default function JobsPage() {
                             </Button>
                             
                             {/* Show undo button if already applied */}
-                            {sampleJobManager.hasApplied(job.id) && (
+                            {appliedJobs.has(job.id) && (
                               <Button
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  if (sampleJobManager.removeApplication(job.id)) {
-                                    toast.success('Application withdrawn successfully')
-                                    setJobs([...jobs]) // Force re-render to update button state
-                                  } else {
-                                    toast.error('Failed to withdraw application')
-                                  }
+                                  // Note: Withdrawing applications would require the application ID
+                                  // For now, we'll show a message that this feature needs the application ID
+                                  toast.error('To withdraw application, please go to your dashboard')
                                 }}
                                 variant="outline"
                                 size="sm"

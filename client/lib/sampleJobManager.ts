@@ -81,6 +81,11 @@ class SampleJobManager {
 
   private loadFromStorage() {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      
       const storedApplications = localStorage.getItem('sampleJobApplications');
       const storedBookmarks = localStorage.getItem('sampleJobBookmarks');
       
@@ -97,6 +102,11 @@ class SampleJobManager {
 
   private saveToStorage() {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      
       localStorage.setItem('sampleJobApplications', JSON.stringify(this.applications));
       localStorage.setItem('sampleJobBookmarks', JSON.stringify(this.bookmarks));
     } catch (error) {
@@ -329,5 +339,27 @@ class SampleJobManager {
   }
 }
 
-export const sampleJobManager = SampleJobManager.getInstance();
+// Export singleton instance - lazy initialization to avoid SSR issues
+export const sampleJobManager = (() => {
+  if (typeof window === 'undefined') {
+    // Return a mock object during SSR
+    return {
+      getApplications: () => [],
+      getBookmarks: () => [],
+      addApplication: () => false,
+      addBookmark: () => false,
+      removeApplication: () => false,
+      removeBookmark: () => false,
+      hasApplied: () => false,
+      hasBookmarked: () => false,
+      updateBookmark: () => false,
+      deleteBookmark: () => false,
+      addListener: () => {},
+      removeListener: () => {},
+      setCurrentUser: () => {},
+      initializeFromStorage: () => {}
+    };
+  }
+  return SampleJobManager.getInstance();
+})();
 export type { SampleJobApplication, SampleJobBookmark };
