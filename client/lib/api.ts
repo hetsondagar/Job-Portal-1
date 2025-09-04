@@ -1277,6 +1277,49 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  // Record search endpoint
+  async recordSearch(searchData: {
+    searchQuery: string;
+    filters: any;
+    resultsCount: number;
+    searchType: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/search-history`, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(searchData),
+      });
+
+      return this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('Error recording search:', error);
+      throw error;
+    }
+  }
+
+  // Update dashboard stats endpoint
+  async updateDashboardStats(updates: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/dashboard-stats`, {
+        method: 'PUT',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      return this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('Error updating dashboard stats:', error);
+      throw error;
+    }
+  }
+
   // Job Template endpoints
   async getJobTemplates(params?: {
     category?: string;
@@ -1322,7 +1365,7 @@ class ApiService {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
-    });
+      });
 
     return this.handleResponse<any>(response);
   }
@@ -1369,6 +1412,7 @@ class ApiService {
     });
 
     return this.handleResponse<any>(response);
+  }
   }
 }
 
