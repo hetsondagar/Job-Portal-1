@@ -65,12 +65,6 @@ export default function CompanyDetailPage() {
   }, [])
 
   // Fetch company data
-  useEffect(() => {
-    if (params.id) {
-      fetchCompanyData()
-      fetchCompanyJobs()
-    }
-  }, [params.id, fetchCompanyData, fetchCompanyJobs])
 
   const fetchCompanyData = useCallback(async () => {
     try {
@@ -121,6 +115,13 @@ export default function CompanyDetailPage() {
       setLoadingJobs(false)
     }
   }, [params.id])
+
+  useEffect(() => {
+    if (params.id) {
+      fetchCompanyData()
+      fetchCompanyJobs()
+    }
+  }, [params.id, fetchCompanyData, fetchCompanyJobs])
 
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {

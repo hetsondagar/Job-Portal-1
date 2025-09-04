@@ -29,7 +29,6 @@ import { Navbar } from '@/components/navbar'
 
 import { toast } from 'sonner'
 import { apiService, DashboardStats, Resume, JobBookmark, JobAlert } from '@/lib/api'
-import { sampleJobManager } from '@/lib/sampleJobManager'
 
 export default function DashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -92,38 +91,16 @@ export default function DashboardPage() {
     try {
       setApplicationsLoading(true)
       
-      // Get backend applications
-      let backendApplications: any[] = []
-      try {
-        const response = await apiService.getApplications()
-        if (response.success && response.data) {
-          backendApplications = response.data
-        }
-      } catch (error) {
-        console.error('Error fetching backend applications:', error)
+      // Fetch applications from database only
+      const response = await apiService.getApplications()
+      if (response.success && response.data) {
+        setApplications(response.data)
+      } else {
+        setApplications([])
       }
-      
-      // Get sample applications and combine with backend
-      const sampleApplications = sampleJobManager.getApplications()
-      const combinedApplications = [
-        ...sampleApplications.map(app => ({
-          ...app,
-          isSample: true,
-          id: `sample-${app.jobId}`,
-          job: {
-            id: app.jobId,
-            title: app.jobTitle,
-            company: { name: app.companyName },
-            location: app.location,
-            salary: app.salary,
-            type: app.type
-          }
-        })),
-        ...backendApplications
-      ]
-      setApplications(combinedApplications)
     } catch (error) {
       console.error('Error fetching applications:', error)
+      setApplications([])
     } finally {
       setApplicationsLoading(false)
     }
@@ -138,28 +115,12 @@ export default function DashboardPage() {
     await fetchApplications()
   }
 
-  // Listen for storage changes to refresh dashboard when applications are submitted
+  // Listen for user changes to refresh dashboard data
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'sampleJobApplications' || e.key === 'sampleJobBookmarks') {
-        refreshDashboard()
-      }
-    }
-
-    // Add listener to sample job manager
-    const handleApplicationUpdate = () => {
+    if (user) {
       refreshDashboard()
     }
-
-    sampleJobManager.addListener(handleApplicationUpdate)
-
-    window.addEventListener('storage', handleStorageChange)
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      sampleJobManager.removeListener(handleApplicationUpdate)
-    }
-  }, [])
+  }, [user])
 
   const fetchResumes = async () => {
     try {
@@ -176,38 +137,16 @@ export default function DashboardPage() {
     try {
       setBookmarksLoading(true)
       
-      // Get backend bookmarks
-      let backendBookmarks: any[] = []
-      try {
-        const response = await apiService.getBookmarks()
-        if (response.success && response.data) {
-          backendBookmarks = response.data
-        }
-      } catch (error) {
-        console.error('Error fetching backend bookmarks:', error)
+      // Fetch bookmarks from database only
+      const response = await apiService.getBookmarks()
+      if (response.success && response.data) {
+        setBookmarks(response.data)
+      } else {
+        setBookmarks([])
       }
-      
-      // Get sample bookmarks and combine with backend
-      const sampleBookmarks = sampleJobManager.getBookmarks()
-      const combinedBookmarks = [
-        ...sampleBookmarks.map(book => ({
-          ...book,
-          isSample: true,
-          id: `sample-${book.jobId}`,
-          job: {
-            id: book.jobId,
-            title: book.jobTitle,
-            company: { name: book.companyName },
-            location: book.location,
-            salary: book.salary,
-            type: book.type
-          }
-        })),
-        ...backendBookmarks
-      ]
-      setBookmarks(combinedBookmarks)
     } catch (error) {
       console.error('Error fetching bookmarks:', error)
+      setBookmarks([])
     } finally {
       setBookmarksLoading(false)
     }
@@ -271,19 +210,14 @@ export default function DashboardPage() {
 
   const handleUndoApplication = async (application: any) => {
     try {
-      if (application.isSample) {
-        // For sample applications, remove from local storage
-        const removed = sampleJobManager.removeApplication(application.job.id)
-        if (removed) {
-          toast.success('Application withdrawn successfully')
-          fetchApplications() // Refresh applications list
-        } else {
-          toast.error('Failed to withdraw application')
-        }
+      // Update application status to withdrawn in database
+      const response = await apiService.updateApplicationStatus(application.id, 'withdrawn')
+      if (response.success) {
+        toast.success('Application withdrawn successfully')
+        fetchApplications() // Refresh applications list
+        fetchDashboardStats() // Refresh dashboard stats
       } else {
-        // For real applications, call backend API to withdraw
-        // Note: This would require a backend endpoint for withdrawing applications
-        toast.error('Withdrawing real applications is not yet supported')
+        toast.error(response.message || 'Failed to withdraw application')
       }
     } catch (error) {
       console.error('Error withdrawing application:', error)
@@ -504,30 +438,14 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/search-history">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
-                <CardContent className="p-6 h-full flex flex-col justify-center">
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Search className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Search History</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">Recent searches</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
             <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
               <CardContent className="p-6 h-full flex flex-col justify-center">
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Search className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Searches</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">Search History</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       {statsLoading ? 'Loading...' : `${stats?.stats?.totalSearches || 0} searches performed`}
                     </p>
@@ -542,7 +460,7 @@ export default function DashboardPage() {
                       size="sm" 
                       variant="outline"
                       onClick={() => router.push('/search-history')}
-                      className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                      className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-900/20"
                     >
                       View History
                     </Button>
@@ -551,7 +469,7 @@ export default function DashboardPage() {
                         size="sm" 
                         variant="outline"
                         onClick={() => router.push('/search-history?tab=saved')}
-                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                        className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-900/20"
                       >
                         Saved Searches
                       </Button>

@@ -10,6 +10,7 @@ const Analytics = sequelize.define('Analytics', {
   userId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'

@@ -24,6 +24,7 @@ const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const Payment = require('../models/Payment');
 const Analytics = require('../models/Analytics');
+const JobPhoto = require('../models/JobPhoto');
 
 // Define associations
 
@@ -55,6 +56,7 @@ Job.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
 Job.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
 Job.hasMany(JobApplication, { foreignKey: 'jobId', as: 'jobApplications' });
 Job.hasMany(JobBookmark, { foreignKey: 'jobId', as: 'bookmarks' });
+Job.hasMany(JobPhoto, { foreignKey: 'jobId', as: 'photos' });
 
 // JobCategory associations
 JobCategory.belongsTo(JobCategory, { foreignKey: 'parentId', as: 'parent' });
@@ -69,6 +71,10 @@ JobApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'jobResume' });
 // JobBookmark associations
 JobBookmark.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 JobBookmark.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+
+// JobPhoto associations
+JobPhoto.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+JobPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 
 // JobAlert associations
 JobAlert.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -199,5 +205,6 @@ module.exports = {
   Conversation,
   Payment,
   Analytics,
+  JobPhoto,
   syncDatabase
 }; 
