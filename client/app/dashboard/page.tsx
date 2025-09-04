@@ -520,6 +520,47 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-6 h-full flex flex-col justify-center">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Searches</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {statsLoading ? 'Loading...' : `${stats?.stats?.totalSearches || 0} searches performed`}
+                    </p>
+                    {stats?.stats?.savedSearches > 0 && (
+                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        {stats.stats.savedSearches} saved searches
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex space-x-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => router.push('/search-history')}
+                      className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                    >
+                      View History
+                    </Button>
+                    {stats?.stats?.savedSearches > 0 && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => router.push('/search-history?tab=saved')}
+                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                      >
+                        Saved Searches
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card 
               className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full"
               onClick={() => router.push('/resumes')}

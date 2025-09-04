@@ -80,6 +80,66 @@ const Resume = sequelize.define('Resume', {
     },
     beforeUpdate: async (resume) => {
       resume.lastUpdated = new Date();
+    },
+    afterCreate: async (resume) => {
+      try {
+        const DashboardService = require('../services/dashboardService');
+        await DashboardService.updateDashboardStats(resume.userId, {
+          totalResumes: sequelize.literal('totalResumes + 1'),
+          hasDefaultResume: resume.isDefault,
+          lastResumeUpdate: new Date()
+        });
+        
+        // Record activity
+        await DashboardService.recordActivity(resume.userId, 'resume_upload', {
+          resumeId: resume.id,
+          title: resume.title,
+          isDefault: resume.isDefault
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after resume creation:', error);
+      }
+    },
+    afterUpdate: async (resume) => {
+      try {
+        const DashboardService = require('../services/dashboardService');
+        
+        const updates = {
+          lastResumeUpdate: new Date()
+        };
+        
+        // Check if default status changed
+        if (resume.changed('isDefault')) {
+          updates.hasDefaultResume = resume.isDefault;
+        }
+        
+        await DashboardService.updateDashboardStats(resume.userId, updates);
+        
+        // Record activity
+        await DashboardService.recordActivity(resume.userId, 'resume_update', {
+          resumeId: resume.id,
+          title: resume.title,
+          changes: resume.changed()
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after resume update:', error);
+      }
+    },
+    afterDestroy: async (resume) => {
+      try {
+        const DashboardService = require('../services/dashboardService');
+        await DashboardService.updateDashboardStats(resume.userId, {
+          totalResumes: sequelize.literal('totalResumes - 1')
+        });
+        
+        // Record activity
+        await DashboardService.recordActivity(resume.userId, 'resume_delete', {
+          resumeId: resume.id,
+          title: resume.title
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after resume deletion:', error);
+      }
     }
   }
 });

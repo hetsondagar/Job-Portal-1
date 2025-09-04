@@ -795,153 +795,183 @@ router.get('/search-history', authenticateToken, async (req, res) => {
   }
 });
 
-// Dashboard Stats endpoint
-router.get('/dashboard-stats', authenticateToken, async (req, res) => {
+// Enhanced Search History endpoints using SearchHistory model
+router.get('/search-history/enhanced', authenticateToken, async (req, res) => {
   try {
-    const JobApplication = require('../models/JobApplication');
-    const Analytics = require('../models/Analytics');
-    const Job = require('../models/Job');
+    const DashboardService = require('../services/dashboardService');
     
-    console.log('📊 Fetching dashboard stats for user:', req.user.id);
-    
-    // Get application count with error handling
-    let applicationCount = 0;
-    try {
-      applicationCount = await JobApplication.count({
-        where: { userId: req.user.id }
-      });
-      console.log('✅ Application count:', applicationCount);
-    } catch (error) {
-      console.error('❌ Error fetching application count:', error);
-      // If JobApplication table doesn't exist or has issues, just set to 0
-      applicationCount = 0;
-    }
-
-    // Get profile views with error handling
-    let profileViews = 0;
-    try {
-      // Try to get profile views, but handle if the column doesn't exist
-      profileViews = await Analytics.count({
-        where: { 
-          userId: req.user.id,
-          eventType: 'profile_view'
-        }
-      });
-      console.log('✅ Profile views:', profileViews);
-    } catch (error) {
-      console.error('❌ Error fetching profile views:', error);
-      // If the query fails, try a simpler query without eventType
-      try {
-        profileViews = await Analytics.count({
-          where: { userId: req.user.id }
-        });
-        console.log('✅ Fallback profile views (all events):', profileViews);
-      } catch (fallbackError) {
-        console.error('❌ Fallback profile views also failed:', fallbackError);
-        // If Analytics table doesn't exist or has issues, just set to 0
-        profileViews = 0;
-      }
-    }
-
-    // Get recent applications with error handling
-    let recentApplications = [];
-    try {
-      recentApplications = await JobApplication.findAll({
-        where: { userId: req.user.id },
-        order: [['applied_at', 'DESC']],
-        limit: 5,
-        include: [
-          {
-            model: Job,
-            as: 'job',
-            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax']
-          }
-        ]
-      });
-      console.log('✅ Recent applications:', recentApplications.length);
-    } catch (error) {
-      console.error('❌ Error fetching recent applications:', error);
-      // Try without the include if it fails
-      try {
-        recentApplications = await JobApplication.findAll({
-          where: { userId: req.user.id },
-          order: [['applied_at', 'DESC']],
-          limit: 5
-        });
-        console.log('✅ Recent applications (without job details):', recentApplications.length);
-      } catch (fallbackError) {
-        console.error('❌ Fallback recent applications also failed:', fallbackError);
-        // If JobApplication table doesn't exist or has issues, just set to empty array
-        recentApplications = [];
-      }
-    }
-
-    // For employers, also get job posting stats
-    let jobStats = {};
-    if (req.user.user_type === 'employer') {
-      try {
-        const activeJobs = await Job.count({
-          where: { 
-            employerId: req.user.id,
-            status: 'active'
-          }
-        });
-        
-        const totalApplications = await JobApplication.count({
-          include: [{
-            model: Job,
-            as: 'job',
-            where: { employerId: req.user.id }
-          }]
-        });
-        
-        jobStats = {
-          activeJobs,
-          totalApplications
-        };
-        console.log('✅ Employer job stats:', jobStats);
-      } catch (error) {
-        console.error('❌ Error fetching employer job stats:', error);
-        // Try simpler queries if the complex ones fail
-        try {
-          const activeJobs = await Job.count({
-            where: { employerId: req.user.id }
-          });
-          
-          const totalApplications = await JobApplication.count({
-            where: { employerId: req.user.id }
-          });
-          
-          jobStats = {
-            activeJobs,
-            totalApplications
-          };
-          console.log('✅ Employer job stats (simplified):', jobStats);
-        } catch (fallbackError) {
-          console.error('❌ Fallback employer job stats also failed:', fallbackError);
-          jobStats = { activeJobs: 0, totalApplications: 0 };
-        }
-      }
-    }
-
-    const stats = {
-      applicationCount,
-      profileViews,
-      recentApplications,
-      ...jobStats
-    };
-
-    console.log('✅ Dashboard stats prepared successfully');
+    const searchHistory = await DashboardService.getSearchHistory(req.user.id, 50);
     
     res.json({
       success: true,
-      data: stats
+      data: searchHistory
     });
   } catch (error) {
-    console.error('❌ Error fetching dashboard stats:', error);
+    console.error('Error fetching enhanced search history:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch dashboard stats',
+      message: 'Failed to fetch enhanced search history'
+    });
+  }
+});
+
+// Save search as favorite
+router.post('/search-history/:id/save', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    const { id } = req.params;
+    
+    const savedSearch = await DashboardService.saveSearch(req.user.id, id);
+    
+    res.json({
+      success: true,
+      data: savedSearch,
+      message: 'Search saved successfully'
+    });
+  } catch (error) {
+    console.error('Error saving search:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save search'
+    });
+  }
+});
+
+// Remove saved search
+router.delete('/search-history/:id/save', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    const { id } = req.params;
+    
+    const removedSearch = await DashboardService.removeSavedSearch(req.user.id, id);
+    
+    res.json({
+      success: true,
+      data: removedSearch,
+      message: 'Search removed from favorites'
+    });
+  } catch (error) {
+    console.error('Error removing saved search:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove saved search'
+    });
+  }
+});
+
+// Record new search
+router.post('/search-history', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    const { searchQuery, filters, resultsCount, searchType } = req.body;
+    
+    const searchData = {
+      userId: req.user.id,
+      searchQuery,
+      filters,
+      resultsCount,
+      searchType,
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip
+    };
+    
+    const recordedSearch = await DashboardService.recordSearch(searchData);
+    
+    res.status(201).json({
+      success: true,
+      data: recordedSearch,
+      message: 'Search recorded successfully'
+    });
+  } catch (error) {
+    console.error('Error recording search:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record search'
+    });
+  }
+});
+
+// Dashboard Stats endpoint
+router.get('/dashboard-stats', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    
+    console.log('📊 Fetching comprehensive dashboard data for user:', req.user.id);
+    
+    // Get comprehensive dashboard data
+    const dashboardData = await DashboardService.getDashboardData(req.user.id);
+    
+    console.log('✅ Dashboard data fetched successfully');
+    
+    res.json({
+      success: true,
+      data: dashboardData
+    });
+  } catch (error) {
+    console.error('❌ Error fetching dashboard data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard data',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Enhanced Dashboard endpoint with search history
+router.get('/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    
+    console.log('📊 Fetching full dashboard for user:', req.user.id);
+    
+    // Get comprehensive dashboard data including search history
+    const dashboardData = await DashboardService.getDashboardData(req.user.id);
+    
+    // Record dashboard view activity
+    await DashboardService.recordActivity(req.user.id, 'dashboard_view', {
+      timestamp: new Date(),
+      userAgent: req.headers['user-agent']
+    });
+    
+    console.log('✅ Full dashboard data fetched successfully');
+    
+    res.json({
+      success: true,
+      data: dashboardData
+    });
+  } catch (error) {
+    console.error('❌ Error fetching full dashboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Update dashboard stats endpoint
+router.put('/dashboard-stats', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    const updates = req.body;
+    
+    console.log('📊 Updating dashboard stats for user:', req.user.id, updates);
+    
+    // Update dashboard stats
+    const updatedDashboard = await DashboardService.updateDashboardStats(req.user.id, updates);
+    
+    console.log('✅ Dashboard stats updated successfully');
+    
+    res.json({
+      success: true,
+      data: updatedDashboard,
+      message: 'Dashboard stats updated successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error updating dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update dashboard stats',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

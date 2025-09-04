@@ -78,19 +78,54 @@ const JobBookmark = sequelize.define('JobBookmark', {
   ],
   hooks: {
     afterCreate: async (bookmark) => {
-      // Update job bookmark count
-      const { Job } = require('../config/index');
-      const job = await Job.findByPk(bookmark.job_id);
-      if (job) {
-        await job.increment('bookmarkCount');
+      try {
+        // Update job bookmark count
+        const { Job } = require('../config/index');
+        const job = await Job.findByPk(bookmark.job_id);
+        if (job) {
+          await job.increment('bookmarkCount');
+        }
+        
+        // Update dashboard stats
+        const DashboardService = require('../services/dashboardService');
+        await DashboardService.updateDashboardStats(bookmark.userId, {
+          totalBookmarks: sequelize.literal('totalBookmarks + 1'),
+          lastBookmarkDate: new Date()
+        });
+        
+        // Record activity
+        await DashboardService.recordActivity(bookmark.userId, 'job_bookmark', {
+          jobId: bookmark.jobId,
+          bookmarkId: bookmark.id,
+          action: 'created'
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after bookmark creation:', error);
       }
     },
     afterDestroy: async (bookmark) => {
-      // Update job bookmark count
-      const { Job } = require('../config/index');
-      const job = await Job.findByPk(bookmark.job_id);
-      if (job) {
-        await job.decrement('bookmarkCount');
+      try {
+        // Update job bookmark count
+        const { Job } = require('../config/index');
+        const job = await Job.findByPk(bookmark.job_id);
+        if (job) {
+          await job.decrement('bookmarkCount');
+        }
+        
+        // Update dashboard stats
+        const DashboardService = require('../services/dashboardService');
+        await DashboardService.updateDashboardStats(bookmark.userId, {
+          totalBookmarks: sequelize.literal('totalBookmarks - 1')
+        });
+        
+        // Record activity
+        await DashboardService.recordActivity(bookmark.userId, 'job_bookmark', {
+          jobId: bookmark.jobId,
+          bookmarkId: bookmark.id,
+          action: 'deleted'
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after bookmark deletion:', error);
       }
     }
   }

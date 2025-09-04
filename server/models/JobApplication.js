@@ -158,6 +158,72 @@ const JobApplication = sequelize.define('JobApplication', {
   hooks: {
     beforeUpdate: (application) => {
       application.lastUpdatedAt = new Date();
+    },
+    afterCreate: async (application) => {
+      try {
+        const DashboardService = require('../services/dashboardService');
+        await DashboardService.updateDashboardStats(application.userId, {
+          totalApplications: sequelize.literal('totalApplications + 1'),
+          lastApplicationDate: new Date()
+        });
+        
+        // Record activity
+        await DashboardService.recordActivity(application.userId, 'job_apply', {
+          jobId: application.jobId,
+          applicationId: application.id,
+          status: application.status
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after application creation:', error);
+      }
+    },
+    afterUpdate: async (application) => {
+      try {
+        const DashboardService = require('../services/dashboardService');
+        
+        // Update status-specific counts
+        const updates = {};
+        if (application.changed('status')) {
+          const oldStatus = application._previousDataValues?.status;
+          const newStatus = application.status;
+          
+          // Decrement old status count
+          if (oldStatus === 'reviewing') {
+            updates.applicationsUnderReview = sequelize.literal('applicationsUnderReview - 1');
+          } else if (oldStatus === 'shortlisted') {
+            updates.applicationsShortlisted = sequelize.literal('applicationsShortlisted - 1');
+          } else if (oldStatus === 'rejected') {
+            updates.applicationsRejected = sequelize.literal('applicationsRejected - 1');
+          } else if (oldStatus === 'hired') {
+            updates.applicationsAccepted = sequelize.literal('applicationsAccepted - 1');
+          }
+          
+          // Increment new status count
+          if (newStatus === 'reviewing') {
+            updates.applicationsUnderReview = sequelize.literal('applicationsUnderReview + 1');
+          } else if (newStatus === 'shortlisted') {
+            updates.applicationsShortlisted = sequelize.literal('applicationsShortlisted + 1');
+          } else if (newStatus === 'rejected') {
+            updates.applicationsRejected = sequelize.literal('applicationsRejected + 1');
+          } else if (newStatus === 'hired') {
+            updates.applicationsAccepted = sequelize.literal('applicationsAccepted + 1');
+          }
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          await DashboardService.updateDashboardStats(application.userId, updates);
+        }
+        
+        // Record activity
+        await DashboardService.recordActivity(application.userId, 'application_update', {
+          jobId: application.jobId,
+          applicationId: application.id,
+          status: application.status,
+          changes: application.changed()
+        });
+      } catch (error) {
+        console.error('Error updating dashboard stats after application update:', error);
+      }
     }
   }
 });
