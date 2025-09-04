@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/sequelize');
 
-module.exports = (sequelize) => {
-  const JobTemplate = sequelize.define('JobTemplate', {
+const JobTemplate = sequelize.define('JobTemplate', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
@@ -18,7 +18,7 @@ module.exports = (sequelize) => {
       comment: 'Template description'
     },
     category: {
-      type: DataTypes.ENUM('technical', 'non-technical', 'management', 'entry-level', 'senior', 'custom'),
+      type: DataTypes.STRING(50),
       allowNull: false,
       defaultValue: 'custom',
       comment: 'Template category for organization'
@@ -73,40 +73,17 @@ module.exports = (sequelize) => {
       allowNull: true,
       comment: 'Company this template belongs to (null for system templates)'
     }
-  }, {
-    tableName: 'job_templates',
-    timestamps: true,
-    indexes: [
-      {
-        fields: ['created_by']
-      },
-      {
-        fields: ['company_id']
-      },
-      {
-        fields: ['category']
-      },
-      {
-        fields: ['is_public']
-      },
-      {
-        fields: ['is_active']
-      }
-    ]
-  });
+}, {
+  tableName: 'job_templates',
+  timestamps: true,
+  indexes: [
+    { fields: ['createdBy'] },
+    { fields: ['companyId'] },
+    { fields: ['category'] },
+    { fields: ['isPublic'] },
+    { fields: ['isActive'] }
+  ]
+});
 
-  JobTemplate.associate = (models) => {
-    JobTemplate.belongsTo(models.User, {
-      foreignKey: 'createdBy',
-      as: 'creator'
-    });
-    
-    JobTemplate.belongsTo(models.Company, {
-      foreignKey: 'companyId',
-      as: 'company'
-    });
-  };
-
-  return JobTemplate;
-};
+module.exports = JobTemplate;
 
