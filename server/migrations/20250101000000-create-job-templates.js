@@ -68,7 +68,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'Users',
+          model: 'users',
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -116,7 +116,7 @@ module.exports = {
           skills: ['Java', 'Python', 'JavaScript', 'AWS', 'Microservices', 'Docker', 'Kubernetes']
         },
         tags: ['engineering', 'senior', 'full-stack', 'remote'],
-        createdBy: Sequelize.literal('(SELECT id FROM "Users" WHERE "userType" = \'admin\' LIMIT 1)'),
+        createdBy: Sequelize.literal('(SELECT id FROM "users" WHERE "userType" = \'admin\' LIMIT 1)'),
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -140,7 +140,7 @@ module.exports = {
           skills: ['Digital Marketing', 'Brand Management', 'Marketing Automation', 'Analytics', 'Social Media']
         },
         tags: ['marketing', 'management', 'strategy', 'digital'],
-        createdBy: Sequelize.literal('(SELECT id FROM "Users" WHERE "userType" = \'admin\' LIMIT 1)'),
+        createdBy: Sequelize.literal('(SELECT id FROM "users" WHERE "userType" = \'admin\' LIMIT 1)'),
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -164,7 +164,7 @@ module.exports = {
           skills: ['HTML', 'CSS', 'JavaScript', 'React', 'Vue.js', 'Responsive Design']
         },
         tags: ['frontend', 'react', 'javascript', 'web-development'],
-        createdBy: Sequelize.literal('(SELECT id FROM "Users" WHERE "userType" = \'admin\' LIMIT 1)'),
+        createdBy: Sequelize.literal('(SELECT id FROM "users" WHERE "userType" = \'admin\' LIMIT 1)'),
         createdAt: new Date(),
         updatedAt: new Date()
       }

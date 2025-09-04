@@ -103,6 +103,15 @@ class DashboardService {
    */
   static async getSearchHistory(userId, limit = 20) {
     try {
+      // Check if the table exists first
+      const tableExists = await sequelize.getQueryInterface().showAllTables();
+      const searchHistoryTableExists = tableExists.some(table => table === 'search_history');
+      
+      if (!searchHistoryTableExists) {
+        console.log('Search history table does not exist, returning empty array');
+        return [];
+      }
+
       const searchHistory = await SearchHistory.findAll({
         where: { userId },
         order: [['createdAt', 'DESC']],
@@ -112,7 +121,9 @@ class DashboardService {
       return searchHistory;
     } catch (error) {
       console.error('Error getting search history:', error);
-      throw error;
+      // Return empty array instead of throwing error to prevent frontend crashes
+      console.log('Returning empty search history due to error');
+      return [];
     }
   }
 

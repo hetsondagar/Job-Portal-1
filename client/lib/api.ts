@@ -303,9 +303,8 @@ class ApiService {
     } finally {
       // Remove from queue when done
       this.requestQueue.delete(endpoint)
-    }
   }
-
+  }
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     console.log('🔍 getAuthHeaders - Token present:', !!token);
@@ -837,6 +836,70 @@ class ApiService {
     });
 
     return this.handleResponse<any[]>(response);
+  }
+
+  async createApplication(data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/applications`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async updateApplicationStatus(applicationId: string, status: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/applications/${applicationId}/status`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getEmployerApplications(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/employer/applications`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
+  // Job Photos endpoints
+  async uploadJobPhoto(formData: FormData): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-photos/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.getToken()}`,
+      },
+      body: formData,
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getJobPhotos(jobId: string): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/jobs/${jobId}/photos`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
+  async deleteJobPhoto(photoId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-photos/${photoId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
   }
 
   // Job Alerts endpoints

@@ -3,6 +3,7 @@
 const Job = require('../models/Job');
 const Company = require('../models/Company');
 const User = require('../models/User');
+const JobPhoto = require('../models/JobPhoto');
 
 /**
  * Create a new job
@@ -315,6 +316,13 @@ exports.getAllJobs = async (req, res, next) => {
           as: 'employer',
           attributes: ['id', 'firstName', 'lastName', 'email'],
           required: false
+        },
+        {
+          model: JobPhoto,
+          as: 'photos',
+          attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
+          where: { isActive: true },
+          required: false
         }
       ],
       order: [[sortBy, sortOrder]],
@@ -362,6 +370,14 @@ exports.getJobById = async (req, res, next) => {
           model: User,
           as: 'postedByUser',
           attributes: ['id', 'firstName', 'lastName', 'email']
+        },
+        {
+          model: JobPhoto,
+          as: 'photos',
+          attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
+          where: { isActive: true },
+          required: false,
+          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
         }
       ]
     });

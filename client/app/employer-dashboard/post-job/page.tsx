@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Eye, Send, AlertCircle } from "lucide-react"
+import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,6 +41,9 @@ export default function PostJobPage() {
     benefits: "",
     skills: [] as string[],
   })
+  const [jobPhotos, setJobPhotos] = useState<any[]>([])
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const [uploadedJobId, setUploadedJobId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
@@ -49,7 +52,8 @@ export default function PostJobPage() {
     { id: 1, title: "Job Details", description: "Basic job information" },
     { id: 2, title: "Requirements", description: "Job requirements and skills" },
     { id: 3, title: "Benefits & Perks", description: "What you offer" },
-    { id: 4, title: "Review & Post", description: "Final review" },
+    { id: 4, title: "Photos", description: "Showcase your workplace" },
+    { id: 5, title: "Review & Post", description: "Final review" },
   ]
 
   // Load job data when editing or template data from URL
@@ -73,6 +77,7 @@ export default function PostJobPage() {
             console.log('✅ Job data loaded:', jobData);
             
             setEditingJobId(jobId);
+            setUploadedJobId(jobId);
             setFormData({
               title: jobData.title || '',
               department: jobData.department || '',
@@ -85,6 +90,16 @@ export default function PostJobPage() {
               benefits: jobData.benefits || '',
               skills: jobData.skills || [],
             });
+            
+            // Load existing job photos
+            try {
+              const photosResponse = await apiService.getJobPhotos(jobId);
+              if (photosResponse.success) {
+                setJobPhotos(photosResponse.data || []);
+              }
+            } catch (photoError) {
+              console.error('Failed to load job photos:', photoError);
+            }
             
             const isDraft = jobData.status === 'draft';
             toast.success(`${isDraft ? 'Draft' : 'Job'} loaded successfully! Continue editing where you left off.`);
@@ -246,10 +261,14 @@ export default function PostJobPage() {
         // Update existing job
         console.log('🔄 Updating existing job:', editingJobId);
         response = await apiService.updateJob(editingJobId, jobData);
+        setUploadedJobId(editingJobId);
       } else {
         // Create new draft
         console.log('🆕 Creating new draft');
         response = await apiService.postJob(jobData);
+        if (response.success && response.data?.id) {
+          setUploadedJobId(response.data.id);
+        }
       }
       
       if (response.success) {
@@ -328,10 +347,14 @@ export default function PostJobPage() {
          // Update existing job to active status
          console.log('🔄 Publishing existing job:', editingJobId);
          response = await apiService.updateJob(editingJobId, jobData);
+         setUploadedJobId(editingJobId);
        } else {
          // Create new job
          console.log('🆕 Creating new job');
          response = await apiService.postJob(jobData);
+         if (response.success && response.data?.id) {
+           setUploadedJobId(response.data.id);
+         }
        }
       
              if (response.success) {
@@ -390,6 +413,82 @@ export default function PostJobPage() {
       router.push('/employer-login')
     } else {
       router.push('/employer-register')
+    }
+  }
+
+  // Photo upload functions
+  const handlePhotoUpload = async (files: FileList) => {
+    if (!uploadedJobId) {
+      toast.error('Please save the job first before uploading photos')
+      return
+    }
+
+    setUploadingPhotos(true)
+    const uploadPromises = Array.from(files).map(async (file) => {
+      const formData = new FormData()
+      formData.append('photo', file)
+      formData.append('jobId', uploadedJobId)
+      formData.append('altText', `Job photo for ${formData.title}`)
+      formData.append('displayOrder', jobPhotos.length.toString())
+      formData.append('isPrimary', (jobPhotos.length === 0).toString())
+
+      try {
+        const response = await apiService.uploadJobPhoto(formData)
+        if (response.success) {
+          return response.data
+        } else {
+          throw new Error(response.message || 'Upload failed')
+        }
+      } catch (error) {
+        console.error('Photo upload error:', error)
+        throw error
+      }
+    })
+
+    try {
+      const uploadedPhotos = await Promise.all(uploadPromises)
+      setJobPhotos(prev => [...prev, ...uploadedPhotos])
+      toast.success(`${uploadedPhotos.length} photo(s) uploaded successfully!`)
+    } catch (error: any) {
+      console.error('Photo upload failed:', error)
+      toast.error('Failed to upload photos. Please try again.')
+    } finally {
+      setUploadingPhotos(false)
+    }
+  }
+
+  const handlePhotoDelete = async (photoId: string) => {
+    try {
+      const response = await apiService.deleteJobPhoto(photoId)
+      if (response.success) {
+        setJobPhotos(prev => prev.filter(photo => photo.photoId !== photoId))
+        toast.success('Photo deleted successfully!')
+      } else {
+        toast.error('Failed to delete photo')
+      }
+    } catch (error) {
+      console.error('Photo deletion error:', error)
+      toast.error('Failed to delete photo')
+    }
+  }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files && files.length > 0) {
+      handlePhotoUpload(files)
+    }
+  }
+
+  // Navigation handlers
+  const goToNextStep = () => {
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
     }
   }
 
@@ -697,6 +796,102 @@ export default function PostJobPage() {
         return (
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4">Job Photos</h3>
+              <p className="text-blue-700 mb-4">
+                Showcase your workplace, team, or company culture with photos. This helps job seekers get a better sense of your work environment.
+              </p>
+              
+              {!uploadedJobId && (
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Please save your job as a draft first before uploading photos.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {uploadedJobId && (
+                <div className="space-y-4">
+                  {/* Upload Area */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="photo-upload"
+                      disabled={uploadingPhotos}
+                    />
+                    <label htmlFor="photo-upload" className="cursor-pointer">
+                      <div className="flex flex-col items-center space-y-2">
+                        {uploadingPhotos ? (
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        ) : (
+                          <Upload className="w-8 h-8 text-gray-400" />
+                        )}
+                        <div className="text-sm text-gray-600">
+                          {uploadingPhotos ? 'Uploading photos...' : 'Click to upload photos or drag and drop'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          PNG, JPG, GIF up to 5MB each
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Uploaded Photos */}
+                  {jobPhotos.length > 0 && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900">Uploaded Photos ({jobPhotos.length})</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {jobPhotos.map((photo, index) => (
+                          <div key={photo.photoId} className="relative group">
+                            <img
+                              src={photo.fileUrl}
+                              alt={photo.altText || `Job photo ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handlePhotoDelete(photo.photoId)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {photo.isPrimary && (
+                              <div className="absolute top-2 left-2">
+                                <Badge className="bg-blue-600 text-white text-xs">Primary</Badge>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tips */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h5 className="font-medium text-gray-900 mb-2">Photo Tips:</h5>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Show your office space, team, or work environment</li>
+                      <li>• Include photos of company events or team activities</li>
+                      <li>• Make sure photos are well-lit and professional</li>
+                      <li>• The first photo will be used as the primary showcase image</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-4">Job Preview</h3>
               <div className="space-y-4">
                 <div>
@@ -715,6 +910,29 @@ export default function PostJobPage() {
                   <h5 className="font-semibold text-gray-900">Requirements</h5>
                   <p className="text-gray-700 mt-1">{formData.requirements || "No requirements provided"}</p>
                 </div>
+                {jobPhotos.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900 mb-2">Job Showcase</h5>
+                    <div className="flex space-x-2 overflow-x-auto">
+                      {jobPhotos.slice(0, 4).map((photo, index) => (
+                        <div key={photo.photoId} className="flex-shrink-0">
+                          <img
+                            src={photo.fileUrl}
+                            alt={photo.altText || `Job photo ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                          />
+                        </div>
+                      ))}
+                      {jobPhotos.length > 4 && (
+                        <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                          <span className="text-xs text-gray-500 font-medium">
+                            +{jobPhotos.length - 4}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="space-y-4">
@@ -853,7 +1071,7 @@ export default function PostJobPage() {
                  <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
                    <div>
                      {currentStep > 1 && (
-                       <Button variant="outline" onClick={handlePrevious}>
+                       <Button variant="outline" onClick={goToPreviousStep}>
                          Previous
                        </Button>
                      )}
@@ -868,7 +1086,7 @@ export default function PostJobPage() {
                        {savingDraft ? 'Saving...' : editingJobId ? 'Save Changes' : 'Save Draft'}
                      </Button>
                      {currentStep < steps.length ? (
-                       <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+                       <Button onClick={goToNextStep} className="bg-blue-600 hover:bg-blue-700">
                          Next Step
                        </Button>
                      ) : (

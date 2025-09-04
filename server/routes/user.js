@@ -77,6 +77,42 @@ const avatarUpload = multer({
   }
 });
 
+// Configure multer for job photo uploads
+const jobPhotoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/job-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      console.log('📁 Created uploads/job-photos directory');
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    const filename = 'job-photo-' + uniqueSuffix + extension;
+    console.log('📄 Generated job photo filename:', filename);
+    cb(null, filename);
+  }
+});
+
+const jobPhotoUpload = multer({
+  storage: jobPhotoStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit for job photos
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    console.log('🔍 Job photo file type check:', ext, 'Allowed:', allowedTypes);
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed for job photos'));
+    }
+  }
+});
+
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
@@ -542,6 +578,203 @@ router.get('/applications', authenticateToken, async (req, res) => {
   }
 });
 
+// Create job application
+router.post('/applications', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication, Job, User } = require('../config/index');
+    const { jobId, coverLetter, expectedSalary, noticePeriod, availableFrom, isWillingToRelocate, preferredLocations, resumeId } = req.body;
+    
+    // Validate required fields
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job ID is required'
+      });
+    }
+
+    // Check if job exists and get employer info
+    const job = await Job.findByPk(jobId, {
+      include: [
+        {
+          model: User,
+          as: 'employer',
+          attributes: ['id']
+        }
+      ]
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Check if user already applied for this job
+    const existingApplication = await JobApplication.findOne({
+      where: { 
+        jobId, 
+        userId: req.user.id 
+      }
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already applied for this job'
+      });
+    }
+
+    // Create application
+    const applicationData = {
+      jobId,
+      userId: req.user.id,
+      employerId: job.employer.id,
+      coverLetter,
+      expectedSalary,
+      noticePeriod,
+      availableFrom,
+      isWillingToRelocate,
+      preferredLocations,
+      resumeId,
+      source: 'website'
+    };
+
+    const application = await JobApplication.create(applicationData);
+
+    // Send email notification to employer
+    try {
+      const emailService = require('../services/emailService');
+      const employer = await User.findByPk(job.employer.id);
+      const applicant = await User.findByPk(req.user.id);
+      
+      if (employer && applicant) {
+        await emailService.sendApplicationNotification(
+          employer.email,
+          `${employer.firstName} ${employer.lastName}`,
+          job.title,
+          `${applicant.firstName} ${applicant.lastName}`,
+          applicant.email
+        );
+        console.log('✅ Application notification sent to employer:', employer.email);
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send application notification:', emailError);
+      // Don't fail the application if email fails
+    }
+
+    res.status(201).json({
+      success: true,
+      data: application,
+      message: 'Application submitted successfully'
+    });
+  } catch (error) {
+    console.error('Error creating job application:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit application'
+    });
+  }
+});
+
+// Get applications for employer's jobs
+router.get('/employer/applications', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication, Job, Company, User } = require('../config/index');
+    
+    // Check if user is an employer
+    if (req.user.userType !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can view job applications.'
+      });
+    }
+    
+    const applications = await JobApplication.findAll({
+      where: { employerId: req.user.id },
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          include: [
+            {
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+            }
+          ]
+        },
+        {
+          model: User,
+          as: 'applicant',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatar']
+        },
+        {
+          model: Resume,
+          as: 'jobResume',
+          attributes: ['id', 'title', 'summary', 'isDefault', 'lastUpdated']
+        }
+      ],
+      order: [['appliedAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: applications
+    });
+  } catch (error) {
+    console.error('Error fetching employer applications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch applications'
+    });
+  }
+});
+
+// Update application status (for withdrawing applications)
+router.put('/applications/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication } = require('../config/index');
+    const { status } = req.body;
+    
+    const application = await JobApplication.findOne({
+      where: { 
+        id: req.params.id, 
+        userId: req.user.id 
+      }
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
+    // Check if the status change is allowed
+    if (status === 'withdrawn' && !application.canWithdraw()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot withdraw application at this stage'
+      });
+    }
+
+    await application.update({ status });
+
+    res.json({
+      success: true,
+      data: application,
+      message: 'Application status updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating application status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update application status'
+    });
+  }
+});
+
 // Job Alerts endpoints
 router.get('/job-alerts', authenticateToken, async (req, res) => {
   try {
@@ -771,17 +1004,10 @@ router.delete('/bookmarks/:id', authenticateToken, async (req, res) => {
 // Search History endpoints
 router.get('/search-history', authenticateToken, async (req, res) => {
   try {
-    const { Analytics } = require('../config/index');
+    const DashboardService = require('../services/dashboardService');
     
-    const searchHistory = await Analytics.findAll({
-      where: { 
-        userId: req.user.id,
-        eventType: 'search_performed'
-      },
-      order: [['createdAt', 'DESC']],
-      limit: 20
-    });
-
+    const searchHistory = await DashboardService.getSearchHistory(req.user.id, 20);
+    
     res.json({
       success: true,
       data: searchHistory
@@ -1383,6 +1609,185 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
     res.status(500).json({
       success: false,
       message: 'Failed to upload avatar: ' + error.message
+    });
+  }
+});
+
+// Job photo upload endpoint
+router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('photo'), async (req, res) => {
+  try {
+    console.log('🔍 Job photo upload request received');
+    console.log('🔍 File:', req.file);
+    console.log('🔍 User:', req.user.id);
+    console.log('🔍 Body:', req.body);
+
+    if (!req.file) {
+      console.log('❌ No file uploaded');
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const { jobId, altText, caption, isPrimary, displayOrder } = req.body;
+    
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job ID is required'
+      });
+    }
+
+    // Check if user has permission to upload photos for this job
+    const { Job } = require('../config/index');
+    const job = await Job.findByPk(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Check if user is the employer of this job
+    if (job.employerId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only upload photos for your own jobs'
+      });
+    }
+
+    const filename = req.file.filename;
+    const filePath = `/uploads/job-photos/${filename}`;
+    const fileUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}${filePath}`;
+    
+    console.log('🔍 Generated job photo URL:', fileUrl);
+
+    // Create job photo record
+    const { JobPhoto } = require('../config/index');
+    const jobPhoto = await JobPhoto.create({
+      jobId: jobId,
+      filename: req.file.originalname,
+      filePath: filePath,
+      fileUrl: fileUrl,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      altText: altText || `Job photo for ${job.title}`,
+      caption: caption || '',
+      displayOrder: parseInt(displayOrder) || 0,
+      isPrimary: isPrimary === 'true' || isPrimary === true,
+      isActive: true,
+      uploadedBy: req.user.id,
+      metadata: {
+        originalName: req.file.originalname,
+        uploadDate: new Date().toISOString(),
+        uploaderId: req.user.id,
+        uploaderEmail: req.user.email
+      }
+    });
+
+    console.log('✅ Job photo created successfully:', jobPhoto.id);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        photoId: jobPhoto.id,
+        filename: filename,
+        fileUrl: fileUrl,
+        fileSize: req.file.size,
+        originalName: req.file.originalname,
+        altText: jobPhoto.altText,
+        caption: jobPhoto.caption,
+        isPrimary: jobPhoto.isPrimary,
+        displayOrder: jobPhoto.displayOrder
+      },
+      message: 'Job photo uploaded successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error uploading job photo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload job photo: ' + error.message
+    });
+  }
+});
+
+// Get job photos endpoint
+router.get('/jobs/:jobId/photos', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { JobPhoto } = require('../config/index');
+    
+    const photos = await JobPhoto.findAll({
+      where: { 
+        jobId: jobId,
+        isActive: true 
+      },
+      order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: photos
+    });
+  } catch (error) {
+    console.error('Error fetching job photos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch job photos'
+    });
+  }
+});
+
+// Delete job photo endpoint
+router.delete('/job-photos/:photoId', authenticateToken, async (req, res) => {
+  try {
+    const { photoId } = req.params;
+    const { JobPhoto, Job } = require('../config/index');
+    
+    // Find the photo
+    const photo = await JobPhoto.findByPk(photoId, {
+      include: [{
+        model: Job,
+        as: 'job',
+        attributes: ['id', 'employerId', 'title']
+      }]
+    });
+    
+    if (!photo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Photo not found'
+      });
+    }
+
+    // Check if user has permission to delete this photo
+    if (photo.job.employerId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete photos from your own jobs'
+      });
+    }
+
+    // Delete the photo file from filesystem
+    const fullPath = path.join(__dirname, '..', photo.filePath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      console.log('✅ Deleted photo file:', fullPath);
+    }
+
+    // Delete the photo record from database
+    await photo.destroy();
+
+    res.json({
+      success: true,
+      message: 'Photo deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting job photo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete job photo'
     });
   }
 });

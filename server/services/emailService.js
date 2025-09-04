@@ -281,6 +281,70 @@ The Job Portal Team
       return { success: false, message: error.message };
     }
   }
+
+  async sendApplicationNotification(employerEmail, employerName, jobTitle, applicantName, applicantEmail) {
+    try {
+      const subject = `New Application for ${jobTitle}`;
+      
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">New Job Application</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">You have received a new application</p>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-top: 0;">Application Details</h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <h3 style="color: #667eea; margin-top: 0;">Job Position</h3>
+              <p style="font-size: 18px; font-weight: bold; color: #333; margin: 5px 0;">${jobTitle}</p>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <h3 style="color: #667eea; margin-top: 0;">Applicant Information</h3>
+              <p style="margin: 5px 0;"><strong>Name:</strong> ${applicantName}</p>
+              <p style="margin: 5px 0;"><strong>Email:</strong> ${applicantEmail}</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer/dashboard" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
+                View Application
+              </a>
+            </div>
+            
+            <div style="border-top: 1px solid #e9ecef; padding-top: 20px; margin-top: 30px; color: #6c757d; font-size: 14px;">
+              <p>This is an automated notification from Job Portal. Please do not reply to this email.</p>
+              <p>To manage your job postings and applications, visit your employer dashboard.</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const textContent = `
+        New Job Application
+        
+        Dear ${employerName},
+        
+        You have received a new application for the position: ${jobTitle}
+        
+        Applicant Details:
+        - Name: ${applicantName}
+        - Email: ${applicantEmail}
+        
+        Please log in to your employer dashboard to view the full application details and manage this application.
+        
+        Best regards,
+        Job Portal Team
+      `;
+
+      return await this.sendEmail(employerEmail, subject, htmlContent, textContent);
+    } catch (error) {
+      console.error('Error sending application notification:', error);
+      return { success: false, message: error.message };
+    }
+  }
 }
 
 module.exports = new EmailService();
