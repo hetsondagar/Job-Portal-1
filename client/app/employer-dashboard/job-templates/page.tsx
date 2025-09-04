@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, Filter, Edit, Copy, Trash2, Eye, BookOpen, Users, Star, Clock, Globe, Lock } from "lucide-react"
+import { Plus, Search, Filter, Edit, Copy, Trash2, Eye, BookOpen, Users, User, Star, Clock, Globe, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -171,6 +171,26 @@ export default function JobTemplatesPage() {
     }
   }
 
+  const handleCreateJobFromTemplate = async (templateId: string) => {
+    try {
+      // Create job from template
+      const response = await apiService.createJobFromTemplate(templateId)
+      
+      if (response.success) {
+        const job = response.data
+        toast.success('Job created from template successfully!')
+        
+        // Navigate to edit the newly created job
+        window.location.href = `/employer-dashboard/post-job?draft=${job.id}`
+      } else {
+        toast.error(response.message || 'Failed to create job from template')
+      }
+    } catch (error) {
+      console.error('Error creating job from template:', error)
+      toast.error('Failed to create job from template')
+    }
+  }
+
   const handleEditTemplate = (template: JobTemplate) => {
     setEditingTemplate(template)
     setIsEditDialogOpen(true)
@@ -300,6 +320,18 @@ export default function JobTemplatesPage() {
                     </Badge>
                   </div>
                   <div className="flex items-center space-x-2">
+                    {/* Ownership indicator */}
+                    {template.createdBy === user?.id ? (
+                      <Badge variant="outline" className="text-xs flex items-center bg-blue-50 text-blue-700 border-blue-200">
+                        <User className="w-3 h-3 mr-1" />
+                        My Template
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs flex items-center bg-gray-50 text-gray-600 border-gray-200">
+                        <Users className="w-3 h-3 mr-1" />
+                        Shared
+                      </Badge>
+                    )}
                     {template.isPublic ? (
                       <Badge variant="outline" className="text-xs flex items-center">
                         <Globe className="w-3 h-3 mr-1" />
@@ -336,37 +368,62 @@ export default function JobTemplatesPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleEditTemplate(template)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleUseTemplate(template.id)}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleTogglePublic(template.id)}
-                      >
-                        {template.isPublic ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
-                      </Button>
-                    </div>
+                  <div className="space-y-3">
+                    {/* Primary Action - Create Job */}
                     <Button 
-                      size="sm" 
-                      variant="destructive"
-                      onClick={() => handleDeleteTemplate(template.id)}
+                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                      onClick={() => handleCreateJobFromTemplate(template.id)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Job from Template
                     </Button>
+                    
+                    {/* Secondary Actions */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex space-x-1">
+                        {/* Only show edit button for user's own templates */}
+                        {template.createdBy === user?.id && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleEditTemplate(template)}
+                            title="Edit Template"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleUseTemplate(template.id)}
+                          title="Copy Template"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        {/* Only show toggle public/private button for user's own templates */}
+                        {template.createdBy === user?.id && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleTogglePublic(template.id)}
+                            title={template.isPublic ? "Make Private" : "Make Public"}
+                          >
+                            {template.isPublic ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                          </Button>
+                        )}
+                      </div>
+                      {/* Only show delete button for user's own templates */}
+                      {template.createdBy === user?.id && (
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleDeleteTemplate(template.id)}
+                          title="Delete Template"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>

@@ -39,7 +39,7 @@ export default function PostJobPage() {
     description: "",
     requirements: "",
     benefits: "",
-    skills: [],
+    skills: [] as string[],
   })
   const [templates, setTemplates] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
@@ -52,11 +52,14 @@ export default function PostJobPage() {
     { id: 4, title: "Review & Post", description: "Final review" },
   ]
 
-  // Load job data when editing
+  // Load job data when editing or template data from URL
   useEffect(() => {
     const loadJobData = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const jobId = urlParams.get('draft') || urlParams.get('job');
+      const templateId = urlParams.get('template');
+      const templateDataParam = urlParams.get('templateData');
+      const templateName = urlParams.get('templateName');
       
       if (jobId && user) {
         try {
@@ -95,6 +98,43 @@ export default function PostJobPage() {
         } finally {
           setLoadingDraft(false);
         }
+      } else if (templateId && templateDataParam && user) {
+        // Load template data from URL parameters
+        try {
+          setLoadingDraft(true);
+          console.log('🔍 Loading template data from URL:', templateId);
+          
+          const templateData = JSON.parse(decodeURIComponent(templateDataParam));
+          console.log('✅ Template data loaded:', templateData);
+          
+          setSelectedTemplate(templateId);
+          setFormData({
+            title: templateData.title || '',
+            department: templateData.department || '',
+            location: templateData.location || '',
+            type: templateData.type || '',
+            experience: templateData.experience || '',
+            salary: templateData.salary || '',
+            description: templateData.description || '',
+            requirements: templateData.requirements || '',
+            benefits: templateData.benefits || '',
+            skills: templateData.skills || [],
+          });
+          
+          toast.success(`Template "${decodeURIComponent(templateName || '')}" applied successfully! Customize the fields as needed.`);
+          
+          // Clean up URL parameters
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('template');
+          newUrl.searchParams.delete('templateData');
+          newUrl.searchParams.delete('templateName');
+          window.history.replaceState({}, '', newUrl.toString());
+        } catch (error: any) {
+          console.error('❌ Error loading template data:', error);
+          toast.error('Failed to load template data. Please try again.');
+        } finally {
+          setLoadingDraft(false);
+        }
       }
     };
 
@@ -124,7 +164,10 @@ export default function PostJobPage() {
       const response = await apiService.getJobTemplateById(templateId);
       if (response.success && response.data) {
         const template = response.data;
-        setFormData({
+        console.log('🔍 Applying template:', template.name);
+        console.log('📋 Template data:', template.templateData);
+        
+        const newFormData = {
           title: template.templateData.title || '',
           department: template.templateData.department || '',
           location: template.templateData.location || '',
@@ -134,13 +177,16 @@ export default function PostJobPage() {
           description: template.templateData.description || '',
           requirements: template.templateData.requirements || '',
           benefits: template.templateData.benefits || '',
-          skills: template.templateData.skills || [],
-        });
+          skills: Array.isArray(template.templateData.skills) ? template.templateData.skills : [],
+        };
+        
+        console.log('📝 Setting form data:', newFormData);
+        setFormData(newFormData);
         
         // Record template usage
         await apiService.useJobTemplate(templateId);
         
-        toast.success(`Template "${template.name}" applied successfully!`);
+        toast.success(`Template "${template.name}" applied successfully! All fields have been pre-filled.`);
         setSelectedTemplate(templateId);
         setShowTemplateDialog(false);
       }
@@ -354,39 +400,113 @@ export default function PostJobPage() {
       case 1:
         return (
           <div className="space-y-6">
-            {/* Template Selection */}
-            {templates.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-blue-900">Use a Template</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowTemplateDialog(true)}
-                  >
-                    Browse Templates
-                  </Button>
+            {/* Template Selection - Enhanced */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-900 mb-1">🚀 Quick Start with Templates</h3>
+                  <p className="text-sm text-blue-700">
+                    Choose from {templates.length} professional templates to create your job posting in seconds
+                  </p>
                 </div>
-                <p className="text-sm text-blue-700 mb-3">
-                  Start with a pre-filled template to save time
-                </p>
-                {selectedTemplate && (
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      Template Applied
-                    </Badge>
-                    <span className="text-sm text-blue-700">
-                      {templates.find(t => t.id === selectedTemplate)?.name}
-                    </span>
-                  </div>
-                )}
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowTemplateDialog(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Browse Templates
+                </Button>
               </div>
-            )}
+              
+              {selectedTemplate ? (
+                <div className="bg-white rounded-lg p-4 border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                        ✓ Template Applied & Form Pre-filled
+                      </Badge>
+                      <div>
+                        <span className="font-medium text-gray-900">
+                          {templates.find(t => t.id === selectedTemplate)?.name}
+                        </span>
+                        <p className="text-sm text-gray-600">
+                          {templates.find(t => t.id === selectedTemplate)?.description}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          ✨ All form fields have been automatically filled with template data
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTemplate("");
+                        setFormData({
+                          title: "",
+                          department: "",
+                          location: "",
+                          type: "",
+                          experience: "",
+                          salary: "",
+                          description: "",
+                          requirements: "",
+                          benefits: "",
+                          skills: [],
+                        });
+                        toast.info("Template cleared. Form has been reset.");
+                      }}
+                    >
+                      Clear Template
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {templates.slice(0, 3).map((template) => (
+                    <div
+                      key={template.id}
+                      className="bg-white rounded-lg p-3 border border-blue-200 hover:border-blue-300 cursor-pointer transition-colors"
+                      onClick={() => handleTemplateSelect(template.id)}
+                    >
+                      <h4 className="font-medium text-gray-900 text-sm mb-1">{template.name}</h4>
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-2">{template.description}</p>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-xs">
+                          {template.category}
+                        </Badge>
+                        <span className="text-xs text-gray-500">
+                          {template.usageCount} uses
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {templates.length > 3 && (
+                    <div
+                      className="bg-white rounded-lg p-3 border border-dashed border-blue-300 hover:border-blue-400 cursor-pointer transition-colors flex items-center justify-center"
+                      onClick={() => setShowTemplateDialog(true)}
+                    >
+                      <div className="text-center">
+                        <div className="text-blue-600 font-medium text-sm">+{templates.length - 3} More</div>
+                        <div className="text-xs text-gray-500">View All</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Job Title*</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Job Title*
+                  {selectedTemplate && formData.title && (
+                    <span className="ml-2 text-xs text-green-600">✨ Pre-filled from template</span>
+                  )}
+                </label>
                 <Input
                   placeholder="e.g. Senior React Developer"
                   value={formData.title}
@@ -454,7 +574,12 @@ export default function PostJobPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Job Description*</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Job Description*
+                {selectedTemplate && formData.description && (
+                  <span className="ml-2 text-xs text-green-600">✨ Pre-filled from template</span>
+                )}
+              </label>
               <Textarea
                 placeholder="Describe the role, responsibilities, and what makes this opportunity exciting..."
                 className="min-h-32"
@@ -468,7 +593,12 @@ export default function PostJobPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Requirements*</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Requirements*
+                {selectedTemplate && formData.requirements && (
+                  <span className="ml-2 text-xs text-green-600">✨ Pre-filled from template</span>
+                )}
+              </label>
               <Textarea
                 placeholder="List the required qualifications, experience, and skills..."
                 className="min-h-32"
@@ -477,8 +607,20 @@ export default function PostJobPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Key Skills (Optional)</label>
-              <Input placeholder="e.g. React, Node.js, JavaScript (separate with commas)" />
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Key Skills (Optional)
+                {selectedTemplate && formData.skills && formData.skills.length > 0 && (
+                  <span className="ml-2 text-xs text-green-600">✨ Pre-filled from template</span>
+                )}
+              </label>
+              <Input 
+                placeholder="e.g. React, Node.js, JavaScript (separate with commas)"
+                value={Array.isArray(formData.skills) ? formData.skills.join(', ') : formData.skills || ''}
+                onChange={(e) => {
+                  const skillsArray = e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill);
+                  setFormData({ ...formData, skills: skillsArray });
+                }}
+              />
               <p className="text-sm text-gray-500 mt-1">Add relevant skills to help candidates find this job</p>
             </div>
             <div className="space-y-4">
@@ -510,7 +652,12 @@ export default function PostJobPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Benefits & Perks</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Benefits & Perks
+                {selectedTemplate && formData.benefits && (
+                  <span className="ml-2 text-xs text-green-600">✨ Pre-filled from template</span>
+                )}
+              </label>
               <Textarea
                 placeholder="Describe the benefits, perks, and what makes your company a great place to work..."
                 className="min-h-32"
@@ -750,55 +897,111 @@ export default function PostJobPage() {
 
       <EmployerFooter />
 
-      {/* Template Selection Dialog */}
+      {/* Template Selection Dialog - Enhanced */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Select a Template</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Choose Your Job Template</DialogTitle>
             <DialogDescription>
-              Choose a template to pre-fill your job posting form
+              Select a professional template to quickly create your job posting. All fields will be pre-filled for you to customize.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-96 overflow-y-auto">
-            <div className="grid gap-3">
+          
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {templates.map((template) => (
                 <div
                   key={template.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                  className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                     selectedTemplate === template.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-25'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-25 hover:shadow-md'
                   }`}
                   onClick={() => handleTemplateSelect(template.id)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{template.name}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{template.description}</p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          {template.category}
-                        </Badge>
-                        {template.isPublic && (
-                          <Badge variant="outline" className="text-xs text-green-700">
-                            Public
-                          </Badge>
-                        )}
-                        <span className="text-xs text-gray-500">
-                          Used {template.usageCount} times
-                        </span>
+                  <div className="flex flex-col h-full">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 text-lg mb-2">{template.name}</h4>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-3">{template.description}</p>
+                      </div>
+                      <div className="ml-4">
+                        <Button
+                          size="sm"
+                          variant={selectedTemplate === template.id ? "default" : "outline"}
+                          className={selectedTemplate === template.id ? "bg-blue-600" : ""}
+                        >
+                          {selectedTemplate === template.id ? "✓ Applied" : "Use Template"}
+                        </Button>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant={selectedTemplate === template.id ? "default" : "outline"}
-                    >
-                      {selectedTemplate === template.id ? "Applied" : "Use Template"}
-                    </Button>
+                    
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Badge variant="outline" className="text-xs bg-gray-100">
+                        {template.category}
+                      </Badge>
+                      {template.createdBy === user?.id ? (
+                        <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                          👤 My Template
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                          👥 Shared
+                        </Badge>
+                      )}
+                      {template.isPublic && (
+                        <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">
+                          🌐 Public
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                        📊 {template.usageCount} uses
+                      </Badge>
+                    </div>
+                    
+                    {/* Template Preview */}
+                    <div className="mt-auto bg-white rounded-lg p-3 border border-gray-100">
+                      <div className="text-xs text-gray-500 mb-2">Template Preview:</div>
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {template.templateData?.title || 'Job Title'}
+                        </div>
+                        <div className="text-xs text-gray-600 truncate">
+                          {template.templateData?.location || 'Location'} • {template.templateData?.type || 'Job Type'}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {template.templateData?.experience || 'Experience Level'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+            
+            {templates.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-6xl mb-4">📝</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Templates Available</h3>
+                <p className="text-gray-600 mb-4">Create your first template to get started with quick job posting.</p>
+                <Button onClick={() => {
+                  setShowTemplateDialog(false);
+                  // Navigate to template creation
+                  window.open('/employer-dashboard/job-templates', '_blank');
+                }}>
+                  Create Template
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="text-sm text-gray-600">
+              💡 Tip: You can customize all fields after applying a template. Only template creators can edit or change privacy settings.
+            </div>
+            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
