@@ -468,7 +468,38 @@ export default function JobsPage() {
       ...prev,
       [filterType]: value
     }))
-  }, [])
+
+    // Record search when search query changes
+    if (filterType === 'search' && value && user) {
+      recordSearch(value);
+    }
+  }, [user])
+
+  // Record search in database
+  const recordSearch = useCallback(async (searchQuery: string) => {
+    if (!user || !searchQuery.trim()) return;
+
+    try {
+      const searchData = {
+        searchQuery: searchQuery.trim(),
+        filters: {
+          location: filters.location,
+          experienceLevels: filters.experienceLevels,
+          jobTypes: filters.jobTypes,
+          salaryRange: filters.salaryRange,
+          category: filters.category,
+          type: filters.type
+        },
+        resultsCount: filteredJobs.length,
+        searchType: 'job_search'
+      };
+
+      await apiService.recordSearch(searchData);
+    } catch (error) {
+      console.error('Error recording search:', error);
+      // Don't show error to user as this is background functionality
+    }
+  }, [user, filters, filteredJobs.length]);
 
   const clearFilters = useCallback(() => {
     setFilters({

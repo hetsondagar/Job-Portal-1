@@ -196,6 +196,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(normalized));
         }
+        
+        // Update dashboard stats for login activity
+        try {
+          await apiService.updateDashboardStats({
+            lastLoginDate: new Date().toISOString(),
+            totalLoginCount: 1
+          });
+        } catch (error) {
+          console.error('Error updating dashboard stats on login:', error);
+          // Don't fail login if dashboard update fails
+        }
+        
         // Return the response data so the calling component can handle redirection
         return { ...response.data, user: normalized } as any;
       } else {
