@@ -320,4 +320,103 @@ router.post('/:id/use', authenticateToken, async (req, res) => {
   }
 });
 
+// Create job from template
+router.post('/:id/create-job', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { Op } = require('sequelize');
+    const Job = require('../models/Job');
+    const Company = require('../models/Company');
+
+    // Find the template
+    const template = await JobTemplate.findOne({
+      where: {
+        id,
+        isActive: true,
+        [Op.or]: [
+          { isPublic: true },
+          { createdBy: req.user.id }
+        ]
+      }
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+
+    // Get user's company
+    const user = await require('../models/User').findByPk(req.user.id);
+    let company = null;
+    
+    if (user && user.company_id) {
+      company = await Company.findByPk(user.company_id);
+    }
+
+    if (!company) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company association required. Please ensure your account is linked to a company.'
+      });
+    }
+
+    // Extract template data
+    const templateData = template.templateData;
+    
+    // Generate slug from title
+    const slug = templateData.title.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim('-') + '-' + Date.now();
+
+    // Create job from template
+    const jobData = {
+      slug,
+      title: templateData.title || 'Untitled Job',
+      description: templateData.description || '',
+      location: templateData.location || '',
+      companyId: company.id,
+      employerId: req.user.id,
+      jobType: templateData.type || 'full-time',
+      experienceLevel: templateData.experience || 'entry',
+      department: templateData.department || null,
+      skills: Array.isArray(templateData.skills) ? templateData.skills : [],
+      benefits: Array.isArray(templateData.benefits) ? templateData.benefits : [],
+      requirements: templateData.requirements || null,
+      responsibilities: templateData.responsibilities || null,
+      status: 'draft', // Start as draft so user can review before publishing
+      templateId: template.id, // Track which template was used
+      tags: template.tags || [],
+      metadata: {
+        createdFromTemplate: true,
+        templateName: template.name,
+        templateVersion: template.version
+      }
+    };
+
+    const job = await Job.create(jobData);
+
+    // Update template usage count
+    await template.update({
+      usageCount: template.usageCount + 1,
+      lastUsedAt: new Date()
+    });
+
+    res.status(201).json({
+      success: true,
+      data: job,
+      message: 'Job created from template successfully'
+    });
+  } catch (error) {
+    console.error('Error creating job from template:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create job from template'
+    });
+  }
+});
+
 module.exports = router;
