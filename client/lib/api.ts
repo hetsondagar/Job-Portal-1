@@ -328,6 +328,18 @@ class ApiService {
       data = await response.json();
     } catch (error) {
       console.error('❌ Failed to parse response as JSON:', error);
+      
+      // If it's a server error (5xx), try to get text content for debugging
+      if (response.status >= 500) {
+        try {
+          const textContent = await response.text();
+          console.error('❌ Server error response content:', textContent);
+          throw new Error(`Server error (${response.status}): ${response.statusText}. Please try again later.`);
+        } catch (textError) {
+          throw new Error(`Server error (${response.status}): ${response.statusText}. Failed to parse response.`);
+        }
+      }
+      
       throw new Error(`Invalid response format: ${response.statusText}`);
     }
 
@@ -354,6 +366,11 @@ class ApiService {
       if (data && data.errors && Array.isArray(data.errors)) {
         const errorMessages = data.errors.map((err: any) => err.msg || err.message).join(', ');
         throw new Error(`Validation failed: ${errorMessages}`);
+      }
+      
+      // Handle server errors more gracefully
+      if (response.status >= 500) {
+        throw new Error(`Server error (${response.status}): ${data?.message || response.statusText}. Please try again later.`);
       }
       
       throw new Error((data && data.message) || `Request failed (${response.status}): ${response.statusText}`);
@@ -1301,6 +1318,101 @@ class ApiService {
       console.error('Error updating dashboard stats:', error);
       throw error;
     }
+  }
+
+  // Job Template endpoints
+  async getJobTemplates(params?: {
+    category?: string;
+    search?: string;
+    isPublic?: boolean;
+  }): Promise<ApiResponse<any[]>> {
+    const queryParams = new URLSearchParams();
+    if (params?.category && params.category !== 'all') {
+      queryParams.append('category', params.category);
+    }
+    if (params?.search) {
+      queryParams.append('search', params.search);
+    }
+    if (params?.isPublic !== undefined) {
+      queryParams.append('isPublic', params.isPublic.toString());
+    }
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/job-templates${query}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
+  async getJobTemplateById(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async createJobTemplate(data: {
+    name: string;
+    description?: string;
+    category: string;
+    isPublic?: boolean;
+    templateData: any;
+    tags?: string[];
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+      });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async updateJobTemplate(id: string, data: Partial<{
+    name: string;
+    description: string;
+    category: string;
+    isPublic: boolean;
+    templateData: any;
+    tags: string[];
+  }>): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async deleteJobTemplate(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async toggleTemplatePublic(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/toggle-public`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async useJobTemplate(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/use`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
   }
 }
 

@@ -41,6 +41,9 @@ export default function PostJobPage() {
     benefits: "",
     skills: [],
   })
+  const [templates, setTemplates] = useState<any[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("")
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false)
 
   const steps = [
     { id: 1, title: "Job Details", description: "Basic job information" },
@@ -97,8 +100,55 @@ export default function PostJobPage() {
 
     if (user && !loading) {
       loadJobData();
+      loadTemplates();
     }
   }, [user, loading]);
+
+  // Load available templates
+  const loadTemplates = async () => {
+    try {
+      const response = await apiService.getJobTemplates();
+      if (response.success) {
+        setTemplates(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  };
+
+  // Handle template selection
+  const handleTemplateSelect = async (templateId: string) => {
+    if (!templateId) return;
+    
+    try {
+      const response = await apiService.getJobTemplateById(templateId);
+      if (response.success && response.data) {
+        const template = response.data;
+        setFormData({
+          title: template.templateData.title || '',
+          department: template.templateData.department || '',
+          location: template.templateData.location || '',
+          type: template.templateData.type || '',
+          experience: template.templateData.experience || '',
+          salary: template.templateData.salary || '',
+          description: template.templateData.description || '',
+          requirements: template.templateData.requirements || '',
+          benefits: template.templateData.benefits || '',
+          skills: template.templateData.skills || [],
+        });
+        
+        // Record template usage
+        await apiService.useJobTemplate(templateId);
+        
+        toast.success(`Template "${template.name}" applied successfully!`);
+        setSelectedTemplate(templateId);
+        setShowTemplateDialog(false);
+      }
+    } catch (error) {
+      console.error('Error applying template:', error);
+      toast.error('Failed to apply template');
+    }
+  };
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -304,6 +354,36 @@ export default function PostJobPage() {
       case 1:
         return (
           <div className="space-y-6">
+            {/* Template Selection */}
+            {templates.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-blue-900">Use a Template</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTemplateDialog(true)}
+                  >
+                    Browse Templates
+                  </Button>
+                </div>
+                <p className="text-sm text-blue-700 mb-3">
+                  Start with a pre-filled template to save time
+                </p>
+                {selectedTemplate && (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      Template Applied
+                    </Badge>
+                    <span className="text-sm text-blue-700">
+                      {templates.find(t => t.id === selectedTemplate)?.name}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Job Title*</label>
@@ -669,6 +749,59 @@ export default function PostJobPage() {
       </div>
 
       <EmployerFooter />
+
+      {/* Template Selection Dialog */}
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select a Template</DialogTitle>
+            <DialogDescription>
+              Choose a template to pre-fill your job posting form
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto">
+            <div className="grid gap-3">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    selectedTemplate === template.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-25'
+                  }`}
+                  onClick={() => handleTemplateSelect(template.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{template.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          {template.category}
+                        </Badge>
+                        {template.isPublic && (
+                          <Badge variant="outline" className="text-xs text-green-700">
+                            Public
+                          </Badge>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          Used {template.usageCount} times
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={selectedTemplate === template.id ? "default" : "outline"}
+                    >
+                      {selectedTemplate === template.id ? "Applied" : "Use Template"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Authentication Dialog */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
