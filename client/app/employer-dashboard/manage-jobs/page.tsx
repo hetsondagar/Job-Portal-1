@@ -451,9 +451,11 @@ export default function ManageJobsPage() {
                                    </Link>
                                  </DropdownMenuItem>
                                  {job.status !== "draft" && (
-                                   <DropdownMenuItem>
-                                     <Users className="w-4 h-4 mr-2" />
-                                     View Applications
+                                   <DropdownMenuItem asChild>
+                                     <Link href={`/employer-dashboard/applications?jobId=${job.id}`}>
+                                       <Users className="w-4 h-4 mr-2" />
+                                       View Applications
+                                     </Link>
                                    </DropdownMenuItem>
                                  )}
                                  <DropdownMenuItem>
