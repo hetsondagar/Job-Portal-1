@@ -680,7 +680,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
 // Get applications for employer's jobs
 router.get('/employer/applications', authenticateToken, async (req, res) => {
   try {
-    const { JobApplication, Job, Company, User } = require('../config/index');
+    const { JobApplication, Job, Company, User, Resume, WorkExperience, Education } = require('../config/index');
     
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
@@ -707,26 +707,340 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         {
           model: User,
           as: 'applicant',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'avatar']
+          attributes: [
+            'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+            'headline', 'summary', 'skills', 'languages', 'certifications',
+            'current_location', 'willing_to_relocate', 'expected_salary',
+            'notice_period', 'date_of_birth', 'gender', 'social_links',
+            'profile_completion', 'verification_level', 'last_profile_update'
+          ],
+          include: [
+            {
+              model: WorkExperience,
+              as: 'workExperiences',
+              attributes: [
+                'id', 'companyName', 'jobTitle', 'department', 'location',
+                'startDate', 'endDate', 'isCurrent', 'description',
+                'responsibilities', 'achievements', 'skills', 'technologies',
+                'salary', 'salaryCurrency', 'employmentType', 'industry',
+                'companySize', 'isVerified', 'order'
+              ],
+              order: [['order', 'ASC'], ['startDate', 'DESC']]
+            },
+            {
+              model: Education,
+              as: 'educations',
+              attributes: [
+                'id', 'institution', 'degree', 'fieldOfStudy', 'startDate',
+                'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa', 'scale',
+                'description', 'activities', 'achievements', 'location', 'country',
+                'educationType', 'level', 'isVerified', 'order'
+              ],
+              order: [['order', 'ASC'], ['startDate', 'DESC']]
+            },
+            {
+              model: Resume,
+              as: 'resumes',
+              attributes: [
+                'id', 'title', 'summary', 'objective', 'skills', 'languages',
+                'certifications', 'projects', 'achievements', 'isDefault',
+                'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+              ],
+              order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+            }
+          ]
         },
         {
           model: Resume,
           as: 'jobResume',
-          attributes: ['id', 'title', 'summary', 'isDefault', 'lastUpdated']
+          attributes: [
+            'id', 'title', 'summary', 'objective', 'skills', 'languages',
+            'certifications', 'projects', 'achievements', 'isDefault',
+            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+          ]
         }
       ],
       order: [['appliedAt', 'DESC']]
     });
 
+    // Transform the data to include comprehensive jobseeker profile information
+    const enrichedApplications = applications.map(application => {
+      const applicant = application.applicant;
+      const jobResume = application.jobResume;
+      
+      // Calculate total work experience
+      const totalExperience = applicant.workExperiences?.reduce((total, exp) => {
+        const start = new Date(exp.startDate);
+        const end = exp.endDate ? new Date(exp.endDate) : new Date();
+        const diffInMs = end - start;
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+        return total + diffInDays;
+      }, 0) || 0;
+
+      const experienceYears = Math.floor(totalExperience / 365);
+      const experienceMonths = Math.floor((totalExperience % 365) / 30);
+
+      // Get highest education
+      const highestEducation = applicant.educations?.sort((a, b) => {
+        const levelOrder = { 'phd': 6, 'master': 5, 'bachelor': 4, 'diploma': 3, 'high-school': 2, 'certification': 1, 'other': 0 };
+        return (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0);
+      })[0];
+
+      // Combine all skills from profile, work experience, and resume
+      const allSkills = new Set();
+      if (applicant.skills) applicant.skills.forEach(skill => allSkills.add(skill));
+      if (applicant.workExperiences) {
+        applicant.workExperiences.forEach(exp => {
+          if (exp.skills) exp.skills.forEach(skill => allSkills.add(skill));
+          if (exp.technologies) exp.technologies.forEach(tech => allSkills.add(tech));
+        });
+      }
+      if (jobResume?.skills) jobResume.skills.forEach(skill => allSkills.add(skill));
+
+      return {
+        ...application.toJSON(),
+        applicant: {
+          ...applicant.toJSON(),
+          fullName: `${applicant.first_name} ${applicant.last_name}`,
+          totalExperienceYears: experienceYears,
+          totalExperienceMonths: experienceMonths,
+          totalExperienceDisplay: experienceYears > 0 
+            ? `${experienceYears} year${experienceYears > 1 ? 's' : ''} ${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`
+            : `${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`,
+          highestEducation: highestEducation ? {
+            ...highestEducation.toJSON(),
+            fullDegree: `${highestEducation.degree} in ${highestEducation.fieldOfStudy}`,
+            gradeDisplay: highestEducation.getGradeDisplay(),
+            formattedPeriod: highestEducation.getFormattedPeriod()
+          } : null,
+          allSkills: Array.from(allSkills),
+          workExperiences: applicant.workExperiences?.map(exp => ({
+            ...exp.toJSON(),
+            duration: exp.getDuration(),
+            formattedPeriod: exp.getFormattedPeriod(),
+            skillsString: exp.getSkillsString(),
+            technologiesString: exp.getTechnologiesString()
+          })) || [],
+          educations: applicant.educations?.map(edu => ({
+            ...edu.toJSON(),
+            duration: edu.getDuration(),
+            formattedPeriod: edu.getFormattedPeriod(),
+            gradeDisplay: edu.getGradeDisplay(),
+            fullDegree: edu.getFullDegree()
+          })) || [],
+          resumes: applicant.resumes?.map(resume => ({
+            ...resume.toJSON(),
+            skillsString: resume.getSkillsString(),
+            languagesString: resume.getLanguagesString(),
+            certificationsString: resume.getCertificationsString()
+          })) || []
+        },
+        jobResume: jobResume ? {
+          ...jobResume.toJSON(),
+          skillsString: jobResume.getSkillsString(),
+          languagesString: jobResume.getLanguagesString(),
+          certificationsString: jobResume.getCertificationsString()
+        } : null
+      };
+    });
+
     res.json({
       success: true,
-      data: applications
+      data: enrichedApplications
     });
   } catch (error) {
     console.error('Error fetching employer applications:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch applications'
+    });
+  }
+});
+
+// Get detailed application information for employer
+router.get('/employer/applications/:id', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication, Job, Company, User, Resume, WorkExperience, Education } = require('../config/index');
+    const { id } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can view job applications.'
+      });
+    }
+    
+    const application = await JobApplication.findOne({
+      where: { 
+        id: id,
+        employerId: req.user.id 
+      },
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          include: [
+            {
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+            }
+          ]
+        },
+        {
+          model: User,
+          as: 'applicant',
+          attributes: [
+            'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+            'headline', 'summary', 'skills', 'languages', 'certifications',
+            'current_location', 'willing_to_relocate', 'expected_salary',
+            'notice_period', 'date_of_birth', 'gender', 'social_links',
+            'profile_completion', 'verification_level', 'last_profile_update'
+          ],
+          include: [
+            {
+              model: WorkExperience,
+              as: 'workExperiences',
+              attributes: [
+                'id', 'companyName', 'jobTitle', 'department', 'location',
+                'startDate', 'endDate', 'isCurrent', 'description',
+                'responsibilities', 'achievements', 'skills', 'technologies',
+                'salary', 'salaryCurrency', 'employmentType', 'industry',
+                'companySize', 'isVerified', 'order'
+              ],
+              order: [['order', 'ASC'], ['startDate', 'DESC']]
+            },
+            {
+              model: Education,
+              as: 'educations',
+              attributes: [
+                'id', 'institution', 'degree', 'fieldOfStudy', 'startDate',
+                'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa', 'scale',
+                'description', 'activities', 'achievements', 'location', 'country',
+                'educationType', 'level', 'isVerified', 'order'
+              ],
+              order: [['order', 'ASC'], ['startDate', 'DESC']]
+            },
+            {
+              model: Resume,
+              as: 'resumes',
+              attributes: [
+                'id', 'title', 'summary', 'objective', 'skills', 'languages',
+                'certifications', 'projects', 'achievements', 'isDefault',
+                'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+              ],
+              order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+            }
+          ]
+        },
+        {
+          model: Resume,
+          as: 'jobResume',
+          attributes: [
+            'id', 'title', 'summary', 'objective', 'skills', 'languages',
+            'certifications', 'projects', 'achievements', 'isDefault',
+            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+          ]
+        }
+      ]
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found or access denied'
+      });
+    }
+
+    // Transform the data to include comprehensive jobseeker profile information
+    const applicant = application.applicant;
+    const jobResume = application.jobResume;
+    
+    // Calculate total work experience
+    const totalExperience = applicant.workExperiences?.reduce((total, exp) => {
+      const start = new Date(exp.startDate);
+      const end = exp.endDate ? new Date(exp.endDate) : new Date();
+      const diffInMs = end - start;
+      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+      return total + diffInDays;
+    }, 0) || 0;
+
+    const experienceYears = Math.floor(totalExperience / 365);
+    const experienceMonths = Math.floor((totalExperience % 365) / 30);
+
+    // Get highest education
+    const highestEducation = applicant.educations?.sort((a, b) => {
+      const levelOrder = { 'phd': 6, 'master': 5, 'bachelor': 4, 'diploma': 3, 'high-school': 2, 'certification': 1, 'other': 0 };
+      return (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0);
+    })[0];
+
+    // Combine all skills from profile, work experience, and resume
+    const allSkills = new Set();
+    if (applicant.skills) applicant.skills.forEach(skill => allSkills.add(skill));
+    if (applicant.workExperiences) {
+      applicant.workExperiences.forEach(exp => {
+        if (exp.skills) exp.skills.forEach(skill => allSkills.add(skill));
+        if (exp.technologies) exp.technologies.forEach(tech => allSkills.add(tech));
+      });
+    }
+    if (jobResume?.skills) jobResume.skills.forEach(skill => allSkills.add(skill));
+
+    const enrichedApplication = {
+      ...application.toJSON(),
+      applicant: {
+        ...applicant.toJSON(),
+        fullName: `${applicant.first_name} ${applicant.last_name}`,
+        totalExperienceYears: experienceYears,
+        totalExperienceMonths: experienceMonths,
+        totalExperienceDisplay: experienceYears > 0 
+          ? `${experienceYears} year${experienceYears > 1 ? 's' : ''} ${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`
+          : `${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`,
+        highestEducation: highestEducation ? {
+          ...highestEducation.toJSON(),
+          fullDegree: `${highestEducation.degree} in ${highestEducation.fieldOfStudy}`,
+          gradeDisplay: highestEducation.getGradeDisplay(),
+          formattedPeriod: highestEducation.getFormattedPeriod()
+        } : null,
+        allSkills: Array.from(allSkills),
+        workExperiences: applicant.workExperiences?.map(exp => ({
+          ...exp.toJSON(),
+          duration: exp.getDuration(),
+          formattedPeriod: exp.getFormattedPeriod(),
+          skillsString: exp.getSkillsString(),
+          technologiesString: exp.getTechnologiesString()
+        })) || [],
+        educations: applicant.educations?.map(edu => ({
+          ...edu.toJSON(),
+          duration: edu.getDuration(),
+          formattedPeriod: edu.getFormattedPeriod(),
+          gradeDisplay: edu.getGradeDisplay(),
+          fullDegree: edu.getFullDegree()
+        })) || [],
+        resumes: applicant.resumes?.map(resume => ({
+          ...resume.toJSON(),
+          skillsString: resume.getSkillsString(),
+          languagesString: resume.getLanguagesString(),
+          certificationsString: resume.getCertificationsString()
+        })) || []
+      },
+      jobResume: jobResume ? {
+        ...jobResume.toJSON(),
+        skillsString: jobResume.getSkillsString(),
+        languagesString: jobResume.getLanguagesString(),
+        certificationsString: jobResume.getCertificationsString()
+      } : null
+    };
+
+    res.json({
+      success: true,
+      data: enrichedApplication
+    });
+  } catch (error) {
+    console.error('Error fetching detailed application:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch application details'
     });
   }
 });
@@ -1178,7 +1492,7 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       }, {
         model: User,
         as: 'applicant',
-        attributes: ['id', 'first_name', 'last_name', 'email']
+        attributes: ['id', 'first_name', 'last_name', 'email', 'headline', 'current_location', 'skills']
       }]
     });
     

@@ -246,6 +246,13 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       color: "from-blue-500 to-blue-600",
     },
     {
+      title: "View Applications",
+      description: "Review job applications",
+      icon: Users,
+      href: "/employer-dashboard/applications",
+      color: "from-purple-500 to-purple-600",
+    },
+    {
       title: "Job Templates",
       description: "Use reusable job templates",
       icon: FileText,

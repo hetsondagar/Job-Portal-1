@@ -907,6 +907,15 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  // Get detailed application information for employer
+  async getEmployerApplicationDetails(applicationId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   async createApplication(data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/user/applications`, {
       method: 'POST',
