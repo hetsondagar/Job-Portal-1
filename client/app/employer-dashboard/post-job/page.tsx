@@ -318,9 +318,36 @@ export default function PostJobPage() {
       return
     }
 
-    // Validate required fields
-    if (!formData.title || !formData.description || !formData.requirements || !formData.location) {
-      toast.error('Please fill in all required fields')
+    // Validate required fields with specific messages
+    const validationErrors = []
+    
+    if (!formData.title || formData.title.trim() === '') {
+      validationErrors.push('Job title is required')
+    }
+    if (!formData.description || formData.description.trim() === '') {
+      validationErrors.push('Job description is required')
+    }
+    if (!formData.requirements || formData.requirements.trim() === '') {
+      validationErrors.push('Job requirements are required')
+    }
+    if (!formData.location || formData.location.trim() === '') {
+      validationErrors.push('Job location is required')
+    }
+    if (!formData.department || formData.department.trim() === '') {
+      validationErrors.push('Department is required')
+    }
+    if (!formData.type || formData.type.trim() === '') {
+      validationErrors.push('Job type is required')
+    }
+    if (!formData.experience || formData.experience.trim() === '') {
+      validationErrors.push('Experience level is required')
+    }
+    if (!formData.salary || formData.salary.trim() === '') {
+      validationErrors.push('Salary range is required')
+    }
+    
+    if (validationErrors.length > 0) {
+      toast.error(`Please fill in the following required fields: ${validationErrors.join(', ')}`)
       return
     }
 
@@ -425,15 +452,15 @@ export default function PostJobPage() {
 
     setUploadingPhotos(true)
     const uploadPromises = Array.from(files).map(async (file) => {
-      const formData = new FormData()
-      formData.append('photo', file)
-      formData.append('jobId', uploadedJobId)
-      formData.append('altText', `Job photo for ${formData.title}`)
-      formData.append('displayOrder', jobPhotos.length.toString())
-      formData.append('isPrimary', (jobPhotos.length === 0).toString())
+      const uploadFormData = new FormData()
+      uploadFormData.append('photo', file)
+      uploadFormData.append('jobId', uploadedJobId)
+      uploadFormData.append('altText', `Job photo for ${formData.title}`)
+      uploadFormData.append('displayOrder', jobPhotos.length.toString())
+      uploadFormData.append('isPrimary', (jobPhotos.length === 0).toString())
 
       try {
-        const response = await apiService.uploadJobPhoto(formData)
+        const response = await apiService.uploadJobPhoto(uploadFormData)
         if (response.success) {
           return response.data
         } else {

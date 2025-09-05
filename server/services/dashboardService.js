@@ -25,14 +25,78 @@ class DashboardService {
           totalSearches: 0,
           totalResumes: 0,
           totalJobAlerts: 0,
-          profileViews: 0
+          profileViews: 0,
+          applicationsUnderReview: 0,
+          applicationsShortlisted: 0,
+          applicationsRejected: 0,
+          applicationsAccepted: 0,
+          savedSearches: 0,
+          hasDefaultResume: false,
+          activeJobAlerts: 0,
+          totalLoginCount: 0
         });
       }
 
       return dashboard;
     } catch (error) {
       console.error('Error getting user dashboard:', error);
-      throw error;
+      // Return a default dashboard object if database fails
+      return {
+        userId,
+        totalApplications: 0,
+        totalBookmarks: 0,
+        totalSearches: 0,
+        totalResumes: 0,
+        totalJobAlerts: 0,
+        profileViews: 0,
+        applicationsUnderReview: 0,
+        applicationsShortlisted: 0,
+        applicationsRejected: 0,
+        applicationsAccepted: 0,
+        savedSearches: 0,
+        hasDefaultResume: false,
+        activeJobAlerts: 0,
+        totalLoginCount: 0,
+        getDashboardSummary: function() {
+          return {
+            applications: {
+              total: this.totalApplications || 0,
+              underReview: this.applicationsUnderReview || 0,
+              shortlisted: this.applicationsShortlisted || 0,
+              rejected: this.applicationsRejected || 0,
+              accepted: this.applicationsAccepted || 0,
+              lastDate: this.lastApplicationDate
+            },
+            bookmarks: {
+              total: this.totalBookmarks || 0,
+              lastDate: this.lastBookmarkDate
+            },
+            searches: {
+              total: this.totalSearches || 0,
+              saved: this.savedSearches || 0,
+              lastDate: this.lastSearchDate
+            },
+            resumes: {
+              total: this.totalResumes || 0,
+              hasDefault: this.hasDefaultResume || false,
+              lastUpdate: this.lastResumeUpdate
+            },
+            jobAlerts: {
+              total: this.totalJobAlerts || 0,
+              active: this.activeJobAlerts || 0
+            },
+            profile: {
+              views: this.profileViews || 0,
+              lastView: this.lastProfileView
+            },
+            activity: {
+              lastLogin: this.lastLoginDate,
+              lastActivity: this.lastActivityDate,
+              totalLogins: this.totalLoginCount || 0
+            }
+          };
+        }
+      };
     }
   }
 
@@ -190,59 +254,127 @@ class DashboardService {
     try {
       const dashboard = await this.getUserDashboard(userId);
       
-      // Get recent applications
-      const recentApplications = await JobApplication.findAll({
-        where: { userId },
-        order: [['appliedAt', 'DESC']],
-        limit: 5,
-        include: [{
-          model: require('../models/Job'),
-          as: 'job',
-          attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
-        }]
-      });
+      // Get recent applications with error handling
+      let recentApplications = [];
+      try {
+        recentApplications = await JobApplication.findAll({
+          where: { userId },
+          order: [['appliedAt', 'DESC']],
+          limit: 5,
+          include: [{
+            model: require('../models/Job'),
+            as: 'job',
+            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
+          }]
+        });
+      } catch (error) {
+        console.error('Error fetching recent applications:', error);
+        recentApplications = [];
+      }
 
-      // Get recent bookmarks
-      const recentBookmarks = await JobBookmark.findAll({
-        where: { userId },
-        order: [['createdAt', 'DESC']],
-        limit: 5,
-        include: [{
-          model: require('../models/Job'),
-          as: 'job',
-          attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
-        }]
-      });
+      // Get recent bookmarks with error handling
+      let recentBookmarks = [];
+      try {
+        recentBookmarks = await JobBookmark.findAll({
+          where: { userId },
+          order: [['createdAt', 'DESC']],
+          limit: 5,
+          include: [{
+            model: require('../models/Job'),
+            as: 'job',
+            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
+          }]
+        });
+      } catch (error) {
+        console.error('Error fetching recent bookmarks:', error);
+        recentBookmarks = [];
+      }
 
-      // Get recent searches
-      const recentSearches = await SearchHistory.findAll({
-        where: { userId },
-        order: [['createdAt', 'DESC']],
-        limit: 5
-      });
+      // Get recent searches with error handling
+      let recentSearches = [];
+      try {
+        recentSearches = await this.getSearchHistory(userId, 5);
+      } catch (error) {
+        console.error('Error fetching recent searches:', error);
+        recentSearches = [];
+      }
 
-      // Get job alerts
-      const jobAlerts = await JobAlert.findAll({
-        where: { userId },
-        order: [['createdAt', 'DESC']]
-      });
+      // Get job alerts with error handling
+      let jobAlerts = [];
+      try {
+        jobAlerts = await JobAlert.findAll({
+          where: { userId },
+          order: [['createdAt', 'DESC']]
+        });
+      } catch (error) {
+        console.error('Error fetching job alerts:', error);
+        jobAlerts = [];
+      }
 
-      // Get resumes
-      const resumes = await Resume.findAll({
-        where: { userId },
-        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
-      });
+      // Get resumes with error handling
+      let resumes = [];
+      try {
+        resumes = await Resume.findAll({
+          where: { userId },
+          order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+        });
+      } catch (error) {
+        console.error('Error fetching resumes:', error);
+        resumes = [];
+      }
 
-      // Get profile analytics
-      const profileViews = await Analytics.count({
-        where: { 
-          userId,
-          eventType: 'profile_view'
-        }
-      });
+      // Get profile analytics with error handling
+      let profileViews = 0;
+      try {
+        profileViews = await Analytics.count({
+          where: { 
+            userId,
+            eventType: 'profile_view'
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching profile views:', error);
+        profileViews = 0;
+      }
 
       return {
-        dashboard: dashboard.getDashboardSummary(),
+        dashboard: dashboard.getDashboardSummary ? dashboard.getDashboardSummary() : {
+          applications: {
+            total: dashboard.totalApplications || 0,
+            underReview: dashboard.applicationsUnderReview || 0,
+            shortlisted: dashboard.applicationsShortlisted || 0,
+            rejected: dashboard.applicationsRejected || 0,
+            accepted: dashboard.applicationsAccepted || 0,
+            lastDate: dashboard.lastApplicationDate
+          },
+          bookmarks: {
+            total: dashboard.totalBookmarks || 0,
+            lastDate: dashboard.lastBookmarkDate
+          },
+          searches: {
+            total: dashboard.totalSearches || 0,
+            saved: dashboard.savedSearches || 0,
+            lastDate: dashboard.lastSearchDate
+          },
+          resumes: {
+            total: dashboard.totalResumes || 0,
+            hasDefault: dashboard.hasDefaultResume || false,
+            lastUpdate: dashboard.lastResumeUpdate
+          },
+          jobAlerts: {
+            total: dashboard.totalJobAlerts || 0,
+            active: dashboard.activeJobAlerts || 0
+          },
+          profile: {
+            views: dashboard.profileViews || 0,
+            lastView: dashboard.lastProfileView
+          },
+          activity: {
+            lastLogin: dashboard.lastLoginDate,
+            lastActivity: dashboard.lastActivityDate,
+            totalLogins: dashboard.totalLoginCount || 0
+          }
+        },
         recentApplications,
         recentBookmarks,
         recentSearches,
@@ -250,15 +382,15 @@ class DashboardService {
         resumes,
         profileViews,
         stats: {
-          totalApplications: dashboard.totalApplications,
-          applicationsUnderReview: dashboard.applicationsUnderReview,
-          totalBookmarks: dashboard.totalBookmarks,
-          totalSearches: dashboard.totalSearches,
-          savedSearches: dashboard.savedSearches,
-          totalResumes: dashboard.totalResumes,
-          hasDefaultResume: dashboard.hasDefaultResume,
-          totalJobAlerts: dashboard.totalJobAlerts,
-          activeJobAlerts: dashboard.activeJobAlerts,
+          totalApplications: dashboard.totalApplications || 0,
+          applicationsUnderReview: dashboard.applicationsUnderReview || 0,
+          totalBookmarks: dashboard.totalBookmarks || 0,
+          totalSearches: dashboard.totalSearches || 0,
+          savedSearches: dashboard.savedSearches || 0,
+          totalResumes: dashboard.totalResumes || 0,
+          hasDefaultResume: dashboard.hasDefaultResume || false,
+          totalJobAlerts: dashboard.totalJobAlerts || 0,
+          activeJobAlerts: dashboard.activeJobAlerts || 0,
           profileViews
         }
       };

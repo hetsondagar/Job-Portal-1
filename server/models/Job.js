@@ -90,6 +90,11 @@ const Job = sequelize.define('Job', {
     type: DataTypes.INTEGER, // in years
     allowNull: true
   },
+  salary: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Salary range as entered by user (e.g., "₹8-15 LPA")'
+  },
   salaryMin: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
@@ -326,6 +331,11 @@ Job.prototype.getSalaryRange = function() {
   if (!this.isSalaryVisible) {
     return 'Not disclosed';
   }
+  // Use the salary field if available (user-entered format)
+  if (this.salary && this.salary.trim()) {
+    return this.salary.trim();
+  }
+  // Fallback to calculated range from min/max
   if (this.salaryMin && this.salaryMax) {
     return `${this.salaryCurrency} ${this.salaryMin.toLocaleString()}-${this.salaryMax.toLocaleString()} ${this.salaryPeriod}`;
   } else if (this.salaryMin) {

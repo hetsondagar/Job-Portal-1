@@ -184,7 +184,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                       
                       <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
                         <DollarSign className="w-4 h-4" />
-                        <span>{job.salary ? `${job.salary} ${job.currency || 'USD'}` : 'Salary not specified'}</span>
+                        <span>{job.salary || job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Salary not specified'}</span>
                       </div>
                       
                       <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">

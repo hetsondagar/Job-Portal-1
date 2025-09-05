@@ -290,7 +290,7 @@ export default function DraftsPage() {
 
                         <div className="flex items-center space-x-6 text-sm text-slate-600">
                           <span>•</span>
-                          <span>{draft.salaryMin && draft.salaryMax ? `₹${draft.salaryMin}-${draft.salaryMax} LPA` : draft.salary || 'Salary not specified'}</span>
+                          <span>{draft.salary || (draft.salaryMin && draft.salaryMax ? `₹${draft.salaryMin}-${draft.salaryMax} LPA` : 'Salary not specified')}</span>
                           <span>•</span>
                           <span>{draft.skills?.length || 0} skills added</span>
                         </div>

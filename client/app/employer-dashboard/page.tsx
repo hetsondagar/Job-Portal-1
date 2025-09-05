@@ -52,6 +52,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [loading, setLoading] = useState(true)
   const [companyData, setCompanyData] = useState<any>(null)
   const [recentApplications, setRecentApplications] = useState<any[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   useEffect(() => {
     if (user) {
@@ -75,7 +76,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       console.log('🔄 Loading employer dashboard data for user:', user.id)
 
       // Load dashboard stats
-      const statsResponse = await apiService.getDashboardStats()
+      const statsResponse = await apiService.getEmployerDashboardStats()
       if (statsResponse.success && statsResponse.data) {
         const dashboardStats = [
           {
@@ -126,21 +127,30 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
 
       // Load recent applications and jobs for activity feed
       try {
-        const applicationsResponse = await apiService.getApplications()
-        const jobsResponse = await apiService.getEmployerJobs({ limit: 5 })
-        
+        // Use data from dashboard stats if available
         let applications = []
         let jobs = []
         
-        if (applicationsResponse.success && applicationsResponse.data) {
-          applications = applicationsResponse.data.slice(0, 5)
+        if (statsResponse.success && statsResponse.data) {
+          applications = statsResponse.data.recentApplications || []
+          jobs = statsResponse.data.recentJobs || []
           setRecentApplications(applications)
-          console.log('✅ Recent applications loaded:', applications.length)
-        }
-        
-        if (jobsResponse.success && jobsResponse.data) {
-          jobs = jobsResponse.data.slice(0, 5)
-          console.log('✅ Recent jobs loaded:', jobs.length)
+          console.log('✅ Recent applications loaded from dashboard stats:', applications.length)
+        } else {
+          // Fallback to separate API calls
+          const applicationsResponse = await apiService.getEmployerApplications()
+          const jobsResponse = await apiService.getEmployerJobs({ limit: 5 })
+          
+          if (applicationsResponse.success && applicationsResponse.data) {
+            applications = applicationsResponse.data.slice(0, 5)
+            setRecentApplications(applications)
+            console.log('✅ Recent applications loaded from API:', applications.length)
+          }
+          
+          if (jobsResponse.success && jobsResponse.data) {
+            jobs = jobsResponse.data.slice(0, 5)
+            console.log('✅ Recent jobs loaded from API:', jobs.length)
+          }
         }
         
         // Generate recent activity from real data
@@ -271,8 +281,6 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       color: "from-orange-500 to-orange-600",
     },
   ]
-
-  const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   // Calculate profile completion based on user and company data
   const calculateProfileCompletion = () => {

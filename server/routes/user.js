@@ -683,7 +683,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     const { JobApplication, Job, Company, User } = require('../config/index');
     
     // Check if user is an employer
-    if (req.user.userType !== 'employer') {
+    if (req.user.user_type !== 'employer') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Only employers can view job applications.'
@@ -707,7 +707,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         {
           model: User,
           as: 'applicant',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatar']
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'avatar']
         },
         {
           model: Resume,
@@ -1138,6 +1138,79 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard data',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Employer Dashboard Stats endpoint
+router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
+  try {
+    const { Job, JobApplication, Company } = require('../config/index');
+    
+    console.log('📊 Fetching employer dashboard data for user:', req.user.id);
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can access this endpoint.'
+      });
+    }
+    
+    // Get employer's jobs
+    const jobs = await Job.findAll({
+      where: { employerId: req.user.id },
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'name', 'industry', 'companySize']
+      }]
+    });
+    
+    // Get applications for employer's jobs
+    const applications = await JobApplication.findAll({
+      where: { employerId: req.user.id },
+      include: [{
+        model: Job,
+        as: 'job',
+        attributes: ['id', 'title', 'location']
+      }, {
+        model: User,
+        as: 'applicant',
+        attributes: ['id', 'first_name', 'last_name', 'email']
+      }]
+    });
+    
+    // Calculate stats
+    const activeJobs = jobs.filter(job => job.status === 'active' || !job.status).length;
+    const totalApplications = applications.length;
+    const hiredCandidates = applications.filter(app => app.status === 'accepted').length;
+    
+    // Get profile views (simplified for now)
+    const profileViews = 0; // TODO: Implement actual profile view tracking
+    
+    const employerStats = {
+      activeJobs,
+      totalApplications,
+      hiredCandidates,
+      profileViews,
+      totalJobs: jobs.length,
+      recentApplications: applications.slice(0, 5),
+      recentJobs: jobs.slice(0, 5)
+    };
+    
+    console.log('✅ Employer dashboard data fetched successfully');
+    
+    res.json({
+      success: true,
+      data: employerStats
+    });
+  } catch (error) {
+    console.error('❌ Error fetching employer dashboard data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch employer dashboard data',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

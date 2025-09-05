@@ -422,7 +422,7 @@ export default function ManageJobsPage() {
                                 <span>{job.views || 0} views</span>
                               </div>
                               <span>•</span>
-                              <span>{job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : job.salary || 'Not specified'}</span>
+                              <span>{job.salary || (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Not specified')}</span>
                               <span>•</span>
                               <span className={getExpiryDate(job.createdAt, job.validTill) === 'Expired' ? "text-red-600" : "text-green-600"}>
                                 {getExpiryDate(job.createdAt, job.validTill)}

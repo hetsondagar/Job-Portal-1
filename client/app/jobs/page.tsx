@@ -70,6 +70,7 @@ interface Job {
   featured: boolean
   companyRating: number
   category: string
+  photos?: any[]
 }
 
 export default function JobsPage() {
@@ -114,161 +115,6 @@ export default function JobsPage() {
     }
   }, [])
 
-  // Sample jobs data
-  const sampleJobs: Job[] = [
-    {
-      id: "550e8400-e29b-41d4-a716-446655440001",
-      title: "Senior Frontend Developer",
-      company: { name: "TechCorp Solutions", id: "550e8400-e29b-41d4-a716-446655440101" },
-      location: "Mumbai, Maharashtra",
-      experience: "3-5 years",
-      salary: "₹12-18 LPA",
-      skills: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-      logo: "/companies/techcorp.png",
-      posted: "2 days ago",
-      applicants: 45,
-      description: "We are looking for a talented Senior Frontend Developer to join our team and help build amazing user experiences.",
-      type: "Full-time",
-      remote: false,
-      urgent: true,
-      featured: true,
-      companyRating: 4.5,
-      category: "Technology"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440002",
-      title: "Product Manager",
-      company: { name: "InnovateLabs", id: "550e8400-e29b-41d4-a716-446655440102" },
-      location: "Bangalore, Karnataka",
-      experience: "5-8 years",
-      salary: "₹20-35 LPA",
-      skills: ["Product Strategy", "Agile", "User Research", "Data Analysis"],
-      logo: "/companies/innovatelabs.png",
-      posted: "1 week ago",
-      applicants: 32,
-      description: "Lead product development initiatives and drive innovation across our platform.",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: true,
-      companyRating: 4.8,
-      category: "Product"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440003",
-      title: "DevOps Engineer",
-      company: { name: "CloudTech Systems", id: "550e8400-e29b-41d4-a716-446655440103" },
-      location: "Pune, Maharashtra",
-      experience: "2-4 years",
-      salary: "₹8-15 LPA",
-      skills: ["AWS", "Docker", "Kubernetes", "Jenkins"],
-      logo: "/companies/cloudtech.png",
-      posted: "3 days ago",
-      applicants: 28,
-      description: "Join our DevOps team to build and maintain scalable infrastructure solutions.",
-      type: "Full-time",
-      remote: false,
-      urgent: true,
-      featured: false,
-      companyRating: 4.2,
-      category: "Technology"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440004",
-      title: "UX/UI Designer",
-      company: { name: "DesignStudio Pro", id: "550e8400-e29b-41d4-a716-446655440104" },
-      location: "Delhi, NCR",
-      experience: "2-5 years",
-      salary: "₹6-12 LPA",
-      skills: ["Figma", "Adobe Creative Suite", "User Research", "Prototyping"],
-      logo: "/companies/designstudio.png",
-      posted: "5 days ago",
-      applicants: 56,
-      description: "Create beautiful and intuitive user interfaces for our digital products.",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: false,
-      companyRating: 4.6,
-      category: "Design"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440005",
-      title: "Data Scientist",
-      company: { name: "DataViz Analytics", id: "550e8400-e29b-41d4-a716-446655440105" },
-      location: "Hyderabad, Telangana",
-      experience: "3-6 years",
-      salary: "₹15-25 LPA",
-      skills: ["Python", "Machine Learning", "SQL", "Statistics"],
-      logo: "/companies/dataviz.png",
-      posted: "1 day ago",
-      applicants: 38,
-      description: "Work on cutting-edge data science projects and build predictive models.",
-      type: "Full-time",
-      remote: false,
-      urgent: true,
-      featured: true,
-      companyRating: 4.7,
-      category: "Data Science"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440006",
-      title: "Marketing Manager",
-      company: { name: "GrowthMasters", id: "550e8400-e29b-41d4-a716-446655440106" },
-      location: "Chennai, Tamil Nadu",
-      experience: "4-7 years",
-      salary: "₹10-18 LPA",
-      skills: ["Digital Marketing", "SEO", "Content Strategy", "Analytics"],
-      logo: "/companies/growthmasters.png",
-      posted: "4 days ago",
-      applicants: 42,
-      description: "Lead marketing campaigns and drive brand growth across multiple channels.",
-      type: "Full-time",
-      remote: false,
-      urgent: false,
-      featured: false,
-      companyRating: 4.3,
-      category: "Marketing"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440007",
-      title: "Mobile App Developer",
-      company: { name: "AppCraft Mobile", id: "550e8400-e29b-41d4-a716-446655440107" },
-      location: "Gurgaon, Haryana",
-      experience: "2-4 years",
-      salary: "₹8-16 LPA",
-      skills: ["React Native", "Flutter", "iOS", "Android"],
-      logo: "/companies/appcraft.png",
-      posted: "6 days ago",
-      applicants: 35,
-      description: "Build innovative mobile applications for iOS and Android platforms.",
-      type: "Full-time",
-      remote: true,
-      urgent: false,
-      featured: false,
-      companyRating: 4.4,
-      category: "Technology"
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440008",
-      title: "Sales Executive",
-      company: { name: "SalesForce India", id: "550e8400-e29b-41d4-a716-446655440108" },
-      location: "Kolkata, West Bengal",
-      experience: "1-3 years",
-      salary: "₹4-8 LPA + Commission",
-      skills: ["Sales", "CRM", "Negotiation", "Customer Relations"],
-      logo: "/companies/salesforce.png",
-      posted: "2 weeks ago",
-      applicants: 67,
-      description: "Drive sales growth and build strong customer relationships.",
-      type: "Full-time",
-      remote: false,
-      urgent: false,
-      featured: false,
-      companyRating: 4.1,
-      category: "Sales"
-    }
-  ]
 
   // Fetch jobs from backend and user data
   useEffect(() => {
@@ -284,10 +130,10 @@ export default function JobsPage() {
     try {
       setJobsLoading(true)
       
-      // Fetch jobs from backend
+      // Fetch jobs from backend - get all active jobs
       const response = await apiService.getJobs({
         status: 'active',
-        limit: 50 // Get more jobs to show
+        limit: 100 // Get more jobs to show
       })
       
       if (response.success && response.data) {
@@ -300,14 +146,14 @@ export default function JobsPage() {
             name: job.company?.name || 'Unknown Company'
           },
           location: job.location,
-          experience: job.experienceLevel || 'Not specified',
-          salary: job.salaryMin && job.salaryMax 
-            ? `₹${job.salaryMin}-${job.salaryMax} LPA`
-            : 'Not specified',
+          experience: job.experienceLevel || job.experience || 'Not specified',
+          salary: job.salary || (job.salaryMin && job.salaryMax 
+            ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
+            : 'Not specified'),
           skills: job.skills || [],
-          logo: job.company?.logo || '/companies/default.png',
-          posted: new Date(job.createdAt).toLocaleDateString(),
-          applicants: job.applications || 0,
+          logo: job.company?.logo || '/placeholder-logo.png',
+          posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+          applicants: job.applications || job.application_count || 0,
           description: job.description,
           type: job.jobType || 'Full-time',
           remote: job.remoteWork === 'remote',
@@ -318,17 +164,18 @@ export default function JobsPage() {
           photos: job.photos || [] // Include job photos
         }))
         
-        // Combine with sample jobs for demonstration
-        const combinedJobs = [...transformedJobs, ...sampleJobs]
-        setJobs(combinedJobs)
+        // Use only real jobs from database, no sample data
+        setJobs(transformedJobs)
+        console.log('✅ Loaded', transformedJobs.length, 'jobs from database')
       } else {
-        // Fallback to sample jobs if backend fails
-        setJobs(sampleJobs)
+        console.error('❌ Failed to fetch jobs:', response.message)
+        // Show empty state instead of sample data
+        setJobs([])
       }
     } catch (error) {
-      console.error('Error fetching jobs:', error)
-      // Fallback to sample jobs
-      setJobs(sampleJobs)
+      console.error('❌ Error fetching jobs:', error)
+      // Show empty state instead of sample data
+      setJobs([])
     } finally {
       setJobsLoading(false)
     }
@@ -399,16 +246,15 @@ export default function JobsPage() {
         return
       }
       
-      // Submit application to database for all jobs
-      const response = await apiService.createApplication({
-        jobId,
+      // Submit application using the correct API endpoint
+      const response = await apiService.applyJob(jobId, {
         coverLetter: `I am interested in the ${job.title} position at ${job.company.name}.`,
-        expectedSalary: null,
+        expectedSalary: undefined,
         noticePeriod: 30,
-        availableFrom: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        availableFrom: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
         isWillingToRelocate: false,
         preferredLocations: [job.location],
-        resumeId: null
+        resumeId: undefined
       })
       
       if (response.success) {
