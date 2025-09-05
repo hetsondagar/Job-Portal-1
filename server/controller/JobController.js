@@ -320,7 +320,7 @@ exports.getAllJobs = async (req, res, next) => {
         {
           model: User,
           as: 'employer',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'first_name', 'last_name', 'email'],
           required: false
         },
         {
@@ -375,7 +375,7 @@ exports.getJobById = async (req, res, next) => {
         {
           model: User,
           as: 'postedByUser',
-          attributes: ['id', 'firstName', 'lastName', 'email']
+          attributes: ['id', 'first_name', 'last_name', 'email']
         },
         {
           model: JobPhoto,

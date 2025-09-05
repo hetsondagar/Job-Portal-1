@@ -324,35 +324,51 @@ class ApiService {
     let data: any;
     
     try {
-      data = await response.json();
-    } catch (error) {
-      console.error('❌ Failed to parse response as JSON:', error);
-      
-      // If it's a server error (5xx), try to get text content for debugging
-      if (response.status >= 500) {
-        try {
-          const textContent = await response.text();
-          console.error('❌ Server error response content:', textContent);
-          // Return error response instead of throwing
+      // Check if response has content before trying to parse
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        // If not JSON, get text content
+        const textContent = await response.text();
+        console.warn('⚠️ Non-JSON response received:', textContent);
+        
+        if (response.ok) {
+          // If response is OK but not JSON, return success with text data
           return {
-            success: false,
-            message: `Server error (${response.status}): ${response.statusText}. Please try again later.`,
-            error: 'SERVER_ERROR'
+            success: true,
+            message: 'Response received',
+            data: textContent
           } as ApiResponse<T>;
-        } catch (textError) {
+        } else {
           return {
             success: false,
-            message: `Server error (${response.status}): ${response.statusText}. Failed to parse response.`,
-            error: 'PARSE_ERROR'
+            message: `Request failed (${response.status}): ${response.statusText}`,
+            error: 'INVALID_RESPONSE'
           } as ApiResponse<T>;
         }
       }
       
-      return {
-        success: false,
-        message: `Invalid response format: ${response.statusText}`,
-        error: 'INVALID_RESPONSE'
-      } as ApiResponse<T>;
+      data = await response.json();
+    } catch (error) {
+      console.error('❌ Failed to parse response as JSON:', error);
+      
+      // Try to get text content for debugging
+      try {
+        const textContent = await response.text();
+        console.error('❌ Response content:', textContent);
+        
+        // Return error response instead of throwing
+        return {
+          success: false,
+          message: `Server error (${response.status}): ${response.statusText}. Please try again later.`,
+          error: 'SERVER_ERROR'
+        } as ApiResponse<T>;
+      } catch (textError) {
+        return {
+          success: false,
+          message: `Server error (${response.status}): ${response.statusText}. Failed to parse response.`,
+          error: 'PARSE_ERROR'
+        } as ApiResponse<T>;
+      }
     }
 
     console.log('🔍 handleResponse - Parsed data:', data);
@@ -649,16 +665,30 @@ class ApiService {
   }
 
   async getJobs(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<any>> {
-    const query = params
-      ? '?' + Object.entries(params)
-          .filter(([, v]) => v !== undefined && v !== null && v !== '')
-          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-          .join('&')
-      : '';
-    const response = await fetch(`${API_BASE_URL}/jobs${query}`, {
-      headers: this.getAuthHeaders(),
-    });
-    return this.handleResponse<any>(response);
+    try {
+      const query = params
+        ? '?' + Object.entries(params)
+            .filter(([, v]) => v !== undefined && v !== null && v !== '')
+            .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+            .join('&')
+        : '';
+      
+      console.log('🔍 Fetching jobs from:', `${API_BASE_URL}/jobs${query}`);
+      
+      const response = await fetch(`${API_BASE_URL}/jobs${query}`, {
+        headers: this.getAuthHeaders(),
+      });
+      
+      console.log('🔍 Jobs API response status:', response.status);
+      
+      return this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error in getJobs:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch jobs. Please try again later.'
+      };
+    }
   }
 
   async getJobById(id: string): Promise<ApiResponse<any>> {
