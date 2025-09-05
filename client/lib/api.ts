@@ -333,13 +333,26 @@ class ApiService {
         try {
           const textContent = await response.text();
           console.error('❌ Server error response content:', textContent);
-          throw new Error(`Server error (${response.status}): ${response.statusText}. Please try again later.`);
+          // Return error response instead of throwing
+          return {
+            success: false,
+            message: `Server error (${response.status}): ${response.statusText}. Please try again later.`,
+            error: 'SERVER_ERROR'
+          } as ApiResponse<T>;
         } catch (textError) {
-          throw new Error(`Server error (${response.status}): ${response.statusText}. Failed to parse response.`);
+          return {
+            success: false,
+            message: `Server error (${response.status}): ${response.statusText}. Failed to parse response.`,
+            error: 'PARSE_ERROR'
+          } as ApiResponse<T>;
         }
       }
       
-      throw new Error(`Invalid response format: ${response.statusText}`);
+      return {
+        success: false,
+        message: `Invalid response format: ${response.statusText}`,
+        error: 'INVALID_RESPONSE'
+      } as ApiResponse<T>;
     }
 
     console.log('🔍 handleResponse - Parsed data:', data);
@@ -358,21 +371,38 @@ class ApiService {
         console.log(`⏳ Waiting ${waitTime}ms before retrying...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         
-        throw new Error(`Rate limit exceeded. Please wait ${Math.ceil(waitTime/1000)} seconds before trying again.`);
+        return {
+          success: false,
+          message: `Rate limit exceeded. Please wait ${Math.ceil(waitTime/1000)} seconds before trying again.`,
+          error: 'RATE_LIMIT'
+        } as ApiResponse<T>;
       }
       
       // Handle validation errors
       if (data && data.errors && Array.isArray(data.errors)) {
         const errorMessages = data.errors.map((err: any) => err.msg || err.message).join(', ');
-        throw new Error(`Validation failed: ${errorMessages}`);
+        return {
+          success: false,
+          message: `Validation failed: ${errorMessages}`,
+          error: 'VALIDATION_ERROR',
+          errors: data.errors
+        } as ApiResponse<T>;
       }
       
       // Handle server errors more gracefully
       if (response.status >= 500) {
-        throw new Error(`Server error (${response.status}): ${data?.message || response.statusText}. Please try again later.`);
+        return {
+          success: false,
+          message: `Server error (${response.status}): ${data?.message || response.statusText}. Please try again later.`,
+          error: 'SERVER_ERROR'
+        } as ApiResponse<T>;
       }
       
-      throw new Error((data && data.message) || `Request failed (${response.status}): ${response.statusText}`);
+      return {
+        success: false,
+        message: (data && data.message) || `Request failed (${response.status}): ${response.statusText}`,
+        error: 'REQUEST_FAILED'
+      } as ApiResponse<T>;
     }
 
     console.log('✅ handleResponse - Success:', data);
@@ -838,6 +868,15 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  // Employer applications endpoint
+  async getEmployerApplications(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/employer/applications`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
   async createApplication(data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/user/applications`, {
       method: 'POST',
@@ -862,14 +901,6 @@ class ApiService {
     });
 
     return this.handleResponse<any>(response);
-  }
-
-  async getEmployerApplications(): Promise<ApiResponse<any[]>> {
-    const response = await fetch(`${API_BASE_URL}/user/employer/applications`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any[]>(response);
   }
 
   // Job Photos endpoints
@@ -1195,6 +1226,19 @@ class ApiService {
       });
 
       return this.handleResponse<DashboardStats>(response);
+    });
+  }
+
+  // Employer Dashboard Stats endpoint
+  async getEmployerDashboardStats(): Promise<ApiResponse<any>> {
+    const endpoint = '/user/employer/dashboard-stats';
+    
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      return this.handleResponse<any>(response);
     });
   }
 

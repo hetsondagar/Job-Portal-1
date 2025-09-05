@@ -70,6 +70,7 @@ interface Job {
   featured: boolean
   companyRating: number
   category: string
+  photos?: any[]
 }
 
 export default function JobsPage() {

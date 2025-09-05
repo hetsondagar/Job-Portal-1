@@ -61,10 +61,15 @@ exports.createJob = async (req, res, next) => {
     // Basic validation - only require fields for active jobs, not drafts
     const errors = [];
     if (status === 'active') {
-      // For active jobs, require all fields
-      if (!title || String(title).trim() === '') errors.push('title is required');
-      if (!description || String(description).trim() === '') errors.push('description is required');
-      if (!location || String(location).trim() === '') errors.push('location is required');
+      // For active jobs, require all essential fields
+      if (!title || String(title).trim() === '') errors.push('Job title is required');
+      if (!description || String(description).trim() === '') errors.push('Job description is required');
+      if (!location || String(location).trim() === '') errors.push('Job location is required');
+      if (!requirements || String(requirements).trim() === '') errors.push('Job requirements are required');
+      if (!department || String(department).trim() === '') errors.push('Department is required');
+      if (!type && !jobType) errors.push('Job type is required');
+      if (!experience && !experienceLevel) errors.push('Experience level is required');
+      if (!salary && !salaryMin && !salaryMax) errors.push('Salary information is required');
     } else {
       // For drafts, only require title (can be "Untitled Job")
       if (!title || String(title).trim() === '') {
@@ -162,8 +167,9 @@ exports.createJob = async (req, res, next) => {
       employerId, // Use employerId to match the association
       jobType: type || jobType, // Handle both field names
       experienceLevel: mappedExperienceLevel,
-      experienceMin: experienceMin || parsedSalaryMin ? 0 : null,
-      experienceMax: experienceMax || parsedSalaryMax ? 5 : null,
+      experienceMin: experienceMin || null,
+      experienceMax: experienceMax || null,
+      salary: salary && salary.trim() ? salary.trim() : null,
       salaryMin: parsedSalaryMin,
       salaryMax: parsedSalaryMax,
       salaryCurrency,
