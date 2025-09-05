@@ -51,12 +51,12 @@ export default function ApplicationsPage() {
 
   return (
     <EmployerAuthGuard>
-      <ApplicationsPageContent user={user} />
+      <ApplicationsPageContent user={user} authLoading={authLoading} />
     </EmployerAuthGuard>
   )
 }
 
-function ApplicationsPageContent({ user }: { user: any }) {
+function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading: boolean }) {
   const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
