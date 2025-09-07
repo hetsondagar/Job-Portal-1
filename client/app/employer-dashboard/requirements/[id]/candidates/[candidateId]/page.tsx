@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { 
@@ -23,7 +23,8 @@ import {
   ExternalLink,
   Eye,
   Share2,
-  FileText
+  FileText,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,137 +33,99 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CandidateProfilePage() {
   const params = useParams()
   const [activeTab, setActiveTab] = useState("overview")
+  const [candidate, setCandidate] = useState<any>(null)
+  const [requirement, setRequirement] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
-  // Mock candidate data
-  const candidate = {
-    id: params.candidateId,
-    name: "Abhijeet Vishwakarma",
-    designation: "Software Engineer, UI/UX Design, Front End Developer",
-    experience: "Fresher",
-    location: "Vadodara, Gujarat",
-    education: "B.Tech/B.E. Parul University, Vadodara 2024",
-    keySkills: ["Javascript", "CSS", "HTML", "Java", "Data Structures", "UI/UX", "C++", "React", "Node.js", "MongoDB"],
-    preferredLocations: ["Ahmedabad", "Mumbai", "Vadodara", "Mumbai Suburban"],
-    avatar: "/placeholder.svg?height=120&width=120",
-    isAttached: true,
-    lastModified: "last 2 months",
-    activeStatus: "last 7 days",
-    additionalInfo: "Frontend Web Development | Interaction | User Experience | Responsive Design",
-    phoneVerified: true,
-    emailVerified: true,
-    currentSalary: "3-5 LPA",
-    expectedSalary: "6-8 LPA",
-    noticePeriod: "Immediately",
-    email: "abhijeet.vishwakarma@email.com",
-    phone: "+91 98765 43210",
-    linkedin: "linkedin.com/in/abhijeet-vishwakarma",
-    github: "github.com/abhijeet-vishwakarma",
-    portfolio: "abhijeet.dev",
-    
-    // Detailed information
-    about: "Passionate software engineer with a strong foundation in frontend development and user experience design. I love creating intuitive and responsive web applications that solve real-world problems. Currently seeking opportunities to work with innovative teams and contribute to meaningful projects.",
-    
-    workExperience: [
-      {
-        id: 1,
-        title: "Frontend Developer Intern",
-        company: "TechStart Solutions",
-        duration: "Jan 2024 - Mar 2024",
-        location: "Vadodara",
-        description: "Developed responsive web applications using React.js and modern CSS. Collaborated with design team to implement UI/UX improvements. Reduced page load time by 40% through optimization techniques.",
-        skills: ["React", "JavaScript", "CSS", "HTML", "Git"]
-      },
-      {
-        id: 2,
-        title: "Web Developer",
-        company: "Freelance",
-        duration: "Jun 2023 - Dec 2023",
-        location: "Remote",
-        description: "Built custom websites for small businesses and startups. Implemented responsive designs and ensured cross-browser compatibility. Managed client relationships and project timelines.",
-        skills: ["HTML", "CSS", "JavaScript", "WordPress", "SEO"]
+  useEffect(() => {
+    const fetchCandidateProfile = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await apiService.getCandidateProfile(
+          params.id as string,
+          params.candidateId as string
+        )
+        
+        if (response.success) {
+          setCandidate(response.data.candidate)
+          setRequirement(response.data.requirement)
+        } else {
+          setError(response.message || 'Failed to fetch candidate profile')
+          toast({
+            title: "Error",
+            description: response.message || 'Failed to fetch candidate profile',
+            variant: "destructive"
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching candidate profile:', err)
+        setError('Failed to fetch candidate profile')
+        toast({
+          title: "Error",
+          description: 'Failed to fetch candidate profile',
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
       }
-    ],
-    
-    educationDetails: [
-      {
-        id: 1,
-        degree: "Bachelor of Technology in Computer Science",
-        institution: "Parul University",
-        duration: "2020 - 2024",
-        location: "Vadodara, Gujarat",
-        cgpa: "8.2/10",
-        relevantCourses: ["Data Structures", "Algorithms", "Database Management", "Web Development", "Software Engineering"]
-      },
-      {
-        id: 2,
-        degree: "Higher Secondary Education",
-        institution: "Delhi Public School",
-        duration: "2018 - 2020",
-        location: "Vadodara, Gujarat",
-        percentage: "85%"
-      }
-    ],
-    
-    projects: [
-      {
-        id: 1,
-        title: "E-Commerce Platform",
-        description: "A full-stack e-commerce application built with React, Node.js, and MongoDB. Features include user authentication, product catalog, shopping cart, and payment integration.",
-        technologies: ["React", "Node.js", "MongoDB", "Express", "Stripe"],
-        github: "github.com/abhijeet-vishwakarma/ecommerce",
-        live: "ecommerce-demo.vercel.app"
-      },
-      {
-        id: 2,
-        title: "Task Management App",
-        description: "A collaborative task management application with real-time updates, drag-and-drop functionality, and team collaboration features.",
-        technologies: ["React", "Firebase", "Material-UI", "React DnD"],
-        github: "github.com/abhijeet-vishwakarma/task-manager",
-        live: "task-manager-demo.vercel.app"
-      },
-      {
-        id: 3,
-        title: "Weather Dashboard",
-        description: "A weather application that displays current weather and forecasts for multiple cities. Features include location-based weather, 7-day forecast, and weather alerts.",
-        technologies: ["JavaScript", "OpenWeather API", "CSS", "HTML"],
-        github: "github.com/abhijeet-vishwakarma/weather-app",
-        live: "weather-dashboard.vercel.app"
-      }
-    ],
-    
-    certifications: [
-      {
-        id: 1,
-        name: "React Developer Certification",
-        issuer: "Meta",
-        date: "Dec 2023",
-        credential: "meta-react-cert"
-      },
-      {
-        id: 2,
-        name: "JavaScript Algorithms and Data Structures",
-        issuer: "freeCodeCamp",
-        date: "Nov 2023",
-        credential: "fcc-js-algorithms"
-      },
-      {
-        id: 3,
-        name: "Web Development Bootcamp",
-        issuer: "Udemy",
-        date: "Oct 2023",
-        credential: "udemy-web-dev"
-      }
-    ],
-    
-    languages: [
-      { name: "English", proficiency: "Professional" },
-      { name: "Hindi", proficiency: "Native" },
-      { name: "Gujarati", proficiency: "Native" }
-    ]
+    }
+
+    if (params.id && params.candidateId) {
+      fetchCandidateProfile()
+    }
+  }, [params.id, params.candidateId, toast])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <EmployerNavbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-slate-600">Loading candidate profile...</p>
+            </div>
+          </div>
+        </div>
+        <EmployerFooter />
+      </div>
+    )
+  }
+
+  if (error || !candidate) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <EmployerNavbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">Profile Not Found</h2>
+              <p className="text-slate-600 mb-4">{error || 'The candidate profile could not be found.'}</p>
+              <Link href={`/employer-dashboard/requirements/${params.id}/candidates`}>
+                <Button>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Candidates
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+        <EmployerFooter />
+      </div>
+    )
   }
 
   return (
@@ -179,6 +142,11 @@ export default function CandidateProfilePage() {
                 Back to Candidates
               </Button>
             </Link>
+            {requirement && (
+              <div className="text-sm text-slate-600">
+                Viewing profile for requirement: <span className="font-medium">{requirement.title}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex flex-col lg:flex-row gap-6">
@@ -522,6 +490,8 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
+                  {candidate.resumes && candidate.resumes.length > 0 ? (
+                    <>
                   {/* CV Preview */}
                   <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center">
                     <div className="max-w-md mx-auto">
@@ -529,10 +499,10 @@ export default function CandidateProfilePage() {
                         <Download className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                       </div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                        Abhijeet_Vishwakarma_Resume.pdf
+                            {candidate.resumes[0].filename}
                       </h3>
                       <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                        PDF • 2.3 MB • Uploaded 2 months ago
+                            PDF • {candidate.resumes[0].fileSize} • Uploaded {new Date(candidate.resumes[0].uploadDate).toLocaleDateString()}
                       </p>
                       
                       {/* CV Preview Image */}
@@ -549,13 +519,17 @@ export default function CandidateProfilePage() {
                       </div>
                       
                       <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <Button className="bg-blue-600 hover:bg-blue-700">
+                            <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+                              <a href={candidate.resumes[0].fileUrl} target="_blank" rel="noopener noreferrer">
                           <Eye className="w-4 h-4 mr-2" />
                           View CV
+                              </a>
                         </Button>
-                        <Button variant="outline">
+                            <Button variant="outline" asChild>
+                              <a href={candidate.resumes[0].fileUrl} download>
                           <Download className="w-4 h-4 mr-2" />
                           Download PDF
+                              </a>
                         </Button>
                       </div>
                     </div>
@@ -570,19 +544,19 @@ export default function CandidateProfilePage() {
                       <CardContent className="space-y-4">
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">File Name</span>
-                          <span className="font-medium">Abhijeet_Vishwakarma_Resume.pdf</span>
+                              <span className="font-medium">{candidate.resumes[0].filename}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">File Size</span>
-                          <span className="font-medium">2.3 MB</span>
+                              <span className="font-medium">{candidate.resumes[0].fileSize}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">Upload Date</span>
-                          <span className="font-medium">2 months ago</span>
+                              <span className="font-medium">{new Date(candidate.resumes[0].uploadDate).toLocaleDateString()}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">Last Updated</span>
-                          <span className="font-medium">1 month ago</span>
+                              <span className="font-medium">{new Date(candidate.resumes[0].lastUpdated).toLocaleDateString()}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">Format</span>
@@ -596,13 +570,17 @@ export default function CandidateProfilePage() {
                         <CardTitle className="text-lg">CV Actions</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700" asChild>
+                              <a href={candidate.resumes[0].fileUrl} target="_blank" rel="noopener noreferrer">
                           <Eye className="w-4 h-4 mr-2" />
                           View Full CV
+                              </a>
                         </Button>
-                        <Button variant="outline" className="w-full">
+                            <Button variant="outline" className="w-full" asChild>
+                              <a href={candidate.resumes[0].fileUrl} download>
                           <Download className="w-4 h-4 mr-2" />
                           Download CV
+                              </a>
                         </Button>
                         <Button variant="outline" className="w-full">
                           <Share2 className="w-4 h-4 mr-2" />
@@ -615,6 +593,16 @@ export default function CandidateProfilePage() {
                       </CardContent>
                     </Card>
                   </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileText className="w-8 h-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2">No Resume Available</h3>
+                      <p className="text-slate-600">This candidate hasn't uploaded a resume yet.</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

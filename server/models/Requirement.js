@@ -11,6 +11,10 @@ const Requirement = sequelize.define('Requirement', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
@@ -27,24 +31,16 @@ const Requirement = sequelize.define('Requirement', {
       key: 'id'
     }
   },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: false
-  },
-  location: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
   experience: {
     type: DataTypes.STRING,
     allowNull: true
   },
   experienceMin: {
-    type: DataTypes.INTEGER, // in years
+    type: DataTypes.INTEGER,
     allowNull: true
   },
   experienceMax: {
-    type: DataTypes.INTEGER, // in years
+    type: DataTypes.INTEGER,
     allowNull: true
   },
   salary: {
@@ -78,14 +74,6 @@ const Requirement = sequelize.define('Requirement', {
     defaultValue: []
   },
   education: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  industry: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  department: {
     type: DataTypes.STRING,
     allowNull: true
   },

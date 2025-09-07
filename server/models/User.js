@@ -74,6 +74,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  preferred_locations: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
   willing_to_relocate: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
@@ -81,6 +85,15 @@ const User = sequelize.define('User', {
   expected_salary: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
+  },
+  current_salary: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
+  experience_years: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
   },
   notice_period: {
     type: DataTypes.INTEGER, // in days
@@ -149,11 +162,19 @@ const User = sequelize.define('User', {
     type: DataTypes.JSONB,
     defaultValue: []
   },
+  key_skills: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
   languages: {
     type: DataTypes.JSONB,
     defaultValue: []
   },
   certifications: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  education: {
     type: DataTypes.JSONB,
     defaultValue: []
   },

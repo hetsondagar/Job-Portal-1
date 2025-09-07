@@ -10,6 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { 
   ArrowLeft,
   User, 
@@ -28,7 +33,11 @@ import {
   Building2,
   Star,
   Eye,
-  Download
+  Download,
+  Save,
+  X,
+  Plus,
+  Trash2
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { ResumeManagement } from '@/components/resume-management'
@@ -40,6 +49,38 @@ export default function AccountPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('profile')
   const [resumeStats, setResumeStats] = useState<any>(null)
+  
+  // Edit states
+  const [editingPersonal, setEditingPersonal] = useState(false)
+  const [editingProfessional, setEditingProfessional] = useState(false)
+  const [saving, setSaving] = useState(false)
+  
+  // Form data states
+  const [personalData, setPersonalData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: ''
+  })
+  
+  const [professionalData, setProfessionalData] = useState({
+    headline: '',
+    currentLocation: '',
+    summary: '',
+    expectedSalary: '',
+    noticePeriod: '',
+    willingToRelocate: false,
+    skills: [] as string[],
+    languages: [] as string[],
+    socialLinks: {
+      linkedin: '',
+      github: '',
+      portfolio: ''
+    }
+  })
+  
+  const [newSkill, setNewSkill] = useState('')
+  const [newLanguage, setNewLanguage] = useState('')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -51,8 +92,36 @@ export default function AccountPage() {
   useEffect(() => {
     if (user && !loading) {
       fetchResumeStats()
+      initializeFormData()
     }
   }, [user, loading])
+
+  const initializeFormData = () => {
+    if (user) {
+      setPersonalData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phone: user.phone || '',
+        email: user.email || ''
+      })
+      
+      setProfessionalData({
+        headline: user.headline || '',
+        currentLocation: user.currentLocation || '',
+        summary: user.summary || '',
+        expectedSalary: user.expectedSalary || '',
+        noticePeriod: user.noticePeriod || '',
+        willingToRelocate: user.willingToRelocate || false,
+        skills: user.skills || [],
+        languages: user.languages || [],
+        socialLinks: {
+          linkedin: user.socialLinks?.linkedin || '',
+          github: user.socialLinks?.github || '',
+          portfolio: user.socialLinks?.portfolio || ''
+        }
+      })
+    }
+  }
 
   const fetchResumeStats = async () => {
     try {
@@ -72,6 +141,90 @@ export default function AccountPage() {
       router.push('/')
     } catch (error) {
       toast.error('Logout failed')
+    }
+  }
+
+  const savePersonalData = async () => {
+    try {
+      setSaving(true)
+      const response = await apiService.updateProfile(personalData)
+      
+      if (response.success) {
+        await refreshUser()
+        setEditingPersonal(false)
+        toast.success('Personal information updated successfully')
+      } else {
+        toast.error(response.message || 'Failed to update personal information')
+      }
+    } catch (error) {
+      console.error('Error updating personal data:', error)
+      toast.error('Failed to update personal information')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveProfessionalData = async () => {
+    try {
+      setSaving(true)
+      const response = await apiService.updateProfile(professionalData)
+      
+      if (response.success) {
+        await refreshUser()
+        setEditingProfessional(false)
+        toast.success('Professional details updated successfully')
+      } else {
+        toast.error(response.message || 'Failed to update professional details')
+      }
+    } catch (error) {
+      console.error('Error updating professional data:', error)
+      toast.error('Failed to update professional details')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addSkill = () => {
+    if (newSkill.trim() && !professionalData.skills.includes(newSkill.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        skills: [...prev.skills, newSkill.trim()]
+      }))
+      setNewSkill('')
+    }
+  }
+
+  const removeSkill = (skillToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      skills: prev.skills.filter(skill => skill !== skillToRemove)
+    }))
+  }
+
+  const addLanguage = () => {
+    if (newLanguage.trim() && !professionalData.languages.includes(newLanguage.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        languages: [...prev.languages, newLanguage.trim()]
+      }))
+      setNewLanguage('')
+    }
+  }
+
+  const removeLanguage = (languageToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      languages: prev.languages.filter(lang => lang !== languageToRemove)
+    }))
+  }
+
+  const cancelEdit = (type: 'personal' | 'professional') => {
+    if (type === 'personal') {
+      setEditingPersonal(false)
+      initializeFormData()
+    } else {
+      setEditingProfessional(false)
+      initializeFormData()
     }
   }
 
@@ -222,12 +375,95 @@ export default function AccountPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
                       <User className="w-5 h-5" />
                       <span>Personal Information</span>
+                      </div>
+                      {!editingPersonal && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditingPersonal(true)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {editingPersonal ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="firstName">First Name</Label>
+                            <Input
+                              id="firstName"
+                              value={personalData.firstName}
+                              onChange={(e) => setPersonalData(prev => ({ ...prev, firstName: e.target.value }))}
+                              placeholder="Enter your first name"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="lastName">Last Name</Label>
+                            <Input
+                              id="lastName"
+                              value={personalData.lastName}
+                              onChange={(e) => setPersonalData(prev => ({ ...prev, lastName: e.target.value }))}
+                              placeholder="Enter your last name"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={personalData.email}
+                              onChange={(e) => setPersonalData(prev => ({ ...prev, email: e.target.value }))}
+                              placeholder="Enter your email"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="phone">Phone</Label>
+                            <Input
+                              id="phone"
+                              type="tel"
+                              value={personalData.phone}
+                              onChange={(e) => setPersonalData(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="Enter your phone number"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button 
+                            onClick={savePersonalData}
+                            disabled={saving}
+                            className="flex-1"
+                          >
+                            {saving ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4 mr-2" />
+                                Save Changes
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => cancelEdit('personal')}
+                            disabled={saving}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-slate-500 dark:text-slate-400">First Name</p>
@@ -254,22 +490,228 @@ export default function AccountPage() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Profile
-                    </Button>
+                    )}
                   </CardContent>
                 </Card>
 
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
                       <MapPin className="w-5 h-5" />
                       <span>Professional Details</span>
+                      </div>
+                      {!editingProfessional && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditingProfessional(true)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-3">
+                    {editingProfessional ? (
+                      <div className="space-y-6">
+                        {/* Basic Professional Info */}
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="headline">Professional Headline</Label>
+                            <Input
+                              id="headline"
+                              value={professionalData.headline}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, headline: e.target.value }))}
+                              placeholder="e.g., Software Engineer, UI/UX Designer"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="currentLocation">Current Location</Label>
+                            <Input
+                              id="currentLocation"
+                              value={professionalData.currentLocation}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, currentLocation: e.target.value }))}
+                              placeholder="e.g., Mumbai, Maharashtra"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="summary">Professional Summary</Label>
+                            <Textarea
+                              id="summary"
+                              value={professionalData.summary}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, summary: e.target.value }))}
+                              placeholder="Tell us about your professional background, skills, and career goals..."
+                              rows={4}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Salary and Preferences */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="expectedSalary">Expected Salary (LPA)</Label>
+                            <Input
+                              id="expectedSalary"
+                              type="number"
+                              value={professionalData.expectedSalary}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, expectedSalary: e.target.value }))}
+                              placeholder="e.g., 8"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="noticePeriod">Notice Period (days)</Label>
+                            <Input
+                              id="noticePeriod"
+                              type="number"
+                              value={professionalData.noticePeriod}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, noticePeriod: e.target.value }))}
+                              placeholder="e.g., 30"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Willing to Relocate */}
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="willingToRelocate"
+                            checked={professionalData.willingToRelocate}
+                            onCheckedChange={(checked) => setProfessionalData(prev => ({ ...prev, willingToRelocate: !!checked }))}
+                          />
+                          <Label htmlFor="willingToRelocate">Willing to relocate</Label>
+                        </div>
+
+                        {/* Skills Management */}
+                        <div>
+                          <Label>Skills</Label>
+                          <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                            {professionalData.skills.map((skill, index) => (
+                              <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                {skill}
+                                <button
+                                  onClick={() => removeSkill(skill)}
+                                  className="ml-1 hover:text-red-500"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="flex space-x-2">
+                            <Input
+                              value={newSkill}
+                              onChange={(e) => setNewSkill(e.target.value)}
+                              placeholder="Add a skill"
+                              onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                            />
+                            <Button type="button" onClick={addSkill} size="sm">
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Languages Management */}
+                        <div>
+                          <Label>Languages</Label>
+                          <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                            {professionalData.languages.map((language, index) => (
+                              <Badge key={index} variant="outline" className="flex items-center gap-1">
+                                {language}
+                                <button
+                                  onClick={() => removeLanguage(language)}
+                                  className="ml-1 hover:text-red-500"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="flex space-x-2">
+                            <Input
+                              value={newLanguage}
+                              onChange={(e) => setNewLanguage(e.target.value)}
+                              placeholder="Add a language"
+                              onKeyPress={(e) => e.key === 'Enter' && addLanguage()}
+                            />
+                            <Button type="button" onClick={addLanguage} size="sm">
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Social Links */}
+                        <div className="space-y-4">
+                          <Label>Social Links</Label>
+                          <div>
+                            <Label htmlFor="linkedin">LinkedIn</Label>
+                            <Input
+                              id="linkedin"
+                              value={professionalData.socialLinks.linkedin}
+                              onChange={(e) => setProfessionalData(prev => ({ 
+                                ...prev, 
+                                socialLinks: { ...prev.socialLinks, linkedin: e.target.value }
+                              }))}
+                              placeholder="https://linkedin.com/in/yourprofile"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="github">GitHub</Label>
+                            <Input
+                              id="github"
+                              value={professionalData.socialLinks.github}
+                              onChange={(e) => setProfessionalData(prev => ({ 
+                                ...prev, 
+                                socialLinks: { ...prev.socialLinks, github: e.target.value }
+                              }))}
+                              placeholder="https://github.com/yourusername"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="portfolio">Portfolio</Label>
+                            <Input
+                              id="portfolio"
+                              value={professionalData.socialLinks.portfolio}
+                              onChange={(e) => setProfessionalData(prev => ({ 
+                                ...prev, 
+                                socialLinks: { ...prev.socialLinks, portfolio: e.target.value }
+                              }))}
+                              placeholder="https://yourportfolio.com"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex space-x-2">
+                          <Button 
+                            onClick={saveProfessionalData}
+                            disabled={saving}
+                            className="flex-1"
+                          >
+                            {saving ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4 mr-2" />
+                                Save Changes
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => cancelEdit('professional')}
+                            disabled={saving}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
                       <div>
                         <p className="text-sm text-slate-500 dark:text-slate-400">Headline</p>
                         <p className="font-medium text-slate-900 dark:text-white">
@@ -288,11 +730,21 @@ export default function AccountPage() {
                           {user.summary || 'No summary provided'}
                         </p>
                       </div>
+                        {user.skills && user.skills.length > 0 && (
+                          <div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Skills</p>
+                            <div className="flex flex-wrap gap-2">
+                              {user.skills.slice(0, 5).map((skill, index) => (
+                                <Badge key={index} variant="secondary">{skill}</Badge>
+                              ))}
+                              {user.skills.length > 5 && (
+                                <Badge variant="outline">+{user.skills.length - 5} more</Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
                     </div>
-                    <Button variant="outline" className="w-full">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Update Details
-                    </Button>
+                    )}
                   </CardContent>
                 </Card>
               </div>

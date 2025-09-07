@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document details the integration of resume upload functionality into the job seeker dashboard with multiple access points and a dedicated resume display section. The implementation provides a seamless user experience for managing resumes with both upload and display capabilities.
+t they are fetched in thisThis document details the integration of resume upload functionality into the job seeker dashboard with multiple access points and a dedicated resume display section. The implementation provides a seamless user experience for managing resumes with both upload and display capabilities.
 
 ## 🎯 Integration Points
 
