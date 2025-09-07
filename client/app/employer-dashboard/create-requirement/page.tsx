@@ -158,6 +158,12 @@ export default function CreateRequirementPage() {
       console.log('✅ Requirement API response:', response)
       if (!response.success) {
         console.error('❌ Requirement creation failed:', response)
+        console.error('❌ Response details:', {
+          success: response.success,
+          message: response.message,
+          error: response.error,
+          data: response.data
+        })
         throw new Error(response.message || 'Failed to create requirement')
       }
       
@@ -165,9 +171,9 @@ export default function CreateRequirementPage() {
         title: "Requirement Created",
         description: `Your requirement has been created successfully. ID: ${response.data?.id || ''}`,
       })
-      // Give the toast time to show before navigating
+      // Give the toast time to show before navigating to candidates page
       setTimeout(() => {
-        router.push('/employer-dashboard/requirements')
+        router.push(`/employer-dashboard/requirements/${response.data?.id}/candidates`)
       }, 1000)
     } catch (error: any) {
       console.error('❌ Error creating requirement:', error?.message || error)

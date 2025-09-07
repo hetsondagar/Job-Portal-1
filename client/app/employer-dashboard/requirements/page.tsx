@@ -491,39 +491,51 @@ export default function RequirementsPage() {
                         </div>
                         <div className="flex items-center space-x-6">
                           <div className="text-center">
-                            <div className="text-2xl font-bold text-slate-900">{getCandidatesCount(requirement)}</div>
+                            <Link href={`/employer-dashboard/requirements/${requirement.id}/candidates`}>
+                              <div className="text-2xl font-bold text-slate-900 hover:text-blue-600 cursor-pointer transition-colors">
+                                {getCandidatesCount(requirement)}
+                              </div>
+                            </Link>
                             <div className="text-sm text-slate-500">Candidates</div>
                           </div>
                           <div className="text-center">
                             <div className="text-2xl font-bold text-blue-600">{getAccessedCount(requirement)}</div>
                             <div className="text-sm text-slate-500">Accessed</div>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
+                          <div className="flex items-center space-x-2">
+                            <Link href={`/employer-dashboard/requirements/${requirement.id}/candidates`}>
+                              <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                                <Users className="w-4 h-4 mr-1" />
+                                View Candidates
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditRequirement(requirement.id)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Requirement
-                              </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDuplicateRequirement(requirement.id)}>
-                                <Copy className="w-4 h-4 mr-2" />
-                                Duplicate
-                              </DropdownMenuItem>
+                            </Link>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditRequirement(requirement.id)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Requirement
+                                </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDuplicateRequirement(requirement.id)}>
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Duplicate
+                                </DropdownMenuItem>
 
-                              <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  className="text-red-600"
-                                  onClick={() => handleDeleteRequirement(requirement.id)}
-                                >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="text-red-600"
+                                    onClick={() => handleDeleteRequirement(requirement.id)}
+                                  >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     </motion.div>

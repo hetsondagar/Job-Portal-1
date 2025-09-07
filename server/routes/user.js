@@ -295,15 +295,21 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'currentLocation': 'current_location',
       'headline': 'headline',
       'summary': 'summary',
+      'currentSalary': 'current_salary',
       'expectedSalary': 'expected_salary',
+      'experienceYears': 'experience_years',
       'noticePeriod': 'notice_period',
       'willingToRelocate': 'willing_to_relocate',
       'gender': 'gender',
       'profileVisibility': 'profile_visibility',
       'contactVisibility': 'contact_visibility',
       'skills': 'skills',
+      'keySkills': 'key_skills',
       'languages': 'languages',
       'certifications': 'certifications',
+      'education': 'education',
+      'preferredLocations': 'preferred_locations',
+      'designation': 'designation',
       'socialLinks': 'social_links',
       'preferences': 'preferences'
     };
@@ -322,7 +328,8 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
     // Calculate profile completion percentage
     const profileFields = [
       'first_name', 'last_name', 'email', 'phone', 'current_location',
-      'headline', 'summary', 'skills', 'languages'
+      'headline', 'summary', 'skills', 'key_skills', 'languages', 'education',
+      'experience_years', 'current_salary', 'expected_salary', 'designation'
     ];
     
     let completedFields = 0;
@@ -358,6 +365,22 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       currentLocation: updatedUser.current_location,
       headline: updatedUser.headline,
       summary: updatedUser.summary,
+      currentSalary: updatedUser.current_salary,
+      expectedSalary: updatedUser.expected_salary,
+      experienceYears: updatedUser.experience_years,
+      noticePeriod: updatedUser.notice_period,
+      willingToRelocate: updatedUser.willing_to_relocate,
+      gender: updatedUser.gender,
+      designation: updatedUser.designation,
+      skills: updatedUser.skills,
+      keySkills: updatedUser.key_skills,
+      languages: updatedUser.languages,
+      education: updatedUser.education,
+      preferredLocations: updatedUser.preferred_locations,
+      certifications: updatedUser.certifications,
+      socialLinks: updatedUser.social_links,
+      profileVisibility: updatedUser.profile_visibility,
+      contactVisibility: updatedUser.contact_visibility,
       profileCompletion: updatedUser.profile_completion,
       oauthProvider: updatedUser.oauth_provider,
       oauthId: updatedUser.oauth_id,

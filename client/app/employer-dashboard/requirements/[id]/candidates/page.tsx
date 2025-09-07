@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft } from "lucide-react"
+import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -15,6 +15,37 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
+import { toast } from "sonner"
+
+interface Candidate {
+  id: string;
+  name: string;
+  designation: string;
+  experience: string;
+  location: string;
+  education: string;
+  keySkills: string[];
+  preferredLocations: string[];
+  avatar: string;
+  isAttached: boolean;
+  lastModified: string;
+  activeStatus: string;
+  additionalInfo: string;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  currentSalary: string;
+  expectedSalary: string;
+  noticePeriod: string;
+  profileCompletion: number;
+}
+
+interface Requirement {
+  id: string;
+  title: string;
+  totalCandidates: number;
+  accessedCandidates: number;
+}
 
 export default function CandidatesPage() {
   const params = useParams()
@@ -22,6 +53,18 @@ export default function CandidatesPage() {
   const [sortBy, setSortBy] = useState("relevance")
   const [showCount, setShowCount] = useState("50")
   const [showFilters, setShowFilters] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  // Data states
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [requirement, setRequirement] = useState<Requirement | null>(null)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    pages: 0
+  })
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -35,14 +78,6 @@ export default function CandidatesPage() {
     lastActive: [] as string[],
   })
 
-  // Mock requirement data
-  const requirement = {
-    id: params.id,
-    title: "Software Engineer",
-    totalCandidates: 1247,
-    accessedCandidates: 45,
-  }
-
   // Filter options
   const filterOptions = {
     locations: ["Bangalore", "Mumbai", "Delhi", "Hyderabad", "Chennai", "Pune", "Ahmedabad", "Kolkata", "Vadodara"],
@@ -53,135 +88,56 @@ export default function CandidatesPage() {
     lastActive: ["Today", "This week", "This month", "Last 3 months", "Last 6 months"],
   }
 
-  // Enhanced candidate data
-  const candidates = [
-    {
-      id: 1,
-      name: "Abhijeet Vishwakarma",
-      designation: "Software Engineer, UI/UX Design, Front End Developer",
-      experience: "Fresher",
-      location: "Vadodara",
-      education: "B.Tech/B.E. Parul University, Vadodara 2024",
-      keySkills: ["Javascript", "CSS", "HTML", "Java", "Data Structures", "UI/UX", "C++"],
-      preferredLocations: ["Ahmedabad", "Mumbai", "Vadodara", "Mumbai Suburban"],
-      avatar: "/placeholder.svg?height=80&width=80",
-      isAttached: true,
-      lastModified: "last 2 months",
-      activeStatus: "last 7 days",
-      additionalInfo: "Frontend Web Development | Interaction | User Experience | Responsive Design",
-      phoneVerified: true,
-      emailVerified: true,
-      currentSalary: "3-5 LPA",
-      expectedSalary: "6-8 LPA",
-      noticePeriod: "Immediately",
-    },
-    {
-      id: 2,
-      name: "Bishal Singh",
-      designation: "Proactive Software Engineer | MERN Stack Developer with a passion for building scalable applications",
-      experience: "Fresher",
-      location: "Vadodara",
-      education: "Diploma Phonics Group of Institutions, Roorkee 2021",
-      keySkills: [
-        "Node.js",
-        "Javascript",
-        "React.js",
-        "Express",
-        "CSS",
-        "MongoDB",
-        "HTML",
-        "MySQL",
-        "Java",
-        "Problem Solving",
-      ],
-      preferredLocations: ["Bengaluru", "New Delhi", "Mumbai", "Ahmedabad", "Pune", "Hyderabad", "Chennai", "Kolkata"],
-      avatar: "/placeholder.svg?height=80&width=80",
-      isAttached: true,
-      lastModified: "last 5 months",
-      activeStatus: "2 days ago",
-      additionalInfo: "Mern Stack | Socket.io | Web Development | API Development | Database Design",
-      previousRole: "Stack Edu Tech",
-      phoneVerified: true,
-      emailVerified: true,
-      currentSalary: "4-6 LPA",
-      expectedSalary: "8-12 LPA",
-      noticePeriod: "15 days",
-    },
-    {
-      id: 3,
-      name: "Satyam Samanta",
-      designation: "I am a Web Developer and open source Contributor with the passion to create innovative solutions",
-      experience: "0y 4m",
-      location: "Vadodara",
-      currentRole: "Junior Software Engineer at Scalybee Digital",
-      education: "B.Tech/B.E. Institute for Technology and Management (ITM) 2023",
-      keySkills: [
-        "Node.js",
-        "Javascript",
-        "React.js",
-        "Express",
-        "Next.js",
-        "Npm",
-        "React Native",
-        "CSS",
-        "Bootstrap",
-        "HTML",
-      ],
-      preferredLocations: ["Bengaluru", "Mumbai", "Ahmedabad", "Vadodara"],
-      avatar: "/placeholder.svg?height=80&width=80",
-      isAttached: true,
-      lastModified: "last 3 months",
-      activeStatus: "1 week ago",
-      additionalInfo: "Web Development | Open Source | Full Stack | Mobile Development | UI/UX",
-      phoneVerified: true,
-      emailVerified: false,
-      currentSalary: "5-7 LPA",
-      expectedSalary: "10-15 LPA",
-      noticePeriod: "1 month",
-    },
-    {
-      id: 4,
-      name: "Priya Sharma",
-      designation: "Full Stack Developer with expertise in modern web technologies and cloud platforms",
-      experience: "2y 6m",
-      location: "Mumbai",
-      education: "B.Tech/B.E. Mumbai University 2021",
-      keySkills: ["React", "Node.js", "Python", "AWS", "Docker", "MongoDB", "PostgreSQL", "TypeScript"],
-      preferredLocations: ["Mumbai", "Bangalore", "Pune", "Hyderabad"],
-      avatar: "/placeholder.svg?height=80&width=80",
-      isAttached: true,
-      lastModified: "last 1 month",
-      activeStatus: "3 days ago",
-      additionalInfo: "Cloud Computing | DevOps | Microservices | API Development | Database Design",
-      previousRole: "Senior Developer at TechCorp",
-      phoneVerified: true,
-      emailVerified: true,
-      currentSalary: "12-15 LPA",
-      expectedSalary: "18-25 LPA",
-      noticePeriod: "2 months",
-    },
-    {
-      id: 5,
-      name: "Rahul Kumar",
-      designation: "Data Scientist and Machine Learning Engineer with strong analytical skills",
-      experience: "3y 8m",
-      location: "Bangalore",
-      education: "M.Tech Indian Institute of Technology, Delhi 2020",
-      keySkills: ["Python", "Machine Learning", "Deep Learning", "TensorFlow", "PyTorch", "SQL", "AWS", "Docker"],
-      preferredLocations: ["Bangalore", "Mumbai", "Delhi", "Hyderabad"],
-      avatar: "/placeholder.svg?height=80&width=80",
-      isAttached: true,
-      lastModified: "last 2 weeks",
-      activeStatus: "Today",
-      additionalInfo: "Data Analysis | Statistical Modeling | Computer Vision | NLP | Big Data",
-      previousRole: "Data Scientist at AI Solutions",
-      phoneVerified: true,
-      emailVerified: true,
-      currentSalary: "18-22 LPA",
-      expectedSalary: "25-35 LPA",
-      noticePeriod: "1 month",
-    },
-  ]
+  // Fetch candidates data
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        console.log('🔍 Fetching candidates for requirement:', params.id)
+        
+        const response = await apiService.getRequirementCandidates(params.id as string, {
+          page: pagination.page,
+          limit: parseInt(showCount),
+          search: searchQuery || undefined,
+          sortBy: sortBy
+        })
+        
+        console.log('🔍 Candidates API response:', response)
+        
+        if (response.success && response.data) {
+          setCandidates(response.data.candidates || [])
+          setRequirement(response.data.requirement)
+          setPagination(response.data.pagination || pagination)
+          console.log('✅ Successfully fetched candidates:', response.data.candidates?.length || 0)
+        } else {
+          console.error('❌ Failed to fetch candidates:', response.message)
+          setError(response.message || 'Failed to load candidates')
+        }
+      } catch (error: any) {
+        console.error('❌ Error fetching candidates:', error)
+        setError(error.message || 'Failed to load candidates. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchCandidates()
+    }
+  }, [params.id, pagination.page, showCount, searchQuery, sortBy])
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (params.id) {
+        setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page on search
+      }
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, params.id])
 
   const handleFilterChange = (filterType: string, value: any) => {
     setFilters(prev => ({
@@ -219,6 +175,27 @@ export default function CandidatesPage() {
           </Link>
         </div>
 
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                <span className="text-slate-600">Loading candidates...</span>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-4">
+                <h3 className="text-lg font-medium">Error loading candidates</h3>
+                <p className="text-sm">{error}</p>
+              </div>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : requirement ? (
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 mb-2">Candidates for {requirement.title}</h1>
@@ -229,6 +206,7 @@ export default function CandidatesPage() {
               <div className="text-sm text-slate-600">Accessed Today</div>
             </div>
           </div>
+          ) : null}
         </div>
 
         {/* Search and Filters */}
@@ -430,8 +408,10 @@ export default function CandidatesPage() {
                           </div>
 
         {/* Candidates List */}
+        {!loading && !error && (
         <div className="space-y-4">
-          {candidates.map((candidate) => (
+            {candidates.length > 0 ? (
+              candidates.map((candidate) => (
             <Card key={candidate.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start space-x-4">
                 <Avatar className="w-16 h-16">
@@ -444,6 +424,28 @@ export default function CandidatesPage() {
                     <div>
                       <h3 className="font-semibold text-slate-900 text-lg mb-1">{candidate.name}</h3>
                       <p className="text-slate-600 text-sm mb-2">{candidate.designation}</p>
+                      {/* Relevance Score and Match Reasons */}
+                      {candidate.relevanceScore !== undefined && (
+                        <div className="mb-2">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <Badge 
+                              variant={candidate.relevanceScore >= 50 ? "default" : candidate.relevanceScore >= 25 ? "secondary" : "outline"}
+                              className="text-xs"
+                            >
+                              {candidate.relevanceScore}% Match
+                            </Badge>
+                          </div>
+                          {candidate.matchReasons && candidate.matchReasons.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {candidate.matchReasons.map((reason, index) => (
+                                <Badge key={index} variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                  {reason}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                                 </div>
                     <div className="flex items-center space-x-2">
                       {candidate.phoneVerified && (
@@ -456,6 +458,9 @@ export default function CandidatesPage() {
                           Email ✓
                         </Badge>
                       )}
+                          <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                            {candidate.profileCompletion}% Complete
+                          </Badge>
                     </div>
                   </div>
 
@@ -510,19 +515,71 @@ export default function CandidatesPage() {
                 </div>
               </div>
             </Card>
-          ))}
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No candidates found</h3>
+                <p className="text-slate-600 mb-4">
+                  {searchQuery 
+                    ? `No candidates match "${searchQuery}". Try adjusting your search criteria.`
+                    : "No candidates match your requirement criteria. Try adjusting your filters or create a new requirement."
+                  }
+                </p>
+                {searchQuery && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSearchQuery("")}
+                    className="mr-2"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            )}
         </div>
+        )}
 
         {/* Pagination */}
+        {!loading && !error && pagination.pages > 1 && (
         <div className="flex justify-center mt-8">
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">Previous</Button>
-            <Button variant="outline" size="sm">1</Button>
-            <Button size="sm">2</Button>
-            <Button variant="outline" size="sm">3</Button>
-            <Button variant="outline" size="sm">Next</Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled={pagination.page === 1}
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+              >
+                Previous
+              </Button>
+              
+              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pagination.page === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled={pagination.page === pagination.pages}
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+              >
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <EmployerFooter />

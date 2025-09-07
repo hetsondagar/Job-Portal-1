@@ -1255,6 +1255,34 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async getRequirementCandidates(requirementId: string, params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/candidates${query}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getCandidateProfile(requirementId: string, candidateId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   // Dashboard Stats endpoint
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     const endpoint = '/user/dashboard-stats';
