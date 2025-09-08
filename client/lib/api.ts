@@ -320,55 +320,38 @@ class ApiService {
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const url = response.url;
-    let data: any;
-    
+    const url = response.url
+    const responseClone = response.clone()
+    let data: any
     try {
-      // Check if response has content before trying to parse
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        // If not JSON, get text content
-        const textContent = await response.text();
-        console.warn('⚠️ Non-JSON response received:', textContent);
-        
+        const textContent = await responseClone.text().catch(() => '')
+        console.warn('⚠️ Non-JSON response received:', textContent)
         if (response.ok) {
-          // If response is OK but not JSON, return success with text data
           return {
             success: true,
             message: 'Response received',
-            data: textContent
-          } as ApiResponse<T>;
-        } else {
-          return {
-            success: false,
-            message: `Request failed (${response.status}): ${response.statusText}`,
-            error: 'INVALID_RESPONSE'
-          } as ApiResponse<T>;
+            data: textContent as any,
+          } as ApiResponse<T>
         }
+        return {
+          success: false,
+          message: `Request failed (${response.status}): ${response.statusText}`,
+          error: 'INVALID_RESPONSE',
+        } as ApiResponse<T>
       }
-      
-      data = await response.json();
+
+      data = await response.json()
     } catch (error) {
-      console.error('❌ Failed to parse response as JSON:', error);
-      
-      // Try to get text content for debugging
-      try {
-        const textContent = await response.text();
-        console.error('❌ Response content:', textContent);
-        
-        // Return error response instead of throwing
-        return {
-          success: false,
-          message: `Server error (${response.status}): ${response.statusText}. Please try again later.`,
-          error: 'SERVER_ERROR'
-        } as ApiResponse<T>;
-      } catch (textError) {
-        return {
-          success: false,
-          message: `Server error (${response.status}): ${response.statusText}. Failed to parse response.`,
-          error: 'PARSE_ERROR'
-        } as ApiResponse<T>;
-      }
+      console.error('❌ Failed to parse response as JSON:', error)
+      const textContent = await responseClone.text().catch(() => '')
+      if (textContent) console.error('❌ Response content:', textContent)
+      return {
+        success: false,
+        message: `Server error (${response.status}): ${response.statusText}. Please try again later.`,
+        error: 'SERVER_ERROR',
+      } as ApiResponse<T>
     }
 
     console.log('🔍 handleResponse - Parsed data:', data);
@@ -395,7 +378,7 @@ class ApiService {
       }
       
       // Handle validation errors
-      if (data && data.errors && Array.isArray(data.errors)) {
+      if (data && (Array.isArray((data as any).errors))) {
         const errorMessages = data.errors.map((err: any) => err.msg || err.message).join(', ');
         return {
           success: false,
@@ -421,8 +404,8 @@ class ApiService {
       } as ApiResponse<T>;
     }
 
-    console.log('✅ handleResponse - Success:', data);
-    return data as ApiResponse<T>;
+    console.log('✅ handleResponse - Success:', data)
+    return data as ApiResponse<T>
   }
 
   // Authentication endpoints

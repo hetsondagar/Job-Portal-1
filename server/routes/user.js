@@ -322,6 +322,26 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       }
     });
 
+    // Normalize numeric fields: convert empty strings to null, and valid strings to numbers
+    if (Object.prototype.hasOwnProperty.call(updateData, 'expected_salary')) {
+      const v = updateData.expected_salary;
+      if (v === '' || v === undefined) {
+        updateData.expected_salary = null;
+      } else if (typeof v === 'string') {
+        const num = parseFloat(v);
+        updateData.expected_salary = isNaN(num) ? null : num;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'notice_period')) {
+      const v = updateData.notice_period;
+      if (v === '' || v === undefined) {
+        updateData.notice_period = null;
+      } else if (typeof v === 'string') {
+        const num = parseInt(v);
+        updateData.notice_period = isNaN(num) ? null : num;
+      }
+    }
+
     // Update last profile update timestamp
     updateData.lastProfileUpdate = new Date();
 
