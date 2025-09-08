@@ -21,7 +21,7 @@ const jobsRoutes = require('./routes/jobs');
 const requirementsRoutes = require('./routes/requirements');
 const jobAlertsRoutes = require('./routes/job-alerts');
 const jobTemplatesRoutes = require('./routes/job-templates');
-const candidateLikesRoutes = require('./routes/candidate-likes');
+const candidateLikesRoutes = require('./routes/candidate-upvote');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -142,6 +142,7 @@ app.use('/api/requirements', requirementsRoutes);
 app.use('/api/job-alerts', jobAlertsRoutes);
 app.use('/api/job-templates', jobTemplatesRoutes);
 app.use('/api/candidate-likes', candidateLikesRoutes);
+app.use('/api/candidate-upvotes', candidateLikesRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -163,7 +164,7 @@ const startServer = async () => {
       const tableNames = Array.isArray(tables) ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase()) : [];
       if (!tableNames.includes('candidate_likes')) {
         await require('./models/CandidateLike').sync();
-        console.log('✅ candidate_likes table created');
+        console.log('✅ candidate_likes table ensured');
       } else {
         console.log('ℹ️ candidate_likes table already exists');
       }

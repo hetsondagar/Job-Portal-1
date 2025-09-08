@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ThumbsUp } from "lucide-react"
+import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -464,7 +464,7 @@ export default function CandidatesPage() {
                             {candidate.profileCompletion}% Complete
                           </Badge>
                           <button
-                            aria-label={candidate.likedByCurrent ? 'Unlike candidate' : 'Like candidate'}
+                            aria-label={candidate.likedByCurrent ? 'Remove upvote' : 'Upvote candidate'}
                             onClick={async (e) => {
                               e.preventDefault();
                               const btn = e.currentTarget as HTMLButtonElement | null;
@@ -490,14 +490,14 @@ export default function CandidatesPage() {
                                   }
                                 }
                               } catch (err) {
-                                toast.error('Failed to update like');
+                                toast.error('Failed to update upvote');
                               } finally {
                                 if (btn) btn.disabled = false;
                               }
                             }}
-                            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${candidate.likedByCurrent ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${candidate.likedByCurrent ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                           >
-                            <ThumbsUp className={`w-3.5 h-3.5 ${candidate.likedByCurrent ? 'fill-blue-600 text-blue-600' : ''}`}/>
+                            <svg className={`w-3.5 h-3.5 ${candidate.likedByCurrent ? 'fill-green-600 text-green-600' : 'text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 5l7 12H5l7-12z"/></svg>
                             <span>{candidate.likeCount ?? 0}</span>
                           </button>
                     </div>

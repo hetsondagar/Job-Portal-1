@@ -86,10 +86,10 @@ router.post('/:candidateId', authenticateToken, ensureEmployer, async (req, res)
 			await Notification.create({
 				userId: candidateId,
 				type: 'profile_view',
-				title: 'Your profile received a like',
-				message: 'Someone liked your profile.',
+				title: 'Your profile received an upvote',
+				message: 'Someone upvoted your profile.',
 				priority: 'medium',
-				icon: 'thumbs-up',
+				icon: 'arrow-up',
 				metadata: { event: 'profile_like' }
 			});
 		} catch (activityErr) {

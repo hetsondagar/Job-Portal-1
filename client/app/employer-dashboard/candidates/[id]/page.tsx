@@ -153,7 +153,7 @@ export default function CandidateProfilePage() {
                         <Download className="w-4 h-4" />
                       </Button>
                       <button
-                        aria-label={liked ? 'Unlike candidate' : 'Like candidate'}
+                        aria-label={liked ? 'Remove upvote' : 'Upvote candidate'}
                         onClick={async () => {
                           try {
                             if (liked) {
@@ -171,9 +171,9 @@ export default function CandidateProfilePage() {
                             }
                           } catch (e) {}
                         }}
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${liked ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${liked ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                       >
-                        <ThumbsUp className={`w-3.5 h-3.5 ${liked ? 'fill-blue-600 text-blue-600' : ''}`} />
+                        <svg className={`w-3.5 h-3.5 ${liked ? 'fill-green-600 text-green-600' : 'text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 5l7 12H5l7-12z"/></svg>
                         <span>{likeCount}</span>
                       </button>
                     </div>

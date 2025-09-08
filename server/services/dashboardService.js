@@ -338,13 +338,25 @@ class DashboardService {
         profileViews = 0;
       }
 
-      // Get profile like count with error handling
+      // Get profile like (upvote) count with robust fallback
       let profileLikes = 0;
       try {
         profileLikes = await CandidateLike.count({ where: { candidateId: userId } });
       } catch (error) {
-        console.error('Error fetching profile likes:', error);
-        profileLikes = 0;
+        console.error('Error fetching profile likes via model:', error);
+      }
+      // Fallback to raw query if model count failed or returned suspicious zero
+      if (!profileLikes || Number.isNaN(profileLikes)) {
+        try {
+          const [rows] = await sequelize.query(
+            'SELECT COUNT(*)::int AS cnt FROM candidate_likes WHERE candidate_id = :userId',
+            { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+          );
+          const cnt = Array.isArray(rows) ? 0 : (rows?.cnt ?? 0);
+          profileLikes = parseInt(cnt, 10) || 0;
+        } catch (rawErr) {
+          console.error('Raw profile likes query failed:', rawErr);
+        }
       }
 
       return {

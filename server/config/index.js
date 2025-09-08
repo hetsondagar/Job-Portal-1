@@ -25,7 +25,7 @@ const Conversation = require('../models/Conversation');
 const Payment = require('../models/Payment');
 const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
-const CandidateLike = require('../models/CandidateLike');
+const CandidateLike = require('../models/CandidateUpvote');
 
 // Define associations
 
