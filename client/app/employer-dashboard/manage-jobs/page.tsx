@@ -458,9 +458,11 @@ export default function ManageJobsPage() {
                                      </Link>
                                    </DropdownMenuItem>
                                  )}
-                                 <DropdownMenuItem>
-                                   <Eye className="w-4 h-4 mr-2" />
-                                   Preview Job
+                                 <DropdownMenuItem asChild>
+                                   <Link href={`/jobs/${job.id}`}>
+                                     <Eye className="w-4 h-4 mr-2" />
+                                     Preview Job
+                                   </Link>
                                  </DropdownMenuItem>
                                  <DropdownMenuSeparator />
                                  {job.status === "draft" ? (

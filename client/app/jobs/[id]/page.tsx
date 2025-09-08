@@ -54,14 +54,98 @@ export default function JobDetailPage() {
       setJobLoading(true)
       try {
         if (jobIdFromParams) {
-          const res = await apiService.getJobById(jobIdFromParams)
-          if (isMounted && res.success && res.data) {
-            setJob(res.data)
+          console.log('🔍 Fetching job details for ID:', jobIdFromParams)
+          
+          // Try to fetch job data using public API method
+          try {
+            const res = await apiService.getJobByIdPublic(jobIdFromParams)
+            console.log('📋 Job API response (public):', res)
+            
+            if (res.success && res.data) {
+              // Transform the job data to match the expected format
+              const transformedJob = {
+                id: res.data.id,
+                title: res.data.title || 'Untitled Job',
+                company: res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
+                companyId: res.data.companyId || res.data.employerId || '',
+                companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
+                location: res.data.location || 'Location not specified',
+                experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
+                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
+                skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
+                posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
+                applicants: res.data.applicationsCount || 0,
+                description: res.data.description || 'No description provided',
+                requirements: Array.isArray(res.data.requirements) ? res.data.requirements : (res.data.requirements ? res.data.requirements.split('\n').filter((r: string) => r.trim()) : []),
+                benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
+                type: res.data.jobType || res.data.type || 'Full-time',
+                remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
+                department: res.data.department || 'Department not specified',
+                companySize: res.data.company?.companySize || res.data.company?.size || res.data.employer?.size || 'Company size not specified',
+                companyRating: res.data.company?.rating || res.data.employer?.rating || 0,
+                companyReviews: res.data.company?.reviews || res.data.employer?.reviews || 0,
+                industry: res.data.company?.industry || res.data.employer?.industry || res.data.industry || 'Industry not specified',
+                founded: res.data.company?.founded || res.data.employer?.founded || 'Founded date not available',
+                website: res.data.company?.website || res.data.employer?.website || '',
+                aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
+                photos: res.data.photos || []
+              }
+              
+              console.log('✅ Transformed job data:', transformedJob)
+              console.log('📸 Job photos for jobseeker:', res.data.photos)
+              setJob(transformedJob)
             setJobLoading(false)
             return
+            }
+          } catch (fetchError) {
+            console.log('❌ Direct fetch failed, trying with API service:', fetchError)
+          }
+          
+          // Fallback to API service with authentication
+          const res = await apiService.getJobById(jobIdFromParams)
+          console.log('📋 Job API response (authenticated):', res)
+          
+          if (isMounted && res.success && res.data) {
+            // Transform the job data to match the expected format
+            const transformedJob = {
+              id: res.data.id,
+              title: res.data.title || 'Untitled Job',
+              company: res.data.company || res.data.employer || 'Company Name',
+              companyId: res.data.companyId || res.data.employerId || '',
+              companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
+              location: res.data.location || 'Location not specified',
+              experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
+              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
+              skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
+              posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
+              applicants: res.data.applicationsCount || 0,
+              description: res.data.description || 'No description provided',
+              requirements: Array.isArray(res.data.requirements) ? res.data.requirements : (res.data.requirements ? res.data.requirements.split('\n').filter((r: string) => r.trim()) : []),
+              benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
+              type: res.data.jobType || res.data.type || 'Full-time',
+              remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
+              department: res.data.department || 'Department not specified',
+              companySize: res.data.company?.size || res.data.employer?.size || 'Company size not specified',
+              companyRating: res.data.company?.rating || res.data.employer?.rating || 0,
+              companyReviews: res.data.company?.reviews || res.data.employer?.reviews || 0,
+              industry: res.data.company?.industry || res.data.employer?.industry || res.data.industry || 'Industry not specified',
+              founded: res.data.company?.founded || res.data.employer?.founded || 'Founded date not available',
+              website: res.data.company?.website || res.data.employer?.website || '',
+              aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
+              photos: res.data.photos || []
+            }
+            
+            console.log('✅ Transformed job data (fallback):', transformedJob)
+            console.log('📸 Job photos for jobseeker (fallback):', res.data.photos)
+            setJob(transformedJob)
+            setJobLoading(false)
+            return
+          } else {
+            console.log('❌ Job API call failed or no data:', res)
           }
         }
       } catch (e) {
+        console.error('❌ Error fetching job:', e)
         // ignore and fallback
       }
 
@@ -130,7 +214,11 @@ export default function JobDetailPage() {
       }
 
       if (isMounted) {
+        if (fallback) {
         setJob(fallback)
+        } else {
+          setJob(null)
+        }
         setJobLoading(false)
       }
     }
@@ -208,6 +296,35 @@ export default function JobDetailPage() {
         <div className="pt-16 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="h-40 animate-pulse bg-white/60 dark:bg-slate-800/60 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Navbar />
+        <div className="pt-16 pb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-16">
+              <div className="w-24 h-24 mx-auto mb-6 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-12 h-12 text-red-600 dark:text-red-400" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Job Not Found</h1>
+              <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
+                The job you're looking for doesn't exist or has been removed.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button onClick={() => router.push('/jobs')} className="bg-blue-600 hover:bg-blue-700">
+                  Browse All Jobs
+                </Button>
+                <Button variant="outline" onClick={() => router.back()}>
+                  Go Back
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -449,6 +566,50 @@ export default function JobDetailPage() {
                             <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
                           </div>
                         ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Job Photos */}
+              {Array.isArray(job?.photos) && job.photos.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Workplace Photos</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {job.photos.map((photo: any, index: number) => {
+                          console.log('📸 Rendering jobseeker photo:', photo);
+                          return (
+                          <div key={photo.id || index} className="relative group">
+                            <img
+                              src={photo.fileUrl}
+                              alt={photo.altText || `Workplace photo ${index + 1}`}
+                              className="w-full h-48 object-cover rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300"
+                              onLoad={() => console.log('✅ Jobseeker image loaded successfully:', photo.fileUrl)}
+                              onError={(e) => {
+                                console.error('❌ Jobseeker image failed to load:', photo.fileUrl, e);
+                                console.log('🔄 Retrying jobseeker image load in 1 second...');
+                                setTimeout(() => {
+                                  e.currentTarget.src = photo.fileUrl + '?t=' + Date.now();
+                                }, 1000);
+                              }}
+                            />
+                            {photo.caption && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-2 rounded-b-lg">
+                                <p className="text-sm">{photo.caption}</p>
+                              </div>
+                            )}
+                          </div>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>

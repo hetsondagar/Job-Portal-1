@@ -84,10 +84,10 @@ export function EmployerNavbar() {
       description: "View and manage your unpublished job drafts",
     },
     {
-      name: "Post a Hot Vacancy",
-      href: "/employer-dashboard/post-job?type=hot",
+      name: "Hot Vacancies",
+      href: "/employer-dashboard/hot-vacancies",
       icon: Briefcase,
-      description: "Get premium visibility for urgent hiring needs",
+      description: "Premium urgent hiring solutions for immediate recruitment",
     },
     {
       name: "Post an Internship",

@@ -119,7 +119,7 @@ exports.createJob = async (req, res, next) => {
     // Parse salary if provided as string
     let parsedSalaryMin = salaryMin;
     let parsedSalaryMax = salaryMax;
-    
+
     if (salary && typeof salary === 'string') {
       // Handle salary ranges like "₹8-15 LPA" or "800000-1500000"
       const salaryMatch = salary.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
@@ -133,6 +133,22 @@ exports.createJob = async (req, res, next) => {
           parsedSalaryMin = singleSalary * 100000;
         }
       }
+    }
+
+    // Sanitize numeric fields to avoid DECIMAL(10,2) overflow in DB
+    const MAX_DECIMAL_10_2_ABS = 99999999.99; // absolute max allowed
+    const coerceNumberOrNull = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+    let safeSalaryMin = coerceNumberOrNull(parsedSalaryMin);
+    let safeSalaryMax = coerceNumberOrNull(parsedSalaryMax);
+    if (safeSalaryMin !== null) {
+      safeSalaryMin = Math.max(0, Math.min(safeSalaryMin, MAX_DECIMAL_10_2_ABS));
+    }
+    if (safeSalaryMax !== null) {
+      safeSalaryMax = Math.max(0, Math.min(safeSalaryMax, MAX_DECIMAL_10_2_ABS));
     }
 
     // Map experience level
@@ -170,8 +186,8 @@ exports.createJob = async (req, res, next) => {
       experienceMin: experienceMin || null,
       experienceMax: experienceMax || null,
       salary: salary && salary.trim() ? salary.trim() : null,
-      salaryMin: parsedSalaryMin,
-      salaryMax: parsedSalaryMax,
+      salaryMin: safeSalaryMin,
+      salaryMax: safeSalaryMax,
       salaryCurrency,
       salaryPeriod,
       isSalaryVisible,
@@ -374,7 +390,7 @@ exports.getJobById = async (req, res, next) => {
         },
         {
           model: User,
-          as: 'postedByUser',
+          as: 'employer',
           attributes: ['id', 'first_name', 'last_name', 'email']
         },
         {

@@ -324,6 +324,16 @@ class ApiService {
     const responseClone = response.clone()
     let data: any
     try {
+      // Detect opaque/network errors (often CORS or network failure)
+      if ((response as any).type === 'opaque' || response.status === 0) {
+        console.error('❌ Network/CORS error:', { url, type: (response as any).type, status: response.status })
+        return {
+          success: false,
+          message: 'Network or CORS error. Please ensure the API server allows this origin and is reachable.',
+          error: 'NETWORK_OR_CORS_ERROR'
+        } as ApiResponse<T>
+      }
+
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
         const textContent = await responseClone.text().catch(() => '')
@@ -388,6 +398,21 @@ class ApiService {
         } as ApiResponse<T>;
       }
       
+      // Provide clearer defaults for common auth/permission/not-found cases
+      if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+        const defaultMessages: Record<number, string> = {
+          401: 'Authentication required. Please log in again.',
+          403: 'Access denied. You do not have permission to perform this action.',
+          404: 'Not found. The requested resource does not exist.',
+        };
+        const fallback = defaultMessages[response.status] || `Request failed (${response.status}): ${response.statusText}`;
+        return {
+          success: false,
+          message: fallback,
+          error: 'REQUEST_FAILED'
+        } as ApiResponse<T>;
+      }
+
       // Handle server errors more gracefully
       if (response.status >= 500) {
         return {
@@ -399,7 +424,7 @@ class ApiService {
       
       return {
         success: false,
-        message: (data && data.message) || `Request failed (${response.status}): ${response.statusText}`,
+        message: (data && (data.message || data.error || (Array.isArray(data.errors) ? data.errors[0]?.msg : undefined))) || `Request failed (${response.status}): ${response.statusText}`,
         error: 'REQUEST_FAILED'
       } as ApiResponse<T>;
     }
@@ -681,6 +706,44 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async getJobByIdPublic(id: string): Promise<ApiResponse<any>> {
+    try {
+      console.log('🔍 Fetching job publicly for ID:', id);
+      const response = await fetch(`${API_BASE_URL}/jobs/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📋 Public job API response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.error('❌ Public job API failed:', response.status, response.statusText);
+        return {
+          success: false,
+          message: `Failed to fetch job: ${response.status} ${response.statusText}`,
+          error: 'API_ERROR'
+        };
+      }
+      
+      const data = await response.json();
+      console.log('📋 Public job API data:', data);
+      
+      return {
+        success: true,
+        data: data.data || data,
+        message: data.message || 'Job fetched successfully'
+      };
+    } catch (error) {
+      console.error('❌ Public job API error:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch job data',
+        error: 'NETWORK_ERROR'
+      };
+    }
+  }
+
   async getCompanyJobs(companyId?: string, params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<any>> {
     const finalCompanyId = companyId || this.getCompanyFromStorage()?.id || this.getCurrentUserFromStorage()?.companyId || '';
     const query = params
@@ -883,11 +946,41 @@ class ApiService {
 
   // Employer applications endpoint
   async getEmployerApplications(): Promise<ApiResponse<any[]>> {
-    const response = await fetch(`${API_BASE_URL}/user/employer/applications`, {
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      console.log('🔍 Fetching employer applications...');
+      const response = await fetch(`${API_BASE_URL}/user/employer/applications`, {
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse<any[]>(response);
+      console.log('📋 Employer applications API response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.error('❌ Employer applications API failed:', response.status, response.statusText);
+        const errorData = await response.text();
+        console.error('❌ Error response body:', errorData);
+        return {
+          success: false,
+          message: `Failed to fetch applications: ${response.status} ${response.statusText}`,
+          error: 'API_ERROR'
+        };
+      }
+      
+      const data = await response.json();
+      console.log('📋 Employer applications API data:', data);
+      
+      return {
+        success: true,
+        data: data.data || data,
+        message: data.message || 'Applications fetched successfully'
+      };
+    } catch (error) {
+      console.error('❌ Employer applications API error:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch applications data',
+        error: 'NETWORK_ERROR'
+      };
+    }
   }
 
   // Get detailed application information for employer
@@ -1266,6 +1359,81 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async shortlistCandidate(requirementId: string, candidateId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/shortlist`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async contactCandidate(requirementId: string, candidateId: string, message?: string, subject?: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/contact`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ message, subject }),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async downloadCandidateResume(requirementId: string, candidateId: string, resumeId: string): Promise<Response> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/resume/${resumeId}/download`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response;
+  }
+
+  // Messages endpoints
+  async getConversations(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/messages/conversations`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
+  async getMessages(conversationId: string, page: number = 1, limit: number = 50): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/messages/conversations/${conversationId}/messages?page=${page}&limit=${limit}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async sendMessage(conversationId: string, content: string, messageType: string = 'text'): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/messages/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ content, messageType }),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async markConversationAsRead(conversationId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/messages/conversations/${conversationId}/read`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getUnreadCount(): Promise<ApiResponse<{ unreadCount: number }>> {
+    const response = await fetch(`${API_BASE_URL}/messages/unread-count`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<{ unreadCount: number }>(response);
+  }
+
   // Candidate Likes endpoints
   async getCandidateLikes(candidateId: string): Promise<ApiResponse<{ likeCount: number; likedByCurrent: boolean }>> {
     const response = await fetch(`${API_BASE_URL}/candidate-likes/${candidateId}`, {
@@ -1598,6 +1766,139 @@ class ApiService {
   async createJobFromTemplate(id: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/job-templates/${id}/create-job`, {
       method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  // Hot Vacancy API methods
+  async createHotVacancy(data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancies(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    urgencyLevel?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.urgencyLevel) queryParams.append('urgencyLevel', params.urgencyLevel);
+
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies?${queryParams}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancyById(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async updateHotVacancy(id: string, data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async deleteHotVacancy(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getPublicHotVacancies(params?: {
+    page?: number;
+    limit?: number;
+    location?: string;
+    jobType?: string;
+    experienceLevel?: string;
+    urgencyLevel?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.location) queryParams.append('location', params.location);
+    if (params?.jobType) queryParams.append('jobType', params.jobType);
+    if (params?.experienceLevel) queryParams.append('experienceLevel', params.experienceLevel);
+    if (params?.urgencyLevel) queryParams.append('urgencyLevel', params.urgencyLevel);
+
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/public?${queryParams}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancyPricing(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/pricing`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async uploadHotVacancyPhoto(hotVacancyId: string, file: File, data: {
+    altText?: string;
+    caption?: string;
+    displayOrder?: number;
+    isPrimary?: boolean;
+  }): Promise<ApiResponse<any>> {
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('altText', data.altText || '');
+    formData.append('caption', data.caption || '');
+    formData.append('displayOrder', (data.displayOrder || 0).toString());
+    formData.append('isPrimary', (data.isPrimary || false).toString());
+
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.getToken()}`,
+      },
+      body: formData,
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancyPhotos(hotVacancyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async deleteHotVacancyPhoto(photoId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/photos/${photoId}`, {
+      method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
 

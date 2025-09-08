@@ -155,7 +155,7 @@ export default function JobsPage() {
           posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
           applicants: job.applications || job.application_count || 0,
           description: job.description,
-          type: job.jobType || 'Full-time',
+          type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
           remote: job.remoteWork === 'remote',
           urgent: job.isUrgent || false,
           featured: job.isFeatured || false,
@@ -351,7 +351,9 @@ export default function JobsPage() {
     // Job type filter
     if (filters.jobTypes.length > 0) {
       filtered = filtered.filter(job =>
-        filters.jobTypes.includes(job.type)
+        filters.jobTypes.some(filterType => 
+          job.type.toLowerCase() === filterType.toLowerCase()
+        )
       )
     }
 
@@ -362,7 +364,7 @@ export default function JobsPage() {
 
     // Type filter
     if (filters.type) {
-      filtered = filtered.filter(job => job.type === filters.type)
+      filtered = filtered.filter(job => job.type.toLowerCase() === filters.type.toLowerCase())
     }
 
     // Sort jobs

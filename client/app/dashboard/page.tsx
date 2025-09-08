@@ -24,7 +24,9 @@ import {
   Upload,
   RefreshCw,
   Star,
-  ThumbsUp
+  ThumbsUp,
+  MessageSquare,
+  Send
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 
@@ -47,6 +49,14 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(true)
+  const [conversations, setConversations] = useState<any[]>([])
+  const [conversationsLoading, setConversationsLoading] = useState(true)
+  const [selectedConversation, setSelectedConversation] = useState<any>(null)
+  const [messages, setMessages] = useState<any[]>([])
+  const [messagesLoading, setMessagesLoading] = useState(false)
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -63,6 +73,8 @@ export default function DashboardPage() {
       fetchBookmarks()
       fetchJobAlerts()
       fetchApplications()
+      fetchConversations()
+      fetchUnreadCount()
     }
   }, [user, loading])
 
@@ -104,6 +116,78 @@ export default function DashboardPage() {
       setApplications([])
     } finally {
       setApplicationsLoading(false)
+    }
+  }
+
+  const fetchConversations = async () => {
+    try {
+      setConversationsLoading(true)
+      const response = await apiService.getConversations()
+      if (response.success && response.data) {
+        setConversations(response.data)
+      } else {
+        setConversations([])
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error)
+      setConversations([])
+    } finally {
+      setConversationsLoading(false)
+    }
+  }
+
+  const fetchMessages = async (conversationId: string) => {
+    try {
+      setMessagesLoading(true)
+      const response = await apiService.getMessages(conversationId)
+      if (response.success && response.data) {
+        setMessages(response.data.messages || [])
+        // Mark conversation as read
+        await apiService.markConversationAsRead(conversationId)
+        // Refresh unread count
+        fetchUnreadCount()
+      } else {
+        setMessages([])
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+      setMessages([])
+    } finally {
+      setMessagesLoading(false)
+    }
+  }
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await apiService.getUnreadCount()
+      if (response.success && response.data) {
+        setUnreadCount(response.data.unreadCount)
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error)
+    }
+  }
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return
+
+    try {
+      setSendingMessage(true)
+      const response = await apiService.sendMessage(selectedConversation.id, newMessage.trim())
+      if (response.success) {
+        setNewMessage('')
+        // Refresh messages
+        fetchMessages(selectedConversation.id)
+        // Refresh conversations to update last message
+        fetchConversations()
+      } else {
+        toast.error('Failed to send message')
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+      toast.error('Failed to send message')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -827,6 +911,188 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Messages Section */}
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="w-5 h-5" />
+                <span>Messages</span>
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {conversationsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : conversations && conversations.length > 0 ? (
+                <div className="space-y-3">
+                  {conversations.slice(0, 5).map((conversation, index) => (
+                    <div 
+                      key={conversation.id || index} 
+                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedConversation?.id === conversation.id 
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+                          : 'bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }`}
+                      onClick={() => {
+                        setSelectedConversation(conversation)
+                        fetchMessages(conversation.id)
+                      }}
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400">
+                            {conversation.otherParticipant.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                              {conversation.otherParticipant.name}
+                            </p>
+                            {conversation.isUnread && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
+                            {conversation.lastMessage ? (
+                              conversation.lastMessage.isFromMe ? `You: ${conversation.lastMessage.content}` : conversation.lastMessage.content
+                            ) : 'No messages yet'}
+                          </p>
+                          {conversation.otherParticipant.company && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                              {conversation.otherParticipant.company.name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end space-y-1">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {conversation.lastMessageAt ? new Date(conversation.lastMessageAt).toLocaleDateString() : 'N/A'}
+                        </div>
+                        {conversation.unreadCount > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            {conversation.unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <MessageSquare className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No messages yet</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Employers will contact you here when they're interested in your profile</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Message Detail Modal */}
+          {selectedConversation && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400">
+                        {selectedConversation.otherParticipant.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white">
+                        {selectedConversation.otherParticipant.name}
+                      </h3>
+                      {selectedConversation.otherParticipant.company && (
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                          {selectedConversation.otherParticipant.company.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedConversation(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto mb-4 space-y-3">
+                  {messagesLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : messages.length > 0 ? (
+                    messages.map((message, index) => (
+                      <div
+                        key={message.id || index}
+                        className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.isFromMe
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className={`text-xs mt-1 ${
+                            message.isFromMe ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
+                          }`}>
+                            {new Date(message.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6">
+                      <MessageSquare className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <p className="text-sm text-slate-600 dark:text-slate-300">No messages yet</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Type your message..."
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  />
+                  <Button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sendingMessage}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {sendingMessage ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
