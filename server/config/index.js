@@ -26,6 +26,8 @@ const Payment = require('../models/Payment');
 const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
 const CandidateLike = require('../models/CandidateUpvote');
+const HotVacancy = require('../models/HotVacancy');
+const HotVacancyPhoto = require('../models/HotVacancyPhoto');
 
 // Define associations
 
@@ -81,6 +83,16 @@ JobBookmark.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 // JobPhoto associations
 JobPhoto.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 JobPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
+
+// HotVacancy associations
+HotVacancy.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+HotVacancy.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
+HotVacancy.hasMany(JobApplication, { foreignKey: 'hotVacancyId', as: 'jobApplications' });
+HotVacancy.hasMany(HotVacancyPhoto, { foreignKey: 'hotVacancyId', as: 'photos' });
+
+// HotVacancyPhoto associations
+HotVacancyPhoto.belongsTo(HotVacancy, { foreignKey: 'hotVacancyId', as: 'hotVacancy' });
+HotVacancyPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 
 // JobAlert associations
 JobAlert.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -213,5 +225,7 @@ module.exports = {
   Analytics,
   JobPhoto,
   CandidateLike,
+  HotVacancy,
+  HotVacancyPhoto,
   syncDatabase
 }; 

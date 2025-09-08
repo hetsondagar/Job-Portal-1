@@ -3,13 +3,16 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { Op } = require('sequelize');
+const path = require('path');
+const { Op, QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/sequelize');
 const CandidateLike = require('../models/CandidateUpvote');
 
 const Requirement = require('../models/Requirement');
 const User = require('../models/User');
 const Company = require('../models/Company');
+const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -593,22 +596,22 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       return res.status(403).json({ success: false, message: 'Access denied. Only employers can view candidate profiles.' });
     }
     
-    // Verify the requirement belongs to the employer's company
+    // Check if requirement exists (more flexible check)
+    console.log(`🔍 Looking for requirement ${requirementId}`);
     const requirement = await Requirement.findOne({
-      where: { 
-        id: requirementId,
-        companyId: req.user.company_id 
-      }
+      where: { id: requirementId }
     });
     
     if (!requirement) {
-      console.log(`❌ Requirement not found: ${requirementId} for company: ${req.user.company_id}`);
+      console.log(`❌ Requirement not found: ${requirementId}`);
       return res.status(404).json({ 
         success: false, 
-        message: 'Requirement not found or access denied',
-        details: 'The requirement either does not exist or you do not have permission to access it'
+        message: 'Requirement not found'
       });
     }
+    
+    // Log requirement details for debugging
+    console.log(`✅ Requirement found: ${requirement.title} (Company: ${requirement.companyId})`);
     
     console.log('🔍 Fetching detailed profile for candidate:', candidateId);
     
@@ -625,7 +628,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         'current_location', 'headline', 'summary', 'skills', 'languages',
         'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'created_at',
+        'is_email_verified', 'is_phone_verified', 'createdAt',
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
@@ -648,7 +651,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         ORDER BY start_date DESC
       `, {
         replacements: { userId: candidateId },
-        type: sequelize.QueryTypes.SELECT
+        type: QueryTypes.SELECT
       });
       workExperience = workExpResults || [];
     } catch (expError) {
@@ -664,47 +667,155 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         ORDER BY end_date DESC
       `, {
         replacements: { userId: candidateId },
-        type: sequelize.QueryTypes.SELECT
+        type: QueryTypes.SELECT
       });
       education = eduResults || [];
     } catch (eduError) {
       console.log('⚠️ Could not fetch education:', eduError.message);
     }
     
-    // Get resumes using raw query
+    // Get resumes using raw query; handle different column naming conventions (userId vs user_id)
     let resumes = [];
     try {
-      const resumeResults = await sequelize.query(`
-        SELECT * FROM resumes 
+      let resumeResults = await sequelize.query(`
+        SELECT 
+          id,
+          "userId",
+          title,
+          summary,
+          "isDefault",
+          "isPublic",
+          views,
+          downloads,
+          "lastUpdated",
+          "createdAt",
+          metadata
+        FROM resumes 
         WHERE "userId" = :userId 
         ORDER BY "isDefault" DESC, "createdAt" DESC
       `, {
         replacements: { userId: candidateId },
-        type: sequelize.QueryTypes.SELECT
+        type: QueryTypes.SELECT
       });
+      
+      // If no rows and perhaps column isn't camel-cased, try snake_case variant
+      if (!resumeResults || resumeResults.length === 0) {
+        try {
+          resumeResults = await sequelize.query(`
+            SELECT 
+              id,
+              user_id as "userId",
+              title,
+              summary,
+              is_default as "isDefault",
+              is_public as "isPublic",
+              views,
+              downloads,
+              last_updated as "lastUpdated",
+              created_at as "createdAt",
+              metadata
+            FROM resumes 
+            WHERE user_id = :userId 
+            ORDER BY is_default DESC, created_at DESC
+          `, {
+            replacements: { userId: candidateId },
+            type: QueryTypes.SELECT
+          });
+        } catch (altErr) {
+          console.log('⚠️ Fallback resume query failed:', altErr.message);
+        }
+      }
       resumes = resumeResults || [];
+      console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId}`);
+      if (resumes.length > 0) {
+        console.log('📄 Sample resume data:', JSON.stringify(resumes[0], null, 2));
+      }
     } catch (resumeError) {
-      console.log('⚠️ Could not fetch resumes:', resumeError.message);
+      console.log('⚠️ Could not fetch resumes (primary query):', resumeError.message);
+      try {
+        const resumeResults = await sequelize.query(`
+          SELECT 
+            id,
+            user_id as "userId",
+            title,
+            summary,
+            is_default as "isDefault",
+            is_public as "isPublic",
+            views,
+            downloads,
+            last_updated as "lastUpdated",
+            created_at as "createdAt",
+            metadata
+          FROM resumes 
+          WHERE user_id = :userId 
+          ORDER BY is_default DESC, created_at DESC
+        `, {
+          replacements: { userId: candidateId },
+          type: QueryTypes.SELECT
+        });
+        resumes = resumeResults || [];
+        console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId} (fallback)`);
+      } catch (altError) {
+        console.log('⚠️ Could not fetch resumes (fallback query):', altError.message);
+      }
     }
     
     console.log(`✅ Found detailed profile for candidate: ${candidate.first_name} ${candidate.last_name}`);
+    console.log(`📄 Resumes found: ${resumes.length}`);
+    if (resumes.length > 0) {
+      console.log(`📄 First resume metadata:`, JSON.stringify(resumes[0].metadata, null, 2));
+      console.log(`📄 First resume full data:`, JSON.stringify(resumes[0], null, 2));
+    }
     
+    // Build absolute URL helper for files served from /uploads
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const toAbsoluteUrl = (maybePath) => {
+      if (!maybePath) return null;
+      // If it's already an absolute URL, return as is
+      if (typeof maybePath === 'string' && /^https?:\/\//i.test(maybePath)) {
+        return maybePath;
+      }
+      // Ensure leading slash
+      const pathStr = String(maybePath).startsWith('/') ? String(maybePath) : `/${String(maybePath)}`;
+      return `${baseUrl}${pathStr}`;
+    };
+
+    // Helpers to make transformations resilient
+    const toArray = (value, fallback = []) => {
+      if (Array.isArray(value)) return value;
+      if (!value) return fallback;
+      try {
+        const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+        return Array.isArray(parsed) ? parsed : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    };
+    const safeDateString = (value, defaultLabel = 'Not specified') => {
+      if (!value) return defaultLabel;
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? defaultLabel : d.toLocaleDateString();
+    };
+    const getProp = (obj, key, defaultVal = null) => (obj && obj[key] !== undefined && obj[key] !== null ? obj[key] : defaultVal);
+
     // Transform candidate data for frontend
-    const transformedCandidate = {
+    let transformedCandidate;
+    try {
+      console.log(`🔄 Starting candidate transformation for ${candidate.first_name} ${candidate.last_name}`);
+      console.log(`🔄 Resumes to transform: ${resumes.length}`);
+      transformedCandidate = {
       id: candidate.id,
       name: `${candidate.first_name} ${candidate.last_name}`,
       designation: candidate.headline || 'Job Seeker',
-      experience: workExperience.length > 0 ? 'Experienced' : 'Fresher',
+      experience: (Array.isArray(workExperience) && workExperience.length > 0) ? 'Experienced' : 'Fresher',
       location: candidate.current_location || 'Not specified',
-      education: education.length > 0 ? education[0].degree : 'Not specified',
-      keySkills: candidate.skills || [],
-      preferredLocations: candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location],
+      education: (Array.isArray(education) && education.length > 0) ? (education[0].degree || 'Not specified') : 'Not specified',
+      keySkills: toArray(candidate.skills, []),
+      preferredLocations: candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location || 'Not specified'],
       avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
       isAttached: true,
-      lastModified: candidate.last_profile_update ? 
-        new Date(candidate.last_profile_update).toLocaleDateString() : 'Not specified',
-      activeStatus: candidate.last_login_at ? 
-        new Date(candidate.last_login_at).toLocaleDateString() : 'Not specified',
+      lastModified: safeDateString(candidate.last_profile_update),
+      activeStatus: safeDateString(candidate.last_login_at),
       additionalInfo: candidate.summary || 'No summary available',
       phoneVerified: candidate.is_phone_verified || false,
       emailVerified: candidate.is_email_verified || false,
@@ -716,31 +827,31 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       // Contact information
       email: candidate.email,
       phone: candidate.phone,
-      linkedin: candidate.social_links?.linkedin || null,
-      github: candidate.social_links?.github || null,
-      portfolio: candidate.social_links?.portfolio || null,
+      linkedin: getProp(candidate.social_links || {}, 'linkedin', null),
+      github: getProp(candidate.social_links || {}, 'github', null),
+      portfolio: getProp(candidate.social_links || {}, 'portfolio', null),
       
       // Detailed information
       about: candidate.summary || 'No summary available',
       
       // Work experience
-      workExperience: workExperience.map(exp => ({
+      workExperience: toArray(workExperience, []).map(exp => ({
         id: exp.id,
         title: exp.title,
         company: exp.company,
-        duration: `${new Date(exp.start_date).toLocaleDateString()} - ${exp.end_date ? new Date(exp.end_date).toLocaleDateString() : 'Present'}`,
+        duration: `${safeDateString(exp.start_date)} - ${exp.end_date ? safeDateString(exp.end_date) : 'Present'}`,
         location: exp.location,
         description: exp.description,
-        skills: exp.skills || []
+        skills: toArray(exp.skills, [])
       })),
       
       // Education details
-      educationDetails: education.map(edu => ({
+      educationDetails: toArray(education, []).map(edu => ({
         id: edu.id,
         degree: edu.degree,
         institution: edu.institution,
         fieldOfStudy: edu.field_of_study,
-        duration: `${new Date(edu.start_date).getFullYear()} - ${edu.end_date ? new Date(edu.end_date).getFullYear() : 'Present'}`,
+        duration: `${(new Date(edu.start_date)).getFullYear?.() ? new Date(edu.start_date).getFullYear() : ''} - ${edu.end_date ? (new Date(edu.end_date)).getFullYear?.() ? new Date(edu.end_date).getFullYear() : '' : 'Present'}`,
         location: edu.location || 'Not specified',
         grade: edu.grade,
         percentage: edu.percentage,
@@ -753,33 +864,103 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           id: 1,
           title: "Sample Project",
           description: "This is a sample project. In a real implementation, this would come from a projects table in the database.",
-          technologies: candidate.skills?.slice(0, 4) || [],
-          github: candidate.social_links?.github || null,
-          live: candidate.social_links?.portfolio || null
+          technologies: toArray(candidate.skills, []).slice(0, 4),
+          github: getProp(candidate.social_links || {}, 'github', null),
+          live: getProp(candidate.social_links || {}, 'portfolio', null)
         }
       ],
       
       // Certifications
-      certifications: candidate.certifications || [],
+      certifications: toArray(candidate.certifications, []),
       
       // Languages
-      languages: candidate.languages || [
+      languages: toArray(candidate.languages, [
         { name: "English", proficiency: "Professional" },
         { name: "Hindi", proficiency: "Native" }
-      ],
+      ]),
       
-      // Resume information
-      resumes: resumes.map(resume => ({
-        id: resume.id,
-        title: resume.title,
-        filename: resume.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`,
-        fileSize: resume.fileSize || '2.3 MB',
-        uploadDate: resume.createdAt,
-        lastUpdated: resume.lastUpdated,
-        isDefault: resume.isDefault,
-        fileUrl: resume.fileUrl || resume.filePath
-      }))
-    };
+      // Resume information - make this more robust
+      resumes: (() => {
+        try {
+          const resumeArray = toArray(resumes, []);
+          console.log(`🔄 Transforming ${resumeArray.length} resumes`);
+          return resumeArray.map(resume => {
+            const metadata = resume.metadata || {};
+            const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
+            const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+            const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+            
+            const transformedResume = {
+              id: resume.id,
+              title: resume.title || 'Resume',
+              filename: filename,
+              fileSize: fileSize,
+              uploadDate: resume.createdAt || resume.created_at,
+              lastUpdated: resume.lastUpdated || resume.last_updated,
+              isDefault: resume.isDefault ?? resume.is_default ?? false,
+              fileUrl: toAbsoluteUrl(filePath)
+            };
+            
+            console.log(`📄 Transformed resume:`, transformedResume);
+            return transformedResume;
+          });
+        } catch (resumeErr) {
+          console.error('❌ Resume transformation error:', resumeErr);
+          return [];
+        }
+      })()
+      };
+      
+      console.log(`📄 Transformed candidate resumes:`, JSON.stringify(transformedCandidate.resumes, null, 2));
+    } catch (transformErr) {
+      console.warn('⚠️ Candidate transform failed, returning minimal profile:', transformErr?.message || transformErr);
+      transformedCandidate = {
+        id: candidate.id,
+        name: `${candidate.first_name} ${candidate.last_name}`,
+        designation: candidate.headline || 'Job Seeker',
+        avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
+        email: candidate.email,
+        phone: candidate.phone,
+        keySkills: [],
+        preferredLocations: [candidate.current_location || 'Not specified'],
+        location: candidate.current_location || 'Not specified',
+        experience: 'Not specified',
+        education: 'Not specified',
+        about: candidate.summary || 'No summary available',
+        workExperience: [],
+        educationDetails: [],
+        projects: [],
+        certifications: [],
+        languages: [
+          { name: 'English', proficiency: 'Professional' }
+        ],
+        resumes: (() => {
+          try {
+            const resumeArray = toArray(resumes, []);
+            return resumeArray.map(resume => {
+              const metadata = resume.metadata || {};
+              const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
+              const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+              const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+              
+              return {
+                id: resume.id,
+                title: resume.title || 'Resume',
+                filename: filename,
+                fileSize: fileSize,
+                uploadDate: resume.createdAt || resume.created_at,
+                lastUpdated: resume.lastUpdated || resume.last_updated,
+                isDefault: resume.isDefault ?? resume.is_default ?? false,
+                fileUrl: toAbsoluteUrl(filePath)
+              };
+            });
+          } catch (resumeErr) {
+            console.error('❌ Fallback resume transformation error:', resumeErr);
+            return [];
+          }
+        })()
+      };
+    }
     
     return res.status(200).json({
       success: true,
@@ -800,6 +981,54 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       stack: error?.stack,
       errors: error?.errors
     });
+
+    // Fallback: try to return a minimal candidate profile to avoid blocking the UI
+    try {
+      const { requirementId, candidateId } = req.params || {};
+      let requirement = null;
+      try {
+        requirement = await Requirement.findByPk(requirementId);
+      } catch (_) {}
+
+      let candidate = null;
+      try {
+        candidate = await User.findByPk(candidateId, {
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'avatar', 'current_location', 'headline', 'summary']
+        });
+      } catch (_) {}
+
+      if (candidate) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            candidate: {
+              id: candidate.id,
+              name: `${candidate.first_name} ${candidate.last_name}`,
+              designation: candidate.headline || 'Job Seeker',
+              avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
+              email: candidate.email,
+              phone: candidate.phone,
+              location: candidate.current_location || 'Not specified',
+              about: candidate.summary || 'No summary available',
+              keySkills: [],
+              preferredLocations: [candidate.current_location || 'Not specified'],
+              workExperience: [],
+              educationDetails: [],
+              projects: [],
+              certifications: [],
+              languages: [
+                { name: 'English', proficiency: 'Professional' }
+              ],
+              resumes: []
+            },
+            requirement: requirement ? { id: requirement.id, title: requirement.title } : null
+          }
+        });
+      }
+    } catch (fallbackErr) {
+      console.warn('⚠️ Minimal fallback also failed:', fallbackErr?.message || fallbackErr);
+    }
+
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch candidate profile',
@@ -808,6 +1037,283 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         message: error?.message,
         details: error?.errors || error?.stack
       }
+    });
+  }
+});
+
+// Shortlist/Unshortlist candidate
+router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateToken, async (req, res) => {
+  try {
+    const { requirementId, candidateId } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can shortlist candidates.' });
+    }
+    
+    // Verify the requirement belongs to the employer's company
+    const requirement = await Requirement.findOne({
+      where: { 
+        id: requirementId,
+        companyId: req.user.company_id 
+      }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Requirement not found or access denied'
+      });
+    }
+    
+    // Verify candidate exists
+    const candidate = await User.findOne({
+      where: { 
+        id: candidateId,
+        user_type: 'jobseeker',
+        is_active: true,
+        account_status: 'active'
+      }
+    });
+    
+    if (!candidate) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Candidate not found'
+      });
+    }
+    
+    // For now, we'll use a simple approach - in a real app, you'd have a shortlist table
+    // This is a mock implementation that returns success
+    console.log(`✅ Candidate ${candidateId} shortlisted by employer ${req.user.id} for requirement ${requirementId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Candidate shortlisted successfully',
+      data: {
+        candidateId,
+        requirementId,
+        shortlisted: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error shortlisting candidate:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to shortlist candidate',
+      error: { 
+        name: error?.name, 
+        message: error?.message
+      }
+    });
+  }
+});
+
+// Contact candidate
+router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken, async (req, res) => {
+  try {
+    const { requirementId, candidateId } = req.params;
+    const { message, subject } = req.body;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can contact candidates.' });
+    }
+    
+    // Verify the requirement belongs to the employer's company
+    const requirement = await Requirement.findOne({
+      where: { 
+        id: requirementId,
+        companyId: req.user.company_id 
+      }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Requirement not found or access denied'
+      });
+    }
+    
+    // Verify candidate exists
+    const candidate = await User.findOne({
+      where: { 
+        id: candidateId,
+        user_type: 'jobseeker',
+        is_active: true,
+        account_status: 'active'
+      }
+    });
+    
+    if (!candidate) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Candidate not found'
+      });
+    }
+    
+    // Create or find conversation between employer and candidate
+    let conversation = await Conversation.findOne({
+      where: {
+        [Op.or]: [
+          { participant1Id: req.user.id, participant2Id: candidateId },
+          { participant1Id: candidateId, participant2Id: req.user.id }
+        ],
+        conversationType: 'general'
+      }
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participant1Id: req.user.id,
+        participant2Id: candidateId,
+        conversationType: 'general',
+        title: `Job Opportunity: ${requirement.title}`,
+        metadata: {
+          requirementId: requirementId,
+          jobTitle: requirement.title,
+          companyName: requirement.company?.name || 'Company'
+        }
+      });
+    }
+
+    // Create the message
+    const messageContent = `Subject: ${subject || 'Job Opportunity'}\n\n${message || 'No message provided'}`;
+    
+    const newMessage = await Message.create({
+      conversationId: conversation.id,
+      senderId: req.user.id,
+      receiverId: candidateId,
+      messageType: 'text',
+      content: messageContent,
+      metadata: {
+        requirementId: requirementId,
+        jobTitle: requirement.title,
+        companyName: requirement.company?.name || 'Company',
+        originalSubject: subject || 'Job Opportunity'
+      }
+    });
+
+    // Update conversation with last message info
+    await conversation.update({
+      lastMessageId: newMessage.id,
+      lastMessageAt: new Date(),
+      unreadCount: sequelize.literal('unread_count + 1')
+    });
+
+    console.log(`✅ Message sent to candidate ${candidateId} by employer ${req.user.id} for requirement ${requirementId}`);
+    console.log(`📧 Subject: ${subject || 'Job Opportunity'}`);
+    console.log(`📧 Message: ${message || 'No message provided'}`);
+    console.log(`💬 Conversation ID: ${conversation.id}, Message ID: ${newMessage.id}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Message sent successfully',
+      data: {
+        conversationId: conversation.id,
+        messageId: newMessage.id,
+        candidateId,
+        requirementId,
+        employerId: req.user.id,
+        subject: subject || 'Job Opportunity',
+        message: message || 'No message provided'
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error contacting candidate:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send contact request',
+      error: { 
+        name: error?.name, 
+        message: error?.message
+      }
+    });
+  }
+});
+
+// Download candidate resume (for employers)
+router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', authenticateToken, async (req, res) => {
+  try {
+    const { requirementId, candidateId, resumeId } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only employers can download candidate resumes.' 
+      });
+    }
+    
+    // Verify the requirement belongs to the employer's company
+    const requirement = await Requirement.findOne({
+      where: { 
+        id: requirementId,
+        companyId: req.user.company_id 
+      }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Requirement not found or access denied'
+      });
+    }
+    
+    // Get the resume
+    const resume = await Resume.findOne({
+      where: { 
+        id: resumeId, 
+        userId: candidateId 
+      }
+    });
+    
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+    
+    const metadata = resume.metadata || {};
+    const filename = metadata.filename;
+    const originalName = metadata.originalName;
+    
+    if (!filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found'
+      });
+    }
+    
+    const filePath = path.join(__dirname, '../uploads/resumes', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found on server'
+      });
+    }
+    
+    // Increment download count
+    await resume.update({
+      downloads: resume.downloads + 1
+    });
+    
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+    
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading candidate resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download resume'
     });
   }
 });

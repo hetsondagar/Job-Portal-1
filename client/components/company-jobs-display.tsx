@@ -210,7 +210,8 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/employer-dashboard/jobs/${job.id}`)}
+                      onClick={() => router.push(`/employer-dashboard/manage-jobs/${job.id}`)}
+                      title="View Job Details"
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -218,7 +219,8 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/employer-dashboard/jobs/${job.id}/edit`)}
+                      onClick={() => router.push(`/employer-dashboard/post-job?draft=${job.id}`)}
+                      title="Edit Job"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>

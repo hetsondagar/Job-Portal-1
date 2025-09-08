@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon } from "lucide-react"
+import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -47,6 +47,8 @@ export default function PostJobPage() {
   const [templates, setTemplates] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [postedJobId, setPostedJobId] = useState<string | null>(null)
 
   const steps = [
     { id: 1, title: "Job Details", description: "Basic job information" },
@@ -55,6 +57,29 @@ export default function PostJobPage() {
     { id: 4, title: "Photos", description: "Showcase your workplace" },
     { id: 5, title: "Review & Post", description: "Final review" },
   ]
+
+  // Load job photos when uploadedJobId changes
+  useEffect(() => {
+    const loadJobPhotos = async () => {
+      if (uploadedJobId && user) {
+        try {
+          console.log('🔍 Loading job photos for job ID:', uploadedJobId)
+          const photosResponse = await apiService.getJobPhotos(uploadedJobId)
+          if (photosResponse.success) {
+            console.log('✅ Job photos loaded:', photosResponse.data)
+            console.log('📸 Photo URLs:', photosResponse.data?.map(p => p.fileUrl))
+            setJobPhotos(photosResponse.data || [])
+          } else {
+            console.error('❌ Failed to load photos:', photosResponse)
+          }
+        } catch (error) {
+          console.error('Failed to load job photos:', error)
+        }
+      }
+    }
+
+    loadJobPhotos()
+  }, [uploadedJobId, user])
 
   // Load job data when editing or template data from URL
   useEffect(() => {
@@ -277,8 +302,15 @@ export default function PostJobPage() {
         toast.success(`${jobType.charAt(0).toUpperCase() + jobType.slice(1)} ${action} successfully!`)
         console.log(`✅ ${jobType.charAt(0).toUpperCase() + jobType.slice(1)} ${action}:`, response.data)
         
-        // Redirect to manage jobs page after saving
-        router.push('/employer-dashboard/manage-jobs')
+        // For drafts, just show success message and stay on the form
+        // For published jobs, show success dialog
+        if (editingJobId || jobData.status === 'active') {
+          setPostedJobId(response.data.id)
+          setShowSuccessDialog(true)
+        } else {
+          // For new drafts, just update the uploadedJobId to enable photo uploads
+          setUploadedJobId(response.data.id)
+        }
       } else {
         console.error('❌ Job saving failed:', response)
         toast.error(response.message || 'Failed to save job')
@@ -389,6 +421,10 @@ export default function PostJobPage() {
          toast.success(`Job ${action} successfully!`)
          console.log(`✅ Job ${action}:`, response.data)
          
+         // Store the posted job ID and show success dialog
+         setPostedJobId(response.data.id)
+         setShowSuccessDialog(true)
+         
          if (!editingJobId) {
            // Only reset form for new jobs, not when editing
            setFormData({
@@ -405,9 +441,6 @@ export default function PostJobPage() {
            })
            setCurrentStep(1)
          }
-         
-         // Redirect to jobs list after successful creation/update
-         router.push('/employer-dashboard/manage-jobs')
        } else {
         console.error('❌ Job posting failed:', response)
         toast.error(response.message || 'Failed to post job')
@@ -450,35 +483,60 @@ export default function PostJobPage() {
       return
     }
 
+    console.log('📸 Starting photo upload for job:', uploadedJobId)
+    console.log('📸 Files to upload:', files.length)
+
     setUploadingPhotos(true)
-    const uploadPromises = Array.from(files).map(async (file) => {
+    const uploadPromises = Array.from(files).map(async (file, index) => {
+      console.log(`📸 Uploading file ${index + 1}:`, file.name, file.size, file.type)
+      
       const uploadFormData = new FormData()
       uploadFormData.append('photo', file)
       uploadFormData.append('jobId', uploadedJobId)
-      uploadFormData.append('altText', `Job photo for ${formData.title}`)
-      uploadFormData.append('displayOrder', jobPhotos.length.toString())
-      uploadFormData.append('isPrimary', (jobPhotos.length === 0).toString())
+      uploadFormData.append('altText', `Job photo for ${formData.title || 'Untitled Job'}`)
+      uploadFormData.append('displayOrder', (jobPhotos.length + index).toString())
+      uploadFormData.append('isPrimary', (jobPhotos.length === 0 && index === 0).toString())
 
       try {
+        console.log('📸 Sending upload request for:', file.name)
         const response = await apiService.uploadJobPhoto(uploadFormData)
+        console.log('📸 Upload response:', response)
+        
         if (response.success) {
+          console.log('✅ Photo uploaded successfully:', response.data)
           return response.data
         } else {
+          console.error('❌ Upload failed:', response.message)
           throw new Error(response.message || 'Upload failed')
         }
       } catch (error) {
-        console.error('Photo upload error:', error)
+        console.error('❌ Photo upload error for', file.name, ':', error)
         throw error
       }
     })
 
     try {
       const uploadedPhotos = await Promise.all(uploadPromises)
+      console.log('✅ All photos uploaded:', uploadedPhotos)
       setJobPhotos(prev => [...prev, ...uploadedPhotos])
+      
+      // Refresh photos from server to ensure consistency
+      try {
+        const photosResponse = await apiService.getJobPhotos(uploadedJobId)
+        if (photosResponse.success) {
+          console.log('🔄 Refreshed photos after upload:', photosResponse.data)
+          setJobPhotos(photosResponse.data || [])
+        } else {
+          console.error('❌ Failed to refresh photos:', photosResponse)
+        }
+      } catch (refreshError) {
+        console.error('Failed to refresh photos:', refreshError)
+      }
+      
       toast.success(`${uploadedPhotos.length} photo(s) uploaded successfully!`)
     } catch (error: any) {
-      console.error('Photo upload failed:', error)
-      toast.error('Failed to upload photos. Please try again.')
+      console.error('❌ Photo upload failed:', error)
+      toast.error(`Failed to upload photos: ${error.message || 'Please try again.'}`)
     } finally {
       setUploadingPhotos(false)
     }
@@ -488,7 +546,7 @@ export default function PostJobPage() {
     try {
       const response = await apiService.deleteJobPhoto(photoId)
       if (response.success) {
-        setJobPhotos(prev => prev.filter(photo => photo.photoId !== photoId))
+        setJobPhotos(prev => prev.filter(photo => (photo.id || photo.photoId) !== photoId))
         toast.success('Photo deleted successfully!')
       } else {
         toast.error('Failed to delete photo')
@@ -872,19 +930,38 @@ export default function PostJobPage() {
                     <div className="space-y-4">
                       <h4 className="font-medium text-gray-900">Uploaded Photos ({jobPhotos.length})</h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {jobPhotos.map((photo, index) => (
-                          <div key={photo.photoId} className="relative group">
-                            <img
-                              src={photo.fileUrl}
-                              alt={photo.altText || `Job photo ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                            />
+                        {jobPhotos.map((photo, index) => {
+                          console.log('📸 Rendering photo:', photo);
+                          return (
+                          <div key={photo.id || photo.photoId} className="relative group">
+                            {photo.fileUrl ? (
+                              <img
+                                src={photo.fileUrl}
+                                alt={photo.altText || `Job photo ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                onLoad={() => console.log('✅ Image loaded successfully:', photo.fileUrl)}
+                                onError={(e) => {
+                                  console.error('❌ Image failed to load:', photo.fileUrl, e);
+                                  console.log('🔄 Retrying image load in 1 second...');
+                                  setTimeout(() => {
+                                    e.currentTarget.src = photo.fileUrl + '?t=' + Date.now();
+                                  }, 1000);
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-32 bg-gray-200 rounded-lg border border-gray-200 flex items-center justify-center">
+                                <div className="text-center">
+                                  <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                  <p className="text-xs text-gray-500">No image URL</p>
+                                </div>
+                              </div>
+                            )}
                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handlePhotoDelete(photo.photoId)}
+                                onClick={() => handlePhotoDelete(photo.id || photo.photoId)}
                               >
                                 <X className="w-4 h-4" />
                               </Button>
@@ -895,7 +972,8 @@ export default function PostJobPage() {
                               </div>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1269,6 +1347,41 @@ export default function PostJobPage() {
             </Button>
             <Button onClick={() => handleAuthDialogAction('register')}>
               Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Job Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              {editingJobId ? 'Job Updated Successfully!' : 'Job Posted Successfully!'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingJobId 
+                ? 'Your job has been updated successfully. You can view it, manage it, or make further changes.'
+                : 'Your job has been posted and is now live. You can view it, manage it, or post another job.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/employer-dashboard/manage-jobs')}>
+              Manage Jobs
+            </Button>
+            {postedJobId && (
+              <Button onClick={() => router.push(`/jobs/${postedJobId}`)}>
+                <Eye className="h-4 w-4 mr-2" />
+                View Job
+              </Button>
+            )}
+            <Button onClick={() => {
+              setShowSuccessDialog(false)
+              setPostedJobId(null)
+            }}>
+              {editingJobId ? 'Continue Editing' : 'Post Another Job'}
             </Button>
           </DialogFooter>
         </DialogContent>

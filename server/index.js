@@ -76,7 +76,7 @@ app.use(session({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'development' ? 1000 : 100, // More lenient in development
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
@@ -91,14 +91,25 @@ const limiter = rateLimit({
 // More lenient rate limiter for OAuth endpoints
 const oauthLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 50, // limit each IP to 50 OAuth requests per 5 minutes
+  max: process.env.NODE_ENV === 'development' ? 500 : 200, // More lenient in development
   message: {
     success: false,
     message: 'Too many OAuth requests, please try again later.'
   }
 });
 
+// Very lenient rate limiter for auth endpoints (signup, login, etc.)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'development' ? 500 : 100, // More lenient in development
+  message: {
+    success: false,
+    message: 'Too many authentication requests, please try again later.'
+  }
+});
+
 app.use('/api/oauth', oauthLimiter);
+app.use('/api/auth', authLimiter);
 app.use('/api/', limiter);
 
 // Compression
@@ -116,7 +127,18 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, path) => {
+    // Ensure proper headers for image files
+    if (path.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      // Remove CSP headers that might block cross-origin image loading
+      res.removeHeader('Content-Security-Policy');
+      res.removeHeader('Cross-Origin-Resource-Policy');
+    }
+  }
+}));
 
 // Passport middleware
 app.use(passport.initialize());
@@ -143,6 +165,8 @@ app.use('/api/job-alerts', jobAlertsRoutes);
 app.use('/api/job-templates', jobTemplatesRoutes);
 app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/candidate-upvotes', candidateLikesRoutes);
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/hot-vacancies', require('./routes/hot-vacancies'));
 
 // 404 handler
 app.use(notFoundHandler);

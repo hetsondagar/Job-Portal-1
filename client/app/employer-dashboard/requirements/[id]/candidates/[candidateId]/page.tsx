@@ -24,7 +24,9 @@ import {
   Eye,
   Share2,
   FileText,
-  Loader2
+  Loader2,
+  X,
+  MessageSquare
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,6 +45,14 @@ export default function CandidateProfilePage() {
   const [requirement, setRequirement] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isShortlisted, setIsShortlisted] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isContacting, setIsContacting] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
+  const [message, setMessage] = useState("")
+  const [subject, setSubject] = useState("")
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -57,8 +67,11 @@ export default function CandidateProfilePage() {
         )
         
         if (response.success) {
+          console.log('📄 Candidate data received:', response.data.candidate)
+          console.log('📄 Resumes in candidate data:', response.data.candidate?.resumes)
           setCandidate(response.data.candidate)
           setRequirement(response.data.requirement)
+          setIsShortlisted(response.data.candidate?.isShortlisted || false)
         } else {
           setError(response.message || 'Failed to fetch candidate profile')
           toast({
@@ -84,6 +97,149 @@ export default function CandidateProfilePage() {
       fetchCandidateProfile()
     }
   }, [params.id, params.candidateId, toast])
+
+  // Handle resume download
+  const handleDownloadResume = async (resume: any) => {
+    if (!resume?.id) {
+      toast({
+        title: "Error",
+        description: "Resume not available for download",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsDownloading(true)
+      
+      // Use the API service to download the resume
+      const response = await apiService.downloadCandidateResume(params.id, params.candidateId, resume.id)
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = resume.filename || `${candidate.name}_Resume.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast({
+        title: "Success",
+        description: "Resume download started"
+      })
+    } catch (error) {
+      console.error('Download error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to download resume",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  // Handle shortlist candidate
+  const handleShortlistCandidate = async () => {
+    try {
+      setIsContacting(true) // Reuse this state for shortlist loading
+      
+      const response = await apiService.shortlistCandidate(
+        params.id as string,
+        params.candidateId as string
+      )
+      
+      if (response.success) {
+        setIsShortlisted(!isShortlisted)
+        toast({
+          title: "Success",
+          description: isShortlisted ? "Candidate removed from shortlist" : "Candidate added to shortlist"
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to update shortlist",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Shortlist error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update shortlist",
+        variant: "destructive"
+      })
+    } finally {
+      setIsContacting(false)
+    }
+  }
+
+  // Handle contact candidate - show contact info modal
+  const handleContactCandidate = () => {
+    setShowContactModal(true)
+  }
+
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!message.trim() || !subject.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in both subject and message",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsSendingMessage(true)
+      
+      const response = await apiService.contactCandidate(
+        params.id as string,
+        params.candidateId as string,
+        message.trim(),
+        subject.trim()
+      )
+      
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Message sent to candidate successfully"
+        })
+        setShowMessageModal(false)
+        setMessage("")
+        setSubject("")
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to send message",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Send message error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSendingMessage(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -216,17 +372,32 @@ export default function CandidateProfilePage() {
             
             {/* Action Buttons */}
             <div className="flex flex-col space-y-3">
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleContactCandidate}
+              >
                 <Mail className="w-4 h-4 mr-2" />
                 Contact Candidate
               </Button>
-              <Button variant="outline">
+              
+              {candidate?.resumes && candidate.resumes.length > 0 && (
+                <Button 
+                  variant="outline"
+                  onClick={() => handleDownloadResume(candidate.resumes[0])}
+                  disabled={isDownloading}
+                >
                 <Download className="w-4 h-4 mr-2" />
-                Download Resume
+                  {isDownloading ? "Downloading..." : "Download Resume"}
               </Button>
-              <Button variant="outline">
-                <Star className="w-4 h-4 mr-2" />
-                Shortlist
+              )}
+              
+              <Button 
+                variant={isShortlisted ? "default" : "outline"}
+                onClick={handleShortlistCandidate}
+                disabled={isContacting}
+              >
+                <Star className={`w-4 h-4 mr-2 ${isShortlisted ? 'fill-current' : ''}`} />
+                {isContacting ? "Updating..." : (isShortlisted ? "Shortlisted" : "Add to Shortlist")}
               </Button>
             </div>
           </div>
@@ -525,11 +696,13 @@ export default function CandidateProfilePage() {
                           View CV
                               </a>
                         </Button>
-                            <Button variant="outline" asChild>
-                              <a href={candidate.resumes[0].fileUrl} download>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => handleDownloadResume(candidate.resumes[0])}
+                              disabled={isDownloading}
+                            >
                           <Download className="w-4 h-4 mr-2" />
-                          Download PDF
-                              </a>
+                          {isDownloading ? "Downloading..." : "Download PDF"}
                         </Button>
                       </div>
                     </div>
@@ -576,11 +749,14 @@ export default function CandidateProfilePage() {
                           View Full CV
                               </a>
                         </Button>
-                            <Button variant="outline" className="w-full" asChild>
-                              <a href={candidate.resumes[0].fileUrl} download>
+                            <Button 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={() => handleDownloadResume(candidate.resumes[0])}
+                              disabled={isDownloading}
+                            >
                           <Download className="w-4 h-4 mr-2" />
-                          Download CV
-                              </a>
+                          {isDownloading ? "Downloading..." : "Download CV"}
                         </Button>
                         <Button variant="outline" className="w-full">
                           <Share2 className="w-4 h-4 mr-2" />
@@ -609,6 +785,147 @@ export default function CandidateProfilePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Contact Information Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+              <button
+                onClick={() => setShowContactModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <Mail className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium text-gray-900">{candidate?.email || 'Not provided'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Phone className="w-5 h-5 text-green-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium text-gray-900">{candidate?.phone || 'Not provided'}</p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t space-y-3">
+                <Button
+                  onClick={() => {
+                    setShowContactModal(false)
+                    setShowMessageModal(true)
+                    setSubject(`Job Opportunity: ${requirement?.title}`)
+                    setMessage(`Hello ${candidate?.name},\n\nI'm interested in discussing the ${requirement?.title} position with you. Please let me know if you're available for a conversation.\n\nBest regards`)
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Send Message
+                </Button>
+                
+                {candidate?.email && (
+                  <a
+                    href={`mailto:${candidate.email}?subject=Job Opportunity: ${requirement?.title}&body=Hello ${candidate.name},%0D%0A%0D%0AI'm interested in discussing the ${requirement?.title} position with you. Please let me know if you're available for a conversation.%0D%0A%0D%0ABest regards`}
+                    className="inline-flex items-center justify-center w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Email
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Message Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Send Message to {candidate?.name}</h3>
+              <button
+                onClick={() => {
+                  setShowMessageModal(false)
+                  setMessage("")
+                  setSubject("")
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter message subject"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your message to the candidate"
+                />
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={isSendingMessage || !message.trim() || !subject.trim()}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {isSendingMessage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowMessageModal(false)
+                    setMessage("")
+                    setSubject("")
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EmployerFooter />
     </div>

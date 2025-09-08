@@ -99,7 +99,7 @@ const jobPhotoStorage = multer.diskStorage({
 const jobPhotoUpload = multer({
   storage: jobPhotoStorage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit for job photos
+    fileSize: 10 * 1024 * 1024 // 10MB limit for job photos
   },
   fileFilter: function (req, file, cb) {
     const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -723,15 +723,19 @@ router.post('/applications', authenticateToken, async (req, res) => {
 // Get applications for employer's jobs
 router.get('/employer/applications', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Fetching employer applications for user:', req.user.id, 'type:', req.user.user_type);
     const { JobApplication, Job, Company, User, Resume, WorkExperience, Education } = require('../config/index');
     
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
+      console.log('❌ Access denied - user is not an employer:', req.user.user_type);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Only employers can view job applications.'
       });
     }
+    
+    console.log('🔍 Querying applications for employerId:', req.user.id);
     
     const applications = await JobApplication.findAll({
       where: { employerId: req.user.id },
@@ -774,22 +778,11 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
               model: Education,
               as: 'educations',
               attributes: [
-                'id', 'institution', 'degree', 'fieldOfStudy', 'startDate',
-                'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa', 'scale',
-                'description', 'activities', 'achievements', 'location', 'country',
-                'educationType', 'level', 'isVerified', 'order'
+                'id', 'institution', 'degree', 'fieldOfStudy', 'location',
+                'startDate', 'endDate', 'isCurrent', 'gpa', 'description',
+                'activities', 'honors', 'order'
               ],
               order: [['order', 'ASC'], ['startDate', 'DESC']]
-            },
-            {
-              model: Resume,
-              as: 'resumes',
-              attributes: [
-                'id', 'title', 'summary', 'objective', 'skills', 'languages',
-                'certifications', 'projects', 'achievements', 'isDefault',
-                'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
-              ],
-              order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
             }
           ]
         },
@@ -805,6 +798,19 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       ],
       order: [['appliedAt', 'DESC']]
     });
+
+    console.log('📋 Found applications:', applications.length);
+    console.log('📋 Applications data:', applications.map(app => ({ id: app.id, jobId: app.jobId, userId: app.userId })));
+
+    // If no applications found, return empty array
+    if (!applications || applications.length === 0) {
+      console.log('📋 No applications found for employer');
+      return res.json({
+        success: true,
+        data: [],
+        message: 'No applications found'
+      });
+    }
 
     // Transform the data to include comprehensive jobseeker profile information
     const enrichedApplications = applications.map(application => {
@@ -2089,7 +2095,7 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
 
     const filename = req.file.filename;
     const filePath = `/uploads/job-photos/${filename}`;
-    const fileUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}${filePath}`;
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
     
     console.log('🔍 Generated job photo URL:', fileUrl);
 
@@ -2121,6 +2127,7 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
     res.status(201).json({
       success: true,
       data: {
+        id: jobPhoto.id,
         photoId: jobPhoto.id,
         filename: filename,
         fileUrl: fileUrl,
@@ -2173,6 +2180,15 @@ router.get('/jobs/:jobId/photos', async (req, res) => {
 router.delete('/job-photos/:photoId', authenticateToken, async (req, res) => {
   try {
     const { photoId } = req.params;
+    
+    // Validate photoId
+    if (!photoId || photoId === 'undefined' || photoId === 'null') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid photo ID provided'
+      });
+    }
+    
     const { JobPhoto, Job } = require('../config/index');
     
     // Find the photo
