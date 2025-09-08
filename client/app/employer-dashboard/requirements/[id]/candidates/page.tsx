@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2 } from "lucide-react"
+import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ThumbsUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -38,6 +38,8 @@ interface Candidate {
   expectedSalary: string;
   noticePeriod: string;
   profileCompletion: number;
+  likeCount?: number;
+  likedByCurrent?: boolean;
 }
 
 interface Requirement {
@@ -461,6 +463,43 @@ export default function CandidatesPage() {
                           <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
                             {candidate.profileCompletion}% Complete
                           </Badge>
+                          <button
+                            aria-label={candidate.likedByCurrent ? 'Unlike candidate' : 'Like candidate'}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              const btn = e.currentTarget as HTMLButtonElement | null;
+                              try {
+                                if (btn) btn.disabled = true;
+                                if (candidate.likedByCurrent) {
+                                  const res = await apiService.unlikeCandidate(candidate.id);
+                                  if (res.success) {
+                                    setCandidates(prev => prev.map(c => c.id === candidate.id ? {
+                                      ...c,
+                                      likedByCurrent: false,
+                                      likeCount: Math.max(0, (c.likeCount || 1) - 1)
+                                    } : c));
+                                  }
+                                } else {
+                                  const res = await apiService.likeCandidate(candidate.id);
+                                  if (res.success) {
+                                    setCandidates(prev => prev.map(c => c.id === candidate.id ? {
+                                      ...c,
+                                      likedByCurrent: true,
+                                      likeCount: (c.likeCount || 0) + 1
+                                    } : c));
+                                  }
+                                }
+                              } catch (err) {
+                                toast.error('Failed to update like');
+                              } finally {
+                                if (btn) btn.disabled = false;
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${candidate.likedByCurrent ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                          >
+                            <ThumbsUp className={`w-3.5 h-3.5 ${candidate.likedByCurrent ? 'fill-blue-600 text-blue-600' : ''}`}/>
+                            <span>{candidate.likeCount ?? 0}</span>
+                          </button>
                     </div>
                   </div>
 

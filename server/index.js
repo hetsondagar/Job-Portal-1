@@ -21,6 +21,7 @@ const jobsRoutes = require('./routes/jobs');
 const requirementsRoutes = require('./routes/requirements');
 const jobAlertsRoutes = require('./routes/job-alerts');
 const jobTemplatesRoutes = require('./routes/job-templates');
+const candidateLikesRoutes = require('./routes/candidate-likes');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -79,6 +80,11 @@ const limiter = rateLimit({
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
+  },
+  skip: (req) => {
+    // Allow higher throughput for lightweight endpoints
+    const p = req.path || '';
+    return p.startsWith('/candidate-likes') || p === '/health';
   }
 });
 
@@ -135,6 +141,7 @@ app.use('/api/jobs', jobsRoutes);
 app.use('/api/requirements', requirementsRoutes);
 app.use('/api/job-alerts', jobAlertsRoutes);
 app.use('/api/job-templates', jobTemplatesRoutes);
+app.use('/api/candidate-likes', candidateLikesRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -148,9 +155,21 @@ const startServer = async () => {
     // Test database connection
     await testConnection();
     
-    // Sync database models
-    await sequelize.sync({ alter: true });
-    console.log('✅ Database models synchronized');
+    // Avoid global sync to prevent duplicate index creation on existing tables.
+    // Only ensure the new candidate_likes table exists.
+    try {
+      const qi = sequelize.getQueryInterface();
+      const tables = await qi.showAllTables();
+      const tableNames = Array.isArray(tables) ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase()) : [];
+      if (!tableNames.includes('candidate_likes')) {
+        await require('./models/CandidateLike').sync();
+        console.log('✅ candidate_likes table created');
+      } else {
+        console.log('ℹ️ candidate_likes table already exists');
+      }
+    } catch (syncError) {
+      console.warn('⚠️ Skipping conditional sync due to error:', syncError?.message || syncError);
+    }
     
     app.listen(PORT, () => {
       console.log(`🚀 Job Portal API server running on port: ${PORT}`);

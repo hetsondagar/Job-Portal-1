@@ -5,6 +5,7 @@ const JobBookmark = require('../models/JobBookmark');
 const JobAlert = require('../models/JobAlert');
 const Resume = require('../models/Resume');
 const Analytics = require('../models/Analytics');
+const CandidateLike = require('../models/CandidateLike');
 const { sequelize } = require('../config/sequelize');
 
 class DashboardService {
@@ -337,6 +338,15 @@ class DashboardService {
         profileViews = 0;
       }
 
+      // Get profile like count with error handling
+      let profileLikes = 0;
+      try {
+        profileLikes = await CandidateLike.count({ where: { candidateId: userId } });
+      } catch (error) {
+        console.error('Error fetching profile likes:', error);
+        profileLikes = 0;
+      }
+
       return {
         dashboard: dashboard.getDashboardSummary ? dashboard.getDashboardSummary() : {
           applications: {
@@ -381,6 +391,7 @@ class DashboardService {
         jobAlerts,
         resumes,
         profileViews,
+        profileLikes,
         stats: {
           totalApplications: dashboard.totalApplications || 0,
           applicationsUnderReview: dashboard.applicationsUnderReview || 0,
@@ -391,7 +402,8 @@ class DashboardService {
           hasDefaultResume: dashboard.hasDefaultResume || false,
           totalJobAlerts: dashboard.totalJobAlerts || 0,
           activeJobAlerts: dashboard.activeJobAlerts || 0,
-          profileViews
+          profileViews,
+          profileLikes
         }
       };
     } catch (error) {

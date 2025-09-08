@@ -1266,6 +1266,30 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  // Candidate Likes endpoints
+  async getCandidateLikes(candidateId: string): Promise<ApiResponse<{ likeCount: number; likedByCurrent: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/candidate-likes/${candidateId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ likeCount: number; likedByCurrent: boolean }>(response);
+  }
+
+  async likeCandidate(candidateId: string): Promise<ApiResponse<{ liked: boolean; created: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/candidate-likes/${candidateId}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ liked: boolean; created: boolean }>(response);
+  }
+
+  async unlikeCandidate(candidateId: string): Promise<ApiResponse<{ liked: boolean; deleted: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/candidate-likes/${candidateId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ liked: boolean; deleted: boolean }>(response);
+  }
+
   // Dashboard Stats endpoint
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     const endpoint = '/user/dashboard-stats';

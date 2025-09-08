@@ -25,6 +25,7 @@ const Conversation = require('../models/Conversation');
 const Payment = require('../models/Payment');
 const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
+const CandidateLike = require('../models/CandidateLike');
 
 // Define associations
 
@@ -44,6 +45,11 @@ User.hasMany(CompanyReview, { foreignKey: 'userId', as: 'companyReviews' });
 User.hasMany(CompanyFollow, { foreignKey: 'userId', as: 'companyFollows' });
 User.hasMany(Subscription, { foreignKey: 'userId', as: 'subscriptions' });
 User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+// CandidateLike associations
+User.hasMany(CandidateLike, { foreignKey: 'employerId', as: 'givenCandidateLikes' });
+User.hasMany(CandidateLike, { foreignKey: 'candidateId', as: 'receivedCandidateLikes' });
+CandidateLike.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
+CandidateLike.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
 
 // Company associations
 Company.hasMany(Job, { foreignKey: 'companyId', as: 'jobs' });
@@ -206,5 +212,6 @@ module.exports = {
   Payment,
   Analytics,
   JobPhoto,
+  CandidateLike,
   syncDatabase
 }; 
