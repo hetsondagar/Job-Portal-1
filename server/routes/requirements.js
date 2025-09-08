@@ -3,7 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { Op, sequelize } = require('sequelize');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/sequelize');
+const CandidateLike = require('../models/CandidateUpvote');
 
 const Requirement = require('../models/Requirement');
 const User = require('../models/User');
@@ -292,18 +294,24 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     
     // 2. Skills matching (if requirement has skills)
     if (requirement.skills && requirement.skills.length > 0) {
-      // Use text search in skills JSONB field
-      const skillConditions = requirement.skills.map(skill => ({
-        skills: { [Op.contains]: [skill] }
-      }));
+      // Match JSONB contains OR text search on JSONB columns to be more forgiving
+      const skillConditions = requirement.skills.flatMap(skill => ([
+        { skills: { [Op.contains]: [skill] } },
+        { key_skills: { [Op.contains]: [skill] } },
+        sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
+        sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${skill}%` })
+      ]));
       matchingConditions.push({ [Op.or]: skillConditions });
     }
     
     // 3. Key skills matching (higher priority)
     if (requirement.keySkills && requirement.keySkills.length > 0) {
-      const keySkillConditions = requirement.keySkills.map(skill => ({
-        skills: { [Op.contains]: [skill] }
-      }));
+      const keySkillConditions = requirement.keySkills.flatMap(skill => ([
+        { key_skills: { [Op.contains]: [skill] } },
+        { skills: { [Op.contains]: [skill] } },
+        sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
+        sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${skill}%` })
+      ]));
       matchingConditions.push({ [Op.or]: keySkillConditions });
     }
     
@@ -357,14 +365,16 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     // Determine sort order - simplified
     let orderClause = [['createdAt', 'DESC']]; // Default sort by creation date
     
-    const offset = (page - 1) * limit;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (isNaN(pageNum) ? 0 : (pageNum - 1)) * (isNaN(limitNum) ? 50 : limitNum);
     
     // Fetch candidates
     const { count, rows: candidates } = await User.findAndCountAll({
       where: whereClause,
       order: orderClause,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: limitNum,
+      offset,
       attributes: [
         'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
         'current_location', 'headline', 'summary', 'skills', 'key_skills', 'languages',
@@ -376,6 +386,29 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     });
     
     console.log(`✅ Found ${count} candidates matching requirement criteria`);
+
+    // Fallback: if no candidates found, relax filters to show recent jobseekers to avoid empty UI
+    let finalCandidates = candidates;
+    let finalCount = count;
+    if (finalCount === 0) {
+      console.warn('⚠️ No candidates matched strict filters. Applying relaxed search fallback.');
+      const relaxed = await User.findAndCountAll({
+        where: { user_type: 'jobseeker', is_active: true, account_status: 'active' },
+        order: [['createdAt', 'DESC']],
+        limit: limitNum,
+        offset,
+        attributes: [
+          'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+          'current_location', 'headline', 'summary', 'skills', 'key_skills', 'languages',
+          'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
+          'experience_years', 'preferred_locations', 'education', 'designation',
+          'profile_completion', 'last_login_at', 'last_profile_update',
+          'is_email_verified', 'is_phone_verified', 'createdAt'
+        ]
+      });
+      finalCandidates = relaxed.rows;
+      finalCount = relaxed.count;
+    }
     
     // Calculate relevance score for each candidate
     const calculateRelevanceScore = (candidate, requirement) => {
@@ -449,7 +482,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     };
     
     // Transform candidates data for frontend with relevance scoring
-    const transformedCandidates = candidates.map(candidate => {
+    const transformedCandidates = finalCandidates.map(candidate => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
       
       return {
@@ -481,6 +514,32 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         matchReasons: matchReasons
       };
     });
+
+    // Enrich transformed candidates with like counts and current employer like status
+    try {
+      const candidateIds = transformedCandidates.map(c => c.id);
+      if (candidateIds.length > 0) {
+        const counts = await CandidateLike.findAll({
+          attributes: ['candidateId', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
+          where: { candidateId: candidateIds },
+          group: ['candidateId']
+        });
+        const idToCount = new Map(counts.map(r => [r.get('candidateId'), parseInt(String(r.get('cnt')))]));
+
+        const liked = await CandidateLike.findAll({
+          attributes: ['candidateId'],
+          where: { employerId: req.user.id, candidateId: candidateIds }
+        });
+        const likedSet = new Set(liked.map(r => r.get('candidateId')));
+
+        transformedCandidates.forEach(c => {
+          c.likeCount = idToCount.get(c.id) || 0;
+          c.likedByCurrent = likedSet.has(c.id);
+        });
+      }
+    } catch (likeErr) {
+      console.warn('Failed to enrich candidates with like data:', likeErr?.message || likeErr);
+    }
     
     // Sort candidates by relevance score (highest first)
     transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);

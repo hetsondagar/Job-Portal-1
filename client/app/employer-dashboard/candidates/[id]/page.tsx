@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Phone, Download, Share2, Star, Calendar, FileText, Eye, Heart, GraduationCap } from "lucide-react"
+import { Phone, Download, Share2, Star, Calendar, FileText, Eye, Heart, GraduationCap, ThumbsUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,10 +11,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
 
 export default function CandidateProfilePage() {
   const params = useParams()
   const [activeTab, setActiveTab] = useState("profile-detail")
+  const [likeCount, setLikeCount] = useState<number>(0)
+  const [liked, setLiked] = useState<boolean>(false)
+
+  // Load initial like state
+  useEffect(() => {
+    const loadLikes = async () => {
+      try {
+        const res = await apiService.getCandidateLikes(String(params.id))
+        if (res.success && res.data) {
+          setLikeCount(res.data.likeCount)
+          setLiked(res.data.likedByCurrent)
+        }
+      } catch (e) {}
+    }
+    if (params.id) loadLikes()
+  }, [params.id])
 
   // Enhanced candidate data matching the screenshot
   const candidate = {
@@ -135,6 +152,30 @@ export default function CandidateProfilePage() {
                       <Button size="sm" variant="ghost">
                         <Download className="w-4 h-4" />
                       </Button>
+                      <button
+                        aria-label={liked ? 'Remove upvote' : 'Upvote candidate'}
+                        onClick={async () => {
+                          try {
+                            if (liked) {
+                              const res = await apiService.unlikeCandidate(String(candidate.id))
+                              if (res.success) {
+                                setLiked(false)
+                                setLikeCount((c) => Math.max(0, c - 1))
+                              }
+                            } else {
+                              const res = await apiService.likeCandidate(String(candidate.id))
+                              if (res.success) {
+                                setLiked(true)
+                                setLikeCount((c) => c + 1)
+                              }
+                            }
+                          } catch (e) {}
+                        }}
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${liked ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                      >
+                        <svg className={`w-3.5 h-3.5 ${liked ? 'fill-green-600 text-green-600' : 'text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 5l7 12H5l7-12z"/></svg>
+                        <span>{likeCount}</span>
+                      </button>
                     </div>
                   </div>
                 </div>

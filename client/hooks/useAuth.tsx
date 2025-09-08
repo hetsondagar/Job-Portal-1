@@ -17,6 +17,8 @@ interface AuthContextType {
   clearError: () => void;
   updateUser: (userData: User) => void;
   refreshUser: () => Promise<void>;
+  debouncedRefreshUser: () => void;
+  manualRefreshUser: () => Promise<void>;
   refreshing: boolean;
 }
 

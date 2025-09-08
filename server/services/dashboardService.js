@@ -5,6 +5,7 @@ const JobBookmark = require('../models/JobBookmark');
 const JobAlert = require('../models/JobAlert');
 const Resume = require('../models/Resume');
 const Analytics = require('../models/Analytics');
+const CandidateLike = require('../models/CandidateLike');
 const { sequelize } = require('../config/sequelize');
 
 class DashboardService {
@@ -337,6 +338,27 @@ class DashboardService {
         profileViews = 0;
       }
 
+      // Get profile like (upvote) count with robust fallback
+      let profileLikes = 0;
+      try {
+        profileLikes = await CandidateLike.count({ where: { candidateId: userId } });
+      } catch (error) {
+        console.error('Error fetching profile likes via model:', error);
+      }
+      // Fallback to raw query if model count failed or returned suspicious zero
+      if (!profileLikes || Number.isNaN(profileLikes)) {
+        try {
+          const [rows] = await sequelize.query(
+            'SELECT COUNT(*)::int AS cnt FROM candidate_likes WHERE candidate_id = :userId',
+            { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+          );
+          const cnt = Array.isArray(rows) ? 0 : (rows?.cnt ?? 0);
+          profileLikes = parseInt(cnt, 10) || 0;
+        } catch (rawErr) {
+          console.error('Raw profile likes query failed:', rawErr);
+        }
+      }
+
       return {
         dashboard: dashboard.getDashboardSummary ? dashboard.getDashboardSummary() : {
           applications: {
@@ -381,6 +403,7 @@ class DashboardService {
         jobAlerts,
         resumes,
         profileViews,
+        profileLikes,
         stats: {
           totalApplications: dashboard.totalApplications || 0,
           applicationsUnderReview: dashboard.applicationsUnderReview || 0,
@@ -391,7 +414,8 @@ class DashboardService {
           hasDefaultResume: dashboard.hasDefaultResume || false,
           totalJobAlerts: dashboard.totalJobAlerts || 0,
           activeJobAlerts: dashboard.activeJobAlerts || 0,
-          profileViews
+          profileViews,
+          profileLikes
         }
       };
     } catch (error) {

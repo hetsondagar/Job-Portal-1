@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Filter, Plus, Search, MoreHorizontal, Edit, Trash2, Copy, X } from "lucide-react"
+import { Filter, Plus, Search, MoreHorizontal, Edit, Trash2, Copy, X, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -208,9 +208,14 @@ export default function RequirementsPage() {
 
   // Filter requirements based on search query and status filters
   const filteredRequirements = requirements.filter((req) => {
-    const matchesSearch = req.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         req.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         req.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const title = (req.title || '').toString()
+    const location = (req.location || '').toString()
+    const description = (req.description || '').toString()
+    const q = (searchQuery || '').toString().toLowerCase()
+
+    const matchesSearch = title.toLowerCase().includes(q) ||
+                         location.toLowerCase().includes(q) ||
+                         description.toLowerCase().includes(q)
     
     const uiStatus = getRequirementStatus(req)
     const matchesStatus = 
