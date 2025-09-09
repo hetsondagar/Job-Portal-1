@@ -19,6 +19,7 @@ import {
   Phone,
   Loader2,
   RefreshCw,
+  Flame,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,6 +54,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [companyData, setCompanyData] = useState<any>(null)
   const [recentApplications, setRecentApplications] = useState<any[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [hotVacancies, setHotVacancies] = useState<any[]>([])
 
   useEffect(() => {
     if (user) {
@@ -130,16 +132,21 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         // Use data from dashboard stats if available
         let applications = []
         let jobs = []
+        let hotVacancies = []
         
         if (statsResponse.success && statsResponse.data) {
           applications = statsResponse.data.recentApplications || []
           jobs = statsResponse.data.recentJobs || []
+          hotVacancies = statsResponse.data.recentHotVacancies || []
           setRecentApplications(applications)
+          setHotVacancies(hotVacancies)
           console.log('✅ Recent applications loaded from dashboard stats:', applications.length)
+          console.log('✅ Recent hot vacancies loaded from dashboard stats:', hotVacancies.length)
         } else {
           // Fallback to separate API calls
           const applicationsResponse = await apiService.getEmployerApplications()
           const jobsResponse = await apiService.getEmployerJobs({ limit: 5 })
+          const hotVacanciesResponse = await apiService.getEmployerHotVacancies()
           
           if (applicationsResponse.success && applicationsResponse.data) {
             applications = applicationsResponse.data.slice(0, 5)
@@ -151,10 +158,15 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             jobs = jobsResponse.data.slice(0, 5)
             console.log('✅ Recent jobs loaded from API:', jobs.length)
           }
+
+          if (hotVacanciesResponse.success && hotVacanciesResponse.data) {
+            setHotVacancies(hotVacanciesResponse.data.slice(0, 5))
+            console.log('✅ Recent hot vacancies loaded from API:', hotVacanciesResponse.data.length)
+          }
         }
         
         // Generate recent activity from real data
-        const activityData = generateRecentActivity(applications, jobs)
+        const activityData = generateRecentActivity(applications, jobs, hotVacancies)
         setRecentActivity(activityData)
         console.log('✅ Recent activity generated:', activityData.length)
         
@@ -321,7 +333,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
     return Math.min(100, Math.round(completion))
   }
 
-  const generateRecentActivity = (applications: any[], jobs: any[]) => {
+  const generateRecentActivity = (applications: any[], jobs: any[], hotVacancies: any[] = []) => {
     const activities = []
     
     // Add recent applications
@@ -333,6 +345,21 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         description: `${app.applicantName || 'A candidate'} applied for ${app.job?.title || 'a job'}`,
         time: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'Recently',
         icon: Users,
+      })
+    })
+    
+    // Add recent hot vacancy postings (prioritize these as they're premium)
+    hotVacancies.slice(0, 2).forEach((hotVacancy, index) => {
+      const isDraft = hotVacancy.status === 'draft'
+      activities.push({
+        id: `hot-vacancy-${index}`,
+        type: "hot_vacancy",
+        title: isDraft ? "Hot Vacancy Created as Draft" : "Hot Vacancy Posted",
+        description: isDraft 
+          ? `${hotVacancy.title} created as draft - complete payment to go live`
+          : `${hotVacancy.title} is now featured as a hot vacancy`,
+        time: hotVacancy.createdAt ? new Date(hotVacancy.createdAt).toLocaleDateString() : 'Recently',
+        icon: Flame,
       })
     })
     

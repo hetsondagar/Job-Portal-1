@@ -303,7 +303,7 @@ class ApiService {
     } finally {
       // Remove from queue when done
       this.requestQueue.delete(endpoint)
-  }
+    }
   }
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -323,6 +323,7 @@ class ApiService {
     const url = response.url
     const responseClone = response.clone()
     let data: any
+    
     try {
       // Detect opaque/network errors (often CORS or network failure)
       if ((response as any).type === 'opaque' || response.status === 0) {
@@ -330,7 +331,7 @@ class ApiService {
         return {
           success: false,
           message: 'Network or CORS error. Please ensure the API server allows this origin and is reachable.',
-          error: 'NETWORK_OR_CORS_ERROR'
+          errors: ['NETWORK_OR_CORS_ERROR']
         } as ApiResponse<T>
       }
 
@@ -348,7 +349,7 @@ class ApiService {
         return {
           success: false,
           message: `Request failed (${response.status}): ${response.statusText}`,
-          error: 'INVALID_RESPONSE',
+          errors: ['INVALID_RESPONSE'],
         } as ApiResponse<T>
       }
 
@@ -360,7 +361,7 @@ class ApiService {
       return {
         success: false,
         message: `Server error (${response.status}): ${response.statusText}. Please try again later.`,
-        error: 'SERVER_ERROR',
+        errors: ['SERVER_ERROR'],
       } as ApiResponse<T>
     }
 
@@ -383,7 +384,7 @@ class ApiService {
         return {
           success: false,
           message: `Rate limit exceeded. Please wait ${Math.ceil(waitTime/1000)} seconds before trying again.`,
-          error: 'RATE_LIMIT'
+          errors: ['RATE_LIMIT']
         } as ApiResponse<T>;
       }
       
@@ -393,7 +394,6 @@ class ApiService {
         return {
           success: false,
           message: `Validation failed: ${errorMessages}`,
-          error: 'VALIDATION_ERROR',
           errors: data.errors
         } as ApiResponse<T>;
       }
@@ -409,7 +409,7 @@ class ApiService {
         return {
           success: false,
           message: fallback,
-          error: 'REQUEST_FAILED'
+          errors: ['REQUEST_FAILED']
         } as ApiResponse<T>;
       }
 
@@ -418,14 +418,14 @@ class ApiService {
         return {
           success: false,
           message: `Server error (${response.status}): ${data?.message || response.statusText}. Please try again later.`,
-          error: 'SERVER_ERROR'
+          errors: ['SERVER_ERROR']
         } as ApiResponse<T>;
       }
       
       return {
         success: false,
         message: (data && (data.message || data.error || (Array.isArray(data.errors) ? data.errors[0]?.msg : undefined))) || `Request failed (${response.status}): ${response.statusText}`,
-        error: 'REQUEST_FAILED'
+        errors: ['REQUEST_FAILED']
       } as ApiResponse<T>;
     }
 
@@ -617,6 +617,24 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async getNotifications(): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/notifications`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching notifications:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch notifications',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
   async deleteAccount(password: string): Promise<ApiResponse> {
     const response = await fetch(`${API_BASE_URL}/user/account`, {
       method: 'DELETE',
@@ -722,7 +740,7 @@ class ApiService {
         return {
           success: false,
           message: `Failed to fetch job: ${response.status} ${response.statusText}`,
-          error: 'API_ERROR'
+          errors: ['API_ERROR']
         };
       }
       
@@ -739,7 +757,7 @@ class ApiService {
       return {
         success: false,
         message: 'Failed to fetch job data',
-        error: 'NETWORK_ERROR'
+        errors: ['NETWORK_ERROR']
       };
     }
   }
@@ -954,42 +972,34 @@ class ApiService {
 
       console.log('📋 Employer applications API response status:', response.status, response.statusText);
       
-      if (!response.ok) {
-        console.error('❌ Employer applications API failed:', response.status, response.statusText);
-        const errorData = await response.text();
-        console.error('❌ Error response body:', errorData);
-        return {
-          success: false,
-          message: `Failed to fetch applications: ${response.status} ${response.statusText}`,
-          error: 'API_ERROR'
-        };
-      }
-      
-      const data = await response.json();
-      console.log('📋 Employer applications API data:', data);
-      
-      return {
-        success: true,
-        data: data.data || data,
-        message: data.message || 'Applications fetched successfully'
-      };
+      // Use the standard handleResponse method for consistency
+      return await this.handleResponse<any[]>(response);
     } catch (error) {
       console.error('❌ Employer applications API error:', error);
       return {
         success: false,
         message: 'Failed to fetch applications data',
-        error: 'NETWORK_ERROR'
+        errors: ['NETWORK_ERROR']
       };
     }
   }
 
   // Get detailed application information for employer
   async getEmployerApplicationDetails(applicationId: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}`, {
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}`, {
+        headers: this.getAuthHeaders(),
+      });
 
-    return this.handleResponse<any>(response);
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching employer application details:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch application details',
+        errors: ['NETWORK_ERROR']
+      };
+    }
   }
 
   async createApplication(data: any): Promise<ApiResponse<any>> {
@@ -1460,28 +1470,44 @@ class ApiService {
 
   // Dashboard Stats endpoint
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-    const endpoint = '/user/dashboard-stats';
-    
-    return this.makeRequest(endpoint, async () => {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
+    try {
+      console.log('🔍 Fetching dashboard stats...');
+      const response = await fetch(`${API_BASE_URL}/user/dashboard-stats`, {
         headers: this.getAuthHeaders(),
       });
 
-      return this.handleResponse<DashboardStats>(response);
-    });
+      console.log('📊 Dashboard stats API response status:', response.status, response.statusText);
+      
+      return await this.handleResponse<DashboardStats>(response);
+    } catch (error) {
+      console.error('❌ Error fetching dashboard stats:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch dashboard stats',
+        errors: ['NETWORK_ERROR']
+      };
+    }
   }
 
   // Employer Dashboard Stats endpoint
   async getEmployerDashboardStats(): Promise<ApiResponse<any>> {
-    const endpoint = '/user/employer/dashboard-stats';
-    
-    return this.makeRequest(endpoint, async () => {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
+    try {
+      console.log('🔍 Fetching employer dashboard stats...');
+      const response = await fetch(`${API_BASE_URL}/user/employer/dashboard-stats`, {
         headers: this.getAuthHeaders(),
       });
 
-      return this.handleResponse<any>(response);
-    });
+      console.log('📊 Employer dashboard stats API response status:', response.status, response.statusText);
+      
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching employer dashboard stats:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch dashboard stats',
+        errors: ['NETWORK_ERROR']
+      };
+    }
   }
 
 
@@ -1770,6 +1796,139 @@ class ApiService {
     });
 
     return this.handleResponse<any>(response);
+  }
+
+  // Get employer notifications
+  async getEmployerNotifications(page: number = 1, limit: number = 20): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/employer/notifications?page=${page}&limit=${limit}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching employer notifications:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch employer notifications',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
+      return {
+        success: false,
+        message: 'Failed to mark notification as read',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Mark all notifications as read
+  async markAllNotificationsAsRead(): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/notifications/read-all`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error marking all notifications as read:', error);
+      return {
+        success: false,
+        message: 'Failed to mark all notifications as read',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Delete notification
+  async deleteNotification(notificationId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error deleting notification:', error);
+      return {
+        success: false,
+        message: 'Failed to delete notification',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Get employer's hot vacancies
+  async getEmployerHotVacancies(): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/hot-vacancies/employer`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching employer hot vacancies:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch hot vacancies',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Get similar jobs
+  async getSimilarJobs(jobId: string, limit: number = 5): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/similar?limit=${limit}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching similar jobs:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch similar jobs',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Profile view tracking
+  async trackProfileView(userId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/track-profile-view/${userId}`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error tracking profile view:', error);
+      return {
+        success: false,
+        message: 'Failed to track profile view',
+        errors: ['NETWORK_ERROR']
+      };
+    }
   }
 
   // Hot Vacancy API methods

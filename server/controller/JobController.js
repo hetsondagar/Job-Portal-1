@@ -4,6 +4,7 @@ const Job = require('../models/Job');
 const Company = require('../models/Company');
 const User = require('../models/User');
 const JobPhoto = require('../models/JobPhoto');
+const ViewTrackingService = require('../services/viewTrackingService');
 
 /**
  * Create a new job
@@ -411,6 +412,25 @@ exports.getJobById = async (req, res, next) => {
       });
     }
 
+    // Track the view (async, don't wait for it)
+    ViewTrackingService.trackView({
+      viewerId: req.user?.id || null, // null for anonymous users
+      viewedUserId: job.employerId, // Track profile view for the job poster
+      jobId: job.id,
+      viewType: 'job_view',
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent'),
+      sessionId: req.sessionID,
+      referrer: req.get('Referer'),
+      metadata: {
+        jobTitle: job.title,
+        jobLocation: job.location,
+        companyName: job.company?.name
+      }
+    }).catch(error => {
+      console.error('Error tracking job view:', error);
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Job retrieved successfully',
@@ -421,6 +441,159 @@ exports.getJobById = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve job',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get similar jobs based on job criteria
+ */
+exports.getSimilarJobs = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { limit = 5 } = req.query;
+
+    // First get the current job to understand its criteria
+    const currentJob = await Job.findByPk(id, {
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'industry', 'companySize'],
+          required: false
+        }
+      ]
+    });
+
+    if (!currentJob) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Build similarity criteria
+    const whereClause = {
+      id: { [require('sequelize').Op.ne]: id }, // Exclude current job
+      status: 'active' // Only show active jobs
+    };
+
+    // Add location similarity (same city/state)
+    if (currentJob.location) {
+      const locationParts = currentJob.location.toLowerCase().split(',').map(part => part.trim());
+      if (locationParts.length > 0) {
+        whereClause.location = {
+          [require('sequelize').Op.iLike]: `%${locationParts[0]}%`
+        };
+      }
+    }
+
+    // Add job type similarity
+    if (currentJob.jobType) {
+      whereClause.jobType = currentJob.jobType;
+    }
+
+    // Add experience level similarity
+    if (currentJob.experienceLevel) {
+      whereClause.experienceLevel = currentJob.experienceLevel;
+    }
+
+    // Add department/category similarity
+    if (currentJob.department) {
+      whereClause.department = {
+        [require('sequelize').Op.iLike]: `%${currentJob.department}%`
+      };
+    }
+
+    // Find similar jobs
+    const similarJobs = await Job.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'industry', 'companySize', 'website'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'employer',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          required: false
+        }
+      ],
+      order: [
+        // Prioritize by similarity factors
+        ['views', 'DESC'], // More viewed jobs first
+        ['createdAt', 'DESC'] // Recent jobs first
+      ],
+      limit: parseInt(limit)
+    });
+
+    // If we don't have enough similar jobs, get more general matches
+    if (similarJobs.length < limit) {
+      const additionalJobs = await Job.findAll({
+        where: {
+          id: { [require('sequelize').Op.ne]: id },
+          status: 'active',
+          id: { [require('sequelize').Op.notIn]: similarJobs.map(job => job.id) }
+        },
+        include: [
+          {
+            model: Company,
+            as: 'company',
+            attributes: ['id', 'name', 'industry', 'companySize', 'website'],
+            required: false
+          },
+          {
+            model: User,
+            as: 'employer',
+            attributes: ['id', 'first_name', 'last_name', 'email'],
+            required: false
+          }
+        ],
+        order: [
+          ['views', 'DESC'],
+          ['createdAt', 'DESC']
+        ],
+        limit: parseInt(limit) - similarJobs.length
+      });
+
+      similarJobs.push(...additionalJobs);
+    }
+
+    // Format the response
+    const formattedJobs = similarJobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      company: job.company?.name || 'Company not specified',
+      location: job.location,
+      salary: job.salary || 'Salary not specified',
+      type: job.jobType,
+      posted: new Date(job.createdAt).toLocaleDateString(),
+      applications: job.applications || 0,
+      views: job.views || 0,
+      experienceLevel: job.experienceLevel,
+      department: job.department,
+      description: job.description?.substring(0, 150) + '...',
+      companyInfo: {
+        industry: job.company?.industry,
+        size: job.company?.companySize,
+        website: job.company?.website
+      }
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Similar jobs retrieved successfully',
+      data: formattedJobs
+    });
+  } catch (error) {
+    console.error('Get similar jobs error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve similar jobs',
       error: error.message
     });
   }

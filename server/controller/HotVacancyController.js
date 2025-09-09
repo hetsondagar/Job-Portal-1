@@ -1,6 +1,6 @@
 'use strict';
 
-const { HotVacancy, Company, User, JobApplication, HotVacancyPhoto } = require('../config');
+const { HotVacancy, Company, User, JobApplication, HotVacancyPhoto, Notification } = require('../config');
 
 /**
  * Create a new hot vacancy
@@ -110,8 +110,20 @@ exports.createHotVacancy = async (req, res, next) => {
       console.error('❌ Salary values clamped or nullified due to overflow potential.');
     }
 
+    // Generate slug from title
+    const slug = title.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim() + '-' + Date.now(); // Add timestamp for uniqueness
+
+    // Set validTill to 30 days from now
+    const validTill = new Date();
+    validTill.setDate(validTill.getDate() + 30);
+
     const hotVacancyData = {
       title,
+      slug,
       description,
       shortDescription,
       requirements,
@@ -160,12 +172,36 @@ exports.createHotVacancy = async (req, res, next) => {
       seoTitle,
       seoDescription,
       keywords,
+      validTill,
       status: 'draft' // Start as draft until payment is confirmed
     };
 
     const hotVacancy = await HotVacancy.create(hotVacancyData);
 
     console.log('✅ Hot vacancy created successfully:', hotVacancy.id);
+
+    // Create notification for the employer about hot vacancy creation
+    try {
+      await Notification.create({
+        userId: req.user.id,
+        type: 'system',
+        title: 'Hot Vacancy Created as Draft',
+        message: `Your hot vacancy "${title}" has been created as a draft. Complete the payment to make it live and featured prominently.`,
+        priority: 'medium',
+        icon: 'fire',
+        metadata: {
+          event: 'hot_vacancy_created',
+          hotVacancyId: hotVacancy.id,
+          hotVacancyTitle: title,
+          status: 'draft',
+          action: 'Complete Payment'
+        }
+      });
+      console.log('📢 Hot vacancy notification created for employer');
+    } catch (notificationError) {
+      console.error('❌ Error creating hot vacancy notification:', notificationError);
+      // Don't fail the main request if notification creation fails
+    }
 
     return res.status(201).json({
       success: true,
@@ -342,7 +378,36 @@ exports.updateHotVacancy = async (req, res, next) => {
       });
     }
 
+    // Check if status is changing from draft to active
+    const wasDraft = hotVacancy.status === 'draft';
+    const isBecomingActive = updateData.status === 'active';
+
     await hotVacancy.update(updateData);
+
+    // Create notification if hot vacancy is being activated
+    if (wasDraft && isBecomingActive) {
+      try {
+        await Notification.create({
+          userId: req.user.id,
+          type: 'system',
+          title: 'Hot Vacancy Now Live!',
+          message: `Your hot vacancy "${hotVacancy.title}" is now live and featured prominently to attract top candidates.`,
+          priority: 'high',
+          icon: 'fire',
+          metadata: {
+            event: 'hot_vacancy_activated',
+            hotVacancyId: hotVacancy.id,
+            hotVacancyTitle: hotVacancy.title,
+            status: 'active',
+            action: 'View Hot Vacancy'
+          }
+        });
+        console.log('📢 Hot vacancy activation notification created for employer');
+      } catch (notificationError) {
+        console.error('❌ Error creating hot vacancy activation notification:', notificationError);
+        // Don't fail the main request if notification creation fails
+      }
+    }
 
     return res.status(200).json({
       success: true,

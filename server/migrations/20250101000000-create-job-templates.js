@@ -88,11 +88,36 @@ module.exports = {
     });
 
     // Add indexes for better performance
-    await queryInterface.addIndex('JobTemplates', ['createdBy']);
-    await queryInterface.addIndex('JobTemplates', ['isPublic']);
-    await queryInterface.addIndex('JobTemplates', ['category']);
-    await queryInterface.addIndex('JobTemplates', ['isActive']);
-    await queryInterface.addIndex('JobTemplates', ['createdAt']);
+    try {
+      await queryInterface.addIndex('JobTemplates', ['createdBy'], { name: 'job_templates_created_by' });
+    } catch (error) {
+      // Index might already exist, continue
+      console.log('Index job_templates_created_by might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('JobTemplates', ['isPublic'], { name: 'job_templates_is_public' });
+    } catch (error) {
+      console.log('Index job_templates_is_public might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('JobTemplates', ['category'], { name: 'job_templates_category' });
+    } catch (error) {
+      console.log('Index job_templates_category might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('JobTemplates', ['isActive'], { name: 'job_templates_is_active' });
+    } catch (error) {
+      console.log('Index job_templates_is_active might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('JobTemplates', ['createdAt'], { name: 'job_templates_created_at' });
+    } catch (error) {
+      console.log('Index job_templates_created_at might already exist, skipping...');
+    }
 
     // Insert some default templates
     await queryInterface.bulkInsert('JobTemplates', [
