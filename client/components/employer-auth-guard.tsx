@@ -35,8 +35,13 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       // Check if user is an employer
       if (user.userType !== 'employer') {
         console.log('❌ User is not employer, userType:', user.userType)
-        console.log('🔄 Redirecting to jobseeker dashboard')
-        router.push('/dashboard')
+        if (user.userType === 'jobseeker') {
+          console.log('🔄 Redirecting jobseeker to jobseeker dashboard')
+          router.push('/dashboard')
+        } else {
+          console.log('🔄 Unknown user type, redirecting to login')
+          router.push('/login')
+        }
         return
       }
       

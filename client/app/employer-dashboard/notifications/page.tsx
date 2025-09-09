@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Bell, Check, X, Clock, AlertCircle, Info, CheckCircle } from "lucide-react"
+import { ArrowLeft, Bell, Check, X, Clock, AlertCircle, Info, CheckCircle, Loader2, RefreshCw, Flame } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,93 +10,154 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { toast } from "sonner"
 
 export default function NotificationsPage() {
+  const { user } = useAuth()
+
+  return (
+    <EmployerAuthGuard>
+      <NotificationsPageContent user={user} />
+    </EmployerAuthGuard>
+  )
+}
+
+function NotificationsPageContent({ user }: { user: any }) {
   const router = useRouter()
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "application",
-      title: "New Job Application",
-      message: "Rahul Kumar applied for Senior Software Engineer position",
-      time: "2 minutes ago",
-      read: false,
-      priority: "high",
-      avatar: "/placeholder-user.jpg",
-      action: "View Application"
-    },
-    {
-      id: 2,
-      type: "candidate",
-      title: "Candidate Match Found",
-      message: "5 candidates match your requirements for Product Manager role",
-      time: "1 hour ago",
-      read: false,
-      priority: "medium",
-      avatar: "/placeholder-user.jpg",
-      action: "View Candidates"
-    },
-    {
-      id: 3,
-      type: "system",
-      title: "Job Posting Expires Soon",
-      message: "Your 'Frontend Developer' job posting expires in 2 days",
-      time: "3 hours ago",
-      read: true,
-      priority: "low",
-      avatar: "/placeholder-logo.png",
-      action: "Extend Posting"
-    },
-    {
-      id: 4,
-      type: "application",
-      title: "New Job Application",
-      message: "Priya Sharma applied for UI/UX Designer position",
-      time: "5 hours ago",
-      read: true,
-      priority: "medium",
-      avatar: "/placeholder-user.jpg",
-      action: "View Application"
-    },
-    {
-      id: 5,
-      type: "system",
-      title: "Welcome to JobPortal!",
-      message: "Your account has been successfully created. Start posting jobs to find great candidates.",
-      time: "1 day ago",
-      read: true,
-      priority: "low",
-      avatar: "/placeholder-logo.png",
-      action: "Post Job"
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0
+  })
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Fetch notifications on component mount
+  useEffect(() => {
+    if (user) {
+      fetchNotifications()
     }
-  ])
+  }, [user, pagination.page])
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    )
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('🔍 Fetching employer notifications...')
+      const response = await apiService.getEmployerNotifications(pagination.page, pagination.limit)
+      
+      if (response.success && response.data) {
+        console.log('✅ Notifications fetched successfully:', response.data)
+        setNotifications(response.data)
+        
+        // Update pagination if available
+        if ((response as any).pagination) {
+          setPagination(prev => ({
+            ...prev,
+            total: (response as any).pagination.total,
+            pages: (response as any).pagination.pages
+          }))
+        }
+      } else {
+        console.error('❌ Failed to fetch notifications:', response)
+        setError(response.message || 'Failed to fetch notifications')
+        toast.error(response.message || 'Failed to fetch notifications')
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching notifications:', error)
+      setError('Failed to fetch notifications')
+      toast.error('Failed to fetch notifications')
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    )
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await apiService.markNotificationAsRead(id)
+      
+      if (response.success) {
+        setNotifications(prev => 
+          prev.map(notification => 
+            notification.id === id ? { ...notification, isRead: true } : notification
+          )
+        )
+        toast.success('Notification marked as read')
+      } else {
+        toast.error(response.message || 'Failed to mark notification as read')
+      }
+    } catch (error: any) {
+      console.error('❌ Error marking notification as read:', error)
+      toast.error('Failed to mark notification as read')
+    }
   }
 
-  const deleteNotification = (id: number) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id))
+  const markAllAsRead = async () => {
+    try {
+      const response = await apiService.markAllNotificationsAsRead()
+      
+      if (response.success) {
+        setNotifications(prev => 
+          prev.map(notification => ({ ...notification, isRead: true }))
+        )
+        toast.success('All notifications marked as read')
+      } else {
+        toast.error(response.message || 'Failed to mark all notifications as read')
+      }
+    } catch (error: any) {
+      console.error('❌ Error marking all notifications as read:', error)
+      toast.error('Failed to mark all notifications as read')
+    }
   }
 
-  const getNotificationIcon = (type: string) => {
+  const deleteNotification = async (id: string) => {
+    try {
+      const response = await apiService.deleteNotification(id)
+      
+      if (response.success) {
+        setNotifications(prev => prev.filter(notification => notification.id !== id))
+        toast.success('Notification deleted')
+      } else {
+        toast.error(response.message || 'Failed to delete notification')
+      }
+    } catch (error: any) {
+      console.error('❌ Error deleting notification:', error)
+      toast.error('Failed to delete notification')
+    }
+  }
+
+  const refreshNotifications = () => {
+    setIsRefreshing(true)
+    fetchNotifications()
+  }
+
+  const getNotificationIcon = (type: string, icon?: string) => {
+    // Check for specific icon from metadata first
+    if (icon === 'fire') {
+      return <Flame className="w-5 h-5 text-orange-600" />
+    }
+    
     switch (type) {
-      case "application":
+      case "job_application":
         return <CheckCircle className="w-5 h-5 text-green-600" />
-      case "candidate":
-        return <Bell className="w-5 h-5 text-blue-600" />
+      case "application_status":
+        return <AlertCircle className="w-5 h-5 text-blue-600" />
+      case "job_recommendation":
+        return <Bell className="w-5 h-5 text-purple-600" />
+      case "company_update":
+        return <Info className="w-5 h-5 text-orange-600" />
       case "system":
         return <Info className="w-5 h-5 text-slate-600" />
+      case "marketing":
+        return <Bell className="w-5 h-5 text-pink-600" />
       default:
         return <Bell className="w-5 h-5 text-slate-600" />
     }
@@ -115,7 +176,19 @@ export default function NotificationsPage() {
     }
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    
+    if (diffInSeconds < 60) return 'Just now'
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`
+    return date.toLocaleDateString()
+  }
+
+  const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
@@ -136,25 +209,66 @@ export default function NotificationsPage() {
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
               <p className="text-slate-600">
-                {unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}
+                {loading ? "Loading notifications..." : 
+                 unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}
               </p>
             </div>
           </div>
-          {unreadCount > 0 && (
+          <div className="flex items-center space-x-2">
             <Button
-              onClick={markAllAsRead}
+              onClick={refreshNotifications}
               variant="outline"
-              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              disabled={isRefreshing}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
             >
-              <Check className="w-4 h-4 mr-2" />
-              Mark all as read
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
+            {unreadCount > 0 && (
+              <Button
+                onClick={markAllAsRead}
+                variant="outline"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Mark all as read
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Notifications List */}
         <div className="space-y-4">
-          {notifications.length === 0 ? (
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4 animate-pulse">
+                      <div className="w-10 h-10 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-full mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : error ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Error loading notifications</h3>
+                <p className="text-slate-600 text-center mb-4">{error}</p>
+                <Button onClick={refreshNotifications} variant="outline">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              </CardContent>
+            </Card>
+          ) : notifications.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Bell className="w-12 h-12 text-slate-400 mb-4" />
@@ -169,16 +283,15 @@ export default function NotificationsPage() {
               <Card
                 key={notification.id}
                 className={`transition-all duration-200 hover:shadow-md ${
-                  !notification.read ? 'border-blue-200 bg-blue-50/50' : ''
+                  !notification.isRead ? 'border-blue-200 bg-blue-50/50' : ''
                 }`}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     {/* Avatar */}
                     <Avatar className="w-10 h-10 flex-shrink-0">
-                      <AvatarImage src={notification.avatar} alt="Notification" />
                       <AvatarFallback className="bg-slate-100">
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification.type, notification.metadata?.icon)}
                       </AvatarFallback>
                     </Avatar>
 
@@ -187,10 +300,10 @@ export default function NotificationsPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            <h3 className={`font-semibold ${!notification.read ? 'text-slate-900' : 'text-slate-700'}`}>
+                            <h3 className={`font-semibold ${!notification.isRead ? 'text-slate-900' : 'text-slate-700'}`}>
                               {notification.title}
                             </h3>
-                            {!notification.read && (
+                            {!notification.isRead && (
                               <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                             )}
                             <Badge variant="outline" className={`text-xs ${getPriorityColor(notification.priority)}`}>
@@ -202,18 +315,20 @@ export default function NotificationsPage() {
                             <div className="flex items-center space-x-4">
                               <span className="text-xs text-slate-500 flex items-center">
                                 <Clock className="w-3 h-3 mr-1" />
-                                {notification.time}
+                                {formatTimeAgo(notification.createdAt)}
                               </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              >
-                                {notification.action}
-                              </Button>
+                              {notification.metadata?.action && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  {notification.metadata.action}
+                                </Button>
+                              )}
                             </div>
                             <div className="flex items-center space-x-2">
-                              {!notification.read && (
+                              {!notification.isRead && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -244,9 +359,13 @@ export default function NotificationsPage() {
         </div>
 
         {/* Load More */}
-        {notifications.length > 0 && (
+        {notifications.length > 0 && pagination.page < pagination.pages && (
           <div className="text-center mt-8">
-            <Button variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50">
+            <Button 
+              variant="outline" 
+              className="border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+            >
               Load More Notifications
             </Button>
           </div>

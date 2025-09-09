@@ -473,6 +473,175 @@ router.put('/change-password', authenticateToken, [
   }
 });
 
+// Get user notifications
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    
+    const notifications = await Notification.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']],
+      limit: 50 // Limit to recent 50 notifications
+    });
+
+    res.json({
+      success: true,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications'
+    });
+  }
+});
+
+// Get employer notifications (filtered for employer-specific types)
+router.get('/employer/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Get employer-specific notification types
+    const employerNotificationTypes = [
+      'job_application',
+      'application_status', 
+      'job_recommendation',
+      'company_update',
+      'system',
+      'marketing'
+    ];
+
+    const { count, rows: notifications } = await Notification.findAndCountAll({
+      where: { 
+        userId: req.user.id,
+        type: employerNotificationTypes
+      },
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      message: 'Employer notifications retrieved successfully',
+      data: notifications,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        pages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching employer notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch employer notifications'
+    });
+  }
+});
+
+// Mark notification as read
+router.patch('/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    const { id } = req.params;
+    
+    const notification = await Notification.findOne({
+      where: { 
+        id: id,
+        userId: req.user.id 
+      }
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+
+    await notification.update({ isRead: true });
+
+    res.json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark notification as read'
+    });
+  }
+});
+
+// Mark all notifications as read
+router.patch('/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    
+    await Notification.update(
+      { isRead: true },
+      { 
+        where: { 
+          userId: req.user.id,
+          isRead: false
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'All notifications marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark all notifications as read'
+    });
+  }
+});
+
+// Delete notification
+router.delete('/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    const { id } = req.params;
+    
+    const notification = await Notification.findOne({
+      where: { 
+        id: id,
+        userId: req.user.id 
+      }
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+
+    await notification.destroy();
+
+    res.json({
+      success: true,
+      message: 'Notification deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete notification'
+    });
+  }
+});
+
 // Update notification preferences
 router.put('/notifications', authenticateToken, [
   body('emailNotifications')
@@ -779,8 +948,8 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
               as: 'educations',
               attributes: [
                 'id', 'institution', 'degree', 'fieldOfStudy', 'location',
-                'startDate', 'endDate', 'isCurrent', 'gpa', 'description',
-                'activities', 'honors', 'order'
+                'startDate', 'endDate', 'isCurrent', 'cgpa', 'description',
+                'activities', 'achievements', 'order'
               ],
               order: [['order', 'ASC'], ['startDate', 'DESC']]
             }
@@ -1509,12 +1678,13 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
 // Employer Dashboard Stats endpoint
 router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
   try {
-    const { Job, JobApplication, Company } = require('../config/index');
+    const { Job, JobApplication, Company, User } = require('../config/index');
     
-    console.log('📊 Fetching employer dashboard data for user:', req.user.id);
+    console.log('📊 Fetching employer dashboard data for user:', req.user.id, 'type:', req.user.user_type);
     
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
+      console.log('❌ Access denied - user is not an employer:', req.user.user_type);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Only employers can access this endpoint.'
@@ -1522,6 +1692,7 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     }
     
     // Get employer's jobs
+    console.log('🔍 Querying jobs for employerId:', req.user.id);
     const jobs = await Job.findAll({
       where: { employerId: req.user.id },
       include: [{
@@ -1530,8 +1701,10 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
         attributes: ['id', 'name', 'industry', 'companySize']
       }]
     });
+    console.log('✅ Found jobs:', jobs.length);
     
     // Get applications for employer's jobs
+    console.log('🔍 Querying applications for employerId:', req.user.id);
     const applications = await JobApplication.findAll({
       where: { employerId: req.user.id },
       include: [{
@@ -1544,14 +1717,35 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
         attributes: ['id', 'first_name', 'last_name', 'email', 'headline', 'current_location', 'skills']
       }]
     });
+    console.log('✅ Found applications:', applications.length);
+    
+    // Get hot vacancies for employer
+    const { HotVacancy } = require('../config/index');
+    const hotVacancies = await HotVacancy.findAll({
+      where: { employerId: req.user.id },
+      order: [['createdAt', 'DESC']],
+      limit: 5,
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'name', 'industry', 'companySize']
+      }]
+    });
+    console.log('✅ Found hot vacancies:', hotVacancies.length);
     
     // Calculate stats
     const activeJobs = jobs.filter(job => job.status === 'active' || !job.status).length;
     const totalApplications = applications.length;
     const hiredCandidates = applications.filter(app => app.status === 'accepted').length;
     
-    // Get profile views (simplified for now)
-    const profileViews = 0; // TODO: Implement actual profile view tracking
+    // Get profile views from view tracking
+    const { ViewTracking } = require('../config/index');
+    const profileViews = await ViewTracking.count({
+      where: { 
+        viewedUserId: req.user.id,
+        viewType: ['job_view', 'profile_view']
+      }
+    });
     
     const employerStats = {
       activeJobs,
@@ -1560,10 +1754,17 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       profileViews,
       totalJobs: jobs.length,
       recentApplications: applications.slice(0, 5),
-      recentJobs: jobs.slice(0, 5)
+      recentJobs: jobs.slice(0, 5),
+      recentHotVacancies: hotVacancies
     };
     
-    console.log('✅ Employer dashboard data fetched successfully');
+    console.log('✅ Employer dashboard data fetched successfully:', {
+      activeJobs,
+      totalApplications,
+      hiredCandidates,
+      profileViews,
+      totalJobs: jobs.length
+    });
     
     res.json({
       success: true,
@@ -1575,6 +1776,45 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to fetch employer dashboard data',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Track profile view
+router.post('/track-profile-view/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const ViewTrackingService = require('../services/viewTrackingService');
+    
+    const result = await ViewTrackingService.trackView({
+      viewerId: req.user?.id || null,
+      viewedUserId: userId,
+      viewType: 'profile_view',
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent'),
+      sessionId: req.sessionID,
+      referrer: req.get('Referer'),
+      metadata: {
+        source: 'profile_page'
+      }
+    });
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Profile view tracked successfully'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error('Error tracking profile view:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to track profile view'
     });
   }
 });

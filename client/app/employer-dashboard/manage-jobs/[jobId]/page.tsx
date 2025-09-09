@@ -45,6 +45,8 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [similarJobs, setSimilarJobs] = useState<any[]>([])
+  const [similarJobsLoading, setSimilarJobsLoading] = useState(false)
 
   useEffect(() => {
     if (params.jobId) {
@@ -63,6 +65,9 @@ export default function JobDetailPage() {
       if (response.success && response.data) {
         console.log('✅ Job details fetched:', response.data)
         setJob(response.data)
+        
+        // Fetch similar jobs after getting job details
+        fetchSimilarJobs()
       } else {
         console.error('❌ Failed to fetch job details:', response)
         setError(response.message || 'Failed to fetch job details')
@@ -74,6 +79,28 @@ export default function JobDetailPage() {
       toast.error('Failed to fetch job details')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchSimilarJobs = async () => {
+    try {
+      setSimilarJobsLoading(true)
+      console.log('🔍 Fetching similar jobs for ID:', params.jobId)
+      
+      const response = await apiService.getSimilarJobs(params.jobId as string, 4)
+      
+      if (response.success && response.data) {
+        console.log('✅ Similar jobs fetched:', response.data)
+        setSimilarJobs(response.data)
+      } else {
+        console.error('❌ Failed to fetch similar jobs:', response)
+        // Don't show error toast for similar jobs as it's not critical
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching similar jobs:', error)
+      // Don't show error toast for similar jobs as it's not critical
+    } finally {
+      setSimilarJobsLoading(false)
     }
   }
 
@@ -143,49 +170,6 @@ export default function JobDetailPage() {
     }
   }
 
-  // Mock recommended jobs
-  const recommendedJobs = [
-    {
-      id: 1,
-      title: "Frontend Developer",
-      company: "InnovateTech",
-      location: "Mumbai",
-      salary: "₹6-12 LPA",
-      type: "Full-time",
-      posted: "1 day ago",
-      applications: 45
-    },
-    {
-      id: 2,
-      title: "React Native Developer",
-      company: "MobileFirst",
-      location: "Delhi",
-      salary: "₹7-14 LPA",
-      type: "Full-time",
-      posted: "3 days ago",
-      applications: 67
-    },
-    {
-      id: 3,
-      title: "UI/UX Developer",
-      company: "DesignHub",
-      location: "Pune",
-      salary: "₹5-10 LPA",
-      type: "Contract",
-      posted: "1 week ago",
-      applications: 34
-    },
-    {
-      id: 4,
-      title: "Full Stack Developer",
-      company: "WebSolutions",
-      location: "Hyderabad",
-      salary: "₹8-16 LPA",
-      type: "Full-time",
-      posted: "2 days ago",
-      applications: 89
-    }
-  ]
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -270,7 +254,7 @@ export default function JobDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {transformedJob.skills.map((skill) => (
+                  {transformedJob.skills.map((skill: string) => (
                     <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                       {skill}
                     </Badge>
@@ -304,7 +288,7 @@ export default function JobDetailPage() {
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Benefits & Perks</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {transformedJob.benefits.map((benefit, index) => (
+                        {transformedJob.benefits.map((benefit: string, index: number) => (
                           <div key={index} className="flex items-center space-x-2">
                             <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
                             <span className="text-slate-600 dark:text-slate-400">{benefit}</span>
@@ -445,26 +429,69 @@ export default function JobDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Recommended Jobs */}
+            {/* Similar Jobs */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Similar Jobs</h3>
-                <div className="space-y-4">
-                  {recommendedJobs.map((recJob) => (
-                    <div key={recJob.id} className="p-4 border rounded-lg hover:border-blue-300 transition-colors cursor-pointer">
-                      <h4 className="font-medium text-slate-900 dark:text-white mb-1">{recJob.title}</h4>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{recJob.company}</p>
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span>{recJob.location}</span>
-                        <span>{recJob.salary}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        <span>{recJob.type}</span>
-                        <span>{recJob.applications} applications</span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Similar Jobs</h3>
+                  {similarJobsLoading && (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                  )}
                 </div>
+                
+                {similarJobsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="p-4 border rounded-lg animate-pulse">
+                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-1/2 mb-2"></div>
+                        <div className="flex justify-between">
+                          <div className="h-3 bg-slate-200 rounded w-1/4"></div>
+                          <div className="h-3 bg-slate-200 rounded w-1/4"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : similarJobs.length > 0 ? (
+                  <div className="space-y-4">
+                    {similarJobs.map((recJob) => (
+                      <Link
+                        key={recJob.id}
+                        href={`/employer-dashboard/manage-jobs/${recJob.id}`}
+                        className="block p-4 border rounded-lg hover:border-blue-300 transition-colors cursor-pointer"
+                      >
+                        <h4 className="font-medium text-slate-900 dark:text-white mb-1">{recJob.title}</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{recJob.company}</p>
+                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                          <span className="flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {recJob.location}
+                          </span>
+                          <span>{recJob.salary}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          <span className="flex items-center">
+                            <Briefcase className="w-3 h-3 mr-1" />
+                            {recJob.type}
+                          </span>
+                          <span className="flex items-center">
+                            <Users className="w-3 h-3 mr-1" />
+                            {recJob.applications} applications
+                          </span>
+                        </div>
+                        {recJob.description && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+                            {recJob.description}
+                          </p>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500 dark:text-slate-400">No similar jobs found</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

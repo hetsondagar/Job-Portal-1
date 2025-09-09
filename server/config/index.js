@@ -28,6 +28,7 @@ const JobPhoto = require('../models/JobPhoto');
 const CandidateLike = require('../models/CandidateUpvote');
 const HotVacancy = require('../models/HotVacancy');
 const HotVacancyPhoto = require('../models/HotVacancyPhoto');
+const ViewTracking = require('../models/ViewTracking');
 
 // Define associations
 
@@ -87,7 +88,7 @@ JobPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 // HotVacancy associations
 HotVacancy.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
 HotVacancy.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
-HotVacancy.hasMany(JobApplication, { foreignKey: 'hotVacancyId', as: 'jobApplications' });
+// Note: Removed JobApplication association as hot_vacancy_id column doesn't exist in job_applications table
 HotVacancy.hasMany(HotVacancyPhoto, { foreignKey: 'hotVacancyId', as: 'photos' });
 
 // HotVacancyPhoto associations
@@ -227,5 +228,6 @@ module.exports = {
   CandidateLike,
   HotVacancy,
   HotVacancyPhoto,
+  ViewTracking,
   syncDatabase
 }; 

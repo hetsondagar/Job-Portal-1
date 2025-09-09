@@ -13,6 +13,7 @@ const {
   createJob,
   getAllJobs,
   getJobById,
+  getSimilarJobs,
   getJobForEdit,
   updateJob,
   deleteJob,
@@ -58,6 +59,7 @@ const authenticateToken = async (req, res, next) => {
 // Public routes
 router.get('/', getAllJobs);
 router.get('/:id', getJobById);
+router.get('/:id/similar', getSimilarJobs);
 router.get('/company/:companyId', getJobsByCompany);
 
 // Protected routes (require authentication)

@@ -114,6 +114,7 @@ router.use(requireEmployer);
 // Hot vacancy CRUD operations
 router.post('/', createHotVacancy);
 router.get('/', getHotVacanciesByEmployer);
+router.get('/employer', getHotVacanciesByEmployer);
 router.get('/:id', getHotVacancyById);
 router.put('/:id', updateHotVacancy);
 router.delete('/:id', deleteHotVacancy);

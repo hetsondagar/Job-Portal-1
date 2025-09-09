@@ -62,6 +62,11 @@ export default function DashboardPage() {
     if (!loading && !user) {
       toast.error('Please sign in to access the dashboard')
       router.push('/login')
+    } else if (user && user.userType === 'employer') {
+      // Redirect employers to their dashboard
+      console.log('🔄 Employer detected on jobseeker dashboard, redirecting to employer dashboard')
+      toast.info('Redirecting to employer dashboard...')
+      router.push('/employer-dashboard')
     }
   }, [user, loading, router])
 

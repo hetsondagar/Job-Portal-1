@@ -279,7 +279,7 @@ export function Navbar() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center">
+                    <Link href={user?.userType === 'employer' ? '/employer-dashboard' : '/dashboard'} className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
@@ -369,7 +369,7 @@ export function Navbar() {
                         <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
                       </div>
                     </div>
-                    <Link href="/dashboard">
+                    <Link href={user?.userType === 'employer' ? '/employer-dashboard' : '/dashboard'}>
                       <Button variant="outline" className="w-full justify-start">
                         <User className="mr-2 h-4 w-4" />
                         Dashboard

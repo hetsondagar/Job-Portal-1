@@ -273,6 +273,12 @@ export function EmployerNavbar() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
+                  <Link href="/employer-dashboard" className="cursor-pointer">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/employer-dashboard/settings" className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile & Settings</span>
@@ -326,6 +332,17 @@ export function EmployerNavbar() {
                   </div>
                 </div>
 
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Dashboard</h3>
+                  <Link
+                    href="/employer-dashboard"
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <span className="text-slate-700 dark:text-slate-200">Dashboard</span>
+                  </Link>
+                </div>
                 <div className="space-y-4">
                   <h3 className="font-semibold text-slate-900 dark:text-white">Jobs & Responses</h3>
                   {jobsMenuItems.map((item, index) => (
