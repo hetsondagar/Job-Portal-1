@@ -169,10 +169,10 @@ export default function CandidatesPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <Link href={`/employer-dashboard/requirements/${params.id}`}>
+            <Link href="/employer-dashboard/requirements">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Requirement
+                Back to Requirements
               </Button>
           </Link>
         </div>

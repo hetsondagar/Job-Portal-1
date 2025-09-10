@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Star,
   ThumbsUp,
+  Calendar,
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 
@@ -48,6 +49,8 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(true)
+  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
+  const [interviewsLoading, setInterviewsLoading] = useState(true)
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([])
   const [coverLettersLoading, setCoverLettersLoading] = useState(true)
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false)
@@ -76,6 +79,7 @@ export default function DashboardPage() {
       fetchJobAlerts()
       fetchApplications()
       fetchCoverLetters()
+      fetchInterviews()
     }
   }, [user, loading])
 
@@ -120,6 +124,24 @@ export default function DashboardPage() {
     }
   }
 
+  const fetchInterviews = async () => {
+    try {
+      setInterviewsLoading(true)
+      
+      const response = await apiService.getCandidateInterviews('scheduled', 1, 5)
+      
+      if (response.success && response.data && response.data.interviews) {
+        setUpcomingInterviews(response.data.interviews)
+      } else {
+        setUpcomingInterviews([])
+      }
+    } catch (error) {
+      console.error('Error fetching interviews:', error)
+      setUpcomingInterviews([])
+    } finally {
+      setInterviewsLoading(false)
+    }
+  }
 
   // Function to refresh dashboard data
   const refreshDashboard = async () => {
@@ -129,6 +151,7 @@ export default function DashboardPage() {
     await fetchJobAlerts()
     await fetchApplications()
     await fetchCoverLetters()
+    await fetchInterviews()
   }
 
   // Listen for user changes to refresh dashboard data
@@ -489,6 +512,29 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
+            <Link href="/interviews">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-6 h-full flex flex-col justify-center">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Interviews</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {interviewsLoading ? 'Loading...' : `${upcomingInterviews.length} upcoming interview${upcomingInterviews.length !== 1 ? 's' : ''}`}
+                      </p>
+                      {upcomingInterviews.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                          Next: {new Date(upcomingInterviews[0]?.scheduledAt).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
             <Link href="/job-alerts">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
@@ -688,6 +734,72 @@ export default function DashboardPage() {
               </Card>
             </Link>
           </div>
+
+          {/* Upcoming Interviews Section */}
+          {upcomingInterviews.length > 0 && (
+            <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Calendar className="w-5 h-5" />
+                    <span>Upcoming Interviews</span>
+                  </CardTitle>
+                  <Link href="/interviews">
+                    <Button variant="outline" size="sm">
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {upcomingInterviews.slice(0, 3).map((interview) => {
+                    const { date, time } = {
+                      date: new Date(interview.scheduledAt).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      }),
+                      time: new Date(interview.scheduledAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })
+                    }
+                    
+                    return (
+                      <div key={interview.id} className="flex items-start space-x-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                          <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-900 dark:text-white">{interview.title}</h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-300">
+                            {interview.jobApplication?.job?.title && (
+                              <span>Position: {interview.jobApplication.job.title}</span>
+                            )}
+                          </p>
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-slate-500 dark:text-slate-400">
+                            <span>{date}</span>
+                            <span>{time}</span>
+                            {interview.duration && (
+                              <span>({interview.duration} minutes)</span>
+                            )}
+                          </div>
+                          {interview.interviewType && (
+                            <Badge variant="secondary" className="mt-2">
+                              {interview.interviewType.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Stats Overview - Enhanced for Jobseekers */}
           {user.userType === 'jobseeker' && (

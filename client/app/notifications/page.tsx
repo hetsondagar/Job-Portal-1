@@ -23,7 +23,11 @@ import {
   Star,
   Building2,
   MessageCircle,
-  Settings
+  Settings,
+  Calendar,
+  Video,
+  Phone,
+  MapPin
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
@@ -41,6 +45,8 @@ export default function NotificationsPage() {
     jobAlerts: true,
     applicationUpdates: true,
     profileViews: true,
+    interviewScheduled: true,
+    interviewReminders: true,
     marketingEmails: false
   })
   const [saving, setSaving] = useState(false)
@@ -98,6 +104,10 @@ export default function NotificationsPage() {
         case 'star': return <Star className="w-5 h-5" />
         case 'building': return <Building2 className="w-5 h-5" />
         case 'message-circle': return <MessageCircle className="w-5 h-5" />
+        case 'calendar': return <Calendar className="w-5 h-5" />
+        case 'video': return <Video className="w-5 h-5" />
+        case 'phone': return <Phone className="w-5 h-5" />
+        case 'map-pin': return <MapPin className="w-5 h-5" />
         default: return <Bell className="w-5 h-5" />
       }
     }
@@ -109,6 +119,9 @@ export default function NotificationsPage() {
       case 'job_recommendation': return <Star className="w-5 h-5" />
       case 'company_update': return <Building2 className="w-5 h-5" />
       case 'message': return <MessageCircle className="w-5 h-5" />
+      case 'interview_scheduled': return <Calendar className="w-5 h-5" />
+      case 'interview_cancelled': return <Calendar className="w-5 h-5" />
+      case 'interview_reminder': return <Calendar className="w-5 h-5" />
       default: return <Bell className="w-5 h-5" />
     }
   }
@@ -438,6 +451,48 @@ export default function NotificationsPage() {
                         checked={settings.profileViews}
                         onCheckedChange={(checked) => 
                           setSettings({ ...settings, profileViews: checked })
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                          <Calendar className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <Label htmlFor="interview-scheduled" className="text-base font-medium">
+                            Interview Scheduled
+                          </Label>
+                          <p className="text-sm text-slate-500">When an interview is scheduled for you</p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="interview-scheduled"
+                        checked={settings.interviewScheduled}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, interviewScheduled: checked })
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                          <Bell className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <Label htmlFor="interview-reminders" className="text-base font-medium">
+                            Interview Reminders
+                          </Label>
+                          <p className="text-sm text-slate-500">Reminders before your scheduled interviews</p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="interview-reminders"
+                        checked={settings.interviewReminders}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, interviewReminders: checked })
                         }
                       />
                     </div>

@@ -242,6 +242,118 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get requirement statistics
+router.get('/:id/stats', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only employers can view requirement statistics.' 
+      });
+    }
+    
+    // Check if requirement exists and belongs to employer's company
+    const requirement = await Requirement.findOne({
+      where: { 
+        id: id,
+        companyId: req.user.company_id 
+      }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Requirement not found' 
+      });
+    }
+    
+    // Get total candidates count for this requirement
+    const { User } = require('../config/index');
+    const { sequelize } = require('../config/sequelize');
+    
+    // Build the same query as in candidates endpoint to get accurate count
+    let whereClause = {
+      user_type: 'jobseeker',
+      is_active: true,
+      account_status: 'active'
+    };
+    
+    // Add location filter
+    if (requirement.location && requirement.location.trim()) {
+      whereClause.current_location = {
+        [sequelize.Op.iLike]: `%${requirement.location.trim()}%`
+      };
+    }
+    
+    // Add experience filter
+    if (requirement.experienceMin || requirement.experienceMax) {
+      whereClause.experience_years = {};
+      if (requirement.experienceMin) {
+        whereClause.experience_years[sequelize.Op.gte] = requirement.experienceMin;
+      }
+      if (requirement.experienceMax) {
+        whereClause.experience_years[sequelize.Op.lte] = requirement.experienceMax;
+      }
+    }
+    
+    // Add salary filter
+    if (requirement.salaryMin || requirement.salaryMax) {
+      whereClause.expected_salary = {};
+      if (requirement.salaryMin) {
+        whereClause.expected_salary[sequelize.Op.gte] = requirement.salaryMin;
+      }
+      if (requirement.salaryMax) {
+        whereClause.expected_salary[sequelize.Op.lte] = requirement.salaryMax;
+      }
+    }
+    
+    // Get total candidates count
+    const totalCandidates = await User.count({
+      where: whereClause
+    });
+    
+    // Get accessed candidates count from ViewTracking
+    // For now, we'll get a simple count of all candidate views by this employer
+    // In a more sophisticated implementation, this would filter by the same criteria as the requirement
+    const { ViewTracking } = require('../config/index');
+    const accessedCandidates = await ViewTracking.count({
+      where: {
+        viewerId: req.user.id,
+        viewType: 'candidate_view'
+      }
+    });
+    
+    // Get CV access left (this would come from subscription/usage data)
+    // For now, we'll use a placeholder - in real implementation this would be from subscription service
+    const cvAccessLeft = 100; // This should be fetched from subscription/usage service
+    
+    res.json({
+      success: true,
+      data: {
+        totalCandidates,
+        accessedCandidates,
+        cvAccessLeft,
+        requirement: {
+          id: requirement.id,
+          title: requirement.title,
+          status: requirement.status
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching requirement statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch requirement statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Get jobseekers based on requirement criteria
 router.get('/:id/candidates', authenticateToken, async (req, res) => {
   try {
@@ -554,8 +666,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         requirement: {
           id: requirement.id,
           title: requirement.title,
-          totalCandidates: count,
-          accessedCandidates: Math.floor(Math.random() * 50) + 1 // Mock accessed count
+          totalCandidates: count
         },
         pagination: {
           page: parseInt(page),
@@ -1078,6 +1189,35 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       };
     }
     
+    // Check if candidate is already shortlisted for this requirement
+    let isShortlisted = false;
+    try {
+      const { JobApplication } = require('../config/index');
+      const existingShortlist = await JobApplication.findOne({
+        where: {
+          userId: candidateId,
+          employerId: req.user.id,
+          source: 'requirement_shortlist'
+        }
+      });
+      
+      if (existingShortlist && existingShortlist.metadata) {
+        try {
+          const metadata = typeof existingShortlist.metadata === 'string' 
+            ? JSON.parse(existingShortlist.metadata) 
+            : existingShortlist.metadata;
+          isShortlisted = metadata.requirementId === requirementId && existingShortlist.status === 'shortlisted';
+        } catch (parseError) {
+          console.warn('⚠️ Could not parse metadata for shortlist check:', parseError.message);
+        }
+      }
+    } catch (shortlistError) {
+      console.warn('⚠️ Could not check shortlist status:', shortlistError.message);
+    }
+    
+    // Add shortlist status to candidate data
+    transformedCandidate.isShortlisted = isShortlisted;
+    
     return res.status(200).json({
       success: true,
       data: {
@@ -1171,7 +1311,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        companyId: req.user.company_id 
+        companyId: req.user.company_id || req.user.companyId
       }
     });
     
@@ -1199,19 +1339,106 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       });
     }
     
-    // For now, we'll use a simple approach - in a real app, you'd have a shortlist table
-    // This is a mock implementation that returns success
-    console.log(`✅ Candidate ${candidateId} shortlisted by employer ${req.user.id} for requirement ${requirementId}`);
+    // Create a virtual job application for this requirement shortlisting
+    // This allows the candidate to appear in the shortlisted page
+    const { JobApplication, Job } = require('../config/index');
     
-    return res.status(200).json({
-      success: true,
-      message: 'Candidate shortlisted successfully',
-      data: {
-        candidateId,
-        requirementId,
-        shortlisted: true
+    // Check if there's already a shortlist entry for this candidate and requirement
+    // Use raw query for metadata search since Sequelize doesn't handle nested JSON queries well
+    const existingShortlist = await JobApplication.findOne({
+      where: {
+        userId: candidateId,
+        employerId: req.user.id,
+        source: 'requirement_shortlist'
       }
     });
+    
+    // Check if the metadata contains the requirementId
+    let isExistingForRequirement = false;
+    if (existingShortlist && existingShortlist.metadata) {
+      try {
+        const metadata = typeof existingShortlist.metadata === 'string' 
+          ? JSON.parse(existingShortlist.metadata) 
+          : existingShortlist.metadata;
+        isExistingForRequirement = metadata.requirementId === requirementId;
+      } catch (parseError) {
+        console.warn('⚠️ Could not parse metadata:', parseError.message);
+      }
+    }
+    
+    if (existingShortlist && isExistingForRequirement) {
+      // Toggle shortlist status
+      const newStatus = existingShortlist.status === 'shortlisted' ? 'applied' : 'shortlisted';
+      await existingShortlist.update({ 
+        status: newStatus,
+        updatedAt: new Date()
+      });
+      
+      console.log(`✅ Candidate ${candidateId} ${newStatus === 'shortlisted' ? 'shortlisted' : 'unshortlisted'} by employer ${req.user.id} for requirement ${requirementId}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: newStatus === 'shortlisted' ? 'Candidate shortlisted successfully' : 'Candidate removed from shortlist',
+        data: {
+          candidateId,
+          requirementId,
+          shortlisted: newStatus === 'shortlisted',
+          status: newStatus
+        }
+      });
+    } else {
+      // Find or create a placeholder job for requirement-based shortlisting
+      let placeholderJob = await Job.findOne({
+        where: {
+          companyId: req.user.company_id || req.user.companyId,
+          title: 'Requirement Shortlist'
+        }
+      });
+
+      if (!placeholderJob) {
+        // Create a placeholder job for requirement-based shortlisting
+        placeholderJob = await Job.create({
+          title: 'Requirement Shortlist',
+          slug: 'requirement-shortlist-' + Date.now(),
+          description: 'Placeholder job for requirement-based candidate shortlisting',
+          companyId: req.user.company_id || req.user.companyId,
+          createdBy: req.user.id,
+          employerId: req.user.id,
+          location: 'Remote',
+          status: 'draft',
+          isActive: false,
+          isPlaceholder: true
+        });
+      }
+
+      // Create new shortlist entry
+      const shortlistApplication = await JobApplication.create({
+        userId: candidateId,
+        employerId: req.user.id,
+        jobId: placeholderJob.id,
+        status: 'shortlisted',
+        source: 'requirement_shortlist',
+        appliedAt: new Date(),
+        metadata: {
+          requirementId: requirementId,
+          requirementTitle: requirement.title,
+          shortlistedFrom: 'requirements'
+        }
+      });
+      
+      console.log(`✅ Candidate ${candidateId} shortlisted by employer ${req.user.id} for requirement ${requirementId}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Candidate shortlisted successfully',
+        data: {
+          candidateId,
+          requirementId,
+          shortlisted: true,
+          applicationId: shortlistApplication.id
+        }
+      });
+    }
     
   } catch (error) {
     console.error('❌ Error shortlisting candidate:', error);

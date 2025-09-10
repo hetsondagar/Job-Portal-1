@@ -10,7 +10,6 @@ const WorkExperience = sequelize.define('WorkExperience', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'user_id', // Map to the snake_case column in database
     references: {
       model: 'users',
       key: 'id'
@@ -23,8 +22,7 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   jobTitle: {
     type: DataTypes.STRING,
-    allowNull: false,
-    field: 'title' // Map to actual column name
+    allowNull: false
   },
   department: {
     type: DataTypes.STRING,
@@ -38,18 +36,15 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false,
-    field: 'start_date' // Map to snake_case column
+    allowNull: false
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true,
-    field: 'end_date' // Map to snake_case column
+    allowNull: true
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    field: 'is_current' // Map to snake_case column
+    defaultValue: false
   },
   description: {
     type: DataTypes.TEXT,
@@ -81,8 +76,7 @@ const WorkExperience = sequelize.define('WorkExperience', {
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR',
-    field: 'salary_currency' // Map to snake_case column
+    defaultValue: 'INR'
   },
   employmentType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),

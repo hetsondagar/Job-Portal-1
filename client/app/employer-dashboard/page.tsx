@@ -20,6 +20,7 @@ import {
   Loader2,
   RefreshCw,
   Flame,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,6 +56,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [recentApplications, setRecentApplications] = useState<any[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [hotVacancies, setHotVacancies] = useState<any[]>([])
+  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
 
   useEffect(() => {
     if (user) {
@@ -87,6 +89,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             change: (statsResponse.data.activeJobs || 0) > 0 ? `+${statsResponse.data.activeJobs} active` : "No active jobs",
             icon: Briefcase,
             color: "from-blue-500 to-blue-600",
+            link: "/employer-dashboard/manage-jobs",
           },
           {
             title: "Total Applications",
@@ -94,6 +97,31 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             change: (statsResponse.data.totalApplications || 0) > 0 ? `${statsResponse.data.totalApplications} received` : "No applications yet",
             icon: Users,
             color: "from-green-500 to-green-600",
+            link: "/employer-dashboard/applications",
+          },
+          {
+            title: "Under Review",
+            value: (statsResponse.data.reviewingApplications || 0).toString(),
+            change: (statsResponse.data.reviewingApplications || 0) > 0 ? `${statsResponse.data.reviewingApplications} reviewing` : "No applications under review",
+            icon: Clock,
+            color: "from-yellow-500 to-yellow-600",
+            link: "/employer-dashboard/applications?status=reviewing",
+          },
+          {
+            title: "Shortlisted",
+            value: (statsResponse.data.shortlistedApplications || 0).toString(),
+            change: (statsResponse.data.shortlistedApplications || 0) > 0 ? `${statsResponse.data.shortlistedApplications} shortlisted` : "No shortlisted candidates",
+            icon: Star,
+            color: "from-indigo-500 to-indigo-600",
+            link: "/employer-dashboard/applications?status=shortlisted",
+          },
+          {
+            title: "Interviews Scheduled",
+            value: (statsResponse.data.interviewScheduledApplications || 0).toString(),
+            change: (statsResponse.data.interviewScheduledApplications || 0) > 0 ? `${statsResponse.data.interviewScheduledApplications} scheduled` : "No interviews scheduled",
+            icon: Calendar,
+            color: "from-pink-500 to-pink-600",
+            link: "/employer-dashboard/applications?status=interview_scheduled",
           },
           {
             title: "Profile Views",
@@ -108,6 +136,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             change: (statsResponse.data.hiredCandidates || 0) > 0 ? `${statsResponse.data.hiredCandidates} hired` : "No hires yet",
             icon: Award,
             color: "from-orange-500 to-orange-600",
+            link: "/employer-dashboard/applications?status=hired",
           },
         ]
         setStats(dashboardStats)
@@ -183,6 +212,23 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         }])
       }
 
+      // Load upcoming interviews
+      try {
+        const interviewsResponse = await apiService.getUpcomingInterviews(5)
+        console.log('🔍 Upcoming interviews API response:', interviewsResponse)
+        if (interviewsResponse.success && interviewsResponse.data && interviewsResponse.data.interviews) {
+          console.log('🔍 Interview data structure:', interviewsResponse.data.interviews[0])
+          setUpcomingInterviews(interviewsResponse.data.interviews)
+          console.log('✅ Upcoming interviews loaded:', interviewsResponse.data.interviews.length)
+        } else {
+          setUpcomingInterviews([])
+          console.log('✅ No upcoming interviews found - response:', interviewsResponse)
+        }
+      } catch (error) {
+        console.error('❌ Error loading upcoming interviews:', error)
+        setUpcomingInterviews([])
+      }
+
       // For Google OAuth users, display Google account details directly
       if (user.oauth_provider === 'google') {
         console.log('✅ Google OAuth user detected, using Google account details')
@@ -220,6 +266,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           change: "No data",
           icon: Briefcase,
           color: "from-blue-500 to-blue-600",
+          link: "/employer-dashboard/manage-jobs",
         },
         {
           title: "Total Applications",
@@ -227,6 +274,27 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           change: "No data",
           icon: Users,
           color: "from-green-500 to-green-600",
+        },
+        {
+          title: "Under Review",
+          value: "0",
+          change: "No data",
+          icon: Clock,
+          color: "from-yellow-500 to-yellow-600",
+        },
+        {
+          title: "Shortlisted",
+          value: "0",
+          change: "No data",
+          icon: Star,
+          color: "from-indigo-500 to-indigo-600",
+        },
+        {
+          title: "Interviews Scheduled",
+          value: "0",
+          change: "No data",
+          icon: Calendar,
+          color: "from-pink-500 to-pink-600",
         },
         {
           title: "Profile Views",
@@ -483,22 +551,43 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.5 }}
               >
-                <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                        <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                        <p className="text-sm text-green-600">{stat.change}</p>
+                {stat.link ? (
+                  <Link href={stat.link}>
+                    <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600">{stat.title}</p>
+                            <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                            <p className="text-sm text-green-600">{stat.change}</p>
+                          </div>
+                          <div
+                            className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
+                          >
+                            <stat.icon className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ) : (
+                  <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-600">{stat.title}</p>
+                          <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                          <p className="text-sm text-green-600">{stat.change}</p>
+                        </div>
+                        <div
+                          className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
+                        >
+                          <stat.icon className="w-6 h-6 text-white" />
+                        </div>
                       </div>
-                      <div
-                        className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                      >
-                        <stat.icon className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </motion.div>
             ))
           ) : (
@@ -675,13 +764,13 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
                     <Calendar className="w-5 h-5 mr-2" />
-                    Upcoming Events
+                    Upcoming Interviews
                   </CardTitle>
                   <button
                     onClick={loadDashboardData}
                     disabled={loading || isRefreshing}
                     className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                    title={isRefreshing ? "Refresh in progress..." : "Refresh events data"}
+                    title={isRefreshing ? "Refresh in progress..." : "Refresh interviews data"}
                   >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
@@ -689,15 +778,26 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {recentApplications.length > 0 ? (
-                    recentApplications.slice(0, 2).map((app, index) => (
-                      <div key={index} className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">New application received</p>
+                  {upcomingInterviews.length > 0 ? (
+                    upcomingInterviews.slice(0, 3).map((interview, index) => (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900">{interview.title}</p>
                           <p className="text-xs text-slate-600">
-                            {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'Recently'}
+                            {interview.jobApplication?.applicant?.first_name && interview.jobApplication?.applicant?.last_name 
+                              ? `${interview.jobApplication.applicant.first_name} ${interview.jobApplication.applicant.last_name}`
+                              : interview.jobApplication?.applicant?.email || 'Unknown Candidate'
+                            }
                           </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {new Date(interview.scheduledAt).toLocaleDateString()} at {new Date(interview.scheduledAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                          {interview.interviewType && (
+                            <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                              {interview.interviewType.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))
@@ -705,8 +805,8 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                     <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900">No upcoming events</p>
-                        <p className="text-xs text-slate-600">Your events will appear here</p>
+                        <p className="text-sm font-medium text-slate-900">No upcoming interviews</p>
+                        <p className="text-xs text-slate-600">Your scheduled interviews will appear here</p>
                       </div>
                     </div>
                   )}

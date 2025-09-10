@@ -42,6 +42,7 @@ export default function RequirementsPage() {
     expired: true,
   })
   const [requirements, setRequirements] = useState<Requirement[]>([])
+  const [requirementStats, setRequirementStats] = useState<{[key: string]: any}>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -133,6 +134,36 @@ export default function RequirementsPage() {
         if (response.success && response.data) {
           console.log('✅ Frontend: Successfully fetched requirements:', response.data.length)
           setRequirements(response.data)
+          
+          // Fetch stats for each requirement
+          const statsPromises = response.data.map(async (requirement: Requirement) => {
+            try {
+              const statsResponse = await apiService.getRequirementStats(requirement.id)
+              if (statsResponse.success && statsResponse.data) {
+                return {
+                  id: requirement.id,
+                  ...statsResponse.data
+                }
+              }
+            } catch (error) {
+              console.error(`❌ Error fetching stats for requirement ${requirement.id}:`, error)
+            }
+            return {
+              id: requirement.id,
+              totalCandidates: 0,
+              accessedCandidates: 0,
+              cvAccessLeft: 0
+            }
+          })
+          
+          const statsResults = await Promise.all(statsPromises)
+          const statsMap = statsResults.reduce((acc, stat) => {
+            acc[stat.id] = stat
+            return acc
+          }, {} as {[key: string]: any})
+          
+          setRequirementStats(statsMap)
+          console.log('✅ Frontend: Successfully fetched requirement stats:', statsMap)
         } else {
           console.error('❌ Frontend: Failed to fetch requirements:', response.message)
           
@@ -194,16 +225,15 @@ export default function RequirementsPage() {
   }
 
   const getCvAccessLeft = (requirement: Requirement) => {
-    // Mock CV access left - in real implementation this would come from subscription/usage data
-    return Math.floor(Math.random() * 100) + 1
+    return requirementStats[requirement.id]?.cvAccessLeft || 0
   }
 
   const getCandidatesCount = (requirement: Requirement) => {
-    return requirement.matches || Math.floor(Math.random() * 500) + 50
+    return requirementStats[requirement.id]?.totalCandidates || 0
   }
 
   const getAccessedCount = (requirement: Requirement) => {
-    return requirement.applications || Math.floor(Math.random() * 50) + 1
+    return requirementStats[requirement.id]?.accessedCandidates || 0
   }
 
   // Filter requirements based on search query and status filters

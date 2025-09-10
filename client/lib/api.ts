@@ -1065,7 +1065,8 @@ class ApiService {
   }
 
   async updateApplicationStatus(applicationId: string, status: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/user/applications/${applicationId}/status`, {
+    // Use the employer endpoint for updating application status
+    const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}/status`, {
       method: 'PUT',
       headers: {
         ...this.getAuthHeaders(),
@@ -1390,6 +1391,14 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async getRequirementStats(requirementId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   async getRequirementCandidates(requirementId: string, params?: {
     page?: number;
     limit?: number;
@@ -1450,8 +1459,18 @@ class ApiService {
   }
 
   // Download resume from application (for employer applications page)
-  async downloadApplicationResume(resumeId: string): Promise<Response> {
-    const response = await fetch(`${API_BASE_URL}/user/resumes/${resumeId}/download`, {
+  async downloadApplicationResume(resumeId: string, applicationId?: string): Promise<Response> {
+    let url: string;
+    
+    if (applicationId) {
+      // Use the new employer endpoint that requires application ID
+      url = `${API_BASE_URL}/user/employer/applications/${applicationId}/resume/download`;
+    } else {
+      // Fallback to the old endpoint (for backward compatibility)
+      url = `${API_BASE_URL}/user/resumes/${resumeId}/download`;
+    }
+    
+    const response = await fetch(url, {
       headers: this.getAuthHeaders(),
     });
 
@@ -2264,6 +2283,89 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
 
+    return this.handleResponse<any>(response);
+  }
+
+  // Interview scheduling methods
+  async scheduleInterview(data: {
+    jobApplicationId: string;
+    candidateId: string;
+    jobId?: string;
+    title?: string;
+    description?: string;
+    interviewType: 'phone' | 'video' | 'in_person' | 'technical' | 'hr' | 'final';
+    scheduledAt: string;
+    duration?: number;
+    timezone?: string;
+    location?: any;
+    meetingLink?: string;
+    meetingPassword?: string;
+    interviewers?: any[];
+    agenda?: any[];
+    requirements?: any;
+    notes?: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/interviews`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getEmployerInterviews(status?: string, page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    
+    const response = await fetch(`${API_BASE_URL}/interviews/employer?${params}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getCandidateInterviews(status?: string, page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    
+    const response = await fetch(`${API_BASE_URL}/interviews/candidate?${params}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getInterviewDetails(interviewId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/interviews/${interviewId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async updateInterview(interviewId: string, data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/interviews/${interviewId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async cancelInterview(interviewId: string, reason?: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/interviews/${interviewId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getUpcomingInterviews(limit: number = 5): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/interviews/employer?status=scheduled&limit=${limit}`, {
+      headers: this.getAuthHeaders(),
+    });
     return this.handleResponse<any>(response);
   }
 }
