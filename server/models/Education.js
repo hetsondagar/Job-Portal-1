@@ -10,6 +10,7 @@ const Education = sequelize.define('Education', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id', // Map to the snake_case column in database
     references: {
       model: 'users',
       key: 'id'
@@ -25,19 +26,23 @@ const Education = sequelize.define('Education', {
   },
   fieldOfStudy: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'field_of_study' // Map to snake_case column
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: false,
+    field: 'start_date' // Map to snake_case column
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date' // Map to snake_case column
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_current' // Map to snake_case column
   },
   grade: {
     type: DataTypes.STRING,
@@ -54,6 +59,7 @@ const Education = sequelize.define('Education', {
   cgpa: {
     type: DataTypes.DECIMAL(3, 2),
     allowNull: true,
+    field: 'gpa', // Map to actual column name
     validate: {
       min: 0,
       max: 10

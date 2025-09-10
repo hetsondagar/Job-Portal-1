@@ -19,7 +19,8 @@ import {
   XCircle,
   AlertCircle,
   Eye,
-  MessageSquare
+  MessageSquare,
+  X
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
@@ -98,6 +99,33 @@ export default function ApplicationsPage() {
       toast.error('Failed to load applications')
     } finally {
       setApplicationsLoading(false)
+    }
+  }
+
+  const handleWithdrawApplication = async (application: any) => {
+    try {
+      // Only allow withdrawal for non-sample applications
+      if (application.isSample) {
+        toast.error('Cannot withdraw sample applications')
+        return
+      }
+
+      // Only allow withdrawal for certain statuses
+      if (!['applied', 'reviewing', 'shortlisted'].includes(application.status)) {
+        toast.error('Cannot withdraw application in current status')
+        return
+      }
+
+      const response = await apiService.updateApplicationStatus(application.id, 'withdrawn')
+      if (response.success) {
+        toast.success('Application withdrawn successfully')
+        fetchApplications() // Refresh applications list
+      } else {
+        toast.error(response.message || 'Failed to withdraw application')
+      }
+    } catch (error) {
+      console.error('Error withdrawing application:', error)
+      toast.error('Failed to withdraw application')
     }
   }
 
@@ -209,6 +237,17 @@ export default function ApplicationsPage() {
                             View Job
                           </Button>
                         </Link>
+                        {!application.isSample && ['applied', 'reviewing', 'shortlisted'].includes(application.status) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWithdrawApplication(application)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Undo
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

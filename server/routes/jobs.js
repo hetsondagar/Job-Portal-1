@@ -87,6 +87,8 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
         message: 'Job not found'
       });
     }
+    
+    console.log('🔍 Job details:', { jobId: job.id, employerId: job.employerId, title: job.title });
 
     // Check if user has already applied for this job
     const existingApplication = await JobApplication.findOne({
@@ -94,9 +96,46 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
     });
 
     if (existingApplication) {
-      return res.status(400).json({
-        success: false,
-        message: 'You have already applied for this job'
+      if (existingApplication.status && existingApplication.status !== 'withdrawn') {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already applied for this job'
+        });
+      }
+
+      // If previously withdrawn, re-activate the existing application
+      let selectedResumeId = resumeId;
+      if (!selectedResumeId) {
+        const defaultResume = await Resume.findOne({
+          where: { userId, isDefault: true }
+        });
+        if (defaultResume) {
+          selectedResumeId = defaultResume.id;
+        }
+      }
+
+      await existingApplication.update({
+        status: 'applied',
+        coverLetter,
+        expectedSalary,
+        noticePeriod,
+        availableFrom,
+        isWillingToRelocate,
+        preferredLocations,
+        resumeId: existingApplication.resumeId || selectedResumeId,
+        appliedAt: new Date(),
+        source: 'website'
+      });
+
+      console.log('✅ Re-applied to job by updating withdrawn application:', existingApplication.id);
+      return res.status(201).json({
+        success: true,
+        message: 'Application submitted successfully',
+        data: {
+          applicationId: existingApplication.id,
+          status: existingApplication.status,
+          appliedAt: existingApplication.appliedAt || existingApplication.createdAt
+        }
       });
     }
 
@@ -127,7 +166,13 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       source: 'website'
     });
 
-    console.log('✅ Job application created:', application.id);
+    console.log('✅ Job application created:', { 
+      applicationId: application.id, 
+      jobId: application.jobId, 
+      userId: application.userId, 
+      employerId: application.employerId,
+      status: application.status 
+    });
 
     res.status(201).json({
       success: true,

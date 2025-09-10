@@ -6,6 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
+const CoverLetter = require('../models/CoverLetter');
+const { sequelize } = require('../config/sequelize');
 
 const router = express.Router();
 
@@ -26,6 +28,37 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['.pdf', '.doc', '.docx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOC, and DOCX files are allowed'));
+    }
+  }
+});
+
+// Configure multer for cover letter uploads
+const coverLetterStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/cover-letters');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const coverLetterUpload = multer({
+  storage: coverLetterStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
@@ -116,41 +149,63 @@ const jobPhotoUpload = multer({
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
+    console.log('🔍 Authenticating token...');
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('❌ No token provided');
       return res.status(401).json({
         success: false,
         message: 'Access token required'
       });
     }
 
+    console.log('🔍 Verifying JWT token...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    console.log('✅ JWT token verified, user ID:', decoded.id);
+    
+    console.log('🔍 Fetching user from database...');
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password'] }
     });
 
     if (!user) {
+      console.log('❌ User not found in database');
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
+    console.log('✅ User authenticated successfully:', { id: user.id, type: user.user_type });
     req.user = user;
     next();
   } catch (error) {
+    console.error('❌ Authentication error:', error);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    
     if (error.name === 'JsonWebTokenError') {
+      console.log('❌ Invalid JWT token');
       return res.status(401).json({
         success: false,
         message: 'Invalid token'
       });
     }
     
-    console.error('Authentication error:', error);
+    if (error.name === 'TokenExpiredError') {
+      console.log('❌ JWT token expired');
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      });
+    }
+    
+    console.error('❌ Unexpected authentication error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: error.message
     });
   }
 };
@@ -270,6 +325,176 @@ router.get('/profile', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+});
+
+// Get candidate profile for employers (general candidate profile)
+router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only employers can view candidate profiles.' 
+      });
+    }
+    
+    console.log('🔍 Fetching general candidate profile for:', candidateId);
+    
+    // Get candidate details
+    const candidate = await User.findOne({
+      where: { 
+        id: candidateId,
+        user_type: 'jobseeker',
+        is_active: true,
+        account_status: 'active'
+      },
+      attributes: [
+        'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+        'current_location', 'headline', 'summary', 'skills', 'languages',
+        'expected_salary', 'notice_period', 'willing_to_relocate',
+        'profile_completion', 'last_login_at', 'last_profile_update',
+        'is_email_verified', 'is_phone_verified', 'createdAt',
+        'date_of_birth', 'gender', 'social_links', 'certifications'
+      ]
+    });
+    
+    if (!candidate) {
+      console.log(`❌ Candidate not found: ${candidateId}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Candidate not found' 
+      });
+    }
+    
+    // Fetch resumes for the candidate
+    let resumes = [];
+    try {
+      console.log(`📄 Fetching resumes for candidate ${candidateId}`);
+      const { Resume } = require('../config/index');
+      
+      const resumeResults = await Resume.findAll({
+        where: { userId: candidateId },
+        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+      });
+      
+      resumes = resumeResults || [];
+      console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId}`);
+    } catch (resumeError) {
+      console.log('⚠️ Could not fetch resumes:', resumeError.message);
+    }
+    
+    // Fetch cover letters for the candidate
+    let coverLetters = [];
+    try {
+      console.log(`📝 Fetching cover letters for candidate ${candidateId}`);
+      const { CoverLetter } = require('../config/index');
+      
+      const coverLetterResults = await CoverLetter.findAll({
+        where: { userId: candidateId },
+        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+      });
+      
+      coverLetters = coverLetterResults || [];
+      console.log(`📝 Found ${coverLetters.length} cover letters for candidate ${candidateId}`);
+    } catch (coverLetterError) {
+      console.log('⚠️ Could not fetch cover letters:', coverLetterError.message);
+    }
+    
+    // Build absolute URL helper for files served from /uploads
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const toAbsoluteUrl = (maybePath) => {
+      if (!maybePath) return null;
+      if (typeof maybePath === 'string' && /^https?:\/\//i.test(maybePath)) {
+        return maybePath;
+      }
+      const pathStr = String(maybePath).startsWith('/') ? String(maybePath) : `/${String(maybePath)}`;
+      return `${baseUrl}${pathStr}`;
+    };
+    
+    // Transform candidate data for frontend
+    const transformedCandidate = {
+      id: candidate.id,
+      name: `${candidate.first_name} ${candidate.last_name}`,
+      designation: candidate.headline || 'Job Seeker',
+      experience: 'Not specified', // Would need work experience data
+      location: candidate.current_location || 'Not specified',
+      currentSalary: 'Not specified',
+      expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
+      noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
+      avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
+      email: candidate.email,
+      phone: candidate.phone,
+      education: 'Not specified', // Would need education data
+      preferredLocations: candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location || 'Not specified'],
+      keySkills: candidate.skills ? (Array.isArray(candidate.skills) ? candidate.skills : JSON.parse(candidate.skills || '[]')) : [],
+      about: candidate.summary || 'No summary available',
+      phoneVerified: candidate.is_phone_verified || false,
+      emailVerified: candidate.is_email_verified || false,
+      profileCompletion: candidate.profile_completion || 0,
+      lastModified: candidate.last_profile_update ? new Date(candidate.last_profile_update).toLocaleDateString() : 'Not specified',
+      activeStatus: candidate.last_login_at ? new Date(candidate.last_login_at).toLocaleDateString() : 'Not specified',
+      
+      // Resumes
+      resumes: resumes.map(resume => {
+        const metadata = resume.metadata || {};
+        const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
+        const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+        const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+        
+        return {
+          id: resume.id,
+          title: resume.title || 'Resume',
+          filename: filename,
+          fileSize: fileSize,
+          uploadDate: resume.createdAt || resume.created_at,
+          lastUpdated: resume.lastUpdated || resume.last_updated,
+          isDefault: resume.isDefault ?? resume.is_default ?? false,
+          fileUrl: toAbsoluteUrl(filePath),
+          metadata: metadata
+        };
+      }),
+      
+      // Cover Letters
+      coverLetters: coverLetters.map(coverLetter => {
+        const metadata = coverLetter.metadata || {};
+        const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
+        const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+        const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+        
+        return {
+          id: coverLetter.id,
+          title: coverLetter.title || 'Cover Letter',
+          content: coverLetter.content || '',
+          summary: coverLetter.summary || '',
+          filename: filename,
+          fileSize: fileSize,
+          uploadDate: coverLetter.createdAt || coverLetter.created_at,
+          lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
+          isDefault: coverLetter.isDefault ?? coverLetter.is_default ?? false,
+          isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
+          fileUrl: toAbsoluteUrl(filePath),
+          metadata: metadata
+        };
+      })
+    };
+    
+    console.log(`✅ Found general candidate profile: ${candidate.first_name} ${candidate.last_name}`);
+    console.log(`📄 Resumes: ${resumes.length}, 📝 Cover letters: ${coverLetters.length}`);
+    
+    return res.status(200).json({
+      success: true,
+      data: transformedCandidate
+    });
+    
+  } catch (error) {
+    console.error('Get candidate profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch candidate profile'
     });
   }
 });
@@ -747,7 +972,7 @@ router.delete('/account', authenticateToken, [
 // Job Applications endpoints
 router.get('/applications', authenticateToken, async (req, res) => {
   try {
-    const { JobApplication, Job, Company } = require('../config/index');
+    const { JobApplication, Job, Company, User, Resume } = require('../config/index');
     
     const applications = await JobApplication.findAll({
       where: { userId: req.user.id },
@@ -889,11 +1114,125 @@ router.post('/applications', authenticateToken, async (req, res) => {
   }
 });
 
+// Debug endpoint to check applications
+router.get('/debug/applications', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication, Job, User } = require('../config/index');
+    
+    // Get all applications with basic info
+    const allApps = await JobApplication.findAll({
+      attributes: ['id', 'jobId', 'userId', 'employerId', 'status', 'appliedAt'],
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          attributes: ['id', 'title', 'employerId']
+        },
+        {
+          model: User,
+          as: 'applicant',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        }
+      ],
+      limit: 20
+    });
+    
+    res.json({
+      success: true,
+      data: allApps,
+      message: `Found ${allApps.length} applications total`
+    });
+  } catch (error) {
+    console.error('Debug applications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Debug failed',
+      error: error.message
+    });
+  }
+});
+
+// Simple test endpoint for employer applications
+router.get('/employer/applications/test', authenticateToken, async (req, res) => {
+  try {
+    console.log('🧪 Testing employer applications endpoint...');
+    console.log('🧪 User:', { id: req.user.id, type: req.user.user_type });
+    
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can view job applications.'
+      });
+    }
+    
+    const { JobApplication } = require('../config/index');
+    
+    // Validate that employerId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(req.user.id)) {
+      console.error('❌ Invalid UUID format for employerId:', req.user.id);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+    
+    // Simple count query first
+    const count = await JobApplication.count({
+      where: { employerId: req.user.id }
+    });
+    
+    console.log('🧪 Found', count, 'applications for employer');
+    
+    res.json({
+      success: true,
+      data: { count },
+      message: `Found ${count} applications for employer`
+    });
+  } catch (error) {
+    console.error('❌ Test endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test failed',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Get applications for employer's jobs
 router.get('/employer/applications', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 Fetching employer applications for user:', req.user.id, 'type:', req.user.user_type);
-    const { JobApplication, Job, Company, User, Resume, WorkExperience, Education } = require('../config/index');
+    console.log('🔍 Fetching employer applications for user:', req.user?.id, 'type:', req.user?.user_type);
+    console.log('🔍 Full user object:', req.user);
+    
+    // Check if user object exists
+    if (!req.user) {
+      console.error('❌ No user object found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+    
+    console.log('🔍 Importing models...');
+    let JobApplication, Job, Company, User, Resume, CoverLetter, WorkExperience, Education;
+    
+    try {
+      const models = require('../config/index');
+      JobApplication = models.JobApplication;
+      Job = models.Job;
+      Company = models.Company;
+      User = models.User;
+      Resume = models.Resume;
+      CoverLetter = models.CoverLetter;
+      WorkExperience = models.WorkExperience;
+      Education = models.Education;
+      console.log('✅ Models imported successfully');
+    } catch (importError) {
+      console.error('❌ Model import error:', importError);
+      throw new Error(`Failed to import models: ${importError.message}`);
+    }
     
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
@@ -906,7 +1245,45 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     
     console.log('🔍 Querying applications for employerId:', req.user.id);
     
-    const applications = await JobApplication.findAll({
+    // Validate that employerId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(req.user.id)) {
+      console.error('❌ Invalid UUID format for employerId:', req.user.id);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+    
+    // Test database connection first
+    try {
+      console.log('🔍 Testing database connection...');
+      await JobApplication.sequelize.authenticate();
+      console.log('✅ Database connection successful');
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      throw new Error(`Database connection failed: ${dbError.message}`);
+    }
+    
+    // First, let's check if there are any applications at all
+    console.log('🔍 Fetching all applications...');
+    const allApplications = await JobApplication.findAll({
+      attributes: ['id', 'jobId', 'userId', 'employerId', 'status', 'appliedAt'],
+      limit: 10
+    });
+    console.log('📊 All applications in database (first 10):', allApplications.map(app => ({
+      id: app.id,
+      jobId: app.jobId,
+      userId: app.userId,
+      employerId: app.employerId,
+      status: app.status
+    })));
+    
+    console.log('🔍 Starting Sequelize query for applications...');
+    
+    let applications;
+    try {
+      applications = await JobApplication.findAll({
       where: { employerId: req.user.id },
       include: [
         {
@@ -935,13 +1312,10 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
               model: WorkExperience,
               as: 'workExperiences',
               attributes: [
-                'id', 'companyName', 'jobTitle', 'department', 'location',
-                'startDate', 'endDate', 'isCurrent', 'description',
-                'responsibilities', 'achievements', 'skills', 'technologies',
-                'salary', 'salaryCurrency', 'employmentType', 'industry',
-                'companySize', 'isVerified', 'order'
+                'id', 'jobTitle', 'location', 'startDate', 'endDate', 'isCurrent',
+                'achievements', 'skills', 'salary', 'salaryCurrency'
               ],
-              order: [['order', 'ASC'], ['startDate', 'DESC']]
+              order: [['startDate', 'DESC']]
             },
             {
               model: Education,
@@ -949,9 +1323,9 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
               attributes: [
                 'id', 'institution', 'degree', 'fieldOfStudy', 'location',
                 'startDate', 'endDate', 'isCurrent', 'cgpa', 'description',
-                'activities', 'achievements', 'order'
+                'achievements', 'grade', 'percentage'
               ],
-              order: [['order', 'ASC'], ['startDate', 'DESC']]
+              order: [['startDate', 'DESC']]
             }
           ]
         },
@@ -963,13 +1337,39 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
             'certifications', 'projects', 'achievements', 'isDefault',
             'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
           ]
+        },
+        {
+          model: CoverLetter,
+          as: 'jobCoverLetter',
+          attributes: [
+            'id', 'title', 'content', 'summary', 'isDefault',
+            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+          ]
         }
       ],
       order: [['appliedAt', 'DESC']]
     });
+      console.log('✅ Sequelize query completed successfully');
+    } catch (queryError) {
+      console.error('❌ Sequelize query failed:', queryError);
+      console.error('❌ Query error details:', {
+        message: queryError.message,
+        name: queryError.name,
+        original: queryError.original,
+        sql: queryError.sql
+      });
+      throw queryError; // Re-throw to be caught by outer catch block
+    }
 
     console.log('📋 Found applications:', applications.length);
-    console.log('📋 Applications data:', applications.map(app => ({ id: app.id, jobId: app.jobId, userId: app.userId })));
+    console.log('📋 Applications data:', applications.map(app => ({ 
+      id: app.id, 
+      jobId: app.jobId, 
+      userId: app.userId, 
+      employerId: app.employerId,
+      status: app.status,
+      appliedAt: app.appliedAt
+    })));
 
     // If no applications found, return empty array
     if (!applications || applications.length === 0) {
@@ -1067,10 +1467,25 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       data: enrichedApplications
     });
   } catch (error) {
-    console.error('Error fetching employer applications:', error);
+    console.error('❌ Error fetching employer applications:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error name:', error.name);
+    
+    // Check if it's a Sequelize error
+    if (error.name === 'SequelizeError') {
+      console.error('❌ Sequelize error details:', {
+        original: error.original,
+        sql: error.sql,
+        parameters: error.parameters
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch applications'
+      message: 'Failed to fetch applications',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -1121,13 +1536,10 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
               model: WorkExperience,
               as: 'workExperiences',
               attributes: [
-                'id', 'companyName', 'jobTitle', 'department', 'location',
-                'startDate', 'endDate', 'isCurrent', 'description',
-                'responsibilities', 'achievements', 'skills', 'technologies',
-                'salary', 'salaryCurrency', 'employmentType', 'industry',
-                'companySize', 'isVerified', 'order'
+                'id', 'jobTitle', 'location', 'startDate', 'endDate', 'isCurrent',
+                'achievements', 'skills', 'salary', 'salaryCurrency'
               ],
-              order: [['order', 'ASC'], ['startDate', 'DESC']]
+              order: [['startDate', 'DESC']]
             },
             {
               model: Education,
@@ -2208,6 +2620,511 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to download resume'
+    });
+  }
+});
+
+// Cover Letter endpoints
+
+// Get all cover letters for a user
+router.get('/cover-letters', authenticateToken, async (req, res) => {
+  try {
+    const coverLetters = await CoverLetter.findAll({
+      where: { userId: req.user.id },
+      order: [['lastUpdated', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: coverLetters
+    });
+  } catch (error) {
+    console.error('Error fetching cover letters:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch cover letters'
+    });
+  }
+});
+
+// Get cover letter stats
+router.get('/cover-letters/stats', authenticateToken, async (req, res) => {
+  try {
+    const stats = await CoverLetter.findAll({
+      where: { userId: req.user.id },
+      attributes: [
+        [sequelize.fn('COUNT', sequelize.col('id')), 'totalCoverLetters'],
+        [sequelize.fn('COUNT', sequelize.literal('CASE WHEN "isDefault" = true THEN 1 END')), 'hasDefaultCoverLetter'],
+        [sequelize.fn('MAX', sequelize.col('lastUpdated')), 'lastCoverLetterUpdate']
+      ],
+      raw: true
+    });
+
+    const result = stats[0] || {
+      totalCoverLetters: 0,
+      hasDefaultCoverLetter: 0,
+      lastCoverLetterUpdate: null
+    };
+
+    res.json({
+      success: true,
+      data: {
+        totalCoverLetters: parseInt(result.totalCoverLetters) || 0,
+        hasDefaultCoverLetter: parseInt(result.hasDefaultCoverLetter) > 0,
+        lastCoverLetterUpdate: result.lastCoverLetterUpdate
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching cover letter stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch cover letter stats'
+    });
+  }
+});
+
+// Create a new cover letter
+router.post('/cover-letters', authenticateToken, async (req, res) => {
+  try {
+    const { title, content, summary } = req.body;
+
+    // Check if this is the first cover letter (make it default)
+    const existingCoverLetters = await CoverLetter.count({
+      where: { userId: req.user.id }
+    });
+
+    const isDefault = existingCoverLetters === 0;
+
+    const coverLetter = await CoverLetter.create({
+      userId: req.user.id,
+      title: title || 'Untitled Cover Letter',
+      content: content || '',
+      summary: summary || '',
+      isDefault: isDefault,
+      isPublic: true
+    });
+
+    res.status(201).json({
+      success: true,
+      data: coverLetter
+    });
+  } catch (error) {
+    console.error('Error creating cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create cover letter'
+    });
+  }
+});
+
+// Update a cover letter
+router.put('/cover-letters/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, content, summary } = req.body;
+
+    const coverLetter = await CoverLetter.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!coverLetter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter not found'
+      });
+    }
+
+    await coverLetter.update({
+      title: title || coverLetter.title,
+      content: content !== undefined ? content : coverLetter.content,
+      summary: summary !== undefined ? summary : coverLetter.summary
+    });
+
+    res.json({
+      success: true,
+      data: coverLetter
+    });
+  } catch (error) {
+    console.error('Error updating cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update cover letter'
+    });
+  }
+});
+
+// Delete a cover letter
+router.delete('/cover-letters/:id', authenticateToken, async (req, res) => {
+  try {
+    const coverLetter = await CoverLetter.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!coverLetter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter not found'
+      });
+    }
+
+    // If this was the default cover letter, make another one default
+    if (coverLetter.isDefault) {
+      const otherCoverLetter = await CoverLetter.findOne({
+        where: { 
+          userId: req.user.id,
+          id: { [sequelize.Op.ne]: req.params.id }
+        },
+        order: [['lastUpdated', 'DESC']]
+      });
+
+      if (otherCoverLetter) {
+        await otherCoverLetter.update({ isDefault: true });
+      }
+    }
+
+    await coverLetter.destroy();
+
+    res.json({
+      success: true,
+      message: 'Cover letter deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete cover letter'
+    });
+  }
+});
+
+// Upload cover letter file
+router.post('/cover-letters/upload', authenticateToken, coverLetterUpload.single('coverLetter'), async (req, res) => {
+  try {
+    console.log('🔍 Cover letter upload request received');
+    console.log('🔍 File:', req.file);
+    console.log('🔍 User:', req.user.id);
+
+    if (!req.file) {
+      console.log('❌ No file uploaded');
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const { title, description } = req.body;
+    const filename = req.file.filename;
+    const originalName = req.file.originalname;
+    const fileSize = req.file.size;
+    const mimeType = req.file.mimetype;
+
+    // Check if this is the first cover letter (make it default)
+    const existingCoverLetters = await CoverLetter.count({
+      where: { userId: req.user.id }
+    });
+
+    const isDefault = existingCoverLetters === 0;
+
+    // Create cover letter record
+    const coverLetter = await CoverLetter.create({
+      userId: req.user.id,
+      title: title || `Cover Letter - ${originalName.replace(/\.[^/.]+$/, '')}`,
+      summary: description || `Cover letter uploaded on ${new Date().toLocaleDateString()}`,
+      isDefault: isDefault,
+      isPublic: true,
+      metadata: {
+        filename,
+        originalName,
+        fileSize,
+        mimeType,
+        uploadDate: new Date().toISOString(),
+        filePath: `/uploads/cover-letters/${filename}`
+      }
+    });
+
+    console.log('✅ Cover letter created successfully:', coverLetter.id);
+
+    // If this is the first cover letter, ensure it's set as default
+    if (isDefault) {
+      console.log('✅ Setting as default cover letter (first upload)');
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        coverLetterId: coverLetter.id,
+        filename,
+        title: coverLetter.title,
+        isDefault: coverLetter.isDefault,
+        fileSize: fileSize,
+        originalName: originalName
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error uploading cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload cover letter: ' + error.message
+    });
+  }
+});
+
+// Set default cover letter
+router.put('/cover-letters/:id/set-default', authenticateToken, async (req, res) => {
+  try {
+    const coverLetter = await CoverLetter.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!coverLetter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter not found'
+      });
+    }
+
+    // Remove default from all other cover letters
+    await CoverLetter.update(
+      { isDefault: false },
+      { where: { userId: req.user.id } }
+    );
+
+    // Set this cover letter as default
+    await coverLetter.update({ isDefault: true });
+
+    res.json({
+      success: true,
+      data: coverLetter
+    });
+  } catch (error) {
+    console.error('Error setting default cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to set default cover letter'
+    });
+  }
+});
+
+// Download cover letter file
+router.get('/cover-letters/:id/download', authenticateToken, async (req, res) => {
+  try {
+    const coverLetter = await CoverLetter.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+
+    if (!coverLetter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter not found'
+      });
+    }
+
+    const metadata = coverLetter.metadata || {};
+    const filename = metadata.filename;
+    const originalName = metadata.originalName;
+
+    if (!filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter file not found'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter file not found on server'
+      });
+    }
+
+    // Increment download count
+    await coverLetter.update({
+      downloads: coverLetter.downloads + 1
+    });
+
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download cover letter'
+    });
+  }
+});
+
+// Download candidate cover letter (for employers)
+router.get('/employer/candidates/:candidateId/cover-letters/:coverLetterId/download', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can download candidate cover letters.'
+      });
+    }
+
+    const { candidateId, coverLetterId } = req.params;
+
+    // Verify the candidate exists and is a jobseeker
+    const candidate = await User.findOne({
+      where: { 
+        id: candidateId,
+        user_type: 'jobseeker',
+        is_active: true,
+        account_status: 'active'
+      }
+    });
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Candidate not found'
+      });
+    }
+
+    // Find the cover letter
+    const coverLetter = await CoverLetter.findOne({
+      where: { 
+        id: coverLetterId, 
+        userId: candidateId 
+      }
+    });
+
+    if (!coverLetter) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter not found'
+      });
+    }
+
+    const metadata = coverLetter.metadata || {};
+    const filename = metadata.filename;
+    const originalName = metadata.originalName;
+
+    if (!filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter file not found'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter file not found on server'
+      });
+    }
+
+    // Increment download count
+    await coverLetter.update({
+      downloads: coverLetter.downloads + 1
+    });
+
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading candidate cover letter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download cover letter'
+    });
+  }
+});
+
+// Employer endpoint to download cover letter from application
+router.get('/employer/applications/:applicationId/cover-letter/download', authenticateToken, async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can download cover letters.'
+      });
+    }
+
+    // Find the application and verify ownership
+    const application = await JobApplication.findOne({
+      where: { 
+        id: applicationId, 
+        employerId: req.user.id 
+      },
+      include: [
+        {
+          model: CoverLetter,
+          as: 'jobCoverLetter',
+          attributes: ['id', 'title', 'metadata']
+        }
+      ]
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found or access denied'
+      });
+    }
+
+    if (!application.jobCoverLetter) {
+      return res.status(404).json({
+        success: false,
+        message: 'No cover letter found for this application'
+      });
+    }
+
+    const coverLetter = application.jobCoverLetter;
+    const metadata = coverLetter.metadata || {};
+    const filename = metadata.filename;
+    const originalName = metadata.originalName;
+
+    if (!filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter file not found'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cover letter file not found on server'
+      });
+    }
+
+    // Increment download count
+    await coverLetter.update({
+      downloads: coverLetter.downloads + 1
+    });
+
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading cover letter for employer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download cover letter'
     });
   }
 });

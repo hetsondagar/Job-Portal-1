@@ -1,0 +1,56 @@
+'use strict';
+
+module.exports = {
+	async up(queryInterface, Sequelize) {
+		// Ensure job_applications has snake_case column cover_letter_id (FK to cover_letters.id)
+		const table = await queryInterface.describeTable('job_applications');
+		const hasCamel = Object.prototype.hasOwnProperty.call(table, 'coverLetterId');
+		const hasSnake = Object.prototype.hasOwnProperty.call(table, 'cover_letter_id');
+
+		if (hasCamel && !hasSnake) {
+			// Rename camelCase column to snake_case to match underscored model mapping
+			await queryInterface.renameColumn('job_applications', 'coverLetterId', 'cover_letter_id');
+		}
+
+		// If neither exists, add the correct snake_case column
+		const tableAfter = await queryInterface.describeTable('job_applications');
+		const hasSnakeAfter = Object.prototype.hasOwnProperty.call(tableAfter, 'cover_letter_id');
+		if (!hasSnakeAfter) {
+			await queryInterface.addColumn('job_applications', 'cover_letter_id', {
+				type: Sequelize.UUID,
+				allowNull: true,
+				references: {
+					model: 'cover_letters',
+					key: 'id'
+				},
+				onUpdate: 'CASCADE',
+				onDelete: 'SET NULL'
+			});
+		}
+
+		// Ensure index exists on snake_case column
+		try {
+			await queryInterface.addIndex('job_applications', ['cover_letter_id']);
+		} catch (e) {
+			// Ignore if index already exists
+		}
+	},
+
+	async down(queryInterface, Sequelize) {
+		// Best-effort rollback: rename back if camelCase used originally
+		const table = await queryInterface.describeTable('job_applications');
+		const hasSnake = Object.prototype.hasOwnProperty.call(table, 'cover_letter_id');
+		const hasCamel = Object.prototype.hasOwnProperty.call(table, 'coverLetterId');
+		if (hasSnake && !hasCamel) {
+			try {
+				await queryInterface.renameColumn('job_applications', 'cover_letter_id', 'coverLetterId');
+			} catch (e) {
+				// If rename fails (e.g., FK/index constraints), attempt to remove the index then rename
+				try { await queryInterface.removeIndex('job_applications', ['cover_letter_id']); } catch (_) {}
+				await queryInterface.renameColumn('job_applications', 'cover_letter_id', 'coverLetterId');
+			}
+		}
+	}
+};
+
+

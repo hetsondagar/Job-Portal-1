@@ -82,11 +82,16 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
       setLoading(true)
       setError(null)
       
+      console.log('🔄 Fetching employer applications for user:', user?.id, 'type:', user?.user_type)
+      
       const response = await apiService.getEmployerApplications()
+      
+      console.log('📊 Employer applications API response:', response)
       
       if (response.success) {
         console.log('✅ Applications fetched successfully:', response.data)
-        setApplications(response.data)
+        console.log('📋 Number of applications:', response.data?.length || 0)
+        setApplications(response.data || [])
       } else {
         console.error('❌ Failed to fetch applications:', response)
         setError(response.message || 'Failed to fetch applications')
@@ -98,6 +103,112 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
       toast.error('Failed to fetch applications')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const debugApplications = async () => {
+    try {
+      console.log('🔍 Debug: Fetching all applications...')
+      const response = await apiService.debugApplications()
+      console.log('📊 Debug response:', response)
+      toast.success(`Debug: Found ${response.data?.length || 0} total applications`)
+    } catch (error) {
+      console.error('❌ Debug error:', error)
+      toast.error('Debug failed')
+    }
+  }
+
+  const testEmployerApplications = async () => {
+    try {
+      console.log('🧪 Testing employer applications endpoint...')
+      const response = await apiService.testEmployerApplications()
+      console.log('🧪 Test response:', response)
+      if (response.success) {
+        toast.success(`Test: Found ${response.data?.count || 0} applications for employer`)
+      } else {
+        toast.error(`Test failed: ${response.message}`)
+      }
+    } catch (error) {
+      console.error('❌ Test error:', error)
+      toast.error('Test failed')
+    }
+  }
+
+  const handleDownloadResume = async (resume: any) => {
+    if (!resume?.id) {
+      toast.error('Resume not available for download')
+      return
+    }
+
+    try {
+      // For applications, we need to use the application-based download endpoint
+      const response = await apiService.downloadApplicationResume(resume.id)
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = resume.metadata?.filename || `${resume.title || 'Resume'}.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast.success('Resume downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading resume:', error)
+      toast.error('Failed to download resume')
+    }
+  }
+
+  const handleDownloadCoverLetter = async (coverLetter: any) => {
+    if (!coverLetter?.id) {
+      toast.error('Cover letter not available for download')
+      return
+    }
+
+    try {
+      // Use the cover letter download endpoint
+      const response = await apiService.downloadCoverLetter(coverLetter.id)
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = coverLetter.metadata?.filename || `${coverLetter.title || 'CoverLetter'}.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast.success('Cover letter downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading cover letter:', error)
+      toast.error('Failed to download cover letter')
     }
   }
 
@@ -204,6 +315,14 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" onClick={debugApplications}>
+                <Search className="w-4 h-4 mr-2" />
+                Debug
+              </Button>
+              <Button variant="outline" size="sm" onClick={testEmployerApplications}>
+                <Search className="w-4 h-4 mr-2" />
+                Test
+              </Button>
               <Button variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export
@@ -624,7 +743,31 @@ function ApplicationDetailView({ application }: { application: any }) {
           
           {application.coverLetter && (
             <div className="mt-4">
-              <h4 className="font-semibold text-gray-900 mb-2">Cover Letter</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-gray-900">Cover Letter</h4>
+                {application.jobCoverLetter?.metadata?.fileUrl && (
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={application.jobCoverLetter.metadata.fileUrl} target="_blank" rel="noopener noreferrer">
+                        <Eye className="w-4 h-4 mr-2" />
+                        View File
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadCoverLetter(application.jobCoverLetter)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                )}
+              </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-600 whitespace-pre-wrap">{application.coverLetter}</p>
               </div>
@@ -637,9 +780,33 @@ function ApplicationDetailView({ application }: { application: any }) {
       {jobResume && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="w-5 h-5 mr-2" />
-              Resume
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Resume/CV
+              </div>
+              <div className="flex space-x-2">
+                {jobResume.metadata?.fileUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a href={jobResume.metadata.fileUrl} target="_blank" rel="noopener noreferrer">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </a>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownloadResume(jobResume)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -668,6 +835,13 @@ function ApplicationDetailView({ application }: { application: any }) {
                 <Calendar className="w-4 h-4 mr-1" />
                 Last updated: {new Date(jobResume.lastUpdated).toLocaleDateString()}
               </div>
+              
+              {jobResume.metadata?.filename && (
+                <div className="flex items-center text-sm text-gray-500">
+                  <FileText className="w-4 h-4 mr-1" />
+                  File: {jobResume.metadata.filename}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

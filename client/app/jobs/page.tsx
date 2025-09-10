@@ -183,11 +183,40 @@ export default function JobsPage() {
 
   const fetchUserData = async () => {
     try {
-      // Fetch applications
+      console.log('🔄 Fetching user data...')
+      
+      // Fetch applications - only include non-withdrawn applications
       const applicationsResponse = await apiService.getApplications()
+      console.log('📊 Applications response:', applicationsResponse)
+      
       if (applicationsResponse.success && applicationsResponse.data) {
-        const appliedJobIds = new Set(applicationsResponse.data.map((app: any) => app.jobId))
+        console.log('📋 All applications:', applicationsResponse.data.map((app: any) => ({ 
+          id: app.id, 
+          jobId: app.jobId, 
+          status: app.status 
+        })))
+        
+        const activeApplications = applicationsResponse.data.filter((app: any) => 
+          app.status && app.status !== 'withdrawn'
+        )
+        console.log('✅ Active applications:', activeApplications.map((app: any) => ({ 
+          id: app.id, 
+          jobId: app.jobId, 
+          status: app.status 
+        })))
+        
+        const appliedJobIds = new Set(activeApplications.map((app: any) => app.jobId))
         setAppliedJobs(appliedJobIds)
+        
+        // Store application IDs for undo functionality (including withdrawn ones for lookup)
+        const jobIdToAppId: Record<string, string> = {}
+        applicationsResponse.data.forEach((app: any) => {
+          if (app.jobId && app.id) {
+            jobIdToAppId[app.jobId] = app.id
+          }
+        })
+        setJobIdToApplicationId(jobIdToAppId)
+        console.log('🗂️ JobId to ApplicationId mapping:', jobIdToAppId)
       }
 
       // Fetch bookmarks
@@ -195,9 +224,10 @@ export default function JobsPage() {
       if (bookmarksResponse.success && bookmarksResponse.data) {
         const savedJobIds = new Set(bookmarksResponse.data.map((bookmark: any) => bookmark.jobId))
         setSavedJobs(savedJobIds)
+        console.log('🔖 Saved jobs:', Array.from(savedJobIds))
       }
     } catch (error) {
-      console.error('Error fetching user data:', error)
+      console.error('❌ Error fetching user data:', error)
     }
   }
 
@@ -265,6 +295,10 @@ export default function JobsPage() {
         console.log('Job application submitted:', jobId)
         // Update applied jobs state
         setAppliedJobs(prev => new Set([...prev, jobId]))
+        // Track applicationId for undo
+        if ((response as any).data?.applicationId) {
+          setJobIdToApplicationId(prev => ({ ...prev, [jobId]: (response as any).data.applicationId }))
+        }
         // Force re-render to update button state
         setJobs([...jobs])
       } else {
@@ -273,6 +307,97 @@ export default function JobsPage() {
     } catch (error) {
       console.error('Error applying for job:', error)
       toast.error('Failed to submit application. Please try again.')
+    }
+  }
+
+  const [jobIdToApplicationId, setJobIdToApplicationId] = useState<Record<string, string>>({})
+  const [withdrawingJobs, setWithdrawingJobs] = useState<Set<string>>(new Set())
+
+  const handleUndoApply = async (jobId: string) => {
+    try {
+      // Prevent multiple simultaneous withdrawals
+      if (withdrawingJobs.has(jobId)) {
+        return
+      }
+      
+      setWithdrawingJobs(prev => new Set([...prev, jobId]))
+      console.log('🔄 Attempting to withdraw application for job:', jobId)
+      
+      // Try known applicationId first
+      let applicationId = jobIdToApplicationId[jobId]
+      console.log('📋 Known applicationId:', applicationId)
+
+      // Fallback: fetch applications and find by jobId
+      if (!applicationId) {
+        console.log('🔍 ApplicationId not found, fetching applications...')
+        
+        // First try to refresh user data to get the latest application mapping
+        await fetchUserData()
+        
+        // Check again after refresh
+        applicationId = jobIdToApplicationId[jobId]
+        console.log('📋 ApplicationId after refresh:', applicationId)
+        
+        // If still not found, do a direct API call
+        if (!applicationId) {
+          const appsResp = await apiService.getApplications()
+          console.log('📊 Applications response:', appsResp)
+          
+          if (appsResp.success && Array.isArray(appsResp.data)) {
+            console.log('📋 All applications:', appsResp.data.map((a: any) => ({ id: a.id, jobId: a.jobId, status: a.status })))
+            
+            // Look for any application with this jobId (including withdrawn ones for debugging)
+            const found = appsResp.data.find((a: any) => a.jobId === jobId)
+            console.log('🎯 Found application:', found)
+            
+            if (found?.id) {
+              applicationId = found.id
+              setJobIdToApplicationId(prev => ({ ...prev, [jobId]: found.id }))
+              console.log('✅ Using applicationId:', applicationId)
+            }
+          }
+        }
+      }
+
+      if (!applicationId) {
+        console.error('❌ No application found for jobId:', jobId)
+        toast.error('Could not locate your application to withdraw. Please refresh the page and try again.')
+        return
+      }
+
+      console.log('🚀 Withdrawing application:', applicationId)
+      const resp = await apiService.updateApplicationStatus(applicationId, 'withdrawn')
+      
+      if (resp.success) {
+        toast.success('Application withdrawn successfully')
+        // Reflect in UI: mark as not applied
+        setAppliedJobs(prev => {
+          const next = new Set(prev)
+          next.delete(jobId)
+          return next
+        })
+        // Remove from application ID mapping
+        setJobIdToApplicationId(prev => {
+          const next = { ...prev }
+          delete next[jobId]
+          return next
+        })
+        setJobs([...jobs])
+        console.log('✅ Application withdrawn successfully')
+      } else {
+        console.error('❌ Withdrawal failed:', resp)
+        toast.error(resp.message || 'Failed to withdraw application')
+      }
+    } catch (error) {
+      console.error('❌ Error withdrawing application:', error)
+      toast.error('Failed to withdraw application. Please try again.')
+    } finally {
+      // Remove from withdrawing state
+      setWithdrawingJobs(prev => {
+        const next = new Set(prev)
+        next.delete(jobId)
+        return next
+      })
     }
   }
 
@@ -848,19 +973,18 @@ export default function JobsPage() {
                             {/* Show undo button if already applied */}
                             {appliedJobs.has(job.id) && (
                               <Button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  // Note: Withdrawing applications would require the application ID
-                                  // For now, we'll show a message that this feature needs the application ID
-                                  toast.error('To withdraw application, please go to your dashboard')
+                                  await handleUndoApply(job.id)
                                 }}
                                 variant="outline"
                                 size="sm"
-                                className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700"
+                                disabled={withdrawingJobs.has(job.id)}
+                                className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50"
                               >
                                 <X className="w-3 h-3 mr-1" />
-                                Undo
+                                {withdrawingJobs.has(job.id) ? 'Withdrawing...' : 'Undo'}
                               </Button>
                             )}
                           </div>
