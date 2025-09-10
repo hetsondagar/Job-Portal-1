@@ -760,11 +760,62 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       }
     }
     
+    // Fetch cover letters for the candidate
+    let coverLetters = [];
+    try {
+      console.log(`📝 Fetching cover letters for candidate ${candidateId}`);
+      const { CoverLetter } = require('../config/index');
+      
+      const coverLetterResults = await CoverLetter.findAll({
+        where: { userId: candidateId },
+        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+      });
+      
+      coverLetters = coverLetterResults || [];
+      console.log(`📝 Found ${coverLetters.length} cover letters for candidate ${candidateId}`);
+      if (coverLetters.length > 0) {
+        console.log(`📝 First cover letter metadata:`, JSON.stringify(coverLetters[0].metadata, null, 2));
+      }
+    } catch (coverLetterError) {
+      console.log('⚠️ Could not fetch cover letters (primary query):', coverLetterError.message);
+      try {
+        const coverLetterResults = await sequelize.query(`
+          SELECT 
+            id,
+            user_id as "userId",
+            title,
+            content,
+            summary,
+            is_default as "isDefault",
+            is_public as "isPublic",
+            views,
+            downloads,
+            last_updated as "lastUpdated",
+            created_at as "createdAt",
+            metadata
+          FROM cover_letters 
+          WHERE user_id = :userId 
+          ORDER BY is_default DESC, last_updated DESC
+        `, {
+          replacements: { userId: candidateId },
+          type: QueryTypes.SELECT
+        });
+        coverLetters = coverLetterResults || [];
+        console.log(`📝 Found ${coverLetters.length} cover letters for candidate ${candidateId} (fallback)`);
+      } catch (altError) {
+        console.log('⚠️ Could not fetch cover letters (fallback query):', altError.message);
+      }
+    }
+    
     console.log(`✅ Found detailed profile for candidate: ${candidate.first_name} ${candidate.last_name}`);
     console.log(`📄 Resumes found: ${resumes.length}`);
+    console.log(`📝 Cover letters found: ${coverLetters.length}`);
     if (resumes.length > 0) {
       console.log(`📄 First resume metadata:`, JSON.stringify(resumes[0].metadata, null, 2));
       console.log(`📄 First resume full data:`, JSON.stringify(resumes[0], null, 2));
+    }
+    if (coverLetters.length > 0) {
+      console.log(`📝 First cover letter metadata:`, JSON.stringify(coverLetters[0].metadata, null, 2));
     }
     
     // Build absolute URL helper for files served from /uploads
@@ -908,10 +959,46 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           console.error('❌ Resume transformation error:', resumeErr);
           return [];
         }
+      })(),
+      
+      // Cover letter information - make this more robust
+      coverLetters: (() => {
+        try {
+          const coverLetterArray = toArray(coverLetters, []);
+          console.log(`🔄 Transforming ${coverLetterArray.length} cover letters`);
+          return coverLetterArray.map(coverLetter => {
+            const metadata = coverLetter.metadata || {};
+            const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
+            const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+            const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+            
+            const transformedCoverLetter = {
+              id: coverLetter.id,
+              title: coverLetter.title || 'Cover Letter',
+              content: coverLetter.content || '',
+              summary: coverLetter.summary || '',
+              filename: filename,
+              fileSize: fileSize,
+              uploadDate: coverLetter.createdAt || coverLetter.created_at,
+              lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
+              isDefault: coverLetter.isDefault ?? coverLetter.is_default ?? false,
+              isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
+              fileUrl: toAbsoluteUrl(filePath),
+              metadata: metadata
+            };
+            
+            console.log(`📝 Transformed cover letter:`, transformedCoverLetter);
+            return transformedCoverLetter;
+          });
+        } catch (coverLetterErr) {
+          console.error('❌ Cover letter transformation error:', coverLetterErr);
+          return [];
+        }
       })()
       };
       
       console.log(`📄 Transformed candidate resumes:`, JSON.stringify(transformedCandidate.resumes, null, 2));
+      console.log(`📝 Transformed candidate cover letters:`, JSON.stringify(transformedCandidate.coverLetters, null, 2));
     } catch (transformErr) {
       console.warn('⚠️ Candidate transform failed, returning minimal profile:', transformErr?.message || transformErr);
       transformedCandidate = {
@@ -956,6 +1043,35 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             });
           } catch (resumeErr) {
             console.error('❌ Fallback resume transformation error:', resumeErr);
+            return [];
+          }
+        })(),
+        coverLetters: (() => {
+          try {
+            const coverLetterArray = toArray(coverLetters, []);
+            return coverLetterArray.map(coverLetter => {
+              const metadata = coverLetter.metadata || {};
+              const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
+              const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+              const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+              
+              return {
+                id: coverLetter.id,
+                title: coverLetter.title || 'Cover Letter',
+                content: coverLetter.content || '',
+                summary: coverLetter.summary || '',
+                filename: filename,
+                fileSize: fileSize,
+                uploadDate: coverLetter.createdAt || coverLetter.created_at,
+                lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
+                isDefault: coverLetter.isDefault ?? coverLetter.is_default ?? false,
+                isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
+                fileUrl: toAbsoluteUrl(filePath),
+                metadata: metadata
+              };
+            });
+          } catch (coverLetterErr) {
+            console.error('❌ Fallback cover letter transformation error:', coverLetterErr);
             return [];
           }
         })()

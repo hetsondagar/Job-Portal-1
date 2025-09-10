@@ -11,6 +11,7 @@ const JobAlert = require('../models/JobAlert');
 const Requirement = require('../models/Requirement');
 const RequirementApplication = require('../models/Application');
 const Resume = require('../models/Resume');
+const CoverLetter = require('../models/CoverLetter');
 const WorkExperience = require('../models/WorkExperience');
 const Education = require('../models/Education');
 const Notification = require('../models/Notification');
@@ -41,6 +42,7 @@ User.hasMany(JobAlert, { foreignKey: 'userId', as: 'jobAlerts' });
 User.hasMany(Requirement, { foreignKey: 'createdBy', as: 'requirements' });
 User.hasMany(RequirementApplication, { foreignKey: 'userId', as: 'requirementApplications' });
 User.hasMany(Resume, { foreignKey: 'userId', as: 'resumes' });
+User.hasMany(CoverLetter, { foreignKey: 'userId', as: 'coverLetters' });
 User.hasMany(WorkExperience, { foreignKey: 'userId', as: 'workExperiences' });
 User.hasMany(Education, { foreignKey: 'userId', as: 'educations' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
@@ -76,6 +78,7 @@ JobApplication.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
 JobApplication.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
 JobApplication.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 JobApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'jobResume' });
+JobApplication.belongsTo(CoverLetter, { foreignKey: 'coverLetterId', as: 'jobCoverLetter' });
 
 // JobBookmark associations
 JobBookmark.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -111,6 +114,9 @@ RequirementApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'requirem
 Resume.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Resume.hasMany(WorkExperience, { foreignKey: 'resumeId', as: 'resumeWorkExperiences' });
 Resume.hasMany(Education, { foreignKey: 'resumeId', as: 'resumeEducations' });
+
+// CoverLetter associations
+CoverLetter.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // WorkExperience associations
 WorkExperience.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -211,6 +217,7 @@ module.exports = {
   Requirement,
   RequirementApplication,
   Resume,
+  CoverLetter,
   WorkExperience,
   Education,
   Notification,

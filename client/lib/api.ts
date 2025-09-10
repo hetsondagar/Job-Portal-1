@@ -209,6 +209,20 @@ export interface Resume {
   metadata?: any;
 }
 
+export interface CoverLetter {
+  id: string;
+  userId: string;
+  title: string;
+  content?: string;
+  summary?: string;
+  isDefault: boolean;
+  isPublic: boolean;
+  views: number;
+  downloads: number;
+  lastUpdated: string;
+  metadata?: any;
+}
+
 export interface Requirement {
   id: string;
   title: string;
@@ -962,6 +976,41 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  // Debug endpoint to check all applications
+  async debugApplications(): Promise<ApiResponse<any[]>> {
+    try {
+      console.log('🔍 Debug: Fetching all applications...');
+      const response = await fetch(`${API_BASE_URL}/user/debug/applications`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      console.log('📋 Debug applications API response status:', response.status, response.statusText);
+      
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Debug applications error:', error);
+      return {
+        success: false,
+        message: 'Failed to debug applications',
+        data: []
+      };
+    }
+  }
+
+  async testEmployerApplications(): Promise<ApiResponse<any>> {
+    try {
+      console.log('🧪 Testing employer applications endpoint...');
+      const response = await fetch(`${API_BASE_URL}/user/employer/applications/test`, {
+        headers: this.getAuthHeaders(),
+      });
+      console.log('🧪 Test applications API response status:', response.status, response.statusText);
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Test applications error:', error);
+      return { success: false, message: 'Failed to test applications', data: null };
+    }
+  }
+
   // Employer applications endpoint
   async getEmployerApplications(): Promise<ApiResponse<any[]>> {
     try {
@@ -1400,6 +1449,34 @@ class ApiService {
     return response;
   }
 
+  // Download resume from application (for employer applications page)
+  async downloadApplicationResume(resumeId: string): Promise<Response> {
+    const response = await fetch(`${API_BASE_URL}/user/resumes/${resumeId}/download`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response;
+  }
+
+  // Get general candidate profile for employers
+  async getGeneralCandidateProfile(candidateId: string): Promise<ApiResponse<any>> {
+    try {
+      console.log('🔍 Fetching general candidate profile for:', candidateId);
+      const response = await fetch(`${API_BASE_URL}/user/candidates/${candidateId}`, {
+        headers: this.getAuthHeaders(),
+      });
+      console.log('📋 General candidate profile API response status:', response.status, response.statusText);
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Get general candidate profile error:', error);
+      return { success: false, message: 'Failed to fetch candidate profile', data: null };
+    }
+  }
+
   // Messages endpoints
   async getConversations(): Promise<ApiResponse<any[]>> {
     const response = await fetch(`${API_BASE_URL}/messages/conversations`, {
@@ -1606,6 +1683,132 @@ class ApiService {
     const a = document.createElement('a');
     a.href = url;
     a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'resume.pdf';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+
+  // Cover Letter endpoints
+  async getCoverLetters(): Promise<ApiResponse<CoverLetter[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<CoverLetter[]>(response);
+  }
+
+  async getCoverLetterStats(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async createCoverLetter(data: Partial<CoverLetter>): Promise<ApiResponse<CoverLetter>> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<CoverLetter>(response);
+  }
+
+  async updateCoverLetter(id: string, data: Partial<CoverLetter>): Promise<ApiResponse<CoverLetter>> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<CoverLetter>(response);
+  }
+
+  async deleteCoverLetter(id: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async uploadCoverLetterFile(file: File): Promise<ApiResponse<{ coverLetterId: string; filename: string }>> {
+    const formData = new FormData();
+    formData.append('coverLetter', file);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    return this.handleResponse<{ coverLetterId: string; filename: string }>(response);
+  }
+
+  async setDefaultCoverLetter(id: string): Promise<ApiResponse<CoverLetter>> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/${id}/set-default`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<CoverLetter>(response);
+  }
+
+  async downloadCoverLetter(id: string): Promise<Response> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/${id}/download`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response;
+  }
+
+  // Download candidate cover letter (for employers)
+  async downloadCandidateCoverLetter(candidateId: string, coverLetterId: string): Promise<Response> {
+    const response = await fetch(`${API_BASE_URL}/user/employer/candidates/${candidateId}/cover-letters/${coverLetterId}/download`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response;
+  }
+
+  // Employer endpoint to download cover letter from application
+  async downloadApplicationCoverLetter(applicationId: string): Promise<void> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}/cover-letter/download`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download cover letter');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'cover-letter.pdf';
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);

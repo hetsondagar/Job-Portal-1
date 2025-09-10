@@ -153,6 +153,115 @@ export default function CandidateProfilePage() {
     }
   }
 
+  // Handle cover letter view
+  const handleViewCoverLetter = (coverLetter: any) => {
+    console.log('🔍 Viewing cover letter:', coverLetter)
+    
+    // Try fileUrl first, then metadata.fileUrl
+    const fileUrl = coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl
+    
+    if (fileUrl) {
+      console.log('📄 Opening cover letter file:', fileUrl)
+      // Open file in new tab
+      window.open(fileUrl, '_blank', 'noopener,noreferrer')
+    } else {
+      console.log('📝 No file URL, showing content')
+      // Show content in modal or expand view
+      toast({
+        title: "Cover Letter",
+        description: coverLetter.content || "Cover letter content not available",
+      })
+    }
+  }
+
+  // Handle cover letter download
+  const handleDownloadCoverLetter = async (coverLetter: any) => {
+    console.log('🔍 Downloading cover letter:', coverLetter)
+    
+    if (!coverLetter?.id) {
+      toast({
+        title: "Error",
+        description: "Cover letter not available for download",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsDownloading(true)
+      
+      // Try direct file download first if fileUrl is available
+      const fileUrl = coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl
+      if (fileUrl) {
+        console.log('📄 Downloading cover letter file directly:', fileUrl)
+        
+        // Get filename from cover letter data
+        const filename = coverLetter.filename || 
+                        coverLetter.metadata?.filename || 
+                        coverLetter.metadata?.originalName || 
+                        `${candidate.name}_CoverLetter.pdf`
+        
+        // Create a temporary link to download the file
+        const link = document.createElement('a')
+        link.href = fileUrl
+        link.download = filename
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        toast({
+          title: "Success",
+          description: "Cover letter download started"
+        })
+        return
+      }
+      
+      // Fallback to API download
+      console.log('📄 Downloading cover letter via API:', coverLetter.id)
+      const response = await apiService.downloadCandidateCoverLetter(candidate.id, coverLetter.id)
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = coverLetter.filename || 
+                    coverLetter.metadata?.filename || 
+                    coverLetter.metadata?.originalName || 
+                    `${candidate.name}_CoverLetter.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast({
+        title: "Success",
+        description: "Cover letter download started"
+      })
+    } catch (error) {
+      console.error('Download error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to download cover letter",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   // Handle shortlist candidate
   const handleShortlistCandidate = async () => {
     try {
@@ -381,6 +490,7 @@ export default function CandidateProfilePage() {
               </Button>
               
               {candidate?.resumes && candidate.resumes.length > 0 && (
+                <div className="flex space-x-2">
                 <Button 
                   variant="outline"
                   onClick={() => handleDownloadResume(candidate.resumes[0])}
@@ -388,7 +498,17 @@ export default function CandidateProfilePage() {
                 >
                 <Download className="w-4 h-4 mr-2" />
                   {isDownloading ? "Downloading..." : "Download Resume"}
+                  </Button>
+                  {candidate.resumes.length > 1 && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => setActiveTab('cv')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      View All CVs ({candidate.resumes.length})
               </Button>
+                  )}
+                </div>
               )}
               
               <Button 
@@ -652,28 +772,87 @@ export default function CandidateProfilePage() {
           </TabsContent>
 
           <TabsContent value="cv" className="space-y-6">
+            {/* Resume/CV Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
                   <Download className="w-5 h-5" />
                   <span>Resume/CV</span>
+                    {candidate.resumes && candidate.resumes.length > 1 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {candidate.resumes.length} CVs
+                      </Badge>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   {candidate.resumes && candidate.resumes.length > 0 ? (
                     <>
-                  {/* CV Preview */}
+                      {/* Multiple CVs Selection */}
+                      {candidate.resumes.length > 1 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold mb-3">Available CVs</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {candidate.resumes.map((resume: any, index: number) => (
+                              <Card key={resume.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                                <CardContent className="p-4">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {resume.filename || resume.title || `CV ${index + 1}`}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {resume.fileSize || 'PDF'} • {new Date(resume.uploadDate || resume.lastUpdated).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex space-x-2 mt-3">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1"
+                                      asChild
+                                    >
+                                      <a href={resume.fileUrl} target="_blank" rel="noopener noreferrer">
+                                        <Eye className="w-3 h-3 mr-1" />
+                                        View
+                                      </a>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => handleDownloadResume(resume)}
+                                      disabled={isDownloading}
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Download
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Primary CV Preview */}
                   <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center">
                     <div className="max-w-md mx-auto">
                       <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Download className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                       </div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                            {candidate.resumes[0].filename}
+                            {candidate.resumes[0].filename || candidate.resumes[0].title || 'Resume'}
                       </h3>
                       <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                            PDF • {candidate.resumes[0].fileSize} • Uploaded {new Date(candidate.resumes[0].uploadDate).toLocaleDateString()}
+                            PDF • {candidate.resumes[0].fileSize || 'Document'} • Uploaded {new Date(candidate.resumes[0].uploadDate || candidate.resumes[0].lastUpdated).toLocaleDateString()}
                       </p>
                       
                       {/* CV Preview Image */}
@@ -717,15 +896,15 @@ export default function CandidateProfilePage() {
                       <CardContent className="space-y-4">
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">File Name</span>
-                              <span className="font-medium">{candidate.resumes[0].filename}</span>
+                          <span className="font-medium">{candidate.resumes[0].filename || candidate.resumes[0].title || 'Resume'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">File Size</span>
-                              <span className="font-medium">{candidate.resumes[0].fileSize}</span>
+                          <span className="font-medium">{candidate.resumes[0].fileSize || 'PDF Document'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">Upload Date</span>
-                              <span className="font-medium">{new Date(candidate.resumes[0].uploadDate).toLocaleDateString()}</span>
+                          <span className="font-medium">{new Date(candidate.resumes[0].uploadDate || candidate.resumes[0].lastUpdated).toLocaleDateString()}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">Last Updated</span>
@@ -733,8 +912,14 @@ export default function CandidateProfilePage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600 dark:text-slate-400">Format</span>
-                          <span className="font-medium">PDF</span>
+                          <span className="font-medium">{candidate.resumes[0].metadata?.mimeType?.includes('pdf') ? 'PDF' : 'Document'}</span>
                         </div>
+                        {candidate.resumes[0].metadata?.originalName && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-600 dark:text-slate-400">Original Name</span>
+                            <span className="font-medium">{candidate.resumes[0].metadata.originalName}</span>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
@@ -758,6 +943,16 @@ export default function CandidateProfilePage() {
                           <Download className="w-4 h-4 mr-2" />
                           {isDownloading ? "Downloading..." : "Download CV"}
                         </Button>
+                        {candidate.resumes.length > 1 && (
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => setActiveTab('cv')}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            View All CVs ({candidate.resumes.length})
+                          </Button>
+                        )}
                         <Button variant="outline" className="w-full">
                           <Share2 className="w-4 h-4 mr-2" />
                           Share CV
@@ -769,6 +964,36 @@ export default function CandidateProfilePage() {
                       </CardContent>
                     </Card>
                   </div>
+
+                  {/* Resume Summary and Skills */}
+                  {candidate.resumes[0].summary && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Resume Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-600 whitespace-pre-wrap">{candidate.resumes[0].summary}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Resume Skills */}
+                  {candidate.resumes[0].skills && candidate.resumes[0].skills.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Resume Skills</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {candidate.resumes[0].skills.map((skill: string, index: number) => (
+                            <Badge key={index} variant="outline" className="text-sm">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                     </>
                   ) : (
                     <div className="text-center py-12">
@@ -777,6 +1002,198 @@ export default function CandidateProfilePage() {
                       </div>
                       <h3 className="text-lg font-semibold text-slate-900 mb-2">No Resume Available</h3>
                       <p className="text-slate-600">This candidate hasn't uploaded a resume yet.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cover Letter Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-5 h-5" />
+                    <span>Cover Letters</span>
+                    {candidate.coverLetters && candidate.coverLetters.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {candidate.coverLetters.length} Letters
+                      </Badge>
+                    )}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {candidate.coverLetters && candidate.coverLetters.length > 0 ? (
+                    <>
+                      {/* Multiple Cover Letters */}
+                      {candidate.coverLetters.length > 1 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold mb-3">Available Cover Letters</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {candidate.coverLetters.map((coverLetter: any, index: number) => (
+                              <Card key={coverLetter.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                                <CardContent className="p-4">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-green-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {coverLetter.title || `Cover Letter ${index + 1}`}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {coverLetter.isDefault ? 'Default' : 'Custom'} • {new Date(coverLetter.lastUpdated).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex space-x-2 mt-3">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => handleViewCoverLetter(coverLetter)}
+                                    >
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      View
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => handleDownloadCoverLetter(coverLetter)}
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Download
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Primary Cover Letter Display */}
+                      <div className="border-2 border-dashed border-green-300 dark:border-green-600 rounded-lg p-8 text-center">
+                        <div className="max-w-md mx-auto">
+                          <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                            {candidate.coverLetters[0].title || 'Cover Letter'}
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            {candidate.coverLetters[0].isDefault ? 'Default Cover Letter' : 'Custom Cover Letter'} • 
+                            Updated {new Date(candidate.coverLetters[0].lastUpdated).toLocaleDateString()}
+                          </p>
+                          
+                          {/* Cover Letter Preview */}
+                          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mb-4">
+                            <div className="aspect-[3/4] bg-slate-100 dark:bg-slate-700 rounded flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                                  <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Cover Letter Preview</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Click to view full content</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                            <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleViewCoverLetter(candidate.coverLetters[0])}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Cover Letter
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => handleDownloadCoverLetter(candidate.coverLetters[0])}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download PDF
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cover Letter Information */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Cover Letter Details</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Title</span>
+                              <span className="font-medium">{candidate.coverLetters[0].title || 'Cover Letter'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Type</span>
+                              <span className="font-medium">{candidate.coverLetters[0].isDefault ? 'Default' : 'Custom'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Last Updated</span>
+                              <span className="font-medium">{new Date(candidate.coverLetters[0].lastUpdated).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Status</span>
+                              <span className="font-medium">{candidate.coverLetters[0].isPublic ? 'Public' : 'Private'}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Cover Letter Actions</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => handleViewCoverLetter(candidate.coverLetters[0])}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Full Cover Letter
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={() => handleDownloadCoverLetter(candidate.coverLetters[0])}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download Cover Letter
+                            </Button>
+                            {candidate.coverLetters.length > 1 && (
+                              <Button 
+                                variant="outline" 
+                                className="w-full"
+                                onClick={() => setActiveTab('cv')}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                View All Letters ({candidate.coverLetters.length})
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Cover Letter Summary */}
+                      {candidate.coverLetters[0].summary && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Cover Letter Summary</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-gray-600 whitespace-pre-wrap">{candidate.coverLetters[0].summary}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileText className="w-8 h-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2">No Cover Letters Available</h3>
+                      <p className="text-gray-600">This candidate hasn't uploaded any cover letters yet.</p>
                     </div>
                   )}
                 </div>

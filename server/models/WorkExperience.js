@@ -10,6 +10,7 @@ const WorkExperience = sequelize.define('WorkExperience', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id', // Map to the snake_case column in database
     references: {
       model: 'users',
       key: 'id'
@@ -17,31 +18,38 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   companyName: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // This field doesn't exist in DB, will be null
+    // No field mapping since column doesn't exist
   },
   jobTitle: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'title' // Map to actual column name
   },
   department: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'department' // Keep as is if it exists
   },
   location: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'location' // Keep as is
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: false,
+    field: 'start_date' // Map to snake_case column
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date' // Map to snake_case column
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_current' // Map to snake_case column
   },
   description: {
     type: DataTypes.TEXT,
@@ -53,11 +61,13 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   achievements: {
     type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    field: 'achievements' // Map to actual column
   },
   skills: {
     type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    field: 'skills' // Map to actual column
   },
   technologies: {
     type: DataTypes.JSONB,
@@ -65,12 +75,14 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   salary: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'salary' // Map to actual column
   },
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'salary_currency' // Map to snake_case column
   },
   employmentType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
