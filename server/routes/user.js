@@ -1675,6 +1675,62 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
   }
 });
 
+// Update application status (for employers)
+router.put('/employer/applications/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { JobApplication } = require('../config/index');
+    const { status } = req.body;
+    const { id } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can update application status.'
+      });
+    }
+    
+    // Find the application and verify ownership
+    const application = await JobApplication.findOne({
+      where: { 
+        id: id, 
+        employerId: req.user.id 
+      }
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found or access denied'
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['applied', 'reviewing', 'shortlisted', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Valid statuses are: ' + validStatuses.join(', ')
+      });
+    }
+
+    // Update the application status
+    await application.update({ status });
+
+    res.json({
+      success: true,
+      data: application,
+      message: 'Application status updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating application status for employer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update application status'
+    });
+  }
+});
+
 // Update application status (for withdrawing applications)
 router.put('/applications/:id/status', authenticateToken, async (req, res) => {
   try {
@@ -2148,7 +2204,10 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     // Calculate stats
     const activeJobs = jobs.filter(job => job.status === 'active' || !job.status).length;
     const totalApplications = applications.length;
-    const hiredCandidates = applications.filter(app => app.status === 'accepted').length;
+    const hiredCandidates = applications.filter(app => app.status === 'hired').length;
+    const reviewingApplications = applications.filter(app => app.status === 'reviewing').length;
+    const shortlistedApplications = applications.filter(app => app.status === 'shortlisted').length;
+    const interviewScheduledApplications = applications.filter(app => app.status === 'interview_scheduled').length;
     
     // Get profile views from view tracking
     const { ViewTracking } = require('../config/index');
@@ -2163,6 +2222,9 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       activeJobs,
       totalApplications,
       hiredCandidates,
+      reviewingApplications,
+      shortlistedApplications,
+      interviewScheduledApplications,
       profileViews,
       totalJobs: jobs.length,
       recentApplications: applications.slice(0, 5),
@@ -2174,6 +2236,9 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       activeJobs,
       totalApplications,
       hiredCandidates,
+      reviewingApplications,
+      shortlistedApplications,
+      interviewScheduledApplications,
       profileViews,
       totalJobs: jobs.length
     });
@@ -3125,6 +3190,123 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
     res.status(500).json({
       success: false,
       message: 'Failed to download cover letter'
+    });
+  }
+});
+
+// Employer endpoint to download resume from application
+router.get('/employer/applications/:applicationId/resume/download', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔍 Employer resume download request:', { applicationId: req.params.applicationId, userId: req.user?.id, userType: req.user?.user_type });
+    
+    const { JobApplication, Resume } = require('../config/index');
+    const { applicationId } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer') {
+      console.log('❌ Access denied - user is not an employer:', req.user.user_type);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can download resumes.'
+      });
+    }
+
+    // Find the application and verify ownership
+    console.log('🔍 Looking for application:', { applicationId, employerId: req.user.id });
+    
+    const application = await JobApplication.findOne({
+      where: { 
+        id: applicationId, 
+        employerId: req.user.id 
+      },
+      include: [
+        {
+          model: Resume,
+          as: 'jobResume',
+          attributes: ['id', 'title', 'metadata']
+        }
+      ]
+    });
+
+    console.log('🔍 Application found:', { 
+      found: !!application, 
+      hasResume: !!application?.jobResume,
+      resumeId: application?.jobResume?.id,
+      resumeTitle: application?.jobResume?.title
+    });
+
+    if (!application) {
+      console.log('❌ Application not found or access denied');
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found or access denied'
+      });
+    }
+
+    if (!application.jobResume) {
+      console.log('❌ No resume found for this application');
+      return res.status(404).json({
+        success: false,
+        message: 'No resume found for this application'
+      });
+    }
+
+    const resume = application.jobResume;
+    const metadata = resume.metadata || {};
+    const filename = metadata.filename;
+    const originalName = metadata.originalName;
+
+    console.log('🔍 Resume metadata:', { filename, originalName, metadata });
+
+    if (!filename) {
+      console.log('❌ No filename in resume metadata');
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/resumes', filename);
+    console.log('🔍 File path:', filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.log('❌ File does not exist on server:', filePath);
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found on server'
+      });
+    }
+
+    console.log('✅ File exists, proceeding with download');
+
+    // Increment download count
+    const currentDownloads = resume.downloads || 0;
+    console.log('🔍 Current downloads:', currentDownloads);
+    await resume.update({
+      downloads: currentDownloads + 1
+    });
+
+    // Set headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+
+    console.log('🔍 Sending file:', filePath);
+    console.log('🔍 Headers set:', {
+      'Content-Disposition': res.getHeader('Content-Disposition'),
+      'Content-Type': res.getHeader('Content-Type')
+    });
+
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('❌ Error downloading resume for employer:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error message:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download resume',
+      error: error.message
     });
   }
 });

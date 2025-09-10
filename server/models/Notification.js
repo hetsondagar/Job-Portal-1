@@ -24,7 +24,10 @@ const Notification = sequelize.define('Notification', {
       'profile_view',
       'message',
       'system',
-      'marketing'
+      'marketing',
+      'interview_scheduled',
+      'interview_cancelled',
+      'interview_reminder'
     ),
     allowNull: false
   },

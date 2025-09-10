@@ -22,6 +22,7 @@ const requirementsRoutes = require('./routes/requirements');
 const jobAlertsRoutes = require('./routes/job-alerts');
 const jobTemplatesRoutes = require('./routes/job-templates');
 const candidateLikesRoutes = require('./routes/candidate-upvote');
+const interviewsRoutes = require('./routes/interviews');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -167,6 +168,7 @@ app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/candidate-upvotes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/hot-vacancies', require('./routes/hot-vacancies'));
+app.use('/api/interviews', interviewsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

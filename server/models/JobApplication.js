@@ -199,24 +199,24 @@ const JobApplication = sequelize.define('JobApplication', {
           
           // Decrement old status count
           if (oldStatus === 'reviewing') {
-            updates.applicationsUnderReview = sequelize.literal('applicationsUnderReview - 1');
+            updates.applicationsUnderReview = sequelize.literal('applications_under_review - 1');
           } else if (oldStatus === 'shortlisted') {
-            updates.applicationsShortlisted = sequelize.literal('applicationsShortlisted - 1');
+            updates.applicationsShortlisted = sequelize.literal('applications_shortlisted - 1');
           } else if (oldStatus === 'rejected') {
-            updates.applicationsRejected = sequelize.literal('applicationsRejected - 1');
+            updates.applicationsRejected = sequelize.literal('applications_rejected - 1');
           } else if (oldStatus === 'hired') {
-            updates.applicationsAccepted = sequelize.literal('applicationsAccepted - 1');
+            updates.applicationsAccepted = sequelize.literal('applications_accepted - 1');
           }
           
           // Increment new status count
           if (newStatus === 'reviewing') {
-            updates.applicationsUnderReview = sequelize.literal('applicationsUnderReview + 1');
+            updates.applicationsUnderReview = sequelize.literal('applications_under_review + 1');
           } else if (newStatus === 'shortlisted') {
-            updates.applicationsShortlisted = sequelize.literal('applicationsShortlisted + 1');
+            updates.applicationsShortlisted = sequelize.literal('applications_shortlisted + 1');
           } else if (newStatus === 'rejected') {
-            updates.applicationsRejected = sequelize.literal('applicationsRejected + 1');
+            updates.applicationsRejected = sequelize.literal('applications_rejected + 1');
           } else if (newStatus === 'hired') {
-            updates.applicationsAccepted = sequelize.literal('applicationsAccepted + 1');
+            updates.applicationsAccepted = sequelize.literal('applications_accepted + 1');
           }
         }
         

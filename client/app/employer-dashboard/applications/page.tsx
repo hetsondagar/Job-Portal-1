@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Users,
   Eye,
@@ -41,6 +41,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { InterviewSchedulingDialog } from "@/components/interview-scheduling-dialog"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
@@ -57,19 +58,31 @@ export default function ApplicationsPage() {
 }
 
 function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading: boolean }) {
+  const searchParams = useSearchParams()
   const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedApplication, setSelectedApplication] = useState<any>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
+  const [interviewApplication, setInterviewApplication] = useState<any>(null)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
     pages: 0
   })
+
+  // Read status from URL parameters on component mount
+  useEffect(() => {
+    const statusFromUrl = searchParams.get('status')
+    if (statusFromUrl) {
+      setStatusFilter(statusFromUrl)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -131,45 +144,6 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
     } catch (error) {
       console.error('❌ Test error:', error)
       toast.error('Test failed')
-    }
-  }
-
-  const handleDownloadResume = async (resume: any) => {
-    if (!resume?.id) {
-      toast.error('Resume not available for download')
-      return
-    }
-
-    try {
-      // For applications, we need to use the application-based download endpoint
-      const response = await apiService.downloadApplicationResume(resume.id)
-      
-      // Get the filename from the response headers or use a default
-      const contentDisposition = response.headers.get('content-disposition')
-      let filename = resume.metadata?.filename || `${resume.title || 'Resume'}.pdf`
-      
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
-        if (filenameMatch) {
-          filename = filenameMatch[1]
-        }
-      }
-      
-      // Create blob and download
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
-      toast.success('Resume downloaded successfully')
-    } catch (error) {
-      console.error('Error downloading resume:', error)
-      toast.error('Failed to download resume')
     }
   }
 
@@ -272,8 +246,31 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
     try {
       const response = await apiService.updateApplicationStatus(applicationId, newStatus)
       if (response.success) {
-        toast.success('Application status updated successfully')
-        fetchApplications()
+        if (newStatus === 'rejected') {
+          // Remove rejected application from the list
+          setApplications(prevApplications => 
+            prevApplications.filter(app => app.id !== applicationId)
+          )
+          toast.success('Application rejected and removed from list')
+        } else {
+          // For other status updates, check if the new status matches the current filter
+          if (statusFilter === 'all' || statusFilter === newStatus) {
+            // Update the application in the list if it should still be visible
+            setApplications(prevApplications => 
+              prevApplications.map(app => 
+                app.id === applicationId 
+                  ? { ...app, status: newStatus }
+                  : app
+              )
+            )
+          } else {
+            // Remove the application from the list if it no longer matches the filter
+            setApplications(prevApplications => 
+              prevApplications.filter(app => app.id !== applicationId)
+            )
+          }
+          toast.success('Application status updated successfully')
+        }
       } else {
         toast.error('Failed to update application status')
       }
@@ -281,6 +278,35 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
       console.error('Error updating application status:', error)
       toast.error('Failed to update application status')
     }
+  }
+
+  const handleScheduleInterview = (application: any) => {
+    console.log('🔍 Application data for interview scheduling:', application)
+    console.log('🔍 Application keys:', Object.keys(application || {}))
+    console.log('🔍 Has candidate:', !!application?.candidate)
+    console.log('🔍 Has applicant:', !!application?.applicant)
+    console.log('🔍 Candidate data:', application?.candidate)
+    console.log('🔍 Applicant data:', application?.applicant)
+    
+    if (application && (application.candidate || application.applicant)) {
+      const candidate = application.candidate || application.applicant;
+      const candidateName = candidate?.name || candidate?.fullName || (candidate?.first_name && candidate?.last_name);
+      
+      if (candidateName) {
+        setInterviewApplication(application)
+        setIsInterviewDialogOpen(true)
+      } else {
+        console.error('❌ Missing candidate name:', candidate)
+        toast.error('Invalid application data - missing candidate name information')
+      }
+    } else {
+      console.error('❌ Invalid application data:', application)
+      toast.error('Invalid application data - missing candidate/applicant information')
+    }
+  }
+
+  const handleInterviewScheduled = () => {
+    fetchApplications() // Refresh the applications list
   }
 
   if (loading) {
@@ -307,11 +333,37 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
+          {statusFilter !== 'all' && (
+            <div className="mb-4">
+              <Link href="/employer-dashboard">
+                <Button variant="ghost" size="sm">
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Back to Dashboard
+                </Button>
+              </Link>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Job Applications</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {statusFilter === 'all' ? 'Job Applications' : 
+                 statusFilter === 'reviewing' ? 'Applications Under Review' :
+                 statusFilter === 'shortlisted' ? 'Shortlisted Candidates' :
+                 statusFilter === 'interview_scheduled' ? 'Interview Scheduled' :
+                 statusFilter === 'hired' ? 'Hired Candidates' :
+                 statusFilter === 'rejected' ? 'Rejected Applications' :
+                 statusFilter === 'applied' ? 'New Applications' :
+                 'Job Applications'}
+              </h1>
               <p className="text-gray-600 mt-2">
-                Manage and review applications from job seekers
+                {statusFilter === 'all' ? 'Manage and review applications from job seekers' :
+                 statusFilter === 'reviewing' ? 'Applications currently being reviewed' :
+                 statusFilter === 'shortlisted' ? 'Candidates who have been shortlisted' :
+                 statusFilter === 'interview_scheduled' ? 'Candidates with scheduled interviews' :
+                 statusFilter === 'hired' ? 'Successfully hired candidates' :
+                 statusFilter === 'rejected' ? 'Applications that have been rejected' :
+                 statusFilter === 'applied' ? 'Recently submitted applications' :
+                 'Manage and review applications from job seekers'}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -402,7 +454,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                         <Avatar className="w-12 h-12">
                           <AvatarImage src={applicant?.avatar} />
                           <AvatarFallback>
-                            {applicant?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                            {applicant?.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
                           </AvatarFallback>
                         </Avatar>
                         
@@ -413,7 +465,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                             </h3>
                             <Badge className={getStatusColor(application.status)}>
                               <StatusIcon className="w-3 h-3 mr-1" />
-                              {application.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              {application.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                             </Badge>
                           </div>
                           
@@ -421,7 +473,14 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                             <div className="space-y-2">
                               <div className="flex items-center text-sm text-gray-600">
                                 <Briefcase className="w-4 h-4 mr-2" />
-                                <span className="truncate">{job?.title || 'Unknown Position'}</span>
+                                <span className="truncate">
+                                  {job?.title || application.metadata?.requirementTitle || 'Unknown Position'}
+                                </span>
+                                {application.metadata?.shortlistedFrom === 'requirements' && (
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    From Requirements
+                                  </Badge>
+                                )}
                               </div>
                               <div className="flex items-center text-sm text-gray-600">
                                 <Mail className="w-4 h-4 mr-2" />
@@ -508,7 +567,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                             <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'shortlisted')}>
                               Shortlist
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'interview_scheduled')}>
+                            <DropdownMenuItem onClick={() => handleScheduleInterview(application)}>
                               Schedule Interview
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'rejected')}>
@@ -533,10 +592,23 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
             </DialogHeader>
             
             {selectedApplication && (
-              <ApplicationDetailView application={selectedApplication} />
+              <ApplicationDetailView 
+                application={selectedApplication} 
+                onDownloadCoverLetter={handleDownloadCoverLetter}
+              />
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Interview Scheduling Dialog */}
+        {interviewApplication && (
+          <InterviewSchedulingDialog
+            isOpen={isInterviewDialogOpen}
+            onClose={() => setIsInterviewDialogOpen(false)}
+            application={interviewApplication}
+            onSuccess={handleInterviewScheduled}
+          />
+        )}
       </div>
       
       <EmployerFooter />
@@ -544,10 +616,98 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
   )
 }
 
-function ApplicationDetailView({ application }: { application: any }) {
+function ApplicationDetailView({ application, onDownloadCoverLetter }: { application: any; onDownloadCoverLetter: (coverLetter: any) => void }) {
   const applicant = application.applicant
   const job = application.job
   const jobResume = application.jobResume
+
+  const handleDownloadResume = async (resume: any) => {
+    if (!resume?.id) {
+      toast.error('Resume not available for download')
+      return
+    }
+
+    try {
+      // For applications, we need to use the application-based download endpoint
+      const response = await apiService.downloadApplicationResume(resume.id, application.id)
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+      }
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = resume.metadata?.filename || `${resume.title || 'Resume'}.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      
+      // Clean up
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }, 100)
+      
+      toast.success('Resume downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading resume:', error)
+      toast.error('Failed to download resume')
+    }
+  }
+
+  const handleViewResume = async (resume: any) => {
+    if (!resume?.id) {
+      toast.error('Resume not available for viewing')
+      return
+    }
+
+    try {
+      // First try to use the metadata fileUrl if available
+      if (resume.metadata?.fileUrl) {
+        window.open(resume.metadata.fileUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      // If no direct URL, fetch the resume file and create a blob URL for viewing
+      const response = await apiService.downloadApplicationResume(resume.id, application.id)
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        
+        // Open the resume in a new tab
+        const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+        
+        // Clean up the blob URL after a delay to allow the browser to load it
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url)
+        }, 10000)
+        
+        if (!newWindow) {
+          toast.error('Please allow popups to view the resume')
+        }
+      } else {
+        toast.error('Failed to load resume for viewing')
+      }
+    } catch (error) {
+      console.error('Error viewing resume:', error)
+      toast.error('Failed to view resume')
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -558,7 +718,7 @@ function ApplicationDetailView({ application }: { application: any }) {
             <Avatar className="w-16 h-16">
               <AvatarImage src={applicant?.avatar} />
               <AvatarFallback>
-                {applicant?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                {applicant?.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -760,7 +920,7 @@ function ApplicationDetailView({ application }: { application: any }) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDownloadCoverLetter(application.jobCoverLetter)}
+                      onClick={() => onDownloadCoverLetter(application.jobCoverLetter)}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download
@@ -786,18 +946,14 @@ function ApplicationDetailView({ application }: { application: any }) {
                 Resume/CV
               </div>
               <div className="flex space-x-2">
-                {jobResume.metadata?.fileUrl && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a href={jobResume.metadata.fileUrl} target="_blank" rel="noopener noreferrer">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </a>
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleViewResume(jobResume)}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
