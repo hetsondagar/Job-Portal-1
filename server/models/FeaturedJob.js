@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/sequelize');
 
-module.exports = (sequelize) => {
-  const FeaturedJob = sequelize.define('FeaturedJob', {
+const FeaturedJob = sequelize.define('FeaturedJob', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
@@ -112,14 +112,14 @@ module.exports = (sequelize) => {
     tableName: 'featured_jobs',
     timestamps: true,
     indexes: [
-          {
-      fields: ['job_id']
-    },
       {
-                  fields: ['promotion_type']
+        fields: ['jobId']
       },
       {
-                  fields: ['is_active']
+        fields: ['promotionType']
+      },
+      {
+        fields: ['isActive']
       },
       {
         fields: ['startDate', 'endDate']
@@ -128,28 +128,11 @@ module.exports = (sequelize) => {
         fields: ['priority']
       },
       {
-                  fields: ['created_by']
+        fields: ['createdBy']
       }
     ]
   });
 
-  FeaturedJob.associate = (models) => {
-    FeaturedJob.belongsTo(models.Job, {
-      foreignKey: 'jobId',
-      as: 'job'
-    });
-    
-    FeaturedJob.belongsTo(models.User, {
-      foreignKey: 'createdBy',
-      as: 'creator'
-    });
-    
-    FeaturedJob.belongsTo(models.User, {
-      foreignKey: 'approvedBy',
-      as: 'approver'
-    });
-  };
 
-  return FeaturedJob;
-};
+module.exports = FeaturedJob;
 

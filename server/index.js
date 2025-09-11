@@ -23,6 +23,8 @@ const jobAlertsRoutes = require('./routes/job-alerts');
 const jobTemplatesRoutes = require('./routes/job-templates');
 const candidateLikesRoutes = require('./routes/candidate-upvote');
 const interviewsRoutes = require('./routes/interviews');
+const hotVacanciesRoutes = require('./routes/hot-vacancies');
+const featuredJobsRoutes = require('./routes/featured-jobs');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -168,6 +170,7 @@ app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/candidate-upvotes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/hot-vacancies', require('./routes/hot-vacancies'));
+app.use('/api/featured-jobs', featuredJobsRoutes);
 app.use('/api/interviews', interviewsRoutes);
 
 // 404 handler
@@ -193,6 +196,13 @@ const startServer = async () => {
         console.log('✅ candidate_likes table ensured');
       } else {
         console.log('ℹ️ candidate_likes table already exists');
+      }
+      // Ensure featured_jobs table exists
+      if (!tableNames.includes('featured_jobs')) {
+        await require('./models/FeaturedJob').sync();
+        console.log('✅ featured_jobs table ensured');
+      } else {
+        console.log('ℹ️ featured_jobs table already exists');
       }
     } catch (syncError) {
       console.warn('⚠️ Skipping conditional sync due to error:', syncError?.message || syncError);
