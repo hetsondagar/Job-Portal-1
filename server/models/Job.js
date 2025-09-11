@@ -298,6 +298,32 @@ const Job = sequelize.define('Job', {
   promotionSettings: {
     type: DataTypes.JSONB,
     defaultValue: {}
+  },
+  // Internship-specific fields
+  duration: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Internship duration (e.g., "3 months", "6 months")'
+  },
+  startDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Internship start date'
+  },
+  workMode: {
+    type: DataTypes.ENUM('remote', 'on-site', 'hybrid'),
+    allowNull: true,
+    comment: 'Work mode for internship'
+  },
+  learningObjectives: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'What the intern will learn from this experience'
+  },
+  mentorship: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Mentorship and guidance details'
   }
 }, {
   tableName: 'jobs',

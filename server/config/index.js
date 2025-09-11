@@ -29,6 +29,7 @@ const JobPhoto = require('../models/JobPhoto');
 const CandidateLike = require('../models/CandidateUpvote');
 const HotVacancy = require('../models/HotVacancy');
 const HotVacancyPhoto = require('../models/HotVacancyPhoto');
+const FeaturedJob = require('../models/FeaturedJob');
 const ViewTracking = require('../models/ViewTracking');
 
 // Define associations
@@ -193,6 +194,10 @@ Job.hasMany(Analytics, { foreignKey: 'jobId', as: 'analytics' });
 Company.hasMany(Analytics, { foreignKey: 'companyId', as: 'analytics' });
 JobApplication.hasMany(Analytics, { foreignKey: 'applicationId', as: 'analytics' });
 
+// FeaturedJob associations
+FeaturedJob.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(FeaturedJob, { foreignKey: 'jobId', as: 'featuredPromotions' });
+
 // Sync database function
 const syncDatabase = async (force = false) => {
   try {
@@ -235,6 +240,7 @@ module.exports = {
   CandidateLike,
   HotVacancy,
   HotVacancyPhoto,
+  FeaturedJob,
   ViewTracking,
   syncDatabase
 }; 

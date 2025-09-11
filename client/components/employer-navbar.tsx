@@ -91,7 +91,7 @@ export function EmployerNavbar() {
     },
     {
       name: "Post an Internship",
-      href: "/employer-dashboard/post-job?type=internship",
+      href: "/employer-dashboard/post-internship",
       icon: Users,
       description: "Find talented interns for your organization",
     },

@@ -19,6 +19,7 @@ import {
   Mail,
   MessageCircle,
   X,
+  Calendar,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -132,7 +133,13 @@ export default function JobDetailPage() {
               founded: res.data.company?.founded || res.data.employer?.founded || 'Founded date not available',
               website: res.data.company?.website || res.data.employer?.website || '',
               aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
-              photos: res.data.photos || []
+              photos: res.data.photos || [],
+              // Internship-specific fields
+              duration: res.data.duration,
+              startDate: res.data.startDate,
+              workMode: res.data.workMode,
+              learningObjectives: res.data.learningObjectives,
+              mentorship: res.data.mentorship
             }
             
             console.log('✅ Transformed job data (fallback):', transformedJob)
@@ -449,6 +456,64 @@ export default function JobDetailPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Internship-specific information */}
+                    {job?.type?.toLowerCase() === 'internship' && (job?.duration || job?.startDate || job?.workMode || job?.learningObjectives || job?.mentorship) && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <Briefcase className="w-4 h-4 text-white" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Internship Details</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {job?.duration && (
+                            <div className="flex items-center text-blue-800 dark:text-blue-200">
+                              <Clock className="w-4 h-4 mr-2" />
+                              <div>
+                                <div className="font-medium">Duration</div>
+                                <div className="text-sm">{job.duration}</div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job?.startDate && (
+                            <div className="flex items-center text-blue-800 dark:text-blue-200">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              <div>
+                                <div className="font-medium">Start Date</div>
+                                <div className="text-sm">{new Date(job.startDate).toLocaleDateString()}</div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job?.workMode && (
+                            <div className="flex items-center text-blue-800 dark:text-blue-200">
+                              <MapPin className="w-4 h-4 mr-2" />
+                              <div>
+                                <div className="font-medium">Work Mode</div>
+                                <div className="text-sm capitalize">{job.workMode.replace('-', ' ')}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {job?.learningObjectives && (
+                          <div className="mt-4">
+                            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">What You'll Learn</h4>
+                            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed">{job.learningObjectives}</p>
+                          </div>
+                        )}
+                        
+                        {job?.mentorship && (
+                          <div className="mt-4">
+                            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Mentorship & Support</h4>
+                            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed">{job.mentorship}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {Array.isArray(job?.skills) && job.skills.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-6">

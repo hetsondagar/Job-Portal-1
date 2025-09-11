@@ -216,24 +216,41 @@ router.post('/', authenticateToken, async (req, res) => {
 // List Requirements for authenticated employer's company
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Requirements API - User:', {
+      id: req.user?.id,
+      user_type: req.user?.user_type,
+      company_id: req.user?.company_id
+    });
+    
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
+      console.log('❌ Requirements API - User is not an employer:', req.user.user_type);
       return res.status(403).json({ success: false, message: 'Access denied. Only employers can view requirements.' });
     }
     
     const companyId = req.user.company_id;
+    console.log('🔍 Requirements API - Company ID:', companyId);
+    
     if (!companyId) {
+      console.log('⚠️ Requirements API - No company ID, returning empty array');
       return res.status(200).json({ success: true, data: [] });
     }
     
+    console.log('🔍 Requirements API - Fetching requirements for company:', companyId);
     const rows = await Requirement.findAll({ 
       where: { companyId }, 
       order: [['createdAt', 'DESC']] 
     });
     
+    console.log('✅ Requirements API - Found requirements:', rows.length);
     return res.status(200).json({ success: true, data: rows });
   } catch (error) {
-    console.error('List requirements error:', error);
+    console.error('❌ List requirements error:', error);
+    console.error('❌ Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack
+    });
     return res.status(500).json({ 
       success: false, 
       message: 'Failed to fetch requirements',
@@ -322,7 +339,9 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     const accessedCandidates = await ViewTracking.count({
       where: {
         viewerId: req.user.id,
-        viewType: 'candidate_view'
+        // ViewTracking.viewType enum allows: 'job_view', 'profile_view', 'company_view'
+        // Use 'profile_view' to represent candidate profile views
+        viewType: 'profile_view'
       }
     });
     

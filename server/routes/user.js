@@ -2257,6 +2257,54 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
   }
 });
 
+// Employer Analytics endpoint
+router.get('/employer/analytics', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    const range = (req.query.range || '30d').toString();
+
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can access this endpoint.' });
+    }
+
+    const analytics = await DashboardService.getEmployerAnalytics(req.user.id, { range });
+    return res.json({ success: true, data: analytics });
+  } catch (error) {
+    console.error('❌ Error fetching employer analytics:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch employer analytics' });
+  }
+});
+
+// Employer Analytics Export endpoint
+router.get('/employer/analytics/export', authenticateToken, async (req, res) => {
+  try {
+    const DashboardService = require('../services/dashboardService');
+    const range = (req.query.range || '30d').toString();
+    const format = (req.query.format || 'csv').toString();
+
+    if (req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can access this endpoint.' });
+    }
+
+    const analytics = await DashboardService.getEmployerAnalytics(req.user.id, { range });
+    
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="analytics-${range}.json"`);
+      return res.json(analytics);
+    } else {
+      // CSV format
+      const csv = DashboardService.convertAnalyticsToCSV(analytics, range);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="analytics-${range}.csv"`);
+      return res.send(csv);
+    }
+  } catch (error) {
+    console.error('❌ Error exporting employer analytics:', error);
+    return res.status(500).json({ success: false, message: 'Failed to export analytics' });
+  }
+});
+
 // Track profile view
 router.post('/track-profile-view/:userId', async (req, res) => {
   try {

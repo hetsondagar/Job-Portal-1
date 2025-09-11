@@ -32,7 +32,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
@@ -119,31 +118,61 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
     }
   }
 
-  const debugApplications = async () => {
-    try {
-      console.log('🔍 Debug: Fetching all applications...')
-      const response = await apiService.debugApplications()
-      console.log('📊 Debug response:', response)
-      toast.success(`Debug: Found ${response.data?.length || 0} total applications`)
-    } catch (error) {
-      console.error('❌ Debug error:', error)
-      toast.error('Debug failed')
-    }
-  }
 
-  const testEmployerApplications = async () => {
+  const exportApplications = async () => {
     try {
-      console.log('🧪 Testing employer applications endpoint...')
-      const response = await apiService.testEmployerApplications()
-      console.log('🧪 Test response:', response)
-      if (response.success) {
-        toast.success(`Test: Found ${response.data?.count || 0} applications for employer`)
-      } else {
-        toast.error(`Test failed: ${response.message}`)
+      if (applications.length === 0) {
+        toast.error('No applications to export')
+        return
       }
+
+      // Create CSV content
+      const headers = [
+        'Application ID',
+        'Candidate Name',
+        'Email',
+        'Phone',
+        'Job Title',
+        'Company',
+        'Status',
+        'Applied Date',
+        'Expected Salary',
+        'Notice Period',
+        'Cover Letter'
+      ]
+
+      const csvContent = [
+        headers.join(','),
+        ...applications.map(app => [
+          app.id || '',
+          `${app.user?.first_name || ''} ${app.user?.last_name || ''}`.trim() || 'N/A',
+          app.user?.email || 'N/A',
+          app.user?.phone || 'N/A',
+          app.job?.title || 'N/A',
+          app.job?.company?.name || 'N/A',
+          app.status || 'N/A',
+          app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'N/A',
+          app.expectedSalary || 'N/A',
+          app.noticePeriod || 'N/A',
+          app.coverLetter ? `"${app.coverLetter.replace(/"/g, '""')}"` : 'N/A'
+        ].join(','))
+      ].join('\n')
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `applications_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success(`Exported ${applications.length} applications successfully`)
     } catch (error) {
-      console.error('❌ Test error:', error)
-      toast.error('Test failed')
+      console.error('❌ Export error:', error)
+      toast.error('Failed to export applications')
     }
   }
 
@@ -367,15 +396,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" onClick={debugApplications}>
-                <Search className="w-4 h-4 mr-2" />
-                Debug
-              </Button>
-              <Button variant="outline" size="sm" onClick={testEmployerApplications}>
-                <Search className="w-4 h-4 mr-2" />
-                Test
-              </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={exportApplications}>
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>

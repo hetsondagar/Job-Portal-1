@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, TrendingUp, Eye, MousePointer, Users, DollarSign, Calendar, Target, BarChart3, Settings } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Plus, TrendingUp, Eye, MousePointer, Users, DollarSign, Calendar, Target, BarChart3, Settings, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,60 +15,59 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
 
 export default function FeaturedJobsPage() {
-  const [featuredJobs, setFeaturedJobs] = useState([
-    {
-      id: 1,
-      jobTitle: "Senior Software Engineer",
-      promotionType: "featured",
-      status: "active",
-      startDate: "2024-01-15",
-      endDate: "2024-02-15",
-      budget: 500,
-      spentAmount: 245.50,
-      impressions: 1250,
-      clicks: 89,
-      applications: 12,
-      ctr: 7.12,
-      conversionRate: 13.48,
-      priority: 1
-    },
-    {
-      id: 2,
-      jobTitle: "Product Manager",
-      promotionType: "premium",
-      status: "active",
-      startDate: "2024-01-10",
-      endDate: "2024-02-10",
-      budget: 800,
-      spentAmount: 567.25,
-      impressions: 2100,
-      clicks: 156,
-      applications: 23,
-      ctr: 7.43,
-      conversionRate: 14.74,
-      priority: 2
-    },
-    {
-      id: 3,
-      jobTitle: "Frontend Developer",
-      promotionType: "urgent",
-      status: "paused",
-      startDate: "2024-01-20",
-      endDate: "2024-02-20",
-      budget: 300,
-      spentAmount: 89.75,
-      impressions: 450,
-      clicks: 34,
-      applications: 5,
-      ctr: 7.56,
-      conversionRate: 14.71,
-      priority: 3
-    }
-  ])
-
+  const [featuredJobs, setFeaturedJobs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [pricingPlans, setPricingPlans] = useState<any>({})
+  const [employerJobs, setEmployerJobs] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchFeaturedJobs()
+    fetchPricingPlans()
+    fetchEmployerJobs()
+  }, [])
+
+  const fetchFeaturedJobs = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getEmployerFeaturedJobs()
+      if (response.success) {
+        setFeaturedJobs(response.data.featuredJobs || [])
+      } else {
+        setError(response.message || 'Failed to fetch featured jobs')
+      }
+    } catch (err) {
+      setError('Failed to fetch featured jobs')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchPricingPlans = async () => {
+    try {
+      const response = await apiService.getFeaturedJobPricingPlans()
+      if (response.success) {
+        setPricingPlans(response.data || {})
+      }
+    } catch (err) {
+      console.error('Failed to fetch pricing plans:', err)
+    }
+  }
+
+  const fetchEmployerJobs = async () => {
+    try {
+      const response = await apiService.getEmployerJobsForPromotion()
+      if (response.success) {
+        setEmployerJobs(Array.isArray(response.data) ? response.data : [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch employer jobs:', err)
+    }
+  }
 
   const getPromotionTypeColor = (type: string) => {
     switch (type) {
@@ -136,14 +135,19 @@ export default function FeaturedJobsPage() {
                 Create Promotion
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Job Promotion</DialogTitle>
                 <DialogDescription>
                   Promote your job posting to reach more candidates
                 </DialogDescription>
               </DialogHeader>
-              <CreatePromotionForm />
+              <CreatePromotionForm 
+                pricingPlans={pricingPlans}
+                employerJobs={employerJobs}
+                onClose={() => setIsCreateDialogOpen(false)}
+                onSuccess={fetchFeaturedJobs}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -207,13 +211,34 @@ export default function FeaturedJobsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {featuredJobs.map((job) => (
-                <div key={job.id} className="border border-slate-200 rounded-lg p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      {getPromotionTypeIcon(job.promotionType)}
-                      <div>
-                        <h3 className="font-semibold text-slate-900 text-lg">{job.jobTitle}</h3>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  <span>Loading featured jobs...</span>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <Button onClick={fetchFeaturedJobs} variant="outline">
+                    Try Again
+                  </Button>
+                </div>
+              ) : featuredJobs.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-600 mb-4">No featured job promotions yet.</p>
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Promotion
+                  </Button>
+                </div>
+              ) : (
+                featuredJobs.map((job) => (
+                  <div key={job.id} className="border border-slate-200 rounded-lg p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        {getPromotionTypeIcon(job.promotionType)}
+                        <div>
+                          <h3 className="font-semibold text-slate-900 text-lg">{job.job?.title || 'Unknown Job'}</h3>
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge className={getPromotionTypeColor(job.promotionType)}>
                             {job.promotionType}
@@ -282,7 +307,8 @@ export default function FeaturedJobsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -293,42 +319,65 @@ export default function FeaturedJobsPage() {
   )
 }
 
-function CreatePromotionForm() {
+function CreatePromotionForm({ 
+  pricingPlans, 
+  employerJobs, 
+  onClose, 
+  onSuccess 
+}: { 
+  pricingPlans: any; 
+  employerJobs: any[]; 
+  onClose: () => void; 
+  onSuccess: () => void; 
+}) {
   const [promotionType, setPromotionType] = useState("featured")
   const [selectedJob, setSelectedJob] = useState("")
   const [budget, setBudget] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const promotionTypes = [
-    {
-      value: "featured",
-      label: "Featured",
-      description: "Highlight your job in search results",
-      price: "₹500/week"
-    },
-    {
-      value: "premium",
-      label: "Premium",
-      description: "Top placement with enhanced visibility",
-      price: "₹800/week"
-    },
-    {
-      value: "urgent",
-      label: "Urgent",
-      description: "Mark as urgent to attract quick applications",
-      price: "₹300/week"
-    },
-    {
-      value: "sponsored",
-      label: "Sponsored",
-      description: "Custom promotion with targeted audience",
-      price: "₹1000/week"
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedJob || !budget || !startDate || !endDate) {
+      setError('Please fill in all required fields')
+      return
     }
-  ]
+
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await apiService.createFeaturedJob({
+        jobId: selectedJob,
+        promotionType: promotionType as any,
+        startDate,
+        endDate,
+        budget: parseFloat(budget)
+      })
+
+      if (response.success) {
+        onSuccess()
+        onClose()
+      } else {
+        setError(response.message || 'Failed to create promotion')
+      }
+    } catch (err) {
+      setError('Failed to create promotion')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+      
       <div>
         <Label htmlFor="job">Select Job</Label>
         <Select value={selectedJob} onValueChange={setSelectedJob}>
@@ -336,10 +385,15 @@ function CreatePromotionForm() {
             <SelectValue placeholder="Choose a job to promote" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="job1">Senior Software Engineer</SelectItem>
-            <SelectItem value="job2">Product Manager</SelectItem>
-            <SelectItem value="job3">Frontend Developer</SelectItem>
-            <SelectItem value="job4">UX Designer</SelectItem>
+            {employerJobs.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-slate-500">No active jobs found.</div>
+            ) : (
+              employerJobs.map((job: any) => (
+                <SelectItem key={job.id} value={job.id}>
+                  {job.title} {job.location ? `- ${job.location}` : ''}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -347,21 +401,21 @@ function CreatePromotionForm() {
       <div>
         <Label>Promotion Type</Label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-          {promotionTypes.map((type) => (
+          {Object.entries(pricingPlans).map(([key, plan]: [string, any]) => (
             <div
-              key={type.value}
+              key={key}
               className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                promotionType === type.value
+                promotionType === key
                   ? "border-blue-500 bg-blue-50"
                   : "border-slate-200 hover:border-slate-300"
               }`}
-              onClick={() => setPromotionType(type.value)}
+              onClick={() => setPromotionType(key)}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium">{type.label}</span>
-                <span className="text-sm font-semibold text-blue-600">{type.price}</span>
+                <span className="font-medium">{plan.name}</span>
+                <span className="text-sm font-semibold text-blue-600">₹{plan.basePrice}/{plan.duration}</span>
               </div>
-              <p className="text-sm text-slate-600">{type.description}</p>
+              <p className="text-sm text-slate-600">{plan.description}</p>
             </div>
           ))}
         </div>
@@ -429,12 +483,19 @@ function CreatePromotionForm() {
       </div>
 
       <div className="flex justify-end space-x-3">
-        <Button variant="outline">Cancel</Button>
-        <Button disabled={!selectedJob || !budget || !startDate || !endDate}>
-          Create Promotion
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="submit" disabled={!selectedJob || !budget || !startDate || !endDate || loading}>
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Create Promotion'
+          )}
         </Button>
       </div>
-    </div>
+    </form>
   )
 }
 

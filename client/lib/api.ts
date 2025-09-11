@@ -382,7 +382,12 @@ class ApiService {
     console.log('🔍 handleResponse - Parsed data:', data);
 
     if (!response.ok) {
-      console.error('❌ API error:', { url, status: response.status, statusText: response.statusText, body: data });
+      // If parsed body is empty object, try to capture raw text for better diagnostics
+      const rawText = (!data || (typeof data === 'object' && Object.keys(data).length === 0))
+        ? await responseClone.text().catch(() => '')
+        : '';
+      const bodyForLog = (rawText && rawText.trim().length > 0) ? rawText : data;
+      console.error('❌ API error:', { url, status: response.status, statusText: response.statusText, body: bodyForLog });
       
       // Handle rate limiting specifically
       if (response.status === 429) {
@@ -419,7 +424,11 @@ class ApiService {
           403: 'Access denied. You do not have permission to perform this action.',
           404: 'Not found. The requested resource does not exist.',
         };
-        const fallback = defaultMessages[response.status] || `Request failed (${response.status}): ${response.statusText}`;
+        // Prefer any raw text from server if available
+        const raw = bodyForLog && typeof bodyForLog === 'string' ? bodyForLog : '';
+        const fallback = raw.trim().length > 0
+          ? raw
+          : (defaultMessages[response.status] || `Request failed (${response.status}): ${response.statusText}`);
         return {
           success: false,
           message: fallback,
@@ -1603,6 +1612,167 @@ class ApiService {
         message: 'Failed to fetch dashboard stats',
         errors: ['NETWORK_ERROR']
       };
+    }
+  }
+
+  // Employer Analytics endpoint
+  async getEmployerAnalytics(range: '7d' | '30d' | '90d' | '1y' = '30d'): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/employer/analytics?range=${range}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching employer analytics:', error);
+      return { success: false, message: 'Failed to fetch analytics', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  // Export analytics report
+  async exportAnalyticsReport(range: '7d' | '30d' | '90d' | '1y' = '30d', format: 'csv' | 'json' = 'csv'): Promise<Blob> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/employer/analytics/export?range=${range}&format=${format}`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('❌ Error exporting analytics report:', error);
+      throw error;
+    }
+  }
+
+  // Featured Jobs API methods
+  async getFeaturedJobPricingPlans(): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/pricing`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching featured job pricing plans:', error);
+      return { success: false, message: 'Failed to fetch pricing plans', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async getEmployerJobsForPromotion(): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/employer/jobs`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching employer jobs:', error);
+      return { success: false, message: 'Failed to fetch jobs', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async getEmployerFeaturedJobs(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+      const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/employer${query}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching featured jobs:', error);
+      return { success: false, message: 'Failed to fetch featured jobs', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async getFeaturedJobDetails(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/${id}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching featured job details:', error);
+      return { success: false, message: 'Failed to fetch featured job details', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async createFeaturedJob(data: {
+    jobId: string;
+    promotionType: 'featured' | 'premium' | 'urgent' | 'sponsored';
+    startDate: string;
+    endDate: string;
+    budget: number;
+    priority?: number;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error creating featured job:', error);
+      return { success: false, message: 'Failed to create featured job', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async updateFeaturedJob(id: string, data: {
+    startDate?: string;
+    endDate?: string;
+    budget?: number;
+    priority?: number;
+    status?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/${id}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error updating featured job:', error);
+      return { success: false, message: 'Failed to update featured job', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async deleteFeaturedJob(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/${id}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error deleting featured job:', error);
+      return { success: false, message: 'Failed to delete featured job', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async processFeaturedJobPayment(id: string, paymentData: {
+    paymentId: string;
+    paymentMethod?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/${id}/payment`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(paymentData),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error processing payment:', error);
+      return { success: false, message: 'Failed to process payment', errors: ['NETWORK_ERROR'] };
     }
   }
 

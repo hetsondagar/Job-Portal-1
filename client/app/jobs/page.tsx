@@ -19,6 +19,7 @@ import {
   BookmarkCheck,
   CheckCircle,
   Camera,
+  Calendar,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -71,6 +72,12 @@ interface Job {
   companyRating: number
   category: string
   photos?: any[]
+  // Internship-specific fields
+  duration?: string
+  startDate?: string
+  workMode?: string
+  learningObjectives?: string
+  mentorship?: string
 }
 
 export default function JobsPage() {
@@ -161,7 +168,13 @@ export default function JobsPage() {
           featured: job.isFeatured || false,
           companyRating: 4.5, // Default rating
           category: job.category || 'General',
-          photos: job.photos || [] // Include job photos
+          photos: job.photos || [], // Include job photos
+          // Internship-specific fields
+          duration: job.duration,
+          startDate: job.startDate,
+          workMode: job.workMode,
+          learningObjectives: job.learningObjectives,
+          mentorship: job.mentorship
         }))
         
         // Use only real jobs from database, no sample data
@@ -876,6 +889,30 @@ export default function JobsPage() {
                                   <span>{job.applicants} applicants</span>
                                 </div>
                               </div>
+
+                              {/* Internship-specific information */}
+                              {job.type.toLowerCase() === 'internship' && (job.duration || job.startDate || job.workMode) && (
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-blue-600 dark:text-blue-400 mb-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                                  {job.duration && (
+                                    <div className="flex items-center space-x-1">
+                                      <Calendar className="w-4 h-4" />
+                                      <span className="font-medium">{job.duration}</span>
+                                    </div>
+                                  )}
+                                  {job.startDate && (
+                                    <div className="flex items-center space-x-1">
+                                      <Clock className="w-4 h-4" />
+                                      <span>Starts {new Date(job.startDate).toLocaleDateString()}</span>
+                                    </div>
+                                  )}
+                                  {job.workMode && (
+                                    <div className="flex items-center space-x-1">
+                                      <MapPin className="w-4 h-4" />
+                                      <span className="capitalize">{job.workMode.replace('-', ' ')}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {job.skills.slice(0, 3).map((skill, skillIndex) => (
