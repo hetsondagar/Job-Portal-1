@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const { Op, QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/sequelize');
-const CandidateLike = require('../models/CandidateUpvote');
+const CandidateLike = require('../models/CandidateLike');
 
 const Requirement = require('../models/Requirement');
 const User = require('../models/User');
