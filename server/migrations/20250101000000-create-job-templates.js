@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('JobTemplates', {
+    await queryInterface.createTable('job_templates', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -89,38 +89,38 @@ module.exports = {
 
     // Add indexes for better performance
     try {
-      await queryInterface.addIndex('JobTemplates', ['createdBy'], { name: 'job_templates_created_by' });
+      await queryInterface.addIndex('job_templates', ['createdBy'], { name: 'job_templates_created_by' });
     } catch (error) {
       // Index might already exist, continue
       console.log('Index job_templates_created_by might already exist, skipping...');
     }
     
     try {
-      await queryInterface.addIndex('JobTemplates', ['isPublic'], { name: 'job_templates_is_public' });
+      await queryInterface.addIndex('job_templates', ['isPublic'], { name: 'job_templates_is_public' });
     } catch (error) {
       console.log('Index job_templates_is_public might already exist, skipping...');
     }
     
     try {
-      await queryInterface.addIndex('JobTemplates', ['category'], { name: 'job_templates_category' });
+      await queryInterface.addIndex('job_templates', ['category'], { name: 'job_templates_category' });
     } catch (error) {
       console.log('Index job_templates_category might already exist, skipping...');
     }
     
     try {
-      await queryInterface.addIndex('JobTemplates', ['isActive'], { name: 'job_templates_is_active' });
+      await queryInterface.addIndex('job_templates', ['isActive'], { name: 'job_templates_is_active' });
     } catch (error) {
       console.log('Index job_templates_is_active might already exist, skipping...');
     }
     
     try {
-      await queryInterface.addIndex('JobTemplates', ['createdAt'], { name: 'job_templates_created_at' });
+      await queryInterface.addIndex('job_templates', ['createdAt'], { name: 'job_templates_created_at' });
     } catch (error) {
       console.log('Index job_templates_created_at might already exist, skipping...');
     }
 
     // Insert some default templates
-    await queryInterface.bulkInsert('JobTemplates', [
+    await queryInterface.bulkInsert('job_templates', [
       {
         id: Sequelize.literal('uuid_generate_v4()'),
         name: 'Senior Software Engineer',
@@ -197,6 +197,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('JobTemplates');
+    await queryInterface.dropTable('job_templates');
   }
 };
