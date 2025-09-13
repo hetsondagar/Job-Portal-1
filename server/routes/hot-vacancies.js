@@ -165,7 +165,7 @@ router.post('/:id/photos/upload', hotVacancyPhotoUpload.single('photo'), async (
       mimeType: req.file.mimetype,
       altText: altText || '',
       caption: caption || '',
-      displayOrder: parseInt(displayOrder) || 0,
+      display_order: parseInt(displayOrder) || 0,
       isPrimary: isPrimary === 'true' || false,
       uploadedBy: req.user.id
     });
@@ -184,7 +184,7 @@ router.post('/:id/photos/upload', hotVacancyPhotoUpload.single('photo'), async (
         altText: hotVacancyPhoto.altText,
         caption: hotVacancyPhoto.caption,
         isPrimary: hotVacancyPhoto.isPrimary,
-        displayOrder: hotVacancyPhoto.displayOrder
+        display_order: hotVacancyPhoto.displayOrder
       },
       message: 'Hot vacancy photo uploaded successfully'
     });
@@ -227,7 +227,7 @@ router.get('/:id/photos', async (req, res) => {
         hotVacancyId: id,
         isActive: true
       },
-      order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+      order: [['display_order', 'ASC'], ['created_at', 'ASC']]
     });
 
     return res.status(200).json({

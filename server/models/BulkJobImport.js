@@ -121,6 +121,7 @@ module.exports = (sequelize) => {
     createdBy: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'created_by',
       comment: 'User who initiated this import'
     },
     companyId: {
@@ -129,7 +130,10 @@ module.exports = (sequelize) => {
       comment: 'Company this import belongs to'
     }
   }, {
-    tableName: 'bulk_job_imports',
+  tableName: 'bulk_job_imports',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
     timestamps: true,
     indexes: [
       {

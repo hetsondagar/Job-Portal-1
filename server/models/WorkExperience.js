@@ -105,6 +105,9 @@ const WorkExperience = sequelize.define('WorkExperience', {
   }
 }, {
   tableName: 'work_experiences',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (experience) => {
       if (experience.isCurrent) {

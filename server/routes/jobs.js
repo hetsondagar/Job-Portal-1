@@ -88,7 +88,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       });
     }
     
-    console.log('🔍 Job details:', { jobId: job.id, employerId: job.employerId, title: job.title });
+    console.log('🔍 Job details:', { job_id: job.id, employer_id: job.employerId, title: job.title });
 
     // Check if user has already applied for this job
     const existingApplication = await JobApplication.findOne({
@@ -107,7 +107,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       let selectedResumeId = resumeId;
       if (!selectedResumeId) {
         const defaultResume = await Resume.findOne({
-          where: { userId, isDefault: true }
+          where: { userId, is_default: true }
         });
         if (defaultResume) {
           selectedResumeId = defaultResume.id;
@@ -123,7 +123,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
         isWillingToRelocate,
         preferredLocations,
         resumeId: existingApplication.resumeId || selectedResumeId,
-        appliedAt: new Date(),
+        applied_at: new Date(),
         source: 'website'
       });
 
@@ -134,7 +134,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
         data: {
           applicationId: existingApplication.id,
           status: existingApplication.status,
-          appliedAt: existingApplication.appliedAt || existingApplication.createdAt
+          applied_at: existingApplication.appliedAt || existingApplication.createdAt
         }
       });
     }
@@ -143,7 +143,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
     let selectedResumeId = resumeId;
     if (!selectedResumeId) {
       const defaultResume = await Resume.findOne({
-        where: { userId, isDefault: true }
+        where: { userId, is_default: true }
       });
       if (defaultResume) {
         selectedResumeId = defaultResume.id;
@@ -154,7 +154,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
     const application = await JobApplication.create({
       jobId,
       userId,
-      employerId: job.employerId, // Use employerId from job
+      employer_id: job.employerId, // Use employerId from job
       status: 'applied',
       coverLetter,
       expectedSalary,
@@ -168,9 +168,9 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
 
     console.log('✅ Job application created:', { 
       applicationId: application.id, 
-      jobId: application.jobId, 
-      userId: application.userId, 
-      employerId: application.employerId,
+      job_id: application.jobId, 
+      user_id: application.userId, 
+      employer_id: application.employerId,
       status: application.status 
     });
 
@@ -180,7 +180,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       data: {
         applicationId: application.id,
         status: application.status,
-        appliedAt: application.createdAt
+        applied_at: application.createdAt
       }
     });
 

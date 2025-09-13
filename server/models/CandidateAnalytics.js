@@ -149,7 +149,10 @@ module.exports = (sequelize) => {
       comment: 'Cost incurred for this search (credits, premium features, etc.)'
     }
   }, {
-    tableName: 'candidate_analytics',
+  tableName: 'candidate_analytics',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
     timestamps: true,
     indexes: [
       {

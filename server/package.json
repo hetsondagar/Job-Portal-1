@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
+    "start": "node production-start.js",
     "dev": "nodemon index.js",
+    "dev:safe": "node start-server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "db:init": "node scripts/init-db.js",

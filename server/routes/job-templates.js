@@ -47,33 +47,22 @@ router.get('/', authenticateToken, async (req, res) => {
     
     const { Op } = require('sequelize');
     
-    let whereClause = {
-      isActive: true,
-      [Op.or]: [
-        { isPublic: true },
-        { createdBy: req.user.id }
-      ]
-    };
+    let whereClause = {};
 
     if (category && category !== 'all') {
-      whereClause.category = category;
+      whereClause.categoryId = category;
     }
 
     if (search) {
-      whereClause[Op.and] = [
-        whereClause,
-        {
-          [Op.or]: [
-            { name: { [Op.iLike]: `%${search}%` } },
-            { description: { [Op.iLike]: `%${search}%` } }
-          ]
-        }
+      whereClause[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } }
       ];
     }
 
     const templates = await JobTemplate.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -93,16 +82,10 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { Op } = require('sequelize');
     
     const template = await JobTemplate.findOne({
       where: {
-        id,
-        isActive: true,
-        [Op.or]: [
-          { isPublic: true },
-          { createdBy: req.user.id }
-        ]
+        id
       }
     });
 
@@ -129,23 +112,20 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new template
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, description, category, isPublic, templateData, tags } = req.body;
+    const { title, description, categoryId, companyId } = req.body;
 
-    if (!name || !category || !templateData) {
+    if (!title) {
       return res.status(400).json({
         success: false,
-        message: 'Name, category, and template data are required'
+        message: 'Title is required'
       });
     }
 
     const template = await JobTemplate.create({
-      name,
+      title,
       description,
-      category,
-      isPublic: isPublic || false,
-      templateData,
-      tags: tags || [],
-      createdBy: req.user.id
+      categoryId,
+      companyId: companyId || req.user.company_id
     });
 
     res.status(201).json({
@@ -166,30 +146,25 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, category, isPublic, templateData, tags } = req.body;
+    const { title, description, categoryId } = req.body;
 
     const template = await JobTemplate.findOne({
       where: {
-        id,
-        createdBy: req.user.id,
-        isActive: true
+        id
       }
     });
 
     if (!template) {
       return res.status(404).json({
         success: false,
-        message: 'Template not found or access denied'
+        message: 'Template not found'
       });
     }
 
     await template.update({
-      name: name || template.name,
+      title: title || template.title,
       description: description !== undefined ? description : template.description,
-      category: category || template.category,
-      isPublic: isPublic !== undefined ? isPublic : template.isPublic,
-      templateData: templateData || template.templateData,
-      tags: tags || template.tags
+      categoryId: categoryId || template.categoryId
     });
 
     res.json({
@@ -213,20 +188,18 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     const template = await JobTemplate.findOne({
       where: {
-        id,
-        createdBy: req.user.id,
-        isActive: true
+        id
       }
     });
 
     if (!template) {
       return res.status(404).json({
         success: false,
-        message: 'Template not found or access denied'
+        message: 'Template not found'
       });
     }
 
-    await template.update({ isActive: false });
+    await template.destroy();
 
     res.json({
       success: true,
@@ -241,102 +214,17 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Toggle template public/private status
-router.patch('/:id/toggle-public', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const template = await JobTemplate.findOne({
-      where: {
-        id,
-        createdBy: req.user.id,
-        isActive: true
-      }
-    });
-
-    if (!template) {
-      return res.status(404).json({
-        success: false,
-        message: 'Template not found or access denied'
-      });
-    }
-
-    await template.update({ isPublic: !template.isPublic });
-
-    res.json({
-      success: true,
-      data: template,
-      message: `Template ${template.isPublic ? 'made public' : 'made private'} successfully`
-    });
-  } catch (error) {
-    console.error('Error toggling template visibility:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to toggle template visibility'
-    });
-  }
-});
-
-// Use template (increment usage count)
-router.post('/:id/use', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { Op } = require('sequelize');
-
-    const template = await JobTemplate.findOne({
-      where: {
-        id,
-        isActive: true,
-        [Op.or]: [
-          { isPublic: true },
-          { createdBy: req.user.id }
-        ]
-      }
-    });
-
-    if (!template) {
-      return res.status(404).json({
-        success: false,
-        message: 'Template not found'
-      });
-    }
-
-    await template.update({
-      usageCount: template.usageCount + 1,
-      lastUsedAt: new Date()
-    });
-
-    res.json({
-      success: true,
-      data: template,
-      message: 'Template usage recorded'
-    });
-  } catch (error) {
-    console.error('Error recording template usage:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to record template usage'
-    });
-  }
-});
-
 // Create job from template
 router.post('/:id/create-job', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { Op } = require('sequelize');
     const Job = require('../models/Job');
     const Company = require('../models/Company');
 
     // Find the template
     const template = await JobTemplate.findOne({
       where: {
-        id,
-        isActive: true,
-        [Op.or]: [
-          { isPublic: true },
-          { createdBy: req.user.id }
-        ]
+        id
       }
     });
 
@@ -362,48 +250,16 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
       });
     }
 
-    // Extract template data
-    const templateData = template.templateData;
-    
-    // Generate slug from title
-    const slug = templateData.title.toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim('-') + '-' + Date.now();
-
     // Create job from template
     const jobData = {
-      slug,
-      title: templateData.title || 'Untitled Job',
-      description: templateData.description || '',
-      location: templateData.location || '',
-      companyId: company.id,
-      employerId: req.user.id,
-      jobType: templateData.type || 'full-time',
-      experienceLevel: templateData.experience || 'entry',
-      department: templateData.department || null,
-      skills: Array.isArray(templateData.skills) ? templateData.skills : [],
-      benefits: Array.isArray(templateData.benefits) ? templateData.benefits : [],
-      requirements: templateData.requirements || null,
-      responsibilities: templateData.responsibilities || null,
-      status: 'draft', // Start as draft so user can review before publishing
-      templateId: template.id, // Track which template was used
-      tags: template.tags || [],
-      metadata: {
-        createdFromTemplate: true,
-        templateName: template.name,
-        templateVersion: template.version
-      }
+      title: template.title || 'Untitled Job',
+      description: template.description || '',
+      company_id: company.id,
+      created_by: req.user.id,
+      is_active: false // Start as draft
     };
 
     const job = await Job.create(jobData);
-
-    // Update template usage count
-    await template.update({
-      usageCount: template.usageCount + 1,
-      lastUsedAt: new Date()
-    });
 
     res.status(201).json({
       success: true,

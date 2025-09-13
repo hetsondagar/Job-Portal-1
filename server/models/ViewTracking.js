@@ -72,7 +72,10 @@ const ViewTracking = sequelize.define('ViewTracking', {
     comment: 'Additional view metadata'
   }
 }, {
-  tableName: 'view_tracking',
+  tableName: 'view_trackings',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   timestamps: true,
   underscored: true,
   indexes: [

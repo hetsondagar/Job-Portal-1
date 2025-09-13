@@ -107,6 +107,9 @@ const Analytics = sequelize.define('Analytics', {
   }
 }, {
   tableName: 'analytics',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       fields: ['user_id']

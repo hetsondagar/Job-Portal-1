@@ -11,34 +11,59 @@ const Job = sequelize.define('Job', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  slug: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false
   },
-  companyId: {
+  company_id: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'companies',
       key: 'id'
     }
   },
-  employerId: {
+  category_id: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true,
     references: {
-      model: 'users',
+      model: 'job_categories',
       key: 'id'
     }
   },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: false
-  },
-  shortDescription: {
-    type: DataTypes.STRING(500),
+  location: {
+    type: DataTypes.STRING,
     allowNull: true
+  },
+  salary_min: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
+  salary_max: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
+  salary_currency: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  employment_type: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  experience_level: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  skills_required: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  benefits: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
   },
   requirements: {
     type: DataTypes.TEXT,
@@ -48,338 +73,60 @@ const Job = sequelize.define('Job', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  location: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  city: {
-    type: DataTypes.STRING,
+  application_deadline: {
+    type: DataTypes.DATE,
     allowNull: true
   },
-  state: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  country: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: 'India'
-  },
-  latitude: {
-    type: DataTypes.DECIMAL(10, 8),
-    allowNull: true
-  },
-  longitude: {
-    type: DataTypes.DECIMAL(11, 8),
-    allowNull: true
-  },
-  jobType: {
-    type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
-    allowNull: false,
-    defaultValue: 'full-time'
-  },
-  experienceLevel: {
-    type: DataTypes.ENUM('entry', 'junior', 'mid', 'senior', 'lead', 'executive'),
-    allowNull: true
-  },
-  experienceMin: {
-    type: DataTypes.INTEGER, // in years
-    allowNull: true
-  },
-  experienceMax: {
-    type: DataTypes.INTEGER, // in years
-    allowNull: true
-  },
-  salary: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'Salary range as entered by user (e.g., "₹8-15 LPA")'
-  },
-  salaryMin: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-  salaryMax: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-  salaryCurrency: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: 'INR'
-  },
-  salaryPeriod: {
-    type: DataTypes.ENUM('hourly', 'daily', 'weekly', 'monthly', 'yearly'),
-    allowNull: true,
-    defaultValue: 'yearly'
-  },
-  isSalaryVisible: {
+  is_active: {
     type: DataTypes.BOOLEAN,
+    allowNull: true,
     defaultValue: true
   },
-  department: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  category: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  skills: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  benefits: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  remoteWork: {
-    type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
+  is_featured: {
+    type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: 'on-site'
-  },
-  travelRequired: {
-    type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  shiftTiming: {
-    type: DataTypes.ENUM('day', 'night', 'rotational', 'flexible'),
+  is_remote: {
+    type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: 'day'
+    defaultValue: false
   },
-  noticePeriod: {
-    type: DataTypes.INTEGER, // in days
-    allowNull: true
+  is_internship: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
   },
-  education: {
+  visibility_type: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  certifications: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  languages: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  status: {
-    type: DataTypes.ENUM('draft', 'active', 'paused', 'closed', 'expired'),
-    allowNull: false,
-    defaultValue: 'draft'
-  },
-  isUrgent: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  isFeatured: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  isPremium: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  views: {
+  view_count: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     defaultValue: 0
   },
-  applications: {
+  application_count: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     defaultValue: 0
   },
-  validTill: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  publishedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  closedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  tags: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  },
-  // Advanced Job Posting Features
-  isPrivate: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  visibilityType: {
-    type: DataTypes.ENUM('public', 'private', 'referral-only', 'invite-only'),
-    defaultValue: 'public'
-  },
-  allowedViewers: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  referralCode: {
-    type: DataTypes.STRING(50),
-    allowNull: true
-  },
-  scheduledPublishAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  scheduledExpiryAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  autoRenew: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  renewalPeriod: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  maxRenewals: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  currentRenewalCount: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  templateId: {
+  created_by: {
     type: DataTypes.UUID,
-    allowNull: true
-  },
-  bulkImportId: {
-    type: DataTypes.UUID,
-    allowNull: true
-  },
-  // Enhanced Analytics
-  searchImpressions: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  searchClicks: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  applicationRate: {
-    type: DataTypes.DECIMAL(5, 4),
-    defaultValue: 0
-  },
-  qualityScore: {
-    type: DataTypes.DECIMAL(3, 2),
-    defaultValue: 0
-  },
-  seoScore: {
-    type: DataTypes.DECIMAL(3, 2),
-    defaultValue: 0
-  },
-  bookmarkCount: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  // Advanced Features
-  isATSEnabled: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  atsKeywords: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  targetAudience: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  },
-  promotionSettings: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  },
-  // Internship-specific fields
-  duration: {
-    type: DataTypes.STRING,
     allowNull: true,
-    comment: 'Internship duration (e.g., "3 months", "6 months")'
-  },
-  startDate: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'Internship start date'
-  },
-  workMode: {
-    type: DataTypes.ENUM('remote', 'on-site', 'hybrid'),
-    allowNull: true,
-    comment: 'Work mode for internship'
-  },
-  learningObjectives: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    comment: 'What the intern will learn from this experience'
-  },
-  mentorship: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    comment: 'Mentorship and guidance details'
-  }
-}, {
-  tableName: 'jobs',
-  hooks: {
-    beforeCreate: async (job) => {
-      if (!job.slug) {
-        job.slug = job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      }
-    },
-    beforeUpdate: async (job) => {
-      if (job.changed('title') && !job.changed('slug')) {
-        job.slug = job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      }
+    references: {
+      model: 'users',
+      key: 'id'
     }
   }
+}, {
+  sequelize,
+  modelName: 'Job',
+  tableName: 'jobs',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  paranoid: false
 });
 
-// Instance methods
-Job.prototype.getExperienceRange = function() {
-  if (this.experienceMin && this.experienceMax) {
-    return `${this.experienceMin}-${this.experienceMax} years`;
-  } else if (this.experienceMin) {
-    return `${this.experienceMin}+ years`;
-  } else if (this.experienceMax) {
-    return `0-${this.experienceMax} years`;
-  }
-  return 'Not specified';
-};
-
-Job.prototype.getSalaryRange = function() {
-  if (!this.isSalaryVisible) {
-    return 'Not disclosed';
-  }
-  // Use the salary field if available (user-entered format)
-  if (this.salary && this.salary.trim()) {
-    return this.salary.trim();
-  }
-  // Fallback to calculated range from min/max
-  if (this.salaryMin && this.salaryMax) {
-    return `${this.salaryCurrency} ${this.salaryMin.toLocaleString()}-${this.salaryMax.toLocaleString()} ${this.salaryPeriod}`;
-  } else if (this.salaryMin) {
-    return `${this.salaryCurrency} ${this.salaryMin.toLocaleString()}+ ${this.salaryPeriod}`;
-  } else if (this.salaryMax) {
-    return `${this.salaryCurrency} Up to ${this.salaryMax.toLocaleString()} ${this.salaryPeriod}`;
-  }
-  return 'Not specified';
-};
-
-Job.prototype.isExpired = function() {
-  if (!this.validTill) return false;
-  return new Date() > new Date(this.validTill);
-};
-
-Job.prototype.getLocationString = function() {
-  const parts = [this.city, this.state, this.country];
-  return parts.filter(part => part).join(', ');
-};
-
-module.exports = Job; 
+module.exports = Job;

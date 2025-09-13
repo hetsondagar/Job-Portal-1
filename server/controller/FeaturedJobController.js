@@ -31,7 +31,7 @@ exports.createFeaturedJob = async (req, res, next) => {
     const job = await Job.findOne({
       where: { 
         id: jobId, 
-        employerId: req.user.id,
+        created_by: req.user.id,
         status: 'active'
       },
       include: [{
@@ -142,7 +142,7 @@ exports.getEmployerFeaturedJobs = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const whereClause = { 
-      '$job.employerId$': req.user.id 
+      '$job.created_by$': req.user.id 
     };
 
     if (status) {
@@ -154,14 +154,14 @@ exports.getEmployerFeaturedJobs = async (req, res, next) => {
       include: [{
         model: Job,
         as: 'job',
-        attributes: ['id', 'title', 'location', 'status', 'createdAt'],
+        attributes: ['id', 'title', 'location', 'status', 'created_at'],
         include: [{
           model: Company,
           as: 'company',
           attributes: ['id', 'name', 'logo']
         }]
       }],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -200,12 +200,12 @@ exports.getFeaturedJobDetails = async (req, res, next) => {
     const featuredJob = await FeaturedJob.findOne({
       where: { 
         id,
-        '$Job.employerId$': req.user.id 
+        '$Job.created_by$': req.user.id 
       },
       include: [{
         model: Job,
         as: 'job',
-        attributes: ['id', 'title', 'description', 'location', 'status', 'createdAt'],
+        attributes: ['id', 'title', 'description', 'location', 'status', 'created_at'],
         include: [{
           model: Company,
           as: 'company',
@@ -248,7 +248,7 @@ exports.updateFeaturedJob = async (req, res, next) => {
     const featuredJob = await FeaturedJob.findOne({
       where: { 
         id,
-        '$Job.employerId$': req.user.id 
+        '$Job.created_by$': req.user.id 
       },
       include: [{
         model: Job,
@@ -306,7 +306,7 @@ exports.deleteFeaturedJob = async (req, res, next) => {
     const featuredJob = await FeaturedJob.findOne({
       where: { 
         id,
-        '$Job.employerId$': req.user.id 
+        '$Job.created_by$': req.user.id 
       },
       include: [{
         model: Job,
@@ -441,16 +441,16 @@ exports.getEmployerJobs = async (req, res, next) => {
 
     const jobs = await Job.findAll({
       where: { 
-        employerId: req.user.id,
+        created_by: req.user.id,
         status: status
       },
-      attributes: ['id', 'title', 'location', 'status', 'createdAt', 'views', 'applicationCount'],
+      attributes: ['id', 'title', 'location', 'status', 'created_at', 'views', 'applicationCount'],
       include: [{
         model: Company,
         as: 'company',
         attributes: ['id', 'name', 'logo']
       }],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit)
     });
 
@@ -481,7 +481,7 @@ exports.processPayment = async (req, res, next) => {
     const featuredJob = await FeaturedJob.findOne({
       where: { 
         id,
-        '$Job.employerId$': req.user.id 
+        '$Job.created_by$': req.user.id 
       },
       include: [{
         model: Job,

@@ -55,8 +55,8 @@ const authenticateToken = async (req, res, next) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const alerts = await JobAlert.findAll({
-      where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
+      where: { user_id: req.user.id },
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -106,7 +106,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     const alert = await JobAlert.create({
-      userId: req.user.id,
+      user_id: req.user.id,
       name,
       keywords: keywords || [],
       locations: locations || [],
@@ -148,7 +148,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     // Find the alert and ensure it belongs to the user
     const alert = await JobAlert.findOne({
-      where: { id, userId: req.user.id }
+      where: { id, user_id: req.user.id }
     });
 
     if (!alert) {
@@ -183,7 +183,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // Find the alert and ensure it belongs to the user
     const alert = await JobAlert.findOne({
-      where: { id, userId: req.user.id }
+      where: { id, user_id: req.user.id }
     });
 
     if (!alert) {
@@ -216,7 +216,7 @@ router.patch('/:id/toggle', authenticateToken, async (req, res) => {
 
     // Find the alert and ensure it belongs to the user
     const alert = await JobAlert.findOne({
-      where: { id, userId: req.user.id }
+      where: { id, user_id: req.user.id }
     });
 
     if (!alert) {
@@ -248,15 +248,15 @@ router.patch('/:id/toggle', authenticateToken, async (req, res) => {
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const totalAlerts = await JobAlert.count({
-      where: { userId: req.user.id }
+      where: { user_id: req.user.id }
     });
 
     const activeAlerts = await JobAlert.count({
-      where: { userId: req.user.id, isActive: true }
+      where: { user_id: req.user.id, isActive: true }
     });
 
     const alertsByFrequency = await JobAlert.findAll({
-      where: { userId: req.user.id },
+      where: { user_id: req.user.id },
       attributes: ['frequency', [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'count']],
       group: ['frequency']
     });
@@ -287,7 +287,7 @@ router.post('/:id/test', authenticateToken, async (req, res) => {
 
     // Find the alert and ensure it belongs to the user
     const alert = await JobAlert.findOne({
-      where: { id, userId: req.user.id }
+      where: { id, user_id: req.user.id }
     });
 
     if (!alert) {
