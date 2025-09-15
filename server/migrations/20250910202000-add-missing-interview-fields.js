@@ -3,100 +3,133 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
+    // Check if columns already exist
+    const tableDescription = await queryInterface.describeTable('interviews');
+    
     // Add missing columns to interviews table
-    await queryInterface.addColumn('interviews', 'employer_id', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    });
+    if (!tableDescription.employer_id) {
+      await queryInterface.addColumn('interviews', 'employer_id', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'job_id', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'jobs',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    });
+    if (!tableDescription.job_id) {
+      await queryInterface.addColumn('interviews', 'job_id', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'jobs',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'title', {
-      type: Sequelize.STRING,
-      allowNull: true
-    });
+    if (!tableDescription.title) {
+      await queryInterface.addColumn('interviews', 'title', {
+        type: Sequelize.STRING,
+        allowNull: true
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'description', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
+    if (!tableDescription.description) {
+      await queryInterface.addColumn('interviews', 'description', {
+        type: Sequelize.TEXT,
+        allowNull: true
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'timezone', {
-      type: Sequelize.STRING,
-      allowNull: false,
-      defaultValue: 'UTC'
-    });
+    if (!tableDescription.timezone) {
+      await queryInterface.addColumn('interviews', 'timezone', {
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: 'UTC'
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'interviewers', {
-      type: Sequelize.JSONB,
-      defaultValue: []
-    });
+    if (!tableDescription.interviewers) {
+      await queryInterface.addColumn('interviews', 'interviewers', {
+        type: Sequelize.JSONB,
+        defaultValue: []
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'agenda', {
-      type: Sequelize.JSONB,
-      defaultValue: []
-    });
+    if (!tableDescription.agenda) {
+      await queryInterface.addColumn('interviews', 'agenda', {
+        type: Sequelize.JSONB,
+        defaultValue: []
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'requirements', {
-      type: Sequelize.JSONB,
-      defaultValue: {}
-    });
+    if (!tableDescription.requirements) {
+      await queryInterface.addColumn('interviews', 'requirements', {
+        type: Sequelize.JSONB,
+        defaultValue: {}
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'next_round_details', {
-      type: Sequelize.JSONB,
-      defaultValue: {}
-    });
+    if (!tableDescription.next_round_details) {
+      await queryInterface.addColumn('interviews', 'next_round_details', {
+        type: Sequelize.JSONB,
+        defaultValue: {}
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'reminder_sent', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false
-    });
+    if (!tableDescription.reminder_sent) {
+      await queryInterface.addColumn('interviews', 'reminder_sent', {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'reminder_sent_at', {
-      type: Sequelize.DATE,
-      allowNull: true
-    });
+    if (!tableDescription.reminder_sent_at) {
+      await queryInterface.addColumn('interviews', 'reminder_sent_at', {
+        type: Sequelize.DATE,
+        allowNull: true
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'cancelled_by', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    });
+    if (!tableDescription.cancelled_by) {
+      await queryInterface.addColumn('interviews', 'cancelled_by', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'cancelled_at', {
-      type: Sequelize.DATE,
-      allowNull: true
-    });
+    if (!tableDescription.cancelled_at) {
+      await queryInterface.addColumn('interviews', 'cancelled_at', {
+        type: Sequelize.DATE,
+        allowNull: true
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'cancellation_reason', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
+    if (!tableDescription.cancellation_reason) {
+      await queryInterface.addColumn('interviews', 'cancellation_reason', {
+        type: Sequelize.TEXT,
+        allowNull: true
+      });
+    }
 
-    await queryInterface.addColumn('interviews', 'metadata', {
-      type: Sequelize.JSONB,
-      defaultValue: {}
-    });
+    if (!tableDescription.metadata) {
+      await queryInterface.addColumn('interviews', 'metadata', {
+        type: Sequelize.JSONB,
+        defaultValue: {}
+      });
+    }
 
     // Add indexes for new columns
     await queryInterface.addIndex('interviews', ['employer_id']);
