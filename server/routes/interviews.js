@@ -104,15 +104,23 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Normalize enums to DB values
+    const normalizeInterviewType = (val) => {
+      if (!val) return undefined;
+      const map = { in_person: 'in-person', 'in person': 'in-person', In_person: 'in-person' };
+      return map[val] || val;
+    };
+    const normalizedInterviewType = normalizeInterviewType(interviewType);
+
     // Create the interview
     const interview = await Interview.create({
       jobApplicationId,
       employerId: req.user.id,
       candidateId: candidateId || jobApplication.userId, // Use provided candidateId or from application
       jobId: jobId || jobApplication.jobId,
-      title: title || `${interviewType.charAt(0).toUpperCase() + interviewType.slice(1)} Interview`,
+      title: title || `${(normalizedInterviewType || 'phone').charAt(0).toUpperCase() + (normalizedInterviewType || 'phone').slice(1)} Interview`,
       description,
-      interviewType,
+      interviewType: normalizedInterviewType,
       scheduledAt: new Date(scheduledAt),
       duration: duration || 60,
       timezone: timezone || 'UTC',
@@ -309,7 +317,11 @@ router.get('/candidate', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+    if (updateData.interviewType) {
+      const map = { in_person: 'in-person', 'in person': 'in-person', In_person: 'in-person' };
+      updateData.interviewType = map[updateData.interviewType] || updateData.interviewType;
+    }
 
     const { Interview, JobApplication } = require('../config/index');
 

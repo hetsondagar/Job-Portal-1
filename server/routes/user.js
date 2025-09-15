@@ -1546,11 +1546,11 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
               as: 'educations',
               attributes: [
                 'id', 'institution', 'degree', 'fieldOfStudy', 'startDate',
-                'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa', 'scale',
-                'description', 'activities', 'achievements', 'location', 'country',
-                'educationType', 'level', 'isVerified', 'order'
+                'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa',
+                'description', 'activities', 'achievements', 'location',
+                'educationType', 'isVerified', 'verificationDate'
               ],
-              order: [['order', 'ASC'], ['startDate', 'DESC']]
+              order: [['startDate', 'DESC']]
             },
             {
               model: Resume,
@@ -2209,12 +2209,13 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     const shortlistedApplications = applications.filter(app => app.status === 'shortlisted').length;
     const interviewScheduledApplications = applications.filter(app => app.status === 'interview_scheduled').length;
     
-    // Get profile views from view tracking
+    // Get profile/job views from view tracking
     const { ViewTracking } = require('../config/index');
+    const { Op } = require('sequelize');
     const profileViews = await ViewTracking.count({
       where: { 
         viewedUserId: req.user.id,
-        viewType: ['job_view', 'profile_view']
+        viewType: { [Op.in]: ['job_view', 'profile_view'] }
       }
     });
     
