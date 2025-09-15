@@ -13,7 +13,8 @@ const Education = sequelize.define('Education', {
     references: {
       model: 'users',
       key: 'id'
-    }
+    },
+    field: 'user_id'
   },
   institution: {
     type: DataTypes.STRING,
@@ -25,19 +26,23 @@ const Education = sequelize.define('Education', {
   },
   fieldOfStudy: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true,
+    field: 'field_of_study'
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: false,
+    field: 'start_date'
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date'
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_current'
   },
   grade: {
     type: DataTypes.STRING,
@@ -54,15 +59,7 @@ const Education = sequelize.define('Education', {
   cgpa: {
     type: DataTypes.DECIMAL(3, 2),
     allowNull: true,
-    validate: {
-      min: 0,
-      max: 10
-    }
-  },
-  scale: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: '10'
+    field: 'gpa'
   },
   description: {
     type: DataTypes.TEXT,
@@ -70,7 +67,8 @@ const Education = sequelize.define('Education', {
   },
   activities: {
     type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    field: 'relevant_courses'
   },
   achievements: {
     type: DataTypes.JSONB,
@@ -80,31 +78,21 @@ const Education = sequelize.define('Education', {
     type: DataTypes.STRING,
     allowNull: true
   },
-  country: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
   educationType: {
-    type: DataTypes.ENUM('full-time', 'part-time', 'distance', 'online'),
+    type: DataTypes.ENUM('bachelor', 'master', 'phd', 'diploma', 'certification', 'high-school', 'other'),
     allowNull: true,
-    defaultValue: 'full-time'
-  },
-  level: {
-    type: DataTypes.ENUM('high-school', 'diploma', 'bachelor', 'master', 'phd', 'certification', 'other'),
-    allowNull: true
+    field: 'education_type'
   },
   isVerified: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_verified'
   },
-  order: {
-    type: DataTypes.INTEGER,
-    allowNull: true
+  verificationDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'verification_date'
   },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  }
 }, {
   tableName: 'educations',
   hooks: {
@@ -167,7 +155,8 @@ Education.prototype.getGradeDisplay = function() {
   if (this.percentage) {
     return `${this.percentage}%`;
   } else if (this.cgpa) {
-    return `${this.cgpa}/${this.scale} CGPA`;
+    const scaleMax = 10; // DB does not store scale; assume 10
+    return `${this.cgpa}/${scaleMax} CGPA`;
   } else if (this.grade) {
     return this.grade;
   }

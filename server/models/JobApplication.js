@@ -14,7 +14,8 @@ const JobApplication = sequelize.define('JobApplication', {
     references: {
       model: 'jobs',
       key: 'id'
-    }
+    },
+    field: 'job_id'
   },
   userId: {
     type: DataTypes.UUID,
@@ -22,7 +23,8 @@ const JobApplication = sequelize.define('JobApplication', {
     references: {
       model: 'users',
       key: 'id'
-    }
+    },
+    field: 'user_id'
   },
   employerId: {
     type: DataTypes.UUID,
@@ -30,7 +32,8 @@ const JobApplication = sequelize.define('JobApplication', {
     references: {
       model: 'users',
       key: 'id'
-    }
+    },
+    field: 'employer_id'
   },
   status: {
     type: DataTypes.ENUM('applied', 'reviewing', 'shortlisted', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'),
@@ -82,7 +85,8 @@ const JobApplication = sequelize.define('JobApplication', {
     references: {
       model: 'resumes',
       key: 'id'
-    }
+    },
+    field: 'resume_id'
   },
   coverLetterId: {
     type: DataTypes.UUID,

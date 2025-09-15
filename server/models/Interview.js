@@ -52,13 +52,13 @@ const Interview = sequelize.define('Interview', {
     allowNull: true
   },
   interviewType: {
-    type: DataTypes.ENUM('phone', 'video', 'in_person', 'technical', 'hr', 'final'),
+    type: DataTypes.ENUM('phone', 'video', 'in-person', 'technical', 'hr', 'final'),
     allowNull: false,
     defaultValue: 'phone',
     field: 'interview_type'
   },
   status: {
-    type: DataTypes.ENUM('scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rescheduled', 'no_show'),
+    type: DataTypes.ENUM('scheduled', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled'),
     allowNull: false,
     defaultValue: 'scheduled'
   },
@@ -120,7 +120,7 @@ const Interview = sequelize.define('Interview', {
     }
   },
   decision: {
-    type: DataTypes.ENUM('selected', 'rejected', 'on_hold', 'next_round'),
+    type: DataTypes.ENUM('selected', 'rejected', 'on-hold', 'next-round'),
     allowNull: true
   },
   nextRoundDetails: {
@@ -175,13 +175,13 @@ const Interview = sequelize.define('Interview', {
   tableName: 'interviews',
   indexes: [
     {
-      fields: ['jobApplicationId']
+      fields: ['job_application_id']
     },
     {
       fields: ['employer_id']
     },
     {
-      fields: ['candidateId']
+      fields: ['candidate_id']
     },
     {
       fields: ['job_id']
@@ -190,10 +190,10 @@ const Interview = sequelize.define('Interview', {
       fields: ['status']
     },
     {
-      fields: ['scheduledAt']
+      fields: ['scheduled_at']
     },
     {
-      fields: ['interviewType']
+      fields: ['interview_type']
     }
   ],
   hooks: {
@@ -218,11 +218,10 @@ Interview.prototype.getStatusColor = function() {
   const colors = {
     scheduled: 'blue',
     confirmed: 'green',
-    in_progress: 'yellow',
+    'in-progress': 'yellow',
     completed: 'green',
     cancelled: 'red',
-    rescheduled: 'orange',
-    no_show: 'red'
+    rescheduled: 'orange'
   };
   return colors[this.status] || 'gray';
 };
@@ -231,11 +230,10 @@ Interview.prototype.getStatusLabel = function() {
   const labels = {
     scheduled: 'Scheduled',
     confirmed: 'Confirmed',
-    in_progress: 'In Progress',
+    'in-progress': 'In Progress',
     completed: 'Completed',
     cancelled: 'Cancelled',
-    rescheduled: 'Rescheduled',
-    no_show: 'No Show'
+    rescheduled: 'Rescheduled'
   };
   return labels[this.status] || 'Unknown';
 };
