@@ -13,43 +13,35 @@ const WorkExperience = sequelize.define('WorkExperience', {
     references: {
       model: 'users',
       key: 'id'
-    },
-    field: 'user_id'
+    }
   },
   companyName: {
     type: DataTypes.STRING,
-    allowNull: true,
-    field: 'company'
+    allowNull: true
   },
   jobTitle: {
     type: DataTypes.STRING,
-    allowNull: false,
-    field: 'title'
+    allowNull: false
   },
   department: {
     type: DataTypes.STRING,
-    allowNull: true,
-    field: 'department' // Keep as is if it exists
+    allowNull: true
   },
   location: {
     type: DataTypes.STRING,
-    allowNull: true,
-    field: 'location' // Keep as is
+    allowNull: true
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false,
-    field: 'start_date'
+    allowNull: false
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true,
-    field: 'end_date'
+    allowNull: true
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    field: 'is_current'
+    defaultValue: false
   },
   description: {
     type: DataTypes.TEXT,
@@ -61,13 +53,11 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   achievements: {
     type: DataTypes.JSONB,
-    defaultValue: [],
-    field: 'achievements' // Map to actual column
+    defaultValue: []
   },
   skills: {
     type: DataTypes.JSONB,
-    defaultValue: [],
-    field: 'skills' // Map to actual column
+    defaultValue: []
   },
   technologies: {
     type: DataTypes.JSONB,
@@ -75,20 +65,17 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   salary: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true,
-    field: 'salary' // Map to actual column
+    allowNull: true
   },
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR',
-    field: 'salary_currency'
+    defaultValue: 'INR'
   },
   employmentType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: true,
-    defaultValue: 'full-time',
-    field: 'employment_type'
+    defaultValue: 'full-time'
   },
   industry: {
     type: DataTypes.STRING,

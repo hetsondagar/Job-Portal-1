@@ -3,8 +3,8 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    // Make companyId column optional (allow NULL)
-    await queryInterface.changeColumn('jobs', 'companyId', {
+    // Make company_id column optional (allow NULL)
+    await queryInterface.changeColumn('jobs', 'company_id', {
       type: Sequelize.UUID,
       allowNull: true,
       references: {
@@ -15,8 +15,8 @@ module.exports = {
   },
 
   async down (queryInterface, Sequelize) {
-    // Revert companyId column to required (not allow NULL)
-    await queryInterface.changeColumn('jobs', 'companyId', {
+    // Revert company_id column to required (not allow NULL)
+    await queryInterface.changeColumn('jobs', 'company_id', {
       type: Sequelize.UUID,
       allowNull: false,
       references: {
