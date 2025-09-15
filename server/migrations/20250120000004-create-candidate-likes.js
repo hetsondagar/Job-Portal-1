@@ -41,12 +41,9 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('candidate_likes', ['employer_id', 'candidate_id'], {
-      unique: true,
-      name: 'unique_employer_candidate_like'
-    });
-    await queryInterface.addIndex('candidate_likes', ['candidate_id']);
+    // Add indexes idempotently
+    await queryInterface.sequelize.query('CREATE UNIQUE INDEX IF NOT EXISTS "unique_employer_candidate_like" ON "candidate_likes" ("employer_id", "candidate_id")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "candidate_likes_candidate_id" ON "candidate_likes" ("candidate_id")');
   },
 
   async down(queryInterface, Sequelize) {

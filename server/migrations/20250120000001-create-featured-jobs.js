@@ -12,7 +12,6 @@ module.exports = {
       job_id: {
         type: Sequelize.UUID,
         allowNull: false,
-        comment: 'Reference to the job being featured',
         references: {
           model: 'jobs',
           key: 'id'
@@ -23,88 +22,71 @@ module.exports = {
       promotion_type: {
         type: Sequelize.ENUM('featured', 'premium', 'urgent', 'sponsored', 'top-listing'),
         allowNull: false,
-        defaultValue: 'featured',
-        comment: 'Type of promotion'
+        defaultValue: 'featured'
       },
       start_date: {
         type: Sequelize.DATE,
-        allowNull: false,
-        comment: 'When the promotion starts'
+        allowNull: false
       },
       end_date: {
         type: Sequelize.DATE,
-        allowNull: false,
-        comment: 'When the promotion ends'
+        allowNull: false
       },
       is_active: {
         type: Sequelize.BOOLEAN,
-        defaultValue: true,
-        comment: 'Whether the promotion is currently active'
+        defaultValue: true
       },
       priority: {
         type: Sequelize.INTEGER,
-        defaultValue: 1,
-        comment: 'Priority level for sorting (higher = more prominent)'
+        defaultValue: 1
       },
       budget: {
         type: Sequelize.DECIMAL(10, 2),
-        allowNull: true,
-        comment: 'Budget allocated for this promotion'
+        allowNull: true
       },
       spent_amount: {
         type: Sequelize.DECIMAL(10, 2),
-        defaultValue: 0,
-        comment: 'Amount spent so far on this promotion'
+        defaultValue: 0
       },
       impressions: {
         type: Sequelize.INTEGER,
-        defaultValue: 0,
-        comment: 'Number of times the job was shown'
+        defaultValue: 0
       },
       clicks: {
         type: Sequelize.INTEGER,
-        defaultValue: 0,
-        comment: 'Number of clicks on the job listing'
+        defaultValue: 0
       },
       applications: {
         type: Sequelize.INTEGER,
-        defaultValue: 0,
-        comment: 'Number of applications received during promotion'
+        defaultValue: 0
       },
       ctr: {
         type: Sequelize.DECIMAL(5, 4),
-        defaultValue: 0,
-        comment: 'Click-through rate'
+        defaultValue: 0
       },
       conversion_rate: {
         type: Sequelize.DECIMAL(5, 4),
-        defaultValue: 0,
-        comment: 'Application conversion rate'
+        defaultValue: 0
       },
       target_audience: {
         type: Sequelize.JSONB,
-        defaultValue: Sequelize.literal(`'{}'::jsonb`),
-        comment: 'Target audience criteria (location, skills, experience, etc.)'
+        defaultValue: Sequelize.literal(`'{}'::jsonb`)
       },
       placement: {
         type: Sequelize.JSONB,
-        defaultValue: Sequelize.literal(`'["search-results", "homepage", "category-pages"]'::jsonb`),
-        comment: 'Where the job should be featured'
+        defaultValue: Sequelize.literal(`'["search-results", "homepage", "category-pages"]'::jsonb`)
       },
       custom_styling: {
         type: Sequelize.JSONB,
-        defaultValue: Sequelize.literal(`'{}'::jsonb`),
-        comment: 'Custom styling for the featured job'
+        defaultValue: Sequelize.literal(`'{}'::jsonb`)
       },
       notes: {
         type: Sequelize.TEXT,
-        allowNull: true,
-        comment: 'Internal notes about the promotion'
+        allowNull: true
       },
       created_by: {
         type: Sequelize.UUID,
         allowNull: false,
-        comment: 'User who created this promotion',
         references: {
           model: 'users',
           key: 'id'
@@ -115,7 +97,6 @@ module.exports = {
       approved_by: {
         type: Sequelize.UUID,
         allowNull: true,
-        comment: 'Admin who approved this promotion',
         references: {
           model: 'users',
           key: 'id'
@@ -125,8 +106,7 @@ module.exports = {
       },
       approved_at: {
         type: Sequelize.DATE,
-        allowNull: true,
-        comment: 'When the promotion was approved'
+        allowNull: true
       },
       created_at: {
         type: Sequelize.DATE,
@@ -140,13 +120,24 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('featured_jobs', ['job_id']);
-    await queryInterface.addIndex('featured_jobs', ['promotion_type']);
-    await queryInterface.addIndex('featured_jobs', ['is_active']);
-    await queryInterface.addIndex('featured_jobs', ['start_date', 'end_date']);
-    await queryInterface.addIndex('featured_jobs', ['priority']);
-    await queryInterface.addIndex('featured_jobs', ['created_by']);
+    // Ensure critical columns exist (for idempotent reruns)
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "job_id" UUID');
+    await queryInterface.sequelize.query('DO $$ BEGIN CREATE TYPE "public"."enum_featured_jobs_promotion_type" AS ENUM (\'featured\', \'premium\', \'urgent\', \'sponsored\', \'top-listing\'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "promotion_type" "public"."enum_featured_jobs_promotion_type" DEFAULT \'featured\'');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ALTER COLUMN "promotion_type" SET NOT NULL');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "is_active" BOOLEAN DEFAULT true');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "start_date" TIMESTAMPTZ');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "end_date" TIMESTAMPTZ');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "priority" INTEGER DEFAULT 1');
+    await queryInterface.sequelize.query('ALTER TABLE "featured_jobs" ADD COLUMN IF NOT EXISTS "created_by" UUID');
+
+    // Add indexes idempotently with explicit names
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "featured_jobs_job_id" ON "featured_jobs" ("job_id")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "featured_jobs_promotion_type" ON "featured_jobs" ("promotion_type")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "featured_jobs_is_active" ON "featured_jobs" ("is_active")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "featured_jobs_start_end_date" ON "featured_jobs" ("start_date", "end_date")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "featured_jobs_priority" ON "featured_jobs" ("priority")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "featured_jobs_created_by" ON "featured_jobs" ("created_by")');
   },
 
   async down(queryInterface, Sequelize) {

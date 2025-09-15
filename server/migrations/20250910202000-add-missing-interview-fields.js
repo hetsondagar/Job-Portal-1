@@ -131,11 +131,11 @@ module.exports = {
       });
     }
 
-    // Add indexes for new columns
-    await queryInterface.addIndex('interviews', ['employer_id']);
-    await queryInterface.addIndex('interviews', ['job_id']);
-    await queryInterface.addIndex('interviews', ['reminder_sent']);
-    await queryInterface.addIndex('interviews', ['cancelled_by']);
+    // Add indexes for new columns idempotently
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "interviews_employer_id" ON "interviews" ("employer_id")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "interviews_job_id" ON "interviews" ("job_id")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "interviews_reminder_sent" ON "interviews" ("reminder_sent")');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "interviews_cancelled_by" ON "interviews" ("cancelled_by")');
   },
 
   async down (queryInterface, Sequelize) {
