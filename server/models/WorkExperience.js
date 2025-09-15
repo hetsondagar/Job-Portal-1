@@ -13,16 +13,18 @@ const WorkExperience = sequelize.define('WorkExperience', {
     references: {
       model: 'users',
       key: 'id'
-    }
+    },
+    field: 'user_id'
   },
   companyName: {
     type: DataTypes.STRING,
-    allowNull: true // This field doesn't exist in DB, will be null
-    // No field mapping since column doesn't exist
+    allowNull: true,
+    field: 'company'
   },
   jobTitle: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'title'
   },
   department: {
     type: DataTypes.STRING,
@@ -36,15 +38,18 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: false,
+    field: 'start_date'
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date'
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_current'
   },
   description: {
     type: DataTypes.TEXT,
@@ -76,12 +81,14 @@ const WorkExperience = sequelize.define('WorkExperience', {
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'salary_currency'
   },
   employmentType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: true,
-    defaultValue: 'full-time'
+    defaultValue: 'full-time',
+    field: 'employment_type'
   },
   industry: {
     type: DataTypes.STRING,

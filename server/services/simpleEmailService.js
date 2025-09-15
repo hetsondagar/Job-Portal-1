@@ -9,24 +9,25 @@ class SimpleEmailService {
 
   async initializeTransporter() {
     try {
-      // Create a test account
-      const testAccount = await nodemailer.createTestAccount();
-      
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass
-        }
-      });
-      
-      console.log('✅ Email service initialized with test account:', testAccount.user);
-      this.testAccount = testAccount;
+      // Prefer explicit SMTP settings if provided
+      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        this.transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        });
+        console.log('✅ Email service initialized with configured SMTP');
+        return;
+      }
+
+      // Fallback to local JSON transport (no network). Emails are logged.
+      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      console.log('✅ Email service initialized with jsonTransport (no network)');
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error.message);
-      throw error;
+      // Last-resort fallback to prevent crashes
+      this.transporter = nodemailer.createTransport({ jsonTransport: true });
     }
   }
 
@@ -52,21 +53,8 @@ class SimpleEmailService {
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Password reset email sent successfully!');
-      console.log('   To:', toEmail);
-      console.log('   Message ID:', info.messageId);
-      
-      // Log preview URL for Ethereal emails
-      if (this.testAccount) {
-        console.log('📧 Email preview URL:', nodemailer.getTestMessageUrl(info));
-      }
-      
-      return { 
-        success: true, 
-        method: 'nodemailer', 
-        messageId: info.messageId,
-        previewUrl: nodemailer.getTestMessageUrl(info)
-      };
+      console.log('✅ Password reset email sent (or logged)');
+      return { success: true, method: 'nodemailer', messageId: info.messageId };
     } catch (error) {
       console.error('❌ Failed to send email:', error.message);
       throw new Error('Failed to send password reset email');

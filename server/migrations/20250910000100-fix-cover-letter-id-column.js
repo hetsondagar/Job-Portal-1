@@ -12,19 +12,14 @@ module.exports = {
 			await queryInterface.renameColumn('job_applications', 'coverLetterId', 'cover_letter_id');
 		}
 
-		// If neither exists, add the correct snake_case column
+		// If neither exists, add the correct snake_case column (without FK constraint for now)
 		const tableAfter = await queryInterface.describeTable('job_applications');
 		const hasSnakeAfter = Object.prototype.hasOwnProperty.call(tableAfter, 'cover_letter_id');
 		if (!hasSnakeAfter) {
 			await queryInterface.addColumn('job_applications', 'cover_letter_id', {
 				type: Sequelize.UUID,
-				allowNull: true,
-				references: {
-					model: 'cover_letters',
-					key: 'id'
-				},
-				onUpdate: 'CASCADE',
-				onDelete: 'SET NULL'
+				allowNull: true
+				// Note: Foreign key constraint will be added later when cover_letters table exists
 			});
 		}
 

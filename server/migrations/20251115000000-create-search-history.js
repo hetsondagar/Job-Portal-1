@@ -80,12 +80,13 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('search_history', ['userId']);
-    await queryInterface.addIndex('search_history', ['searchQuery']);
-    await queryInterface.addIndex('search_history', ['createdAt']);
-    await queryInterface.addIndex('search_history', ['searchType']);
-    await queryInterface.addIndex('search_history', ['location']);
+    // Add indexes (idempotent)
+    // Use explicit names and IF NOT EXISTS to avoid rerun errors
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "search_history_user_id" ON "search_history" ("userId");');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "search_history_search_query" ON "search_history" ("searchQuery");');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "search_history_created_at" ON "search_history" ("createdAt");');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "search_history_search_type" ON "search_history" ("searchType");');
+    await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS "search_history_location" ON "search_history" ("location");');
   },
 
   down: async (queryInterface, Sequelize) => {

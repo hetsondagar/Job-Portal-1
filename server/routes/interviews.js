@@ -104,15 +104,32 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Normalize enums to DB values
+    const normalizeInterviewType = (val) => {
+      if (!val) return undefined;
+      const map = { in_person: 'in-person', 'in person': 'in-person', In_person: 'in-person' };
+      return map[val] || val;
+    };
+    const normalizedInterviewType = normalizeInterviewType(interviewType);
+
     // Create the interview
     const interview = await Interview.create({
-      job_id: jobId || jobApplication.job_id,
-      employer_id: req.user.id,
-      candidate_id: candidateId || jobApplication.user_id, // Use provided candidateId or from application
-      interview_type: interviewType,
-      scheduled_at: new Date(scheduled_at),
-      duration_minutes: duration || 60,
-      meeting_link: meetingLink,
+      jobApplicationId,
+      employerId: req.user.id,
+      candidateId: candidateId || jobApplication.userId, // Use provided candidateId or from application
+      jobId: jobId || jobApplication.jobId,
+      title: title || `${(normalizedInterviewType || 'phone').charAt(0).toUpperCase() + (normalizedInterviewType || 'phone').slice(1)} Interview`,
+      description,
+      interviewType: normalizedInterviewType,
+      scheduledAt: new Date(scheduledAt),
+      duration: duration || 60,
+      timezone: timezone || 'UTC',
+      location: location || {},
+      meetingLink,
+      meetingPassword,
+      interviewers: interviewers || [],
+      agenda: agenda || [],
+      requirements: requirements || {},
       notes,
       status: 'scheduled'
     });
@@ -292,7 +309,11 @@ router.get('/candidate', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+    if (updateData.interviewType) {
+      const map = { in_person: 'in-person', 'in person': 'in-person', In_person: 'in-person' };
+      updateData.interviewType = map[updateData.interviewType] || updateData.interviewType;
+    }
 
     const { Interview, JobApplication } = require('../config/index');
 

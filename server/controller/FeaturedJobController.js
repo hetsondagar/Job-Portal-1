@@ -444,7 +444,7 @@ exports.getEmployerJobs = async (req, res, next) => {
         created_by: req.user.id,
         status: status
       },
-      attributes: ['id', 'title', 'location', 'status', 'created_at', 'views', 'applicationCount'],
+      attributes: ['id', 'title', 'location', 'status', 'createdAt', 'views', 'applications'],
       include: [{
         model: Company,
         as: 'company',
