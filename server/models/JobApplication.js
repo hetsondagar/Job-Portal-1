@@ -88,7 +88,7 @@ const JobApplication = sequelize.define('JobApplication', {
     type: DataTypes.UUID,
     allowNull: true,
     // Map to existing DB column to avoid missing column errors if snake_case column isn't present yet
-    field: 'coverLetterId',
+    field: 'cover_letter_id',
     references: {
       model: 'cover_letters',
       key: 'id'

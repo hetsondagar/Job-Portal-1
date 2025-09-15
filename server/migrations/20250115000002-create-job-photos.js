@@ -106,11 +106,30 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('job_photos', ['job_id']);
-    await queryInterface.addIndex('job_photos', ['job_id', 'display_order']);
-    await queryInterface.addIndex('job_photos', ['job_id', 'is_primary']);
-    await queryInterface.addIndex('job_photos', ['is_active']);
+    // Add indexes with error handling
+    try {
+      await queryInterface.addIndex('job_photos', ['job_id'], { name: 'job_photos_job_id' });
+    } catch (error) {
+      console.log('Index job_photos_job_id might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('job_photos', ['job_id', 'display_order'], { name: 'job_photos_job_id_display_order' });
+    } catch (error) {
+      console.log('Index job_photos_job_id_display_order might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('job_photos', ['job_id', 'is_primary'], { name: 'job_photos_job_id_is_primary' });
+    } catch (error) {
+      console.log('Index job_photos_job_id_is_primary might already exist, skipping...');
+    }
+    
+    try {
+      await queryInterface.addIndex('job_photos', ['is_active'], { name: 'job_photos_is_active' });
+    } catch (error) {
+      console.log('Index job_photos_is_active might already exist, skipping...');
+    }
   },
 
   async down(queryInterface, Sequelize) {

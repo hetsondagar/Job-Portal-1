@@ -83,17 +83,17 @@ module.exports = {
       },
       target_audience: {
         type: Sequelize.JSONB,
-        defaultValue: {},
+        defaultValue: Sequelize.literal(`'{}'::jsonb`),
         comment: 'Target audience criteria (location, skills, experience, etc.)'
       },
       placement: {
         type: Sequelize.JSONB,
-        defaultValue: ['search-results', 'homepage', 'category-pages'],
+        defaultValue: Sequelize.literal(`'["search-results", "homepage", "category-pages"]'::jsonb`),
         comment: 'Where the job should be featured'
       },
       custom_styling: {
         type: Sequelize.JSONB,
-        defaultValue: {},
+        defaultValue: Sequelize.literal(`'{}'::jsonb`),
         comment: 'Custom styling for the featured job'
       },
       notes: {
