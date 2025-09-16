@@ -42,7 +42,7 @@ const authenticateToken = async (req, res, next) => {
 // Create a new company
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, industry, companySize, website, description, address, city, state, country, email, phone } = req.body;
+    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region } = req.body;
     
     // Check if user is an employer
     if (req.user.user_type !== 'employer') {
@@ -100,6 +100,7 @@ router.post('/', authenticateToken, async (req, res) => {
       city,
       state,
       country: country || 'India',
+      region: region || 'india',
       contactPerson: `${req.user.first_name} ${req.user.last_name}`,
       contactEmail: req.user.email,
       contactPhone: req.user.phone,
@@ -129,7 +130,8 @@ router.post('/', authenticateToken, async (req, res) => {
           address: company.address,
           city: company.city,
           state: company.state,
-          country: company.country
+          country: company.country,
+          region: company.region
         },
         user: {
           id: updatedUser.id,

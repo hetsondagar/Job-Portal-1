@@ -67,6 +67,9 @@ const validateEmployerSignup = [
     .optional()
     .isIn(['technology', 'finance', 'healthcare', 'education', 'retail', 'manufacturing', 'consulting', 'other'])
     .withMessage('Invalid industry'),
+  body('region')
+    .isIn(['india', 'gulf', 'other'])
+    .withMessage('Region must be india, gulf, or other'),
   body('agreeToTerms')
     .custom((value) => {
       // Handle both boolean and string values
@@ -228,7 +231,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       });
     }
 
-    const { email, password, fullName, companyName, phone, companySize, industry, website } = req.body;
+    const { email, password, fullName, companyName, phone, companySize, industry, website, region } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -286,6 +289,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         website: website,
         email: email,
         phone: phone,
+        region: region || 'india',
         contactPerson: fullName,
         contactEmail: email,
         contactPhone: phone,
@@ -355,7 +359,8 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             companySize: company.companySize,
             website: company.website,
             email: company.email,
-            phone: company.phone
+            phone: company.phone,
+            region: company.region
           },
           token
         }
