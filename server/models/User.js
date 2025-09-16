@@ -254,7 +254,10 @@ const User = sequelize.define('User', {
   }
 }, {
   tableName: 'users',
-  underscored: true, // Use snake_case for database columns
+  // Enable timestamps and map to camelCase columns present in DB
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   hooks: {
     beforeCreate: async (user) => {
       // Hash password for all users with passwords (except OAuth users without passwords)
