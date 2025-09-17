@@ -59,15 +59,20 @@ export default function DashboardPage() {
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
 
   useEffect(() => {
-    if (!loading && !user) {
-      toast.error('Please sign in to access the dashboard')
-      router.push('/login')
-    } else if (user && user.userType === 'employer') {
-      // Redirect employers to their dashboard
-      console.log('🔄 Employer detected on jobseeker dashboard, redirecting to employer dashboard')
-      toast.info('Redirecting to employer dashboard...')
-      router.push('/employer-dashboard')
+    if (loading) return;
+    if (user) {
+      if (user.userType === 'employer') {
+        console.log('🔄 Employer detected on jobseeker dashboard, redirecting to employer dashboard')
+        router.replace('/employer-dashboard')
+      }
+      return;
     }
+    // No user yet
+    if (typeof window !== 'undefined' && apiService.isAuthenticated()) {
+      // Token present; avoid redirecting to login while profile is loading
+      return;
+    }
+    router.replace('/login')
   }, [user, loading, router])
 
   useEffect(() => {

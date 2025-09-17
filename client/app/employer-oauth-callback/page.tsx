@@ -17,11 +17,18 @@ export default function EmployerOAuthCallbackPage() {
   const searchParams = useSearchParams()
   const { login } = useAuth()
   
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'password-setup'>('loading')
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'password-setup' | 'profile-setup'>('loading')
   const [message, setMessage] = useState('Processing authentication...')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [settingPassword, setSettingPassword] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [region, setRegion] = useState<'india' | 'gulf' | 'other' | ''>('')
+  const [savingProfile, setSavingProfile] = useState(false)
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
@@ -75,12 +82,36 @@ export default function EmployerOAuthCallbackPage() {
           response.data.user = updatedUser
           console.log('✅ User type forced to employer')
           
+          const needsProfileSetup = !response.data.user.firstName || !response.data.user.lastName || !response.data.user.phone
+          setFirstName(response.data.user.firstName || '')
+          setLastName(response.data.user.lastName || '')
+          setPhone(response.data.user.phone || '')
+          setCompanyName((response.data.user as any)?.company?.name || '')
+          setCompanyId((response.data.user as any)?.companyId || null)
+
+          // Fetch company to get region if available
+          try {
+            const cid = (response.data.user as any)?.companyId
+            if (cid) {
+              const companyResp = await apiService.getCompany(cid)
+              if (companyResp.success && companyResp.data) {
+                localStorage.setItem('company', JSON.stringify(companyResp.data))
+                setRegion((companyResp.data.region as any) || '')
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to fetch company for employer OAuth:', err)
+          }
+
           if (needsPasswordSetup) {
             // User needs to set up a password
             console.log('🔄 User needs password setup')
             setStatus('password-setup')
             setMessage(`Welcome! Please set up a password for your ${provider} account`)
             toast.success(`Welcome! Please set up a password for your ${provider} account`)
+          } else if (needsProfileSetup) {
+            setStatus('profile-setup')
+            setMessage('Complete your basic details to continue')
           } else {
             // User already has a password, proceed to employer dashboard
             console.log('✅ User has password, proceeding to employer dashboard')
@@ -89,11 +120,15 @@ export default function EmployerOAuthCallbackPage() {
             toast.success(`Welcome to your employer dashboard!`)
             
             console.log('✅ Redirecting employer to employer dashboard')
-            // Redirect to employer dashboard after a short delay
+            // Redirect based on region
             setTimeout(() => {
-              console.log('🔄 Executing redirect to /employer-dashboard')
-              router.push('/employer-dashboard')
-            }, 2000)
+              const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+              const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
+              const regionToUse = region || storedCompany?.region || storedUser?.company?.region || storedUser?.region
+              const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+              console.log('🔄 Executing redirect to', target)
+              router.replace(target)
+            }, 1200)
           }
         } else {
           console.error('❌ Failed to get user data:', response)
@@ -147,15 +182,21 @@ export default function EmployerOAuthCallbackPage() {
       if (response.success) {
         console.log('✅ Password setup successful')
         toast.success('Password set successfully!')
-        
-        setStatus('success')
-        setMessage('Password set successfully! Redirecting to employer dashboard...')
-        
-        // Redirect to employer dashboard
-        setTimeout(() => {
-          console.log('🔄 Redirecting to employer dashboard after password setup')
-          router.push('/employer-dashboard')
-        }, 2000)
+        const me = await apiService.getCurrentUser()
+        const needsProfileSetup = me.success && me.data?.user && (!me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone)
+        if (needsProfileSetup) {
+          setStatus('profile-setup')
+          setMessage('Complete your basic details to continue')
+        } else {
+          setStatus('success')
+          setMessage('Password set successfully! Redirecting to your dashboard...')
+          setTimeout(() => {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+            const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
+            const regionToUse = region || storedCompany?.region || storedUser?.company?.region || storedUser?.region
+            router.replace(regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+          }, 1000)
+        }
       } else {
         console.error('❌ Password setup failed:', response)
         toast.error(response.message || 'Failed to set password')
@@ -165,6 +206,51 @@ export default function EmployerOAuthCallbackPage() {
       toast.error(error.message || 'Failed to set password')
     } finally {
       setSettingPassword(false)
+    }
+  }
+
+  const handleProfileSetup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!firstName || !lastName || !phone) {
+      toast.error('Please fill in first name, last name, and phone')
+      return
+    }
+    try {
+      setSavingProfile(true)
+      const resp = await apiService.updateProfile({
+        firstName,
+        lastName,
+        phone
+      } as any)
+      if (resp.success) {
+        // Update company region if provided
+        try {
+          if (companyId && region) {
+            const companyUpdate = await apiService.updateCompany(companyId, { region })
+            if (companyUpdate.success && companyUpdate.data) {
+              localStorage.setItem('company', JSON.stringify(companyUpdate.data))
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to update company region:', err)
+        }
+
+        toast.success('Profile updated')
+        setStatus('success')
+        setMessage('Profile completed! Redirecting...')
+        setTimeout(() => {
+          const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
+          const tgtRegion = region || storedCompany?.region
+          const tgt = (tgtRegion === 'gulf') ? '/gulf-dashboard' : '/employer-dashboard'
+          router.replace(tgt)
+        }, 800)
+      } else {
+        throw new Error(resp.message || 'Failed to update profile')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update profile')
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -253,6 +339,59 @@ export default function EmployerOAuthCallbackPage() {
                 disabled={settingPassword}
               >
                 {settingPassword ? 'Setting Password...' : 'Set Password'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (status === 'profile-setup') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center">
+        <Card className="w-full max-w-md border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="text-center pb-6">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <Users className="w-7 h-7 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+              Complete Your Details
+            </CardTitle>
+            <p className="text-slate-600 dark:text-slate-300 mt-2">
+              {message}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleProfileSetup} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-slate-700 dark:text-slate-300">First name</Label>
+                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-12" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-slate-700 dark:text-slate-300">Last name</Label>
+                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-12" required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-slate-700 dark:text-slate-300">Phone</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="region" className="text-slate-700 dark:text-slate-300">Region of Operation</Label>
+                <select id="region" value={region} onChange={(e) => setRegion(e.target.value as any)} className="h-12 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3">
+                  <option value="">Select region</option>
+                  <option value="india">India</option>
+                  <option value="gulf">Gulf</option>
+                  <option value="other">Other</option>
+                </select>
+                <p className="text-xs text-slate-500">This decides your dashboard after setup.</p>
+              </div>
+              <Button type="submit" disabled={savingProfile} className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                {savingProfile ? 'Saving...' : 'Save & Continue'}
               </Button>
             </form>
           </CardContent>

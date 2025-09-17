@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Building2, Loader2, Shield } from 'lucide-react'
+import { apiService } from '@/lib/api'
 
 interface EmployerAuthGuardProps {
   children: React.ReactNode
@@ -17,37 +18,41 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    if (!loading) {
-      console.log('🔍 EmployerAuthGuard - User state:', {
-        hasUser: !!user,
-        userType: user?.userType,
-        email: user?.email,
-        id: user?.id
-      })
-      
-      if (!user) {
-        // User not authenticated, redirect to employer login
-        console.log('❌ No user found, redirecting to employer-login')
-        router.push('/employer-login')
+    // While auth provider is loading, or we have a token but no user yet, keep checking
+    if (loading) return;
+
+    const hasToken = typeof window !== 'undefined' && apiService.isAuthenticated()
+
+    console.log('🔍 EmployerAuthGuard - State:', {
+      loading,
+      hasUser: !!user,
+      userType: user?.userType,
+      hasToken
+    })
+
+    if (!user) {
+      // If we have a token, wait for profile fetch to hydrate user instead of redirecting
+      if (hasToken) {
+        setIsChecking(true)
         return
       }
-      
-      // Check if user is an employer
-      if (user.userType !== 'employer') {
-        console.log('❌ User is not employer, userType:', user.userType)
-        if (user.userType === 'jobseeker') {
-          console.log('🔄 Redirecting jobseeker to jobseeker dashboard')
-          router.push('/dashboard')
-        } else {
-          console.log('🔄 Unknown user type, redirecting to login')
-          router.push('/login')
-        }
-        return
-      }
-      
-      console.log('✅ User is employer, allowing access to employer dashboard')
-      setIsChecking(false)
+      // No token and no user → go to employer-login
+      router.replace('/employer-login')
+      return
     }
+
+    // We have a user
+    if (user.userType !== 'employer') {
+      if (user.userType === 'jobseeker') {
+        router.replace('/dashboard')
+      } else {
+        router.replace('/login')
+      }
+      return
+    }
+
+    // Auth OK
+    setIsChecking(false)
   }, [user, loading, router])
 
   // Show loading while checking authentication
