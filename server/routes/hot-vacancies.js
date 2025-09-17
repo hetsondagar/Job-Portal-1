@@ -56,12 +56,12 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Middleware to check if user is employer
+// Middleware to check if user is employer or admin
 const requireEmployer = (req, res, next) => {
-  if (req.user.user_type !== 'employer') {
+  if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
     return res.status(403).json({
       success: false,
-      message: 'Access denied. Employer account required.'
+      message: 'Access denied. Employer or admin account required.'
     });
   }
   next();

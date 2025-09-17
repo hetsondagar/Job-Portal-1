@@ -694,6 +694,27 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  // Companies list and join
+  async listCompanies(params?: { search?: string; limit?: number; offset?: number }): Promise<ApiResponse<any[]>> {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.append('search', params.search);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    if (params?.offset) sp.append('offset', String(params.offset));
+    const response = await fetch(`${API_BASE_URL}/companies${sp.toString() ? `?${sp.toString()}` : ''}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  async joinCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/join`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ companyId })
+    });
+    return this.handleResponse<any>(response);
+  }
+
   async updateCompany(companyId: string, data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
       method: 'PUT',
@@ -1475,6 +1496,38 @@ class ApiService {
     return response;
   }
 
+  // View resume from application (increment view count and log activity)
+  async viewApplicationResume(applicationId: string): Promise<any> {
+    const url = `${API_BASE_URL}/user/employer/applications/${applicationId}/resume/view`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`View failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // View resume from requirements (increment view count and log activity)
+  async viewRequirementResume(requirementId: string, candidateId: string, resumeId: string): Promise<any> {
+    const url = `${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/resume/${resumeId}/view`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`View failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
   // Download resume from application (for employer applications page)
   async downloadApplicationResume(resumeId: string, applicationId?: string): Promise<Response> {
     let url: string;
@@ -1634,6 +1687,89 @@ class ApiService {
       console.error('❌ Error fetching employer analytics:', error);
       return { success: false, message: 'Failed to fetch analytics', errors: ['NETWORK_ERROR'] };
     }
+  }
+
+  // Usage Pulse endpoints
+  async getUsageSummary(companyId: string): Promise<ApiResponse<any>> {
+    const endpoint = `/usage/summary?companyId=${encodeURIComponent(companyId)}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getUsageActivities(params: { userId?: string; activityType?: string; from?: string; to?: string; limit?: number; offset?: number; }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.userId) sp.append('userId', params.userId);
+    if (params.activityType) sp.append('activityType', params.activityType);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    if (params.limit) sp.append('limit', String(params.limit));
+    if (params.offset) sp.append('offset', String(params.offset));
+    const endpoint = `/usage/activities${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getUsageSearchInsights(params: { companyId?: string; from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.companyId) sp.append('companyId', params.companyId);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    if (params.limit) sp.append('limit', String(params.limit));
+    const endpoint = `/usage/search-insights${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getUsagePostingInsights(params: { companyId?: string; from?: string; to?: string }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.companyId) sp.append('companyId', params.companyId);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    const endpoint = `/usage/posting-insights${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getRecruiterPerformance(params: { companyId?: string; from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.companyId) sp.append('companyId', params.companyId);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    if (params.limit) sp.append('limit', String(params.limit));
+    const endpoint = `/usage/recruiter-performance${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  // Quotas
+  async getQuotas(userId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest(`/usage/quotas?userId=${encodeURIComponent(userId)}`, async () => {
+      const response = await fetch(`${this.baseURL}/usage/quotas?userId=${encodeURIComponent(userId)}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async updateQuota(payload: { userId: string; quotaType: string; limit: number; resetUsed?: boolean }): Promise<ApiResponse<any>> {
+    return this.makeRequest('/usage/quotas', async () => {
+      const response = await fetch(`${this.baseURL}/usage/quotas`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      return this.handleResponse<any>(response);
+    });
   }
 
   // Export analytics report

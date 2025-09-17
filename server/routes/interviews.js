@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const EmployerActivityService = require('../services/employerActivityService');
 const jwt = require('jsonwebtoken');
 
 // Middleware to verify JWT token
@@ -59,8 +60,8 @@ router.post('/', authenticateToken, async (req, res) => {
       notes 
     } = req.body;
 
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. Only employers can schedule interviews.' 
@@ -164,6 +165,28 @@ router.post('/', authenticateToken, async (req, res) => {
 
     console.log(`✅ Interview scheduled for candidate ${candidateId} by employer ${req.user.id}`);
 
+    // Log interview scheduling activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logInterviewScheduled(
+        req.user.id,
+        interview.id,
+        candidateId,
+        {
+          applicationId: jobApplicationId,
+          jobId: jobApplication.jobId,
+          scheduledAt: scheduledAt,
+          interviewType: normalizedInterviewType,
+          location: location,
+          meetingLink: meetingLink,
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
+    } catch (e) {
+      console.error('⚠️ Failed to log interview_scheduled activity:', e?.message || e);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Interview scheduled successfully',
@@ -194,7 +217,7 @@ router.post('/', authenticateToken, async (req, res) => {
 // Get interviews for employer
 router.get('/employer', authenticateToken, async (req, res) => {
   try {
-    if (req.user.user_type !== 'employer') {
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. Only employers can view interviews.' 
@@ -356,6 +379,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    // Store old data for logging
+    const oldData = {
+      status: interview.status,
+      scheduledAt: interview.scheduledAt,
+      interviewType: interview.interviewType,
+      location: interview.location,
+      meetingLink: interview.meetingLink
+    };
+
     // Update the interview
     await interview.update(updateData);
 
@@ -365,6 +397,28 @@ router.put('/:id', authenticateToken, async (req, res) => {
         status: 'interview_scheduled',
         lastUpdatedAt: new Date()
       });
+    }
+
+    // Log interview update activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logInterviewUpdated(
+        req.user.id,
+        interview.id,
+        interview.candidateId,
+        {
+          applicationId: interview.jobApplicationId,
+          jobId: interview.jobId,
+          oldStatus: oldData.status,
+          newStatus: updateData.status || oldData.status,
+          changes: updateData,
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
+    } catch (activityError) {
+      console.error('Failed to log interview update activity:', activityError);
+      // Don't fail the update if activity logging fails
     }
 
     res.json({

@@ -97,12 +97,12 @@ export default function EmployerLoginPage() {
       console.log('👤 User data:', result?.user)
       console.log('🎯 User type:', result?.user?.userType)
       
-      // Check if user is an employer and redirect accordingly
+      // Check if user is an employer or admin and redirect accordingly
       if (result?.user?.userType === 'employer') {
         console.log('✅ User is employer, checking region for dashboard redirect')
         
         // Check if user has company data with region
-        if (result?.user?.company?.region === 'gulf') {
+        if (result?.company?.region === 'gulf') {
           console.log('✅ Gulf region employer, redirecting to Gulf dashboard')
           toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
           setTimeout(() => {
@@ -117,8 +117,13 @@ export default function EmployerLoginPage() {
             router.push('/employer-dashboard')
           }, 1000)
         }
+      } else if (result?.user?.userType === 'admin') {
+        // Admin: show employer dashboard as requested
+        console.log('✅ Admin user, redirecting to employer dashboard')
+        toast.success('Signed in as admin! Redirecting to dashboard...')
+        setTimeout(() => router.push('/employer-dashboard'), 600)
       } else {
-        console.log('❌ User is not employer, userType:', result?.user?.userType)
+        console.log('❌ User is not employer or admin, userType:', result?.user?.userType)
         toast.error('This account is not registered as an employer. Please use the regular login.')
         setTimeout(() => {
           console.log('🔄 Redirecting to /login')
@@ -501,6 +506,13 @@ export default function EmployerLoginPage() {
                       Create Employer Account
                     </Button>
                   </Link>
+
+                  <div className="text-sm text-slate-600 dark:text-slate-400">
+                    Need to link to an existing company?{' '}
+                    <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
+                      Join company
+                    </Link>
+                  </div>
 
                   <div className="text-sm text-slate-600 dark:text-slate-400">
                     Need help? Contact our{" "}
