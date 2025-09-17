@@ -110,7 +110,10 @@ router.post('/', authenticateToken, async (req, res) => {
       const map = { in_person: 'in-person', 'in person': 'in-person', In_person: 'in-person' };
       return map[val] || val;
     };
-    const normalizedInterviewType = normalizeInterviewType(interviewType);
+    const normalizedInterviewType = (val => {
+      const map = { 'in-person': 'in_person', in_person: 'in_person', 'in person': 'in_person', In_person: 'in_person' };
+      return map[val] || val;
+    })(interviewType);
 
     // Create the interview
     const interview = await Interview.create({
