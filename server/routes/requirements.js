@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const fs = require('fs');
 const { Op, QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/sequelize');
 const CandidateLike = require('../models/CandidateLike');
@@ -13,6 +14,7 @@ const User = require('../models/User');
 const Company = require('../models/Company');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
+const { Resume } = require('../config/index');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {

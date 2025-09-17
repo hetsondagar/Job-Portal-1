@@ -254,6 +254,7 @@ const User = sequelize.define('User', {
   }
 }, {
   tableName: 'users',
+  underscored: false,
   // Enable timestamps and map to camelCase columns present in DB
   timestamps: true,
   createdAt: 'createdAt',
