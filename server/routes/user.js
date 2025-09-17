@@ -301,6 +301,8 @@ router.get('/profile', authenticateToken, async (req, res) => {
       profileCompletion: req.user.profile_completion,
       oauthProvider: req.user.oauth_provider,
       oauthId: req.user.oauth_id,
+      hasPassword: !!req.user.password,
+      requiresPasswordSetup: !req.user.password && req.user.oauth_provider && req.user.oauth_provider !== 'local',
       skills: req.user.skills,
       languages: req.user.languages,
       expectedSalary: req.user.expected_salary,

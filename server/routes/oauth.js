@@ -638,10 +638,28 @@ router.post('/setup-password', async (req, res) => {
     
     // Set password for OAuth user
     await user.update({ password });
-    
+
+    // Issue a fresh JWT so the client session is stable post-setup
+    const newToken = jwt.sign(
+      { id: user.id, email: user.email, userType: user.user_type },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
     res.status(200).json({
       success: true,
-      message: 'Password set successfully'
+      message: 'Password set successfully',
+      data: {
+        token: newToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          user_type: user.user_type,
+          is_email_verified: user.is_email_verified
+        }
+      }
     });
     
   } catch (error) {
