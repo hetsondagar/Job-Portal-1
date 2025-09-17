@@ -42,9 +42,9 @@ export default function LoginPage() {
       console.log('✅ Login successful:', result)
       
       // Check if login was successful and redirect accordingly
-      if (result?.user?.userType === 'employer') {
-        console.log('❌ Employer trying to login through jobseeker login page')
-        toast.error('This account is registered as an employer. Please use the employer login page.')
+      if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {
+        console.log('❌ Employer/Admin trying to login through jobseeker login page')
+        toast.error('This account is registered as an employer/admin. Please use the employer login page.')
         setTimeout(() => {
           window.location.href = '/employer-login'
         }, 2000)

@@ -20,6 +20,7 @@ export function EmployerNavbar() {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const [company, setCompany] = useState<any>(null)
+  const isAdmin = (user?.userType === 'admin') || (user?.preferences?.employerRole === 'admin')
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -134,6 +135,11 @@ export function EmployerNavbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
+            {isAdmin && (
+              <Link href="/admin/usage-pulse" className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+                Usage Pulse
+              </Link>
+            )}
             {/* Jobs & Responses Dropdown */}
             <div
               className="relative"
@@ -334,6 +340,16 @@ export function EmployerNavbar() {
 
                 <div className="space-y-4">
                   <h3 className="font-semibold text-slate-900 dark:text-white">Dashboard</h3>
+                  {isAdmin && (
+                    <Link
+                      href="/admin/usage-pulse"
+                      className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-slate-700 dark:text-slate-200">Usage Pulse</span>
+                    </Link>
+                  )}
                   <Link
                     href="/employer-dashboard"
                     className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"

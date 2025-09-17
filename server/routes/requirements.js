@@ -48,8 +48,8 @@ router.post('/', authenticateToken, async (req, res) => {
     console.log('📝 Create Requirement request by user:', req.user?.id, 'company_id:', req.user?.company_id);
     console.log('📝 Payload:', JSON.stringify(body));
 
-    // Only employers can create requirements
-    if (req.user.user_type !== 'employer') {
+    // Only employers/admins can create requirements
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Only employers can create requirements' });
     }
 
@@ -195,6 +195,59 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     console.log('✅ Requirement created with id:', requirement.id);
+
+    // Check and consume quota for requirement posting
+    try {
+      const EmployerQuotaService = require('../services/employerQuotaService');
+      await EmployerQuotaService.checkAndConsume(
+        req.user.id,
+        EmployerQuotaService.QUOTA_TYPES.REQUIREMENTS_POSTED,
+        {
+          activityType: 'requirement_posted',
+          details: {
+            requirementId: requirement.id,
+            title: requirement.title,
+            location: requirement.location,
+            jobType: requirement.jobType,
+            companyId: requirement.companyId
+          },
+          defaultLimit: 30
+        }
+      );
+    } catch (quotaError) {
+      console.error('Quota check failed for requirement posting:', quotaError);
+      if (quotaError.code === 'QUOTA_LIMIT_EXCEEDED') {
+        // Delete the requirement that was just created since quota exceeded
+        await requirement.destroy();
+        return res.status(429).json({
+          success: false,
+          message: 'Requirements posting quota exceeded. Please contact your administrator.'
+        });
+      }
+      // For other quota errors, continue but log the issue
+    }
+
+    // Log requirement posting activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logActivity(
+        req.user.id,
+        'requirement_posted',
+        {
+          details: {
+            requirementId: requirement.id,
+            title: requirement.title,
+            location: requirement.location,
+            jobType: requirement.jobType,
+            companyId: requirement.companyId
+          }
+        }
+      );
+    } catch (activityError) {
+      console.error('Failed to log requirement posting activity:', activityError);
+      // Don't fail the creation if activity logging fails
+    }
+
     return res.status(201).json({ success: true, message: 'Requirement created successfully', data: requirement });
   } catch (error) {
     console.error('❌ Requirement creation error:', error);
@@ -1450,6 +1503,25 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       });
       
       console.log(`✅ Candidate ${candidateId} shortlisted by employer ${req.user.id} for requirement ${requirementId}`);
+
+      // Log candidate shortlisting activity
+      try {
+        const EmployerActivityService = require('../services/employerActivityService');
+        await EmployerActivityService.logCandidateShortlist(
+          req.user.id,
+          candidateId,
+          {
+            requirementId: requirementId,
+            applicationId: shortlistApplication.id,
+            jobId: placeholderJob.id,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+          }
+        );
+      } catch (activityError) {
+        console.error('Failed to log candidate shortlisting activity:', activityError);
+        // Don't fail the shortlisting if activity logging fails
+      }
       
       return res.status(200).json({
         success: true,
@@ -1600,6 +1672,117 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
   }
 });
 
+// View candidate resume (for employers) - increment view count and log activity
+router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', authenticateToken, async (req, res) => {
+  try {
+    const { requirementId, candidateId, resumeId } = req.params;
+    
+    // Check if user is an employer
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only employers can view candidate resumes.' 
+      });
+    }
+    
+    // Verify the requirement belongs to the employer's company
+    const requirement = await Requirement.findOne({
+      where: { 
+        id: requirementId,
+        companyId: req.user.company_id 
+      }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Requirement not found or access denied'
+      });
+    }
+    
+    // Get the resume
+    const resume = await Resume.findOne({
+      where: { 
+        id: resumeId, 
+        userId: candidateId 
+      }
+    });
+    
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+    
+    // Increment view count
+    await resume.update({
+      views: resume.views + 1
+    });
+
+    // Check and consume quota for resume view
+    try {
+      const EmployerQuotaService = require('../services/employerQuotaService');
+      await EmployerQuotaService.checkAndConsume(
+        req.user.id,
+        EmployerQuotaService.QUOTA_TYPES.RESUME_VIEWS,
+        {
+          activityType: 'resume_view',
+          details: {
+            resumeId: resume.id,
+            candidateId: candidateId,
+            requirementId: requirementId
+          },
+          defaultLimit: 100
+        }
+      );
+    } catch (quotaError) {
+      console.error('Quota check failed for resume view:', quotaError);
+      if (quotaError.code === 'QUOTA_LIMIT_EXCEEDED') {
+        return res.status(429).json({
+          success: false,
+          message: 'Resume view quota exceeded. Please contact your administrator.'
+        });
+      }
+      // For other quota errors, continue with view but log the issue
+    }
+
+    // Log resume view activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logResumeView(
+        req.user.id,
+        resume.id,
+        candidateId,
+        {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          requirementId: requirementId
+        }
+      );
+    } catch (activityError) {
+      console.error('Failed to log resume view activity:', activityError);
+      // Don't fail the view if activity logging fails
+    }
+    
+    res.json({
+      success: true,
+      message: 'Resume view logged successfully',
+      data: {
+        resumeId: resume.id,
+        views: resume.views
+      }
+    });
+  } catch (error) {
+    console.error('Error viewing resume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to view resume',
+      error: error.message
+    });
+  }
+});
+
 // Download candidate resume (for employers)
 router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', authenticateToken, async (req, res) => {
   try {
@@ -1668,6 +1851,51 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     await resume.update({
       downloads: resume.downloads + 1
     });
+
+    // Check and consume quota for resume download
+    try {
+      const EmployerQuotaService = require('../services/employerQuotaService');
+      await EmployerQuotaService.checkAndConsume(
+        req.user.id,
+        EmployerQuotaService.QUOTA_TYPES.RESUME_VIEWS,
+        {
+          activityType: 'resume_download',
+          details: {
+            resumeId: resume.id,
+            candidateId: candidateId,
+            requirementId: requirementId
+          },
+          defaultLimit: 100
+        }
+      );
+    } catch (quotaError) {
+      console.error('Quota check failed for resume download:', quotaError);
+      if (quotaError.code === 'QUOTA_LIMIT_EXCEEDED') {
+        return res.status(429).json({
+          success: false,
+          message: 'Resume download quota exceeded. Please contact your administrator.'
+        });
+      }
+      // For other quota errors, continue with download but log the issue
+    }
+
+    // Log resume download activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logResumeDownload(
+        req.user.id,
+        resume.id,
+        candidateId,
+        {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          requirementId: requirementId
+        }
+      );
+    } catch (activityError) {
+      console.error('Failed to log resume download activity:', activityError);
+      // Don't fail the download if activity logging fails
+    }
     
     // Set headers for file download
     res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);

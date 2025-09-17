@@ -67,16 +67,24 @@ export default function EmployerLoginPage() {
       console.log('👤 User data:', result?.user)
       console.log('🎯 User type:', result?.user?.userType)
       
-      // Check if user is an employer and redirect accordingly
+      // Check if user is an employer or admin and redirect accordingly
       if (result?.user?.userType === 'employer') {
-        console.log('✅ User is employer, redirecting to employer dashboard')
-        toast.success('Successfully signed in! Redirecting to employer dashboard...')
-        setTimeout(() => {
-          console.log('🔄 Redirecting to /employer-dashboard')
-          router.push('/employer-dashboard')
-        }, 1000)
+        if (result?.user?.companyId) {
+          console.log('✅ Employer with company, redirecting to employer dashboard')
+          toast.success('Signed in! Redirecting to dashboard...')
+          setTimeout(() => router.push('/employer-dashboard'), 600)
+        } else {
+          console.log('ℹ️ Employer without company, redirecting to join company flow')
+          toast.info('Link your account to an existing company')
+          setTimeout(() => router.push('/employer-join-company'), 600)
+        }
+      } else if (result?.user?.userType === 'admin') {
+        // Admin: show employer dashboard as requested
+        console.log('✅ Admin user, redirecting to employer dashboard')
+        toast.success('Signed in as admin! Redirecting to dashboard...')
+        setTimeout(() => router.push('/employer-dashboard'), 600)
       } else {
-        console.log('❌ User is not employer, userType:', result?.user?.userType)
+        console.log('❌ User is not employer or admin, userType:', result?.user?.userType)
         toast.error('This account is not registered as an employer. Please use the regular login.')
         setTimeout(() => {
           console.log('🔄 Redirecting to /login')
@@ -459,6 +467,13 @@ export default function EmployerLoginPage() {
                       Create Employer Account
                     </Button>
                   </Link>
+
+                  <div className="text-sm text-slate-600 dark:text-slate-400">
+                    Need to link to an existing company?{' '}
+                    <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
+                      Join company
+                    </Link>
+                  </div>
 
                   <div className="text-sm text-slate-600 dark:text-slate-400">
                     Need help? Contact our{" "}

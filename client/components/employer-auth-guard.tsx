@@ -32,8 +32,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
         return
       }
       
-      // Check if user is an employer
-      if (user.userType !== 'employer') {
+      // Check if user is an employer or admin (admins are allowed into employer area)
+      if (user.userType !== 'employer' && user.userType !== 'admin') {
         console.log('❌ User is not employer, userType:', user.userType)
         if (user.userType === 'jobseeker') {
           console.log('🔄 Redirecting jobseeker to jobseeker dashboard')
@@ -45,7 +45,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
         return
       }
       
-      console.log('✅ User is employer, allowing access to employer dashboard')
+      console.log('✅ User is employer/admin, allowing access to employer dashboard')
       setIsChecking(false)
     }
   }, [user, loading, router])
@@ -81,8 +81,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
     )
   }
 
-  // Show access denied if user is not an employer
-  if (user && user.userType !== 'employer') {
+  // Show access denied if user is not an employer or admin
+  if (user && user.userType !== 'employer' && user.userType !== 'admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center">
         <Card className="w-full max-w-md border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
@@ -96,7 +96,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
               Access Denied
             </CardTitle>
             <p className="text-slate-600 dark:text-slate-300 mt-2">
-              This area is restricted to employer accounts only
+              This area is restricted to employer and admin accounts only
             </p>
           </CardHeader>
           <CardContent className="text-center space-y-4">

@@ -81,7 +81,8 @@ const Education = sequelize.define('Education', {
   },
   verificationDate: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'verification_date'
   },
 }, {
   tableName: 'educations',
