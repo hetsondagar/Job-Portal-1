@@ -80,6 +80,11 @@ const Company = sequelize.define('Company', {
     allowNull: true,
     defaultValue: 'India'
   },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true,
+    defaultValue: 'india'
+  },
   pincode: {
     type: DataTypes.STRING,
     allowNull: true
@@ -239,6 +244,7 @@ const Company = sequelize.define('Company', {
   }
 }, {
   tableName: 'companies',
+  // underscored: true, // Removed - database uses camelCase columns
   hooks: {
     // Removed auto slug generation - handled manually in auth routes
   }
