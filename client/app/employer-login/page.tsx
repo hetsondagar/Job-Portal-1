@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -48,6 +48,36 @@ export default function EmployerLoginPage() {
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
   const router = useRouter()
   const { login, loading, error, clearError } = useAuth()
+  const [checking, setChecking] = useState(true)
+
+  // If already authenticated (e.g., just completed OAuth), send to appropriate employer dashboard
+  useEffect(() => {
+    const checkAlreadyLoggedIn = async () => {
+      try {
+        if (apiService.isAuthenticated()) {
+          const me = await apiService.getCurrentUser()
+          if (me.success && me.data?.user && me.data.user.userType === 'employer') {
+            // Determine region → target dashboard
+            let region: string | undefined
+            const companyId = (me.data.user as any).companyId
+            if (companyId) {
+              const companyResp = await apiService.getCompany(companyId)
+              if (companyResp.success && companyResp.data) {
+                localStorage.setItem('company', JSON.stringify(companyResp.data))
+                region = companyResp.data.region
+              }
+            }
+            const target = region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+            return router.replace(target)
+          }
+        }
+      } catch {
+        // ignore and show login form
+      }
+      setChecking(false)
+    }
+    checkAlreadyLoggedIn()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,14 +99,23 @@ export default function EmployerLoginPage() {
       
       // Check if user is an employer or admin and redirect accordingly
       if (result?.user?.userType === 'employer') {
-        if (result?.user?.companyId) {
-          console.log('✅ Employer with company, redirecting to employer dashboard')
-          toast.success('Signed in! Redirecting to dashboard...')
-          setTimeout(() => router.push('/employer-dashboard'), 600)
+        console.log('✅ User is employer, checking region for dashboard redirect')
+        
+        // Check if user has company data with region
+        if (result?.company?.region === 'gulf') {
+          console.log('✅ Gulf region employer, redirecting to Gulf dashboard')
+          toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
+          setTimeout(() => {
+            console.log('🔄 Redirecting to /gulf-dashboard')
+            router.push('/gulf-dashboard')
+          }, 1000)
         } else {
-          console.log('ℹ️ Employer without company, redirecting to join company flow')
-          toast.info('Link your account to an existing company')
-          setTimeout(() => router.push('/employer-join-company'), 600)
+          console.log('✅ India/Other region employer, redirecting to regular employer dashboard')
+          toast.success('Successfully signed in! Redirecting to employer dashboard...')
+          setTimeout(() => {
+            console.log('🔄 Redirecting to /employer-dashboard')
+            router.push('/employer-dashboard')
+          }, 1000)
         }
       } else if (result?.user?.userType === 'admin') {
         // Admin: show employer dashboard as requested

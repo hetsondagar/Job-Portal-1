@@ -48,6 +48,7 @@ export interface Company {
   website?: string;
   email: string;
   phone?: string;
+  region?: string;
 }
 
 export interface AuthResponse {
@@ -75,6 +76,7 @@ export interface EmployerSignupData {
   companySize?: string;
   industry?: string;
   website?: string;
+  region?: string;
   agreeToTerms: boolean;
   subscribeUpdates?: boolean;
 }
@@ -993,8 +995,14 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ password }),
     });
-
-    return this.handleResponse(response);
+    const result = await this.handleResponse<any>(response);
+    if (result.success && result.data?.token) {
+      localStorage.setItem('token', result.data.token);
+      if (result.data.user) {
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+      }
+    }
+    return result as any;
   }
 
   // Applications endpoints

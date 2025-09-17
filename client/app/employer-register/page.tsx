@@ -71,6 +71,7 @@ export default function EmployerRegisterPage() {
     industry: "",
     website: "",
     role: "recruiter",
+    region: "",
     agreeToTerms: false,
     subscribeUpdates: true,
   })
@@ -167,6 +168,11 @@ export default function EmployerRegisterPage() {
       return
     }
     
+    if (!formData.region) {
+      toast.error('Please select a region')
+      return
+    }
+    
     if (!formData.password) {
       toast.error('Password is required')
       return
@@ -197,16 +203,24 @@ export default function EmployerRegisterPage() {
         industry: formData.industry,
         website: formData.website,
         role: formData.role,
+        region: formData.region,
         agreeToTerms: formData.agreeToTerms,
         subscribeUpdates: formData.subscribeUpdates,
       })
       
       if (result?.user?.userType === 'employer') {
-        toast.success('Employer account created successfully! Redirecting to dashboard...')
-        // Redirect to employer dashboard
+        // Check region for dashboard redirect
+        if (result?.company?.region === 'gulf') {
+          toast.success('Employer account created successfully! Redirecting to Gulf dashboard...')
+          setTimeout(() => {
+            router.push('/gulf-dashboard')
+          }, 2000)
+        } else {
+          toast.success('Employer account created successfully! Redirecting to employer dashboard...')
         setTimeout(() => {
           router.push('/employer-dashboard')
         }, 2000)
+        }
       } else {
         toast.error('Failed to create employer account. Please try again.')
       }
@@ -452,7 +466,7 @@ export default function EmployerRegisterPage() {
                      </ul>
                    </div>
                  ) : (
-                   formData.companyName && formData.fullName && formData.email && formData.phone && formData.password && (
+                   formData.companyName && formData.fullName && formData.email && formData.phone && formData.region && formData.password && (
                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                        <h3 className="text-green-800 dark:text-green-200 font-medium mb-2 flex items-center">
                          <span className="mr-2">✅</span>
@@ -590,6 +604,25 @@ export default function EmployerRegisterPage() {
                       </div>
                     </div>
                   )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="region" className="text-slate-700 dark:text-slate-300">
+                      Region of Operation *
+                    </Label>
+                    <Select value={formData.region} onValueChange={(value) => handleInputChange("region", value)}>
+                      <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
+                        <SelectValue placeholder="Select your region of operation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="india">India</SelectItem>
+                        <SelectItem value="gulf">Gulf Region (UAE, Saudi Arabia, Qatar, etc.)</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-slate-500 text-xs">
+                      💡 This determines which dashboard you'll access after registration
+                    </p>
+                  </div>
 
                   {!formData.companyId && (
                     <div className="space-y-2">

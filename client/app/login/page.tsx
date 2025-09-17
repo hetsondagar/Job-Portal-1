@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Briefcase, CheckCircle, Building2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,16 +14,38 @@ import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { useAuth } from "@/hooks/useAuth"
+import { useRouter } from 'next/navigation'
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
 
 export default function LoginPage() {
+  const router = useRouter()
   const { login, loading, error, clearError } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+  const [checking, setChecking] = useState(true)
+
+  // If already authenticated (e.g., just completed OAuth), send to dashboard instead of showing login
+  useEffect(() => {
+    const checkAlreadyLoggedIn = async () => {
+      try {
+        if (apiService.isAuthenticated()) {
+          const me = await apiService.getCurrentUser()
+          if (me.success && me.data?.user && me.data.user.userType !== 'employer') {
+            router.replace('/dashboard')
+            return
+          }
+        }
+      } catch {
+        // ignore and show login form
+      }
+      setChecking(false)
+    }
+    checkAlreadyLoggedIn()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
