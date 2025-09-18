@@ -25,12 +25,12 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
 
     console.log('🔍 EmployerAuthGuard - State:', {
       loading,
-      hasUser: !!user,
-      userType: user?.userType,
+        hasUser: !!user,
+        userType: user?.userType,
       hasToken
-    })
-
-    if (!user) {
+      })
+      
+      if (!user) {
       // If we have a token, wait for profile fetch to hydrate user instead of redirecting
       if (hasToken) {
         setIsChecking(true)
@@ -39,21 +39,21 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       
       // No token and no user → go to employer-login
       router.replace('/employer-login')
-      return
-    }
-
+        return
+      }
+      
     // We have a user - check if they're employer or admin
     if (user.userType !== 'employer' && user.userType !== 'admin') {
-      if (user.userType === 'jobseeker') {
+        if (user.userType === 'jobseeker') {
         router.replace('/dashboard')
-      } else {
+        } else {
         router.replace('/login')
+        }
+        return
       }
-      return
-    }
-
+      
     // Auth OK
-    setIsChecking(false)
+      setIsChecking(false)
   }, [user, loading, router])
 
   // Show loading while checking authentication

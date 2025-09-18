@@ -406,7 +406,7 @@ router.get('/google/callback', (req, res) => {
         const token = generateToken(user);
         
         // Check if user needs to set up a password (OAuth users without password)
-        const needsPasswordSetup = !user.password && user.oauth_provider === 'google';
+        const needsPasswordSetup = !user.password;
         
         console.log('📝 Google OAuth Callback - Final user state:', {
           id: user.id,
@@ -416,14 +416,20 @@ router.get('/google/callback', (req, res) => {
           state: state
         });
         
-        // Determine redirect URL based on user type - BE VERY EXPLICIT
+        // Determine redirect URL based on user type and state - BE VERY EXPLICIT
         let redirectUrl;
         if (user.user_type === 'employer') {
           console.log('✅ Redirecting employer to employer-oauth-callback');
           redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}&userType=employer`;
         } else {
-          console.log('✅ Redirecting jobseeker to oauth-callback');
-          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker`;
+          // Check if this is a Gulf flow
+          if (state === 'gulf') {
+            console.log('✅ Redirecting Gulf jobseeker to oauth-callback with Gulf state');
+            redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker&state=gulf`;
+          } else {
+            console.log('✅ Redirecting jobseeker to oauth-callback');
+            redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker`;
+          }
         }
         
         console.log('✅ Google OAuth Callback - Redirecting to:', redirectUrl);
@@ -576,12 +582,18 @@ router.get('/facebook/callback', (req, res) => {
           needsPasswordSetup: needsPasswordSetup
         });
         
-        // Determine redirect URL based on user type
+        // Determine redirect URL based on user type and state
         let redirectUrl;
         if (user.user_type === 'employer') {
           redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/employer-oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}&userType=employer`;
         } else {
-          redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker`;
+          // Check if this is a Gulf flow
+          if (state === 'gulf') {
+            console.log('✅ Redirecting Gulf jobseeker to oauth-callback with Gulf state');
+            redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker&state=gulf`;
+          } else {
+            redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=facebook&needsPasswordSetup=${needsPasswordSetup}&userType=jobseeker`;
+          }
         }
         
         console.log('✅ Facebook OAuth Callback - Redirecting to:', redirectUrl);
@@ -629,15 +641,18 @@ router.post('/setup-password', async (req, res) => {
     }
     
     // Check if user is OAuth user without password
-    if (user.password || (user.oauth_provider === 'local')) {
-      return res.status(400).json({
+    // Only block if a password already exists; allow setting password even if oauth_provider is 'local'
+    if (user.password) {
+      return res.status(409).json({
         success: false,
+        code: 'PASSWORD_ALREADY_SET',
+        requiresPasswordSetup: false,
         message: 'Password already set or user is not OAuth user'
       });
     }
     
-    // Set password for OAuth user
-    await user.update({ password });
+    // Set password for OAuth user and mark as capable of local login
+    await user.update({ password, oauth_provider: user.oauth_provider || 'google' });
 
     // Issue a fresh JWT so the client session is stable post-setup
     const newToken = jwt.sign(
@@ -645,7 +660,7 @@ router.post('/setup-password', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
-
+    
     res.status(200).json({
       success: true,
       message: 'Password set successfully',
@@ -657,7 +672,9 @@ router.post('/setup-password', async (req, res) => {
           first_name: user.first_name,
           last_name: user.last_name,
           user_type: user.user_type,
-          is_email_verified: user.is_email_verified
+          is_email_verified: user.is_email_verified,
+          hasPassword: true,
+          requiresPasswordSetup: false
         }
       }
     });

@@ -14,7 +14,11 @@ const router = express.Router();
 const validateSignup = [
   body('email')
     .isEmail()
-    .normalizeEmail()
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false,
+      gmail_convert_googlemaildotcom: false
+    })
     .withMessage('Please enter a valid email address'),
   body('password')
     .isLength({ min: 8 })
@@ -38,7 +42,11 @@ const validateSignup = [
 const validateEmployerSignup = [
   body('email')
     .isEmail()
-    .normalizeEmail()
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false,
+      gmail_convert_googlemaildotcom: false
+    })
     .withMessage('Please enter a valid email address'),
   body('password')
     .isLength({ min: 8 })
@@ -98,8 +106,9 @@ const validateEmployerSignup = [
 const validateLogin = [
   body('email')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please enter a valid email address'),
+    .withMessage('Please enter a valid email address')
+    .bail()
+    .customSanitizer((value) => typeof value === 'string' ? value.trim().toLowerCase() : value),
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -108,7 +117,11 @@ const validateLogin = [
 const validateForgotPassword = [
   body('email')
     .isEmail()
-    .normalizeEmail()
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false,
+      gmail_convert_googlemaildotcom: false
+    })
     .withMessage('Please enter a valid email address')
 ];
 
@@ -298,25 +311,25 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         }
         console.log('✅ Joining existing company:', company.id);
       } else {
-        const companySlug = await generateSlug(companyName);
-        // Create company record
-        console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug });
+      const companySlug = await generateSlug(companyName);
+      // Create company record
+      console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug });
         company = await Company.create({
-          name: companyName,
-          slug: companySlug,
-          industry: industry || 'Other',
-          companySize: companySize || '1-50',
-          website: website,
-          email: email,
-          phone: phone,
+        name: companyName,
+        slug: companySlug,
+        industry: industry || 'Other',
+        companySize: companySize || '1-50',
+        website: website,
+        email: email,
+        phone: phone,
           region: region || 'india',
-          contactPerson: fullName,
-          contactEmail: email,
-          contactPhone: phone,
-          companyStatus: 'pending_approval',
-          isActive: true
-        }, { transaction });
-        console.log('✅ Company created successfully:', company.id);
+        contactPerson: fullName,
+        contactEmail: email,
+        contactPhone: phone,
+        companyStatus: 'pending_approval',
+        isActive: true
+      }, { transaction });
+      console.log('✅ Company created successfully:', company.id);
       }
 
       // Create new employer user
@@ -438,11 +451,33 @@ router.post('/login', validateLogin, async (req, res) => {
     }
 
     const { email, password } = req.body;
+    console.log('🧪 Login debug: rawEmail=', req.body?.email, 'sanitizedEmail=', email);
 
-    // Find user by email
-    const user = await User.findOne({ where: { email } });
+    // Find user by email (exact match first)
+    let user = await User.findOne({ where: { email } });
+    console.log('🧪 Login debug: exact match found? ', !!user);
+
+    // Gmail-specific fallback: if not found and looks like gmail, try matching ignoring dots
     if (!user) {
-      console.log('❌ User not found:', email);
+      const lowerEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
+      const looksLikeGmail = lowerEmail.endsWith('@gmail.com') || lowerEmail.endsWith('@googlemail.com');
+      console.log('🧪 Login debug: looksLikeGmail=', looksLikeGmail, 'lowerEmail=', lowerEmail);
+      if (looksLikeGmail) {
+        const { sequelize } = require('../config/sequelize');
+        const strippedInput = lowerEmail.replace(/\./g, '');
+        console.log('🧪 Login debug: strippedInputForFallback=', strippedInput);
+        user = await User.findOne({
+          where: sequelize.where(
+            sequelize.fn('replace', sequelize.fn('lower', sequelize.col('email')), '.', ''),
+            strippedInput
+          )
+        });
+        console.log('🧪 Login debug: fallback match found? ', !!user);
+      }
+    }
+
+    if (!user) {
+      console.log('❌ User not found after exact+fallback:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'

@@ -3,6 +3,20 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
+    // Check if employer_quotas table exists
+    const tableExists = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'employer_quotas'
+      );
+    `, { type: Sequelize.QueryTypes.SELECT });
+
+    if (!tableExists[0].exists) {
+      console.log('⚠️ employer_quotas table does not exist, skipping quota type updates');
+      return;
+    }
+
     // Update old quota types to new ones
     const quotaTypeMappings = [
       { old: 'resume_search', new: 'resume_views' },
