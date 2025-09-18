@@ -391,7 +391,7 @@ export default function EmployerRegisterPage() {
                 <p className="text-slate-600 dark:text-slate-300 mt-2">Start hiring top talent in minutes</p>
               </CardHeader>
 
-              <CardContent className="space-y-6">
+                             <CardContent className="space-y-6">
                 <div className="text-center text-sm text-slate-600 dark:text-slate-300">
                   Already have a company in the system?{' '}
                   <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
@@ -448,7 +448,7 @@ export default function EmployerRegisterPage() {
                   </div>
                 )}
 
-                {/* Validation Status */}
+                 {/* Validation Status */}
                  {Object.keys(validationErrors).length > 0 ? (
                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                      <h3 className="text-red-800 dark:text-red-200 font-medium mb-2 flex items-center">
@@ -560,49 +560,49 @@ export default function EmployerRegisterPage() {
                    </div>
 
                   {!formData.companyId && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="companySize" className="text-slate-700 dark:text-slate-300">
-                          Company Size
-                        </Label>
-                        <Select
-                          value={formData.companySize}
-                          onValueChange={(value) => handleInputChange("companySize", value)}
-                        >
-                          <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
-                            <SelectValue placeholder="Select company size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1-50">1-50 employees</SelectItem>
-                            <SelectItem value="51-200">51-200 employees</SelectItem>
-                            <SelectItem value="201-500">201-500 employees</SelectItem>
-                            <SelectItem value="500-1000">500-1000 employees</SelectItem>
-                            <SelectItem value="1000+">1000+ employees</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="industry" className="text-slate-700 dark:text-slate-300">
-                          Industry
-                        </Label>
-                        <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
-                          <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
-                            <SelectValue placeholder="Select industry" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="technology">Technology</SelectItem>
-                            <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="healthcare">Healthcare</SelectItem>
-                            <SelectItem value="education">Education</SelectItem>
-                            <SelectItem value="retail">Retail</SelectItem>
-                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="consulting">Consulting</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="companySize" className="text-slate-700 dark:text-slate-300">
+                        Company Size
+                      </Label>
+                      <Select
+                        value={formData.companySize}
+                        onValueChange={(value) => handleInputChange("companySize", value)}
+                      >
+                        <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
+                          <SelectValue placeholder="Select company size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1-50">1-50 employees</SelectItem>
+                          <SelectItem value="51-200">51-200 employees</SelectItem>
+                          <SelectItem value="201-500">201-500 employees</SelectItem>
+                          <SelectItem value="500-1000">500-1000 employees</SelectItem>
+                          <SelectItem value="1000+">1000+ employees</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="industry" className="text-slate-700 dark:text-slate-300">
+                        Industry
+                      </Label>
+                      <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+                        <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="technology">Technology</SelectItem>
+                          <SelectItem value="finance">Finance</SelectItem>
+                          <SelectItem value="healthcare">Healthcare</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="retail">Retail</SelectItem>
+                          <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                          <SelectItem value="consulting">Consulting</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   )}
 
                   <div className="space-y-2">
@@ -625,22 +625,22 @@ export default function EmployerRegisterPage() {
                   </div>
 
                   {!formData.companyId && (
-                    <div className="space-y-2">
-                      <Label htmlFor="website" className="text-slate-700 dark:text-slate-300">
-                        Company Website (Optional)
-                      </Label>
-                      <div className="relative">
-                        <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                        <Input
-                          id="website"
-                          type="url"
-                          placeholder="https://yourcompany.com"
-                          value={formData.website}
-                          onChange={(e) => handleInputChange("website", e.target.value)}
-                          className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                        />
-                      </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="website" className="text-slate-700 dark:text-slate-300">
+                      Company Website (Optional)
+                    </Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <Input
+                        id="website"
+                        type="url"
+                        placeholder="https://yourcompany.com"
+                        value={formData.website}
+                        onChange={(e) => handleInputChange("website", e.target.value)}
+                        className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
+                      />
                     </div>
+                  </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

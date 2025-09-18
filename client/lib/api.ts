@@ -996,6 +996,20 @@ class ApiService {
       body: JSON.stringify({ password }),
     });
     const result = await this.handleResponse<any>(response);
+    // Treat PASSWORD_ALREADY_SET as a soft success
+    if (!result.success) {
+      try {
+        const clone = response.clone();
+        const json = await clone.json().catch(() => null as any);
+        if (json && (json.code === 'PASSWORD_ALREADY_SET' || json.requiresPasswordSetup === false)) {
+          return {
+            success: true,
+            message: 'Password already set',
+            data: json,
+          } as any;
+        }
+      } catch (_) {}
+    }
     if (result.success && result.data?.token) {
       localStorage.setItem('token', result.data.token);
       if (result.data.user) {
@@ -2681,6 +2695,197 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
     return this.handleResponse<any>(response);
+  }
+
+  // Gulf-specific API methods
+  async getGulfJobs(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    location?: string;
+    jobType?: string;
+    experienceLevel?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    companyId?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<ApiResponse<{ jobs: Job[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ jobs: Job[]; pagination: any }>(response);
+  }
+
+  async getGulfJobById(id: string): Promise<ApiResponse<Job>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<Job>(response);
+  }
+
+  async getSimilarGulfJobs(id: string, limit?: number): Promise<ApiResponse<Job[]>> {
+    const queryParams = limit ? `?limit=${limit}` : '';
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${id}/similar${queryParams}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<Job[]>(response);
+  }
+
+  async getGulfCompanies(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    industry?: string;
+    companySize?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<ApiResponse<{ companies: Company[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/companies?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ companies: Company[]; pagination: any }>(response);
+  }
+
+  async getGulfJobApplications(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<ApiResponse<{ applications: JobApplication[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/applications?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ applications: JobApplication[]; pagination: any }>(response);
+  }
+
+  async getGulfJobBookmarks(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<{ bookmarks: JobBookmark[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/bookmarks?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ bookmarks: JobBookmark[]; pagination: any }>(response);
+  }
+
+  async getGulfJobAlerts(params?: {
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+  }): Promise<ApiResponse<{ alerts: JobAlert[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ alerts: JobAlert[]; pagination: any }>(response);
+  }
+
+  async getGulfDashboardStats(): Promise<ApiResponse<{
+    gulfApplications: number;
+    gulfBookmarks: number;
+    gulfAlerts: number;
+    totalGulfJobs: number;
+    stats: any;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/dashboard/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{
+      gulfApplications: number;
+      gulfBookmarks: number;
+      gulfAlerts: number;
+      totalGulfJobs: number;
+      stats: any;
+    }>(response);
+  }
+
+  async bookmarkGulfJob(jobId: string): Promise<ApiResponse<JobBookmark>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${jobId}/bookmark`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<JobBookmark>(response);
+  }
+
+  async removeGulfJobBookmark(jobId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${jobId}/bookmark`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async createGulfJobAlert(alertData: {
+    keywords?: string;
+    location?: string;
+    jobType?: string;
+    experienceLevel?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    isActive?: boolean;
+  }): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(alertData),
+    });
+    return this.handleResponse<JobAlert>(response);
+  }
+
+  async updateGulfJobAlert(alertId: string, alertData: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts/${alertId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(alertData),
+    });
+    return this.handleResponse<JobAlert>(response);
+  }
+
+  async deleteGulfJobAlert(alertId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts/${alertId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
   }
 }
 

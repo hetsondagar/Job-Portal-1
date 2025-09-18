@@ -65,6 +65,11 @@ const Job = sequelize.define('Job', {
     allowNull: true,
     defaultValue: 'India'
   },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true,
+    defaultValue: 'india'
+  },
   latitude: {
     type: DataTypes.DECIMAL(10, 8),
     allowNull: true
