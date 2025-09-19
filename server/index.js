@@ -27,6 +27,7 @@ const hotVacanciesRoutes = require('./routes/hot-vacancies');
 const featuredJobsRoutes = require('./routes/featured-jobs');
 const usageRoutes = require('./routes/usage');
 const gulfJobsRoutes = require('./routes/gulf-jobs');
+const salaryRoutes = require('./routes/salary');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -176,6 +177,7 @@ app.use('/api/featured-jobs', featuredJobsRoutes);
 app.use('/api/interviews', interviewsRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
+app.use('/api/salary', salaryRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
