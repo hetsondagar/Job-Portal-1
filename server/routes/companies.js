@@ -266,14 +266,14 @@ router.get('/:id/jobs', authenticateToken, async (req, res) => {
     
     const jobs = await Job.findAll({
       where: { 
-        companyId: id,
+        company_id: id,
         status: 'active'
       },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: [
         'id', 'title', 'location', 'jobType', 'experienceLevel', 
         'salaryMin', 'salaryMax', 'description', 'requirements',
-        'createdAt', 'isUrgent'
+        'created_at', 'is_urgent'
       ]
     });
 

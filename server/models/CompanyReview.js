@@ -111,6 +111,9 @@ const CompanyReview = sequelize.define('CompanyReview', {
 }, {
   tableName: 'company_reviews',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  timestamps: true,
   underscored: true,
   indexes: [
     {

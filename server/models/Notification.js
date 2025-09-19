@@ -10,6 +10,7 @@ const Notification = sequelize.define('Notification', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -39,69 +40,20 @@ const Notification = sequelize.define('Notification', {
     type: DataTypes.TEXT,
     allowNull: false
   },
-  shortMessage: {
-    type: DataTypes.STRING(200),
-    allowNull: true
-  },
   isRead: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_read'
   },
-  isEmailSent: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  isSMSSent: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  isPushSent: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  priority: {
-    type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
-    allowNull: false,
-    defaultValue: 'medium'
-  },
-  actionUrl: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  actionText: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  icon: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  image: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  metadata: {
+  data: {
     type: DataTypes.JSONB,
     defaultValue: {}
-  },
-  readAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  expiresAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  scheduledAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  sentAt: {
-    type: DataTypes.DATE,
-    allowNull: true
   }
 }, {
   tableName: 'notifications',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (notification) => {
       if (!notification.shortMessage) {

@@ -106,6 +106,9 @@ const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
 }, {
   tableName: 'subscription_plans',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  timestamps: true,
   underscored: true,
   hooks: {
     beforeCreate: (plan) => {

@@ -10,6 +10,7 @@ const CoverLetter = sequelize.define('CoverLetter', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -21,46 +22,19 @@ const CoverLetter = sequelize.define('CoverLetter', {
   },
   content: {
     type: DataTypes.TEXT,
-    allowNull: true
-  },
-  summary: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: false
   },
   isDefault: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  isPublic: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
-  },
-  views: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  downloads: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
-  lastUpdated: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: false,
+    field: 'is_default'
   }
 }, {
   tableName: 'cover_letters',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
-    beforeCreate: async (coverLetter) => {
-      coverLetter.lastUpdated = new Date();
-    },
-    beforeUpdate: async (coverLetter) => {
-      coverLetter.lastUpdated = new Date();
-    },
     afterCreate: async (coverLetter) => {
       try {
         const DashboardService = require('../services/dashboardService');

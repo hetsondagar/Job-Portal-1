@@ -96,6 +96,7 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
     createdBy: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'created_by',
       comment: 'User who created this promotion'
     },
     approvedBy: {
@@ -109,7 +110,10 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
       comment: 'When the promotion was approved'
     }
   }, {
-    tableName: 'featured_jobs',
+  tableName: 'featured_jobs',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
     timestamps: true,
     indexes: [
       {

@@ -200,23 +200,12 @@ const User = sequelize.define('User', {
     defaultValue: 'public'
   },
   email_notifications: {
-    type: DataTypes.JSONB,
-    defaultValue: {
-      jobAlerts: true,
-      applicationUpdates: true,
-      messages: true,
-      companyUpdates: true,
-      marketing: false
-    }
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   },
   push_notifications: {
-    type: DataTypes.JSONB,
-    defaultValue: {
-      jobAlerts: true,
-      applicationUpdates: true,
-      messages: true,
-      companyUpdates: true
-    }
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   },
   // Account status & verification
   account_status: {

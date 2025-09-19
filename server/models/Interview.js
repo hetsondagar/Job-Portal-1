@@ -7,7 +7,7 @@ const Interview = sequelize.define('Interview', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
-  jobApplicationId: {
+  job_id: {
     type: DataTypes.UUID,
     allowNull: false,
     field: 'job_application_id',
@@ -43,12 +43,24 @@ const Interview = sequelize.define('Interview', {
       key: 'id'
     }
   },
-  title: {
-    type: DataTypes.STRING,
-    allowNull: false
+  candidate_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   },
-  description: {
-    type: DataTypes.TEXT,
+  employer_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  interview_type: {
+    type: DataTypes.STRING,
     allowNull: true
   },
   interviewType: {
@@ -86,22 +98,10 @@ const Interview = sequelize.define('Interview', {
     allowNull: true,
     field: 'meeting_link'
   },
-  meetingPassword: {
+  meeting_link: {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'meeting_password'
-  },
-  interviewers: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  agenda: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  requirements: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
   },
   notes: {
     type: DataTypes.TEXT,
@@ -172,6 +172,8 @@ const Interview = sequelize.define('Interview', {
     field: 'updated_at'
   }
 }, {
+  sequelize,
+  modelName: 'Interview',
   tableName: 'interviews',
   indexes: [
     {

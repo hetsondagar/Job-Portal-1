@@ -90,6 +90,9 @@ const Conversation = sequelize.define('Conversation', {
   }
 }, {
   tableName: 'conversations',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       fields: ['participant1Id']
