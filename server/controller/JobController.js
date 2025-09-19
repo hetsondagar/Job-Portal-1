@@ -5,6 +5,8 @@ const Company = require('../models/Company');
 const User = require('../models/User');
 const JobPhoto = require('../models/JobPhoto');
 const ViewTrackingService = require('../services/viewTrackingService');
+const EmployerActivityService = require('../services/employerActivityService');
+const EmployerQuotaService = require('../services/employerQuotaService');
 
 /**
  * Create a new job
@@ -230,6 +232,26 @@ exports.createJob = async (req, res, next) => {
     });
 
     const job = await Job.create(jobData);
+
+    // Consume job posting quota
+    try {
+      await EmployerQuotaService.checkAndConsume(employerId, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
+        activityType: 'job_post',
+        details: { title: job.title, status: job.status },
+        jobId: job.id,
+        defaultLimit: 50
+      });
+    } catch (e) {
+      console.error('⚠️ Failed to consume job posting quota:', e?.message || e);
+      // Don't fail the job creation if quota check fails
+    }
+
+    // Log employer activity: job posted
+    try {
+      await EmployerActivityService.logJobPost(employerId, job.id, { title: job.title, status: job.status });
+    } catch (e) {
+      console.error('⚠️ Failed to log job_post activity:', e?.message || e);
+    }
 
     console.log('✅ Job created successfully:', job.id);
 

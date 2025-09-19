@@ -14,7 +14,11 @@ const router = express.Router();
 const validateSignup = [
   body('email')
     .isEmail()
-    .normalizeEmail()
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false,
+      gmail_convert_googlemaildotcom: false
+    })
     .withMessage('Please enter a valid email address'),
   body('password')
     .isLength({ min: 8 })
@@ -38,7 +42,11 @@ const validateSignup = [
 const validateEmployerSignup = [
   body('email')
     .isEmail()
-    .normalizeEmail()
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false,
+      gmail_convert_googlemaildotcom: false
+    })
     .withMessage('Please enter a valid email address'),
   body('password')
     .isLength({ min: 8 })
@@ -49,7 +57,12 @@ const validateEmployerSignup = [
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Full name must be between 2 and 100 characters'),
+  body('companyId')
+    .optional()
+    .isUUID()
+    .withMessage('Invalid companyId'),
   body('companyName')
+    .optional()
     .trim()
     .isLength({ min: 2, max: 200 })
     .withMessage('Company name must be between 2 and 200 characters'),
@@ -60,13 +73,17 @@ const validateEmployerSignup = [
     .matches(/^[\+]?[0-9\s\-\(\)\.]+$/)
     .withMessage('Please enter a valid phone number (digits, spaces, dashes, parentheses, and dots allowed)'),
   body('companySize')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['1-50', '51-200', '201-500', '500-1000', '1000+'])
     .withMessage('Invalid company size'),
   body('industry')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['technology', 'finance', 'healthcare', 'education', 'retail', 'manufacturing', 'consulting', 'other'])
     .withMessage('Invalid industry'),
+  body('region')
+    .optional()
+    .isIn(['india', 'gulf', 'other'])
+    .withMessage('Region must be india, gulf, or other'),
   body('agreeToTerms')
     .custom((value) => {
       // Handle both boolean and string values
@@ -77,13 +94,21 @@ const validateEmployerSignup = [
       return true;
     })
     .withMessage('You must agree to the terms and conditions')
+  // Ensure either companyId or companyName is provided
+  , (req, res, next) => {
+    if (!req.body.companyId && !req.body.companyName) {
+      return res.status(400).json({ success: false, message: 'Provide either companyId to join or companyName to create a new company' });
+    }
+    next();
+  }
 ];
 
 const validateLogin = [
   body('email')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please enter a valid email address'),
+    .withMessage('Please enter a valid email address')
+    .bail()
+    .customSanitizer((value) => typeof value === 'string' ? value.trim().toLowerCase() : value),
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -92,7 +117,11 @@ const validateLogin = [
 const validateForgotPassword = [
   body('email')
     .isEmail()
-    .normalizeEmail()
+    .normalizeEmail({
+      gmail_remove_dots: false,
+      gmail_remove_subaddress: false,
+      gmail_convert_googlemaildotcom: false
+    })
     .withMessage('Please enter a valid email address')
 ];
 
@@ -228,7 +257,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       });
     }
 
-    const { email, password, fullName, companyName, phone, companySize, industry, website } = req.body;
+    const { email, password, fullName, companyName, companyId, phone, companySize, industry, website, region, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -245,7 +274,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Start a transaction to create both user and company
+    // Start a transaction to create user and (optionally) company
     const transaction = await sequelize.transaction();
 
     try {
@@ -273,12 +302,19 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         return slug;
       };
 
+      let company = null;
+      if (companyId) {
+        // Join existing company
+        company = await Company.findByPk(companyId, { transaction });
+        if (!company) {
+          throw new Error('Company not found');
+        }
+        console.log('✅ Joining existing company:', company.id);
+      } else {
       const companySlug = await generateSlug(companyName);
-      
       // Create company record
       console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug });
-      
-      const company = await Company.create({
+        company = await Company.create({
         name: companyName,
         slug: companySlug,
         industry: industry || 'Other',
@@ -286,14 +322,15 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         website: website,
         email: email,
         phone: phone,
+          region: region || 'india',
         contactPerson: fullName,
         contactEmail: email,
         contactPhone: phone,
         companyStatus: 'pending_approval',
         isActive: true
       }, { transaction });
-
       console.log('✅ Company created successfully:', company.id);
+      }
 
       // Create new employer user
       console.log('📝 Creating employer user with data:', {
@@ -319,6 +356,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         oauth_provider: 'local', // Ensure this is set for regular registrations
         // Store additional preferences
         preferences: {
+          employerRole: companyId ? (role || 'recruiter') : 'admin',
           ...req.body.preferences
         }
       }, { transaction });
@@ -348,15 +386,16 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             accountStatus: user.account_status,
             companyId: user.company_id
           },
-          company: {
+          company: company ? {
             id: company.id,
             name: company.name,
             industry: company.industry,
             companySize: company.companySize,
             website: company.website,
             email: company.email,
-            phone: company.phone
-          },
+            phone: company.phone,
+            region: company.region
+          } : undefined,
           token
         }
       });
@@ -412,11 +451,33 @@ router.post('/login', validateLogin, async (req, res) => {
     }
 
     const { email, password } = req.body;
+    console.log('🧪 Login debug: rawEmail=', req.body?.email, 'sanitizedEmail=', email);
 
-    // Find user by email
-    const user = await User.findOne({ where: { email } });
+    // Find user by email (exact match first)
+    let user = await User.findOne({ where: { email } });
+    console.log('🧪 Login debug: exact match found? ', !!user);
+
+    // Gmail-specific fallback: if not found and looks like gmail, try matching ignoring dots
     if (!user) {
-      console.log('❌ User not found:', email);
+      const lowerEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
+      const looksLikeGmail = lowerEmail.endsWith('@gmail.com') || lowerEmail.endsWith('@googlemail.com');
+      console.log('🧪 Login debug: looksLikeGmail=', looksLikeGmail, 'lowerEmail=', lowerEmail);
+      if (looksLikeGmail) {
+        const { sequelize } = require('../config/sequelize');
+        const strippedInput = lowerEmail.replace(/\./g, '');
+        console.log('🧪 Login debug: strippedInputForFallback=', strippedInput);
+        user = await User.findOne({
+          where: sequelize.where(
+            sequelize.fn('replace', sequelize.fn('lower', sequelize.col('email')), '.', ''),
+            strippedInput
+          )
+        });
+        console.log('🧪 Login debug: fallback match found? ', !!user);
+      }
+    }
+
+    if (!user) {
+      console.log('❌ User not found after exact+fallback:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'

@@ -60,15 +60,20 @@ export default function DashboardPage() {
   const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
-    if (!loading && !user) {
-      toast.error('Please sign in to access the dashboard')
-      router.push('/login')
-    } else if (user && user.userType === 'employer') {
-      // Redirect employers to their dashboard
+    if (loading) return;
+    if (user) {
+      if (user.userType === 'employer') {
       console.log('🔄 Employer detected on jobseeker dashboard, redirecting to employer dashboard')
-      toast.info('Redirecting to employer dashboard...')
-      router.push('/employer-dashboard')
+        router.replace('/employer-dashboard')
+      }
+      return;
     }
+    // No user yet
+    if (typeof window !== 'undefined' && apiService.isAuthenticated()) {
+      // Token present; avoid redirecting to login while profile is loading
+      return;
+    }
+    router.replace('/login')
   }, [user, loading, router])
 
   // Single useEffect to handle all data fetching with proper debouncing
@@ -147,10 +152,12 @@ export default function DashboardPage() {
       if (response.success && response.data && response.data.interviews) {
         setUpcomingInterviews(response.data.interviews)
       } else {
+        console.log('No interviews found or response format issue:', response)
         setUpcomingInterviews([])
       }
     } catch (error) {
       console.error('Error fetching interviews:', error)
+      // Don't show error to user for interviews as it's not critical
       setUpcomingInterviews([])
     } finally {
       setInterviewsLoading(false)
@@ -775,6 +782,24 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </Link>
+
+            <Link href="/gulf-opportunities">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-2 border-green-200 dark:border-green-800">
+                <CardContent className="p-6 h-full flex flex-col justify-center">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Gulf Opportunities</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">Explore jobs in Gulf region</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Upcoming Interviews Section */}
@@ -1008,6 +1033,33 @@ export default function DashboardPage() {
                   <LogOut className="w-5 h-5" />
                   <span className="text-sm font-medium">Sign Out</span>
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gulf Opportunities Banner */}
+          <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Explore Gulf Opportunities</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">Discover high-paying jobs in the Gulf region with tax-free salaries</p>
+                  </div>
+                </div>
+                <Link href="/gulf-opportunities">
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                    Explore Gulf Jobs
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

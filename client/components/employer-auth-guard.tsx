@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Building2, Loader2, Shield } from 'lucide-react'
+import { apiService } from '@/lib/api'
 
 interface EmployerAuthGuardProps {
   children: React.ReactNode
@@ -17,37 +18,42 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    if (!loading) {
-      console.log('🔍 EmployerAuthGuard - User state:', {
+    // While auth provider is loading, or we have a token but no user yet, keep checking
+    if (loading) return;
+
+    const hasToken = typeof window !== 'undefined' && apiService.isAuthenticated()
+
+    console.log('🔍 EmployerAuthGuard - State:', {
+      loading,
         hasUser: !!user,
         userType: user?.userType,
-        email: user?.email,
-        id: user?.id
+      hasToken
       })
       
       if (!user) {
-        // User not authenticated, redirect to employer login
-        console.log('❌ No user found, redirecting to employer-login')
-        router.push('/employer-login')
+      // If we have a token, wait for profile fetch to hydrate user instead of redirecting
+      if (hasToken) {
+        setIsChecking(true)
         return
       }
       
-      // Check if user is an employer
-      if (user.userType !== 'employer') {
-        console.log('❌ User is not employer, userType:', user.userType)
+      // No token and no user → go to employer-login
+      router.replace('/employer-login')
+        return
+      }
+      
+    // We have a user - check if they're employer or admin
+    if (user.userType !== 'employer' && user.userType !== 'admin') {
         if (user.userType === 'jobseeker') {
-          console.log('🔄 Redirecting jobseeker to jobseeker dashboard')
-          router.push('/dashboard')
+        router.replace('/dashboard')
         } else {
-          console.log('🔄 Unknown user type, redirecting to login')
-          router.push('/login')
+        router.replace('/login')
         }
         return
       }
       
-      console.log('✅ User is employer, allowing access to employer dashboard')
+    // Auth OK
       setIsChecking(false)
-    }
   }, [user, loading, router])
 
   // Show loading while checking authentication
@@ -81,8 +87,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
     )
   }
 
-  // Show access denied if user is not an employer
-  if (user && user.userType !== 'employer') {
+  // Show access denied if user is not an employer or admin
+  if (user && user.userType !== 'employer' && user.userType !== 'admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center">
         <Card className="w-full max-w-md border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
@@ -96,7 +102,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
               Access Denied
             </CardTitle>
             <p className="text-slate-600 dark:text-slate-300 mt-2">
-              This area is restricted to employer accounts only
+              This area is restricted to employer and admin accounts only
             </p>
           </CardHeader>
           <CardContent className="text-center space-y-4">

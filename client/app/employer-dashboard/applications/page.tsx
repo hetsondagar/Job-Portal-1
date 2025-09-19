@@ -697,6 +697,15 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
     }
 
     try {
+      // First log the resume view activity
+      try {
+        await apiService.viewApplicationResume(application.id)
+        console.log('✅ Resume view activity logged')
+      } catch (activityError) {
+        console.error('Failed to log resume view activity:', activityError)
+        // Don't fail the view if activity logging fails
+      }
+
       // First try to use the metadata fileUrl if available
       if (resume.metadata?.fileUrl) {
         window.open(resume.metadata.fileUrl, '_blank', 'noopener,noreferrer')

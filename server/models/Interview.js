@@ -19,7 +19,7 @@ const Interview = sequelize.define('Interview', {
   employerId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'employer_id',
+    field: 'interviewer_id',
     references: {
       model: 'users',
       key: 'id'
@@ -36,7 +36,7 @@ const Interview = sequelize.define('Interview', {
   },
   jobId: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true,
     field: 'job_id',
     references: {
       model: 'jobs',
@@ -180,7 +180,7 @@ const Interview = sequelize.define('Interview', {
       fields: ['job_application_id']
     },
     {
-      fields: ['employer_id']
+      fields: ['interviewer_id']
     },
     {
       fields: ['candidate_id']

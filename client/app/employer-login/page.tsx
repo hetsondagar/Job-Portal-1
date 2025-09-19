@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -48,6 +48,36 @@ export default function EmployerLoginPage() {
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
   const router = useRouter()
   const { login, loading, error, clearError } = useAuth()
+  const [checking, setChecking] = useState(true)
+
+  // If already authenticated (e.g., just completed OAuth), send to appropriate employer dashboard
+  useEffect(() => {
+    const checkAlreadyLoggedIn = async () => {
+      try {
+        if (apiService.isAuthenticated()) {
+          const me = await apiService.getCurrentUser()
+          if (me.success && me.data?.user && me.data.user.userType === 'employer') {
+            // Determine region → target dashboard
+            let region: string | undefined
+            const companyId = (me.data.user as any).companyId
+            if (companyId) {
+              const companyResp = await apiService.getCompany(companyId)
+              if (companyResp.success && companyResp.data) {
+                localStorage.setItem('company', JSON.stringify(companyResp.data))
+                region = companyResp.data.region
+              }
+            }
+            const target = region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+            return router.replace(target)
+          }
+        }
+      } catch {
+        // ignore and show login form
+      }
+      setChecking(false)
+    }
+    checkAlreadyLoggedIn()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,16 +97,33 @@ export default function EmployerLoginPage() {
       console.log('👤 User data:', result?.user)
       console.log('🎯 User type:', result?.user?.userType)
       
-      // Check if user is an employer and redirect accordingly
+      // Check if user is an employer or admin and redirect accordingly
       if (result?.user?.userType === 'employer') {
-        console.log('✅ User is employer, redirecting to employer dashboard')
-        toast.success('Successfully signed in! Redirecting to employer dashboard...')
-        setTimeout(() => {
-          console.log('🔄 Redirecting to /employer-dashboard')
-          router.push('/employer-dashboard')
-        }, 1000)
+        console.log('✅ User is employer, checking region for dashboard redirect')
+        
+        // Check if user has company data with region
+        if (result?.company?.region === 'gulf') {
+          console.log('✅ Gulf region employer, redirecting to Gulf dashboard')
+          toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
+          setTimeout(() => {
+            console.log('🔄 Redirecting to /gulf-dashboard')
+            router.push('/gulf-dashboard')
+          }, 1000)
+        } else {
+          console.log('✅ India/Other region employer, redirecting to regular employer dashboard')
+          toast.success('Successfully signed in! Redirecting to employer dashboard...')
+          setTimeout(() => {
+            console.log('🔄 Redirecting to /employer-dashboard')
+            router.push('/employer-dashboard')
+          }, 1000)
+        }
+      } else if (result?.user?.userType === 'admin') {
+        // Admin: show employer dashboard as requested
+        console.log('✅ Admin user, redirecting to employer dashboard')
+        toast.success('Signed in as admin! Redirecting to dashboard...')
+        setTimeout(() => router.push('/employer-dashboard'), 600)
       } else {
-        console.log('❌ User is not employer, userType:', result?.user?.userType)
+        console.log('❌ User is not employer or admin, userType:', result?.user?.userType)
         toast.error('This account is not registered as an employer. Please use the regular login.')
         setTimeout(() => {
           console.log('🔄 Redirecting to /login')
@@ -459,6 +506,13 @@ export default function EmployerLoginPage() {
                       Create Employer Account
                     </Button>
                   </Link>
+
+                  <div className="text-sm text-slate-600 dark:text-slate-400">
+                    Need to link to an existing company?{' '}
+                    <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
+                      Join company
+                    </Link>
+                  </div>
 
                   <div className="text-sm text-slate-600 dark:text-slate-400">
                     Need help? Contact our{" "}

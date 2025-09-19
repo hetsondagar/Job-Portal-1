@@ -243,17 +243,21 @@ const User = sequelize.define('User', {
   }
 }, {
   tableName: 'users',
-  underscored: true, // Use snake_case for database columns
+  underscored: false,
+  // Enable timestamps and map to camelCase columns present in DB
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   hooks: {
     beforeCreate: async (user) => {
-      // Hash password for all users with passwords (except OAuth users without passwords)
-      if (user.password && (!user.oauth_provider || user.oauth_provider === 'local')) {
+      // Hash password whenever it's provided
+      if (user.password) {
         user.password = await bcrypt.hash(user.password, 12);
       }
     },
     beforeUpdate: async (user) => {
-      // Hash password for all users with passwords (except OAuth users without passwords)
-      if (user.changed('password') && user.password && (!user.oauth_provider || user.oauth_provider === 'local')) {
+      // Hash password whenever it's changed
+      if (user.changed('password') && user.password) {
         user.password = await bcrypt.hash(user.password, 12);
       }
     }

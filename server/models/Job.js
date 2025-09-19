@@ -77,7 +77,69 @@ const Job = sequelize.define('Job', {
     type: DataTypes.DATE,
     allowNull: true
   },
-  is_active: {
+  state: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'India'
+  },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true,
+    defaultValue: 'india'
+  },
+  latitude: {
+    type: DataTypes.DECIMAL(10, 8),
+    allowNull: true
+  },
+  longitude: {
+    type: DataTypes.DECIMAL(11, 8),
+    allowNull: true
+  },
+  jobType: {
+    type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
+    allowNull: false,
+    defaultValue: 'full-time'
+  },
+  experienceLevel: {
+    type: DataTypes.ENUM('entry', 'junior', 'mid', 'senior', 'lead', 'executive'),
+    allowNull: true
+  },
+  experienceMin: {
+    type: DataTypes.INTEGER, // in years
+    allowNull: true
+  },
+  experienceMax: {
+    type: DataTypes.INTEGER, // in years
+    allowNull: true
+  },
+  salary: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Salary range as entered by user (e.g., "₹8-15 LPA")'
+  },
+  salaryMin: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
+  salaryMax: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
+  salaryCurrency: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'INR'
+  },
+  salaryPeriod: {
+    type: DataTypes.ENUM('hourly', 'daily', 'weekly', 'monthly', 'yearly'),
+    allowNull: true,
+    defaultValue: 'yearly'
+  },
+  isSalaryVisible: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
     defaultValue: true

@@ -593,6 +593,11 @@ export default function RegisterPage() {
                     My Applications
                   </Link>
                 </li>
+                <li>
+                  <Link href="/gulf-opportunities" className="text-slate-400 hover:text-white transition-colors text-sm">
+                    Gulf Opportunities
+                  </Link>
+                </li>
               </ul>
             </div>
 

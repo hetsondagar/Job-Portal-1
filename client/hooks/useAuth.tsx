@@ -68,6 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     oauthId: u.oauth_id ?? u.oauthId,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
+    // passthrough helpers if provided by API
+    requiresPasswordSetup: u.requiresPasswordSetup ?? undefined as any,
+    hasPassword: u.hasPassword ?? undefined as any,
   });
 
   useEffect(() => {

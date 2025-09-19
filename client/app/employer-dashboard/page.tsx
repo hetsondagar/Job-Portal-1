@@ -522,6 +522,10 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
               }}
               userId={user?.id || ''}
             />
+            <div className="mt-4 text-sm text-slate-700">
+              Already have a company?{' '}
+              <Link href="/employer-join-company" className="text-blue-600 hover:underline">Join existing company</Link>
+            </div>
           </motion.div>
         )}
 

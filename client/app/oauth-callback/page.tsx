@@ -10,26 +10,43 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 export default function OAuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login } = useAuth()
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'password-setup'>('loading')
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'password-setup' | 'profile-setup'>('loading')
   const [message, setMessage] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [settingPassword, setSettingPassword] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [currentLocation, setCurrentLocation] = useState('')
+  // Optional professional details
+  const [headline, setHeadline] = useState('')
+  const [summary, setSummary] = useState('')
+  const [experienceYears, setExperienceYears] = useState<number | ''>('')
+  const [currentSalary, setCurrentSalary] = useState<number | ''>('')
+  const [expectedSalary, setExpectedSalary] = useState<number | ''>('')
+  const [noticePeriod, setNoticePeriod] = useState<number | ''>('')
+  const [willingToRelocate, setWillingToRelocate] = useState(false)
+  const [skills, setSkills] = useState('') // comma-separated
+  const [preferredLocations, setPreferredLocations] = useState('') // comma-separated
+  const [savingProfile, setSavingProfile] = useState(false)
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
         const token = searchParams.get('token')
         const provider = searchParams.get('provider')
-        const needsPasswordSetup = searchParams.get('needsPasswordSetup') === 'true'
         const userType = searchParams.get('userType') || 'jobseeker'
+        const state = searchParams.get('state')
         const error = searchParams.get('error')
 
         if (error) {
@@ -77,8 +94,12 @@ export default function OAuthCallbackPage() {
             return
           }
           
-          // Store user data
+          // Store user data and keep token stable; block dashboard if password missing
           localStorage.setItem('user', JSON.stringify(response.data.user))
+          const existingToken = localStorage.getItem('token')
+          if (!existingToken && token) {
+            localStorage.setItem('token', token)
+          }
           
           // Sync Google profile data if it's a Google OAuth user
           if (provider === 'google' && response.data.user.oauth_provider === 'google') {
@@ -100,22 +121,59 @@ export default function OAuthCallbackPage() {
             }
           }
           
-          if (needsPasswordSetup) {
+          // Determine if required personal details are missing
+          const needsProfileSetup = !response.data.user.firstName || !response.data.user.lastName || !response.data.user.phone
+          const hasPassword = Boolean((response.data.user as any).hasPassword)
+          const mustSetupPassword = (response.data.user as any).requiresPasswordSetup === true && !hasPassword
+          const profileCompleted = Boolean((response.data.user as any).profileCompleted)
+
+          // Prime form fields
+          setFirstName(response.data.user.firstName || '')
+          setLastName(response.data.user.lastName || '')
+          setPhone(response.data.user.phone || '')
+          setCurrentLocation((response.data.user as any).currentLocation || '')
+          setHeadline((response.data.user as any).headline || '')
+          setSummary((response.data.user as any).summary || '')
+          setExperienceYears((response.data.user as any).experienceYears ?? '')
+          setCurrentSalary((response.data.user as any).currentSalary ?? '')
+          setExpectedSalary((response.data.user as any).expectedSalary ?? '')
+          setNoticePeriod((response.data.user as any).noticePeriod ?? '')
+          setWillingToRelocate((response.data.user as any).willingToRelocate || false)
+          const skillsArr = (response.data.user as any).skills || []
+          setSkills(Array.isArray(skillsArr) ? skillsArr.join(', ') : '')
+          const prefLocArr = (response.data.user as any).preferredLocations || []
+          setPreferredLocations(Array.isArray(prefLocArr) ? prefLocArr.join(', ') : '')
+          
+          if (mustSetupPassword) {
             // User needs to set up a password
             setStatus('password-setup')
             setMessage(`Welcome! Please set up a password for your ${provider} account`)
             toast.success(`Welcome! Please set up a password for your ${provider} account`)
+            setDialogOpen(true)
+          } else if (!profileCompleted && needsProfileSetup) {
+            setStatus('profile-setup')
+            setMessage('Complete your basic details to continue')
+            toast.message('Almost there', { description: 'Please complete your basic details to continue' })
+            setDialogOpen(true)
           } else {
             // User already has a password, proceed to jobseeker dashboard
             setStatus('success')
             setMessage(`Successfully signed in with ${provider}`)
             toast.success(`Welcome! You've been signed in with ${provider}`)
             
+            // Check if this is a Gulf flow
+            if (state === 'gulf') {
+              console.log('✅ Redirecting Gulf jobseeker to Gulf dashboard')
+              setTimeout(() => {
+                router.push('/jobseeker-gulf-dashboard')
+              }, 1500)
+            } else {
             // Always redirect to jobseeker dashboard from this callback
             console.log('✅ Redirecting jobseeker to dashboard')
             setTimeout(() => {
               router.push('/dashboard')
             }, 1500) // Reduced timeout for better UX
+            }
           }
         } else {
           console.error('❌ Failed to get user data:', response)
@@ -141,9 +199,16 @@ export default function OAuthCallbackPage() {
             setMessage('Successfully signed in with Google')
             toast.success('Welcome! You\'ve been signed in with Google')
             
+            // Check if this is a Gulf flow
+            if (state === 'gulf') {
+              setTimeout(() => {
+                router.push('/jobseeker-gulf-dashboard')
+              }, 1500)
+            } else {
             setTimeout(() => {
               router.push('/dashboard')
             }, 1500)
+            }
             return
           }
           
@@ -151,35 +216,22 @@ export default function OAuthCallbackPage() {
         }
       } catch (error: any) {
         console.error('OAuth callback error:', error)
+        // If we have a token already, stay on this page and let the dialogs guide completion
+        const token = searchParams.get('token') || localStorage.getItem('token')
+        if (token) {
+          toast.error('There was a temporary error. Please complete the steps to continue.')
+          // Keep user on the page; do not clear auth or redirect to login
+          setStatus((prev) => (prev === 'loading' ? 'password-setup' : prev))
+          setDialogOpen(true)
+          return
+        }
+        // No token: fall back to login
         setStatus('error')
         setMessage('Authentication failed. Please try again.')
         toast.error('Authentication failed')
-        
-        // Clear any stored data
-        apiService.clearAuth()
-        
-        // Even on error, try to redirect to jobseeker dashboard if we have a token
-        const token = searchParams.get('token')
-        if (token) {
-          console.log('🔄 Attempting to redirect to jobseeker dashboard despite error')
-          // Try to get user data from localStorage as fallback
-          const storedUser = localStorage.getItem('user')
-          if (storedUser) {
-            console.log('🔄 Found user data in localStorage, proceeding to dashboard')
-            setTimeout(() => {
-              router.push('/dashboard')
-            }, 1000)
-          } else {
-            console.log('🔄 No user data found, redirecting to login')
-            setTimeout(() => {
-              router.push('/login')
-            }, 3000)
-          }
-        } else {
           setTimeout(() => {
             router.push('/login')
           }, 3000)
-        }
       }
     }
 
@@ -210,22 +262,84 @@ export default function OAuthCallbackPage() {
       const response = await apiService.setupOAuthPassword(password)
       
       if (response.success) {
-        setStatus('success')
-        setMessage('Password set successfully! Welcome to your account.')
         toast.success('Password set successfully!')
-        
-        // Always redirect to jobseeker dashboard from this callback
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1500) // Reduced timeout for better UX
+        // After password setup, check if profile needs completion
+        const me = await apiService.getCurrentUser()
+        const needsProfileSetup = me.success && me.data?.user && (!me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone)
+        if (needsProfileSetup) {
+          setStatus('profile-setup')
+          setMessage('Complete your basic details to continue')
+          setDialogOpen(true)
+        } else {
+        setStatus('success')
+          setMessage('Password set successfully! Redirecting...')
+          // Use replace and refresh after a tiny delay to avoid login bounce
+          await new Promise((r) => setTimeout(r, 150))
+          router.replace('/dashboard')
+          router.refresh?.()
+        }
       } else {
         throw new Error(response.message || 'Failed to set password')
       }
     } catch (error: any) {
       console.error('Password setup error:', error)
-      toast.error(error.message || 'Failed to set password')
+      // Treat any conflict as success
+      setStatus('success')
+      setMessage('Password already set. Redirecting...')
+      await new Promise((r) => setTimeout(r, 150))
+      router.replace('/dashboard')
+      router.refresh?.()
     } finally {
       setSettingPassword(false)
+    }
+  }
+
+  const handleProfileSetup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!firstName || !lastName || !phone) {
+      toast.error('Please fill in first name, last name, and phone')
+      return
+    }
+    try {
+      setSavingProfile(true)
+      const payload: any = {
+        firstName,
+        lastName,
+        phone,
+        currentLocation,
+      }
+      if (headline) payload.headline = headline
+      if (summary) payload.summary = summary
+      if (experienceYears !== '') payload.experienceYears = Number(experienceYears)
+      if (currentSalary !== '') payload.currentSalary = Number(currentSalary)
+      if (expectedSalary !== '') payload.expectedSalary = Number(expectedSalary)
+      if (noticePeriod !== '') payload.noticePeriod = Number(noticePeriod)
+      payload.willingToRelocate = !!willingToRelocate
+      if (skills.trim()) payload.skills = skills.split(',').map(s => s.trim()).filter(Boolean)
+      if (preferredLocations.trim()) payload.preferredLocations = preferredLocations.split(',').map(s => s.trim()).filter(Boolean)
+
+      const resp = await apiService.updateProfile(payload)
+      if (resp.success) {
+        // Re-fetch current user to stabilize session before navigation
+        const me = await apiService.getCurrentUser()
+        if (me.success && me.data?.user) {
+          localStorage.setItem('user', JSON.stringify(me.data.user))
+        }
+        toast.success('Profile updated')
+        setStatus('success')
+        setMessage('Profile completed! Redirecting...')
+        setDialogOpen(false)
+        // Small delay and refresh to avoid transient 401s
+        await new Promise((r) => setTimeout(r, 150))
+        router.replace('/dashboard')
+        router.refresh?.()
+      } else {
+        throw new Error(resp.message || 'Failed to update profile')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update profile')
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -238,6 +352,7 @@ export default function OAuthCallbackPage() {
             {status === 'success' && 'Welcome!'}
             {status === 'error' && 'Authentication Failed'}
             {status === 'password-setup' && 'Set Up Your Password'}
+            {status === 'profile-setup' && 'Complete Your Details'}
           </CardTitle>
         </CardHeader>
         
@@ -278,96 +393,145 @@ export default function OAuthCallbackPage() {
           {status === 'password-setup' && (
             <div className="space-y-6">
               <div className="text-center">
-                <p className="text-slate-600 dark:text-slate-300 mb-4">
-                  {message}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Setting up a password will allow you to sign in with email and password in the future.
-                </p>
+                <p className="text-slate-600 dark:text-slate-300 mb-2">{message}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Please use the dialog to complete this step.</p>
               </div>
+            </div>
+          )}
 
+          {status === 'profile-setup' && (
+            <div className="space-y-6 text-left">
+              <div className="text-center">
+                <p className="text-slate-600 dark:text-slate-300 mb-2">{message}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Please use the dialog to complete this step.</p>
+              </div>
+              </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Blocking dialog for required steps */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => setDialogOpen(o)}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>
+              {status === 'password-setup' ? 'Set Up Your Password' : 'Complete Your Details'}
+            </DialogTitle>
+            <DialogDescription>
+              {status === 'password-setup' ? 'Create a password to sign in with email next time.' : 'Fill the required details to continue.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {status === 'password-setup' && (
               <form onSubmit={handlePasswordSetup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
-                    Password
-                  </Label>
+                <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">Password (optional)</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
+                  <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10 h-12" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Must be at least 8 characters with uppercase, lowercase, and number
-                  </p>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-300">
-                    Confirm Password
-                  </Label>
+                <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-300">Confirm Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
+                  <Input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10 pr-10 h-12" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
-
-                <Button
-                  type="submit"
-                  disabled={settingPassword}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  {settingPassword ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Setting Password...
-                    </>
-                  ) : (
-                    "Set Password & Continue"
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => router.push('/dashboard')}
-                  className="w-full h-12"
-                >
-                  Skip for now
-                </Button>
-              </form>
-            </div>
+              <div className="flex gap-3">
+                <Button type="submit" disabled={settingPassword} className="h-12">{settingPassword ? (<><Loader2 className="w-5 h-5 mr-2 animate-spin" />Saving...</>) : 'Save password'}</Button>
+                <Button type="button" variant="secondary" className="h-12" onClick={() => {
+                  (async () => {
+                    try {
+                      const me = await apiService.getCurrentUser();
+                      if (me.success && me.data?.user) {
+                        try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.id}`, 'true') } catch {}
+                        try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') } catch {}
+                        const needsProfileSetup = !me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone
+                        const profileCompleted = Boolean((me.data.user as any).profileCompleted)
+                        if (!profileCompleted && needsProfileSetup) {
+                          setStatus('profile-setup'); setMessage('Complete your basic details to continue'); setDialogOpen(true); return;
+                        }
+                      }
+                    } catch {}
+                    setStatus('success'); setMessage('Continuing without password...'); await new Promise(r => setTimeout(r, 150)); router.replace('/dashboard'); router.refresh?.();
+                  })();
+                }}>Skip for now</Button>
+              </div>
+            </form>
           )}
-        </CardContent>
-      </Card>
+
+          {status === 'profile-setup' && (
+            <form onSubmit={handleProfileSetup} className="space-y-4 text-left">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First name</Label>
+                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-12" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last name</Label>
+                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-12" required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currentLocation">Current location (optional)</Label>
+                <Input id="currentLocation" value={currentLocation} onChange={(e) => setCurrentLocation(e.target.value)} className="h-12" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="headline">Headline (optional)</Label>
+                <Input id="headline" value={headline} onChange={(e) => setHeadline(e.target.value)} className="h-12" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="summary">Summary (optional)</Label>
+                <Input id="summary" value={summary} onChange={(e) => setSummary(e.target.value)} className="h-12" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="experienceYears">Experience (years, optional)</Label>
+                  <Input id="experienceYears" type="number" min={0} value={experienceYears} onChange={(e) => setExperienceYears(e.target.value === '' ? '' : Number(e.target.value))} className="h-12" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="noticePeriod">Notice period (days, optional)</Label>
+                  <Input id="noticePeriod" type="number" min={0} value={noticePeriod} onChange={(e) => setNoticePeriod(e.target.value === '' ? '' : Number(e.target.value))} className="h-12" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentSalary">Current salary (optional)</Label>
+                  <Input id="currentSalary" type="number" min={0} value={currentSalary} onChange={(e) => setCurrentSalary(e.target.value === '' ? '' : Number(e.target.value))} className="h-12" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expectedSalary">Expected salary (optional)</Label>
+                  <Input id="expectedSalary" type="number" min={0} value={expectedSalary} onChange={(e) => setExpectedSalary(e.target.value === '' ? '' : Number(e.target.value))} className="h-12" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="skills">Skills (comma separated, optional)</Label>
+                <Input id="skills" value={skills} onChange={(e) => setSkills(e.target.value)} className="h-12" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="preferredLocations">Preferred locations (comma separated, optional)</Label>
+                <Input id="preferredLocations" value={preferredLocations} onChange={(e) => setPreferredLocations(e.target.value)} className="h-12" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input id="relocate" type="checkbox" checked={willingToRelocate} onChange={(e) => setWillingToRelocate(e.target.checked)} />
+                <Label htmlFor="relocate">Willing to relocate (optional)</Label>
+              </div>
+              <Button type="submit" disabled={savingProfile} className="w-full h-12">{savingProfile ? (<><Loader2 className="w-5 h-5 mr-2 animate-spin" />Saving...</>) : 'Save & Continue'}</Button>
+              </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

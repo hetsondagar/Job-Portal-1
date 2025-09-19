@@ -4,6 +4,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
+// (moved list and join company routes below middleware definition)
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -39,13 +40,67 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// List companies (public)
+router.get('/', async (req, res) => {
+  try {
+    const { search, limit = 20, offset = 0 } = req.query;
+    const { Op } = require('sequelize');
+    const where = {};
+    if (search && String(search).trim().length > 0) {
+      const q = String(search).trim();
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${q}%` } },
+        { slug: { [Op.iLike]: `%${q}%` } }
+      ];
+    }
+    const companies = await Company.findAll({
+      where,
+      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region'],
+      order: [['name', 'ASC']],
+      limit: Math.min(parseInt(limit, 10) || 20, 100),
+      offset: parseInt(offset, 10) || 0
+    });
+    return res.json({ success: true, data: companies });
+  } catch (error) {
+    console.error('List companies error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Join existing company (employer without a company)
+router.post('/join', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only employers can join companies' });
+    }
+    if (req.user.company_id) {
+      return res.status(400).json({ success: false, message: 'User already associated with a company' });
+    }
+    const { companyId, role } = req.body || {};
+    if (!companyId) {
+      return res.status(400).json({ success: false, message: 'companyId is required' });
+    }
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, message: 'Company not found' });
+    }
+    // Persist role into user preferences (non-breaking)
+    const prefs = req.user.preferences || {};
+    prefs.employerRole = (role && typeof role === 'string') ? role : (prefs.employerRole || 'recruiter');
+    await req.user.update({ company_id: company.id, preferences: prefs });
+    return res.json({ success: true, message: 'Joined company successfully', data: { companyId: company.id, role: prefs.employerRole } });
+  } catch (error) {
+    console.error('Join company error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
 // Create a new company
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, industry, companySize, website, description, address, city, state, country, email, phone } = req.body;
+    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region } = req.body;
     
     // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Only employers can create companies'
@@ -100,6 +155,7 @@ router.post('/', authenticateToken, async (req, res) => {
       city,
       state,
       country: country || 'India',
+      region: region || 'india',
       contactPerson: `${req.user.first_name} ${req.user.last_name}`,
       contactEmail: req.user.email,
       contactPhone: req.user.phone,
@@ -129,7 +185,8 @@ router.post('/', authenticateToken, async (req, res) => {
           address: company.address,
           city: company.city,
           state: company.state,
-          country: company.country
+          country: company.country,
+          region: company.region
         },
         user: {
           id: updatedUser.id,

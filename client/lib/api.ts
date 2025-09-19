@@ -48,6 +48,7 @@ export interface Company {
   website?: string;
   email: string;
   phone?: string;
+  region?: string;
 }
 
 export interface AuthResponse {
@@ -75,6 +76,7 @@ export interface EmployerSignupData {
   companySize?: string;
   industry?: string;
   website?: string;
+  region?: string;
   agreeToTerms: boolean;
   subscribeUpdates?: boolean;
 }
@@ -692,6 +694,27 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  // Companies list and join
+  async listCompanies(params?: { search?: string; limit?: number; offset?: number }): Promise<ApiResponse<any[]>> {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.append('search', params.search);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    if (params?.offset) sp.append('offset', String(params.offset));
+    const response = await fetch(`${API_BASE_URL}/companies${sp.toString() ? `?${sp.toString()}` : ''}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  async joinCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/join`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ companyId })
+    });
+    return this.handleResponse<any>(response);
+  }
+
   async updateCompany(companyId: string, data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
       method: 'PUT',
@@ -972,8 +995,28 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ password }),
     });
-
-    return this.handleResponse(response);
+    const result = await this.handleResponse<any>(response);
+    // Treat PASSWORD_ALREADY_SET as a soft success
+    if (!result.success) {
+      try {
+        const clone = response.clone();
+        const json = await clone.json().catch(() => null as any);
+        if (json && (json.code === 'PASSWORD_ALREADY_SET' || json.requiresPasswordSetup === false)) {
+          return {
+            success: true,
+            message: 'Password already set',
+            data: json,
+          } as any;
+        }
+      } catch (_) {}
+    }
+    if (result.success && result.data?.token) {
+      localStorage.setItem('token', result.data.token);
+      if (result.data.user) {
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+      }
+    }
+    return result as any;
   }
 
   // Applications endpoints
@@ -1467,6 +1510,38 @@ class ApiService {
     return response;
   }
 
+  // View resume from application (increment view count and log activity)
+  async viewApplicationResume(applicationId: string): Promise<any> {
+    const url = `${API_BASE_URL}/user/employer/applications/${applicationId}/resume/view`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`View failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // View resume from requirements (increment view count and log activity)
+  async viewRequirementResume(requirementId: string, candidateId: string, resumeId: string): Promise<any> {
+    const url = `${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/resume/${resumeId}/view`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`View failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
   // Download resume from application (for employer applications page)
   async downloadApplicationResume(resumeId: string, applicationId?: string): Promise<Response> {
     let url: string;
@@ -1626,6 +1701,89 @@ class ApiService {
       console.error('❌ Error fetching employer analytics:', error);
       return { success: false, message: 'Failed to fetch analytics', errors: ['NETWORK_ERROR'] };
     }
+  }
+
+  // Usage Pulse endpoints
+  async getUsageSummary(companyId: string): Promise<ApiResponse<any>> {
+    const endpoint = `/usage/summary?companyId=${encodeURIComponent(companyId)}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getUsageActivities(params: { userId?: string; activityType?: string; from?: string; to?: string; limit?: number; offset?: number; }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.userId) sp.append('userId', params.userId);
+    if (params.activityType) sp.append('activityType', params.activityType);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    if (params.limit) sp.append('limit', String(params.limit));
+    if (params.offset) sp.append('offset', String(params.offset));
+    const endpoint = `/usage/activities${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getUsageSearchInsights(params: { companyId?: string; from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.companyId) sp.append('companyId', params.companyId);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    if (params.limit) sp.append('limit', String(params.limit));
+    const endpoint = `/usage/search-insights${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getUsagePostingInsights(params: { companyId?: string; from?: string; to?: string }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.companyId) sp.append('companyId', params.companyId);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    const endpoint = `/usage/posting-insights${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getRecruiterPerformance(params: { companyId?: string; from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params.companyId) sp.append('companyId', params.companyId);
+    if (params.from) sp.append('from', params.from);
+    if (params.to) sp.append('to', params.to);
+    if (params.limit) sp.append('limit', String(params.limit));
+    const endpoint = `/usage/recruiter-performance${sp.toString() ? `?${sp.toString()}` : ''}`;
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  // Quotas
+  async getQuotas(userId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest(`/usage/quotas?userId=${encodeURIComponent(userId)}`, async () => {
+      const response = await fetch(`${this.baseURL}/usage/quotas?userId=${encodeURIComponent(userId)}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async updateQuota(payload: { userId: string; quotaType: string; limit: number; resetUsed?: boolean }): Promise<ApiResponse<any>> {
+    return this.makeRequest('/usage/quotas', async () => {
+      const response = await fetch(`${this.baseURL}/usage/quotas`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      return this.handleResponse<any>(response);
+    });
   }
 
   // Export analytics report
@@ -2537,6 +2695,197 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
     return this.handleResponse<any>(response);
+  }
+
+  // Gulf-specific API methods
+  async getGulfJobs(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    location?: string;
+    jobType?: string;
+    experienceLevel?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    companyId?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<ApiResponse<{ jobs: Job[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ jobs: Job[]; pagination: any }>(response);
+  }
+
+  async getGulfJobById(id: string): Promise<ApiResponse<Job>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<Job>(response);
+  }
+
+  async getSimilarGulfJobs(id: string, limit?: number): Promise<ApiResponse<Job[]>> {
+    const queryParams = limit ? `?limit=${limit}` : '';
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${id}/similar${queryParams}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<Job[]>(response);
+  }
+
+  async getGulfCompanies(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    industry?: string;
+    companySize?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<ApiResponse<{ companies: Company[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/companies?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ companies: Company[]; pagination: any }>(response);
+  }
+
+  async getGulfJobApplications(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<ApiResponse<{ applications: JobApplication[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/applications?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ applications: JobApplication[]; pagination: any }>(response);
+  }
+
+  async getGulfJobBookmarks(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<{ bookmarks: JobBookmark[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/bookmarks?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ bookmarks: JobBookmark[]; pagination: any }>(response);
+  }
+
+  async getGulfJobAlerts(params?: {
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+  }): Promise<ApiResponse<{ alerts: JobAlert[]; pagination: any }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts?${queryParams.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ alerts: JobAlert[]; pagination: any }>(response);
+  }
+
+  async getGulfDashboardStats(): Promise<ApiResponse<{
+    gulfApplications: number;
+    gulfBookmarks: number;
+    gulfAlerts: number;
+    totalGulfJobs: number;
+    stats: any;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/dashboard/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{
+      gulfApplications: number;
+      gulfBookmarks: number;
+      gulfAlerts: number;
+      totalGulfJobs: number;
+      stats: any;
+    }>(response);
+  }
+
+  async bookmarkGulfJob(jobId: string): Promise<ApiResponse<JobBookmark>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${jobId}/bookmark`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<JobBookmark>(response);
+  }
+
+  async removeGulfJobBookmark(jobId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/gulf/jobs/${jobId}/bookmark`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async createGulfJobAlert(alertData: {
+    keywords?: string;
+    location?: string;
+    jobType?: string;
+    experienceLevel?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    isActive?: boolean;
+  }): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(alertData),
+    });
+    return this.handleResponse<JobAlert>(response);
+  }
+
+  async updateGulfJobAlert(alertId: string, alertData: Partial<JobAlert>): Promise<ApiResponse<JobAlert>> {
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts/${alertId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(alertData),
+    });
+    return this.handleResponse<JobAlert>(response);
+  }
+
+  async deleteGulfJobAlert(alertId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/gulf/alerts/${alertId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
   }
 }
 

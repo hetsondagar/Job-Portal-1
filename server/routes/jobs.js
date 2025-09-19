@@ -8,6 +8,7 @@ const User = require('../models/User');
 const JobApplication = require('../models/JobApplication');
 const Job = require('../models/Job');
 const Resume = require('../models/Resume');
+const EmployerActivityService = require('../services/employerActivityService');
 
 const {
   createJob,
@@ -173,6 +174,13 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       employer_id: application.employerId,
       status: application.status 
     });
+
+    // Log activity for employer: application received
+    try {
+      await EmployerActivityService.logApplicationReceived(job.employerId, application.id, job.id, { applicantId: userId });
+    } catch (e) {
+      console.error('⚠️ Failed to log application_received activity:', e?.message || e);
+    }
 
     res.status(201).json({
       success: true,
