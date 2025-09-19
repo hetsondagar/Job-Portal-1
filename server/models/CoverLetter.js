@@ -61,6 +61,14 @@ const CoverLetter = sequelize.define('CoverLetter', {
   timestamps: true,
   underscored: false,
   hooks: {
+    beforeCreate: async (coverLetter) => {
+      if (!coverLetter.lastUpdated) {
+        coverLetter.lastUpdated = new Date();
+      }
+    },
+    beforeUpdate: async (coverLetter) => {
+      coverLetter.lastUpdated = new Date();
+    },
     afterCreate: async (coverLetter) => {
       try {
         const DashboardService = require('../services/dashboardService');

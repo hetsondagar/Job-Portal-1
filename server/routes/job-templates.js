@@ -257,7 +257,8 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
       description: template.description || '',
       companyId: company.id,
       employerId: req.user.id,
-      status: 'draft' // Start as draft
+      status: 'draft', // Start as draft
+      region: user.region || 'india' // Set region based on user's region
     };
 
     const job = await Job.create(jobData);

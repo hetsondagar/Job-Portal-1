@@ -32,11 +32,10 @@ export function CompanyRegistration({ onCompanyCreated, userId }: CompanyRegistr
   })
 
   const companySizes = [
-    "1-10",
-    "11-50", 
+    "1-50",
     "51-200",
     "201-500",
-    "501-1000",
+    "500-1000",
     "1000+"
   ]
 

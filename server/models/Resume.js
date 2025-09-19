@@ -87,7 +87,9 @@ const Resume = sequelize.define('Resume', {
   underscored: false,
   hooks: {
     beforeCreate: async (resume) => {
-      resume.lastUpdated = new Date();
+      if (!resume.lastUpdated) {
+        resume.lastUpdated = new Date();
+      }
     },
     beforeUpdate: async (resume) => {
       resume.lastUpdated = new Date();

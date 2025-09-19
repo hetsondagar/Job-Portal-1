@@ -169,6 +169,9 @@ exports.createJob = async (req, res, next) => {
     // Use authenticated user's ID as employerId (matching the association)
     const createdBy = req.user.id;
     
+    // Set region based on user's region to ensure Gulf employers create Gulf jobs
+    const jobRegion = req.user.region || 'india'; // Default to 'india' if no region set
+    
     // Generate slug from title
     const slug = title.toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
@@ -219,7 +222,8 @@ exports.createJob = async (req, res, next) => {
       latitude,
       longitude,
       requirements: requirements && requirements.trim() ? requirements : null,
-      responsibilities: responsibilities && responsibilities.trim() ? responsibilities : null
+      responsibilities: responsibilities && responsibilities.trim() ? responsibilities : null,
+      region: jobRegion // Set region based on user's region
     };
 
     console.log('📝 Creating job with data:', {
@@ -744,6 +748,16 @@ exports.getJobsByEmployer = async (req, res, next) => {
     const offset = (page - 1) * limit;
     
     const whereClause = { employerId: req.user.id };
+    
+    // Add region filtering to ensure Gulf employers only see Gulf jobs
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all jobs (backward compatibility)
     
     // Add filters
     if (status && status !== 'all') {
@@ -1443,6 +1457,15 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     const whereClause = { employerId: req.user.id };
     
+    // Add region filtering to ensure Gulf employers only see Gulf jobs
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all jobs (backward compatibility)
 
     // Add filters
 

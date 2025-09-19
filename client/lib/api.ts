@@ -85,6 +85,7 @@ export interface LoginData {
   email: string;
   password: string;
   rememberMe?: boolean;
+  loginType?: 'jobseeker' | 'employer';
 }
 
 export interface ForgotPasswordData {
@@ -336,8 +337,28 @@ class ApiService {
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    const url = response.url;
+    console.log('🔍 handleResponse - Starting with URL:', url, 'Status:', response.status);
+    
+    // Basic error check
+    if (!response.ok) {
+      console.log('❌ Response not OK:', response.status, response.statusText);
+    }
+    
+    // Simple fallback logging in case the main logging fails
     try {
-      const url = response.url
+      console.log('🔍 handleResponse - Processing response:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+    } catch (logError) {
+      console.log('🔍 handleResponse - Basic info:', url, response.status, response.statusText);
+    }
+    
+    try {
       const responseClone = response.clone()
       let data: any
       
@@ -415,21 +436,40 @@ class ApiService {
           safeBodyForLog = `[Unable to stringify response body: ${stringifyError instanceof Error ? stringifyError.message : String(stringifyError)}]`;
         }
         
-        console.error('❌ API error:', { 
-          url, 
-          status: response.status, 
-          statusText: response.statusText, 
-          body: safeBodyForLog,
-          bodyType: typeof bodyForLog,
-          bodyLength: bodyForLog ? (typeof bodyForLog === 'string' ? bodyForLog.length : Object.keys(bodyForLog).length) : 0
-        });
+        // Safe error logging with individual try-catch blocks
+        try {
+          console.error('❌ API error - URL:', url);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Status:', response.status, response.statusText);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Body:', safeBodyForLog);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Headers:', Object.fromEntries(response.headers.entries()));
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Timestamp:', new Date().toISOString());
+        } catch (e) {}
+        
       } catch (logError) {
-        console.error('❌ API error (logging failed):', { 
-          url, 
-          status: response.status, 
-          statusText: response.statusText,
-          logError: logError instanceof Error ? logError.message : String(logError)
-        });
+        // Fallback error logging
+        try {
+          console.error('❌ API error (logging failed) - URL:', url);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error (logging failed) - Status:', response.status);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error (logging failed) - LogError:', logError instanceof Error ? logError.message : String(logError));
+        } catch (e) {}
       }
       
       // Handle rate limiting specifically
@@ -498,6 +538,7 @@ class ApiService {
       console.log('✅ handleResponse - Success:', data)
       return data as ApiResponse<T>
     } catch (error) {
+      console.log('❌ handleResponse - Unexpected error caught:', error);
       console.error('❌ handleResponse - Unexpected error:', error);
       return {
         success: false,
@@ -1049,6 +1090,33 @@ class ApiService {
     }
     
     return response;
+  }
+
+  async completeEmployerProfile(data: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    companyName?: string;
+    companyId?: string;
+    region: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/oauth/complete-employer-profile`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getCompanies(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/companies`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
   }
 
   async setupOAuthPassword(password: string): Promise<ApiResponse> {

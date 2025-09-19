@@ -266,7 +266,7 @@ class DashboardService {
       try {
         jobAlerts = await JobAlert.findAll({
           where: { userId },
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         });
       } catch (error) {
         console.error('Error fetching job alerts:', error);
@@ -544,7 +544,7 @@ class DashboardService {
     // Profile views by employer (viewing candidates) - best effort
     let viewedProfiles = 0;
     if (ViewTracking) {
-      viewedProfiles = await safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: dateFrom } } }));
+      viewedProfiles = await safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', created_at: { [Op.gte]: dateFrom } } }));
     } else {
       // Fallback: use Analytics page_view with metadata.page = 'candidate_profile'
       viewedProfiles = await safeCount(() => Analytics.count({ where: { userId, eventType: 'page_view', createdAt: { [Op.gte]: dateFrom } } }));
@@ -552,7 +552,7 @@ class DashboardService {
 
     // Contacts sent by employer (messages)
     const contactedCandidates = Message
-      ? await safeCount(() => Message.count({ where: { senderId: userId, createdAt: { [Op.gte]: dateFrom } } }))
+      ? await safeCount(() => Message.count({ where: { senderId: userId, created_at: { [Op.gte]: dateFrom } } }))
       : 0;
 
     // Downloaded resumes - if tracked in Analytics; else 0
@@ -623,10 +623,10 @@ class DashboardService {
       const [daySearches, dayViews, dayContacts] = await Promise.all([
         safeCount(() => SearchHistory.count({ where: { userId, createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } })),
         ViewTracking
-          ? safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
+          ? safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', created_at: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
           : safeCount(() => Analytics.count({ where: { userId, eventType: 'page_view', createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } })),
         Message
-          ? safeCount(() => Message.count({ where: { senderId: userId, createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
+          ? safeCount(() => Message.count({ where: { senderId: userId, created_at: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
           : 0
       ]);
 
@@ -657,8 +657,8 @@ class DashboardService {
     // Recent profile views (if ViewTracking exists)
     if (ViewTracking) {
       const recentViews = await safeFindAll(() => ViewTracking.findAll({
-        where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-        order: [['createdAt', 'DESC']],
+        where: { userId, viewType: 'profile_view', created_at: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+        order: [['created_at', 'DESC']],
         limit: 3
       }));
       
@@ -1121,7 +1121,7 @@ class DashboardService {
 
     if (ViewTracking) {
 
-      viewedProfiles = await safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: dateFrom } } }));
+      viewedProfiles = await safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', created_at: { [Op.gte]: dateFrom } } }));
 
     } else {
 
@@ -1137,7 +1137,7 @@ class DashboardService {
 
     const contactedCandidates = Message
 
-      ? await safeCount(() => Message.count({ where: { senderId: userId, createdAt: { [Op.gte]: dateFrom } } }))
+      ? await safeCount(() => Message.count({ where: { senderId: userId, created_at: { [Op.gte]: dateFrom } } }))
 
       : 0;
 
@@ -1279,13 +1279,13 @@ class DashboardService {
 
         ViewTracking
 
-          ? safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
+          ? safeCount(() => ViewTracking.count({ where: { userId, viewType: 'profile_view', created_at: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
 
           : safeCount(() => Analytics.count({ where: { userId, eventType: 'page_view', createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } })),
 
         Message
 
-          ? safeCount(() => Message.count({ where: { senderId: userId, createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
+          ? safeCount(() => Message.count({ where: { senderId: userId, created_at: { [Op.gte]: dayStart, [Op.lt]: dayEnd } } }))
 
           : 0
 

@@ -32,7 +32,24 @@ export default function EmployerOAuthCallbackPage() {
   const [companyName, setCompanyName] = useState('')
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [region, setRegion] = useState<'india' | 'gulf' | 'other' | ''>('')
+  const [companyType, setCompanyType] = useState<'new' | 'existing'>('new')
   const [savingProfile, setSavingProfile] = useState(false)
+  const [companies, setCompanies] = useState<any[]>([])
+  const [loadingCompanies, setLoadingCompanies] = useState(false)
+
+  const loadCompanies = async () => {
+    try {
+      setLoadingCompanies(true)
+      const response = await apiService.getCompanies()
+      if (response.success) {
+        setCompanies(response.data || [])
+      }
+    } catch (error) {
+      console.error('Failed to load companies:', error)
+    } finally {
+      setLoadingCompanies(false)
+    }
+  }
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
@@ -94,7 +111,25 @@ export default function EmployerOAuthCallbackPage() {
                                      localStorage.getItem(`oauth:pwdSkipped:${response.data.user.email}`) === 'true'
           const hasSkippedPassword = apiPasswordSkipped || localStorageSkipped
           
-          const needsProfileSetup = !response.data.user.firstName || !response.data.user.lastName || !response.data.user.phone
+          // For employers, ALWAYS require profile setup for OAuth users (they need to create company)
+          // OAuth users are detected by the presence of provider parameter in URL or missing company
+          const isOAuthUser = Boolean(provider) // If we have a provider, this is an OAuth user
+          const hasCompany = Boolean((response.data.user as any)?.company?.name || (response.data.user as any)?.companyId)
+          // Force profile setup for OAuth users without company OR if user type is employer/admin but no company
+          const needsProfileSetup = (isOAuthUser && !hasCompany) || 
+                                   ((response.data.user.userType === 'employer' || response.data.user.userType === 'admin') && !hasCompany)
+          
+          console.log('🔍 PROFILE SETUP DEBUG:', {
+            isOAuthUser,
+            hasCompany,
+            needsProfileSetup,
+            provider: provider,
+            oauthProvider: (response.data.user as any)?.oauthProvider,
+            companyName: (response.data.user as any)?.company?.name,
+            companyId: (response.data.user as any)?.companyId,
+            userType: response.data.user.userType,
+            fullUserData: response.data.user
+          })
           const hasPassword = Boolean((response.data.user as any).hasPassword)
           // Use the backend-calculated requiresPasswordSetup field
           const mustSetupPassword = Boolean((response.data.user as any).requiresPasswordSetup)
@@ -149,7 +184,7 @@ export default function EmployerOAuthCallbackPage() {
           console.log('🔍 DEBUG - Employer OAuth Callback Values:', {
             userType: response.data.user.userType,
             oauthProvider: (response.data.user as any).oauthProvider,
-            last_login_at: response.data.user.last_login_at,
+            lastLoginAt: response.data.user.lastLoginAt,
             hasPassword: hasPassword,
             passwordValue: (response.data.user as any).password || 'null',
             passwordSkipped: (response.data.user as any).passwordSkipped,
@@ -191,6 +226,12 @@ export default function EmployerOAuthCallbackPage() {
           console.log('🔍 EMPLOYER FALLBACK CHECK:', { needsSetup, hasPassword, phone: response.data.user.phone, companyId: (response.data.user as any)?.companyId })
           
           if (!hasCompletedInitialSetup || needsSetup) {
+            console.log('🔍 SETUP DECISION:', { 
+              mustSetupPassword, 
+              needsProfileSetup, 
+              hasCompletedInitialSetup, 
+              needsSetup 
+            })
             if (mustSetupPassword) {
               // First: Show password setup dialog
               console.log('🔄 New user needs password setup')
@@ -198,27 +239,35 @@ export default function EmployerOAuthCallbackPage() {
             setMessage(`Welcome! Please set up a password for your ${provider} account`)
             toast.success(`Welcome! Please set up a password for your ${provider} account`)
             setDialogOpen(true)
-          } else if (!profileCompleted && needsProfileSetup) {
+          } else if (needsProfileSetup) {
               // Second: Show profile setup dialog (after password or if no password needed)
-              console.log('🔄 New user needs profile setup')
+              console.log('🔄 OAuth user needs profile setup - no company found')
             setStatus('profile-setup')
-            setMessage('Complete your basic details to continue')
+            setMessage('Complete your company details to continue')
             setDialogOpen(true)
           } else {
-              // User has completed both, proceed to dashboard
-              console.log('✅ New user completed setup, proceeding to employer dashboard')
-              setStatus('success')
-              setMessage(`Successfully signed in with ${provider}`)
-              toast.success(`Welcome to your employer dashboard!`)
-              
-              setTimeout(() => {
-                const userRegion = (response.data.user as any)?.region
-                const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-                const regionToUse = userRegion || region || storedCompany?.region
-                const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-                console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
-                router.replace(target)
-              }, 1200)
+              // Check if this is an OAuth user without company - force profile setup
+              if (isOAuthUser && !hasCompany) {
+                console.log('🔄 FORCING profile setup for OAuth user without company')
+                setStatus('profile-setup')
+                setMessage('Complete your company details to continue')
+                setDialogOpen(true)
+              } else {
+                // User has completed both, proceed to dashboard
+                console.log('✅ New user completed setup, proceeding to employer dashboard')
+                setStatus('success')
+                setMessage(`Successfully signed in with ${provider}`)
+                toast.success(`Welcome to your employer dashboard!`)
+                
+                setTimeout(() => {
+                  const userRegion = (response.data?.user as any)?.region
+                  const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
+                  const regionToUse = userRegion || region || storedCompany?.region
+                  const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+                  console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
+                  router.replace(target)
+                }, 500)
+              }
             }
           } else {
             // User already has a password or is returning, proceed to employer dashboard
@@ -230,13 +279,13 @@ export default function EmployerOAuthCallbackPage() {
             console.log('✅ Redirecting employer to employer dashboard')
             // Redirect based on region
             setTimeout(() => {
-              const userRegion = (response.data.user as any)?.region
+              const userRegion = (response.data?.user as any)?.region
               const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
               const regionToUse = userRegion || region || storedCompany?.region
               const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
               console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
               router.replace(target)
-            }, 1200)
+            }, 500)
           }
         } else {
           console.error('❌ Failed to get user data:', response)
@@ -320,7 +369,7 @@ export default function EmployerOAuthCallbackPage() {
             const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
             console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
             router.replace(target)
-          }, 1000)
+          }, 500)
         }
       } else {
         console.error('❌ Password setup failed:', response)
@@ -336,29 +385,47 @@ export default function EmployerOAuthCallbackPage() {
 
   const handleProfileSetup = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate required fields based on company type and region
+    const needsCompanyName = companyType === 'new' && region !== 'gulf'
+    const needsCompanyId = companyType === 'existing'
+    
     if (!firstName || !lastName || !phone || !region) {
-      toast.error('Please fill in first name, last name, phone, and region')
+      toast.error('Please fill in all required fields: first name, last name, phone, and region')
+      return
+    }
+    
+    if (needsCompanyName && !companyName) {
+      toast.error('Please enter a company name')
+      return
+    }
+    
+    if (needsCompanyId && !companyId) {
+      toast.error('Please select a company to join')
       return
     }
     try {
       setSavingProfile(true)
-      const resp = await apiService.updateProfile({
+      
+      // Use the new completeEmployerProfile API method
+      const resp = await apiService.completeEmployerProfile({
         firstName,
         lastName,
         phone,
+        companyName: companyType === 'new' ? companyName : undefined,
+        companyId: companyType === 'existing' ? companyId || undefined : undefined,
         region
-      } as any)
+      })
+      
       if (resp.success) {
-        // Update company region if provided
-        try {
-          if (companyId && region) {
-            const companyUpdate = await apiService.updateCompany(companyId, { region })
-            if (companyUpdate.success && companyUpdate.data) {
-              localStorage.setItem('company', JSON.stringify(companyUpdate.data))
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to update company region:', err)
+        console.log('✅ Employer profile setup completed successfully')
+        
+        // Store updated user and company data
+        if (resp.data?.user) {
+          localStorage.setItem('user', JSON.stringify(resp.data.user))
+        }
+        if (resp.data?.company) {
+          localStorage.setItem('company', JSON.stringify(resp.data.company))
         }
 
         // Store user region in localStorage for future logins
@@ -376,13 +443,12 @@ export default function EmployerOAuthCallbackPage() {
         setStatus('success')
         setMessage('Profile completed! Redirecting...')
         setTimeout(() => {
-          const userRegion = (response.data.user as any)?.region
-          const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-          const tgtRegion = userRegion || region || storedCompany?.region
+          // Use the region from the form since that's what was just submitted
+          const tgtRegion = region // This is the region from the profile setup form
           const tgt = (tgtRegion === 'gulf') ? '/gulf-dashboard' : '/employer-dashboard'
           console.log('✅ Redirecting employer to dashboard based on region:', tgtRegion, '→', tgt)
           router.replace(tgt)
-        }, 800)
+        }, 500)
       } else {
         throw new Error(resp.message || 'Failed to update profile')
       }
@@ -537,7 +603,7 @@ export default function EmployerOAuthCallbackPage() {
                           try { 
                             localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') 
                             // Also set the password_skipped flag in the database
-                            await apiService.updateProfile({ passwordSkipped: true })
+                            await apiService.updateProfile({ passwordSkipped: true } as any)
                           } catch {}
                           const needsProfileSetup = !me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone
                           const profileCompleted = Boolean((me.data.user as any).profileCompleted)
@@ -555,7 +621,8 @@ export default function EmployerOAuthCallbackPage() {
                       await new Promise(r => setTimeout(r, 150)); 
                       
                       // Redirect based on region
-                      const userRegion = (response.data.user as any)?.region
+                      const storedUser = JSON.parse(localStorage.getItem('user') || 'null')
+                      const userRegion = storedUser?.region
                       const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
                       const regionToUse = userRegion || region || storedCompany?.region
                       const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
@@ -587,6 +654,66 @@ export default function EmployerOAuthCallbackPage() {
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" required />
               </div>
+              {/* Company type selection */}
+              <div className="space-y-2">
+                <Label>Company Type</Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      value="new"
+                      checked={companyType === 'new'}
+                      onChange={(e) => setCompanyType(e.target.value as 'new' | 'existing')}
+                      className="w-4 h-4"
+                    />
+                    <span>Create New Company</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      value="existing"
+                      checked={companyType === 'existing'}
+                      onChange={(e) => setCompanyType(e.target.value as 'new' | 'existing')}
+                      className="w-4 h-4"
+                    />
+                    <span>Join Existing Company</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Company name - only show for new companies and non-Gulf regions */}
+              {companyType === 'new' && region !== 'gulf' && (
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name</Label>
+                  <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="h-12" required />
+                </div>
+              )}
+
+              {/* Company selection for existing companies */}
+              {companyType === 'existing' && (
+                <div className="space-y-2">
+                  <Label htmlFor="companyId">Select Company</Label>
+                  <select 
+                    id="companyId" 
+                    value={companyId || ''} 
+                    onChange={(e) => setCompanyId(e.target.value || null)} 
+                    className="h-12 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3"
+                    required
+                    onFocus={loadCompanies}
+                  >
+                    <option value="">Select a company</option>
+                    {loadingCompanies ? (
+                      <option value="">Loading companies...</option>
+                    ) : (
+                      companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="region">Region of Operation</Label>
                 <select 

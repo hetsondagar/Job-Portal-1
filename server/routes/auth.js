@@ -453,8 +453,8 @@ router.post('/login', validateLogin, async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
-    console.log('🧪 Login debug: rawEmail=', req.body?.email, 'sanitizedEmail=', email);
+    const { email, password, loginType } = req.body;
+    console.log('🧪 Login debug: rawEmail=', req.body?.email, 'sanitizedEmail=', email, 'loginType=', loginType);
 
     // Find user by email (exact match first)
     let user = await User.findOne({ where: { email } });
@@ -509,6 +509,29 @@ router.post('/login', validateLogin, async (req, res) => {
     }
 
     console.log('✅ Password verified successfully');
+
+    // Validate login type if specified
+    if (loginType) {
+      console.log('🔍 Validating login type:', { loginType, userType: user.user_type });
+      
+      if (loginType === 'employer' && user.user_type === 'jobseeker') {
+        console.log('❌ Jobseeker trying to login through employer login');
+        return res.status(403).json({
+          success: false,
+          message: 'This account is registered as a jobseeker. Please use the jobseeker login page.',
+          redirectTo: '/login'
+        });
+      }
+      
+      if (loginType === 'jobseeker' && (user.user_type === 'employer' || user.user_type === 'admin')) {
+        console.log('❌ Employer/Admin trying to login through jobseeker login');
+        return res.status(403).json({
+          success: false,
+          message: 'This account is registered as an employer. Please use the employer login page.',
+          redirectTo: '/employer-login'
+        });
+      }
+    }
 
     // Update last login
     await user.update({ last_login_at: new Date() });

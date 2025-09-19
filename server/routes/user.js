@@ -1871,8 +1871,8 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
     const { JobAlert } = require('../config/index');
     
     const alerts = await JobAlert.findAll({
-      where: { user_id: req.user.id },
-      order: [['createdAt', 'DESC']]
+      where: { userId: req.user.id },
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -2225,6 +2225,13 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error fetching dashboard data:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      sql: error.sql
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard data',
@@ -2249,10 +2256,22 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       });
     }
     
-    // Get employer's jobs
-    console.log('🔍 Querying jobs for employerId:', req.user.id);
+    // Get employer's jobs - filter by user's region to ensure Gulf employers only see Gulf jobs
+    console.log('🔍 Querying jobs for employerId:', req.user.id, 'region:', req.user.region);
+    const whereClause = { employerId: req.user.id };
+    
+    // Add region filtering to ensure Gulf employers only see Gulf jobs in normal dashboard
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all jobs (backward compatibility)
+    
     const jobs = await Job.findAll({
-      where: { employerId: req.user.id }
+      where: whereClause
     });
     console.log('✅ Found jobs:', jobs.length);
     
@@ -2291,14 +2310,14 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     // Get profile/job views from view tracking
     let profileViews = 0;
     try {
-      const { ViewTracking } = require('../config/index');
-      const { Op } = require('sequelize');
+    const { ViewTracking } = require('../config/index');
+    const { Op } = require('sequelize');
       profileViews = await ViewTracking.count({
-        where: { 
-          viewedUserId: req.user.id,
-          viewType: { [Op.in]: ['job_view', 'profile_view'] }
-        }
-      });
+      where: { 
+        viewedUserId: req.user.id,
+        viewType: { [Op.in]: ['job_view', 'profile_view'] }
+      }
+    });
     } catch (viewError) {
       console.log('⚠️ Could not fetch profile views:', viewError.message);
       profileViews = 0;
@@ -2608,7 +2627,8 @@ router.post('/resumes', authenticateToken, async (req, res) => {
       projects: projects || [],
       achievements: achievements || [],
       isDefault: false,
-      isPublic: true
+      isPublic: true,
+      lastUpdated: new Date() // Explicitly set lastUpdated
     });
 
     res.status(201).json({
@@ -2726,6 +2746,7 @@ router.post('/resumes/upload', authenticateToken, upload.single('resume'), async
       summary: description || `Resume uploaded on ${new Date().toLocaleDateString()}`,
       isDefault: isDefault,
       isPublic: true,
+      lastUpdated: new Date(), // Explicitly set lastUpdated
       metadata: {
         filename,
         originalName,
@@ -2930,7 +2951,8 @@ router.post('/cover-letters', authenticateToken, async (req, res) => {
       content: content || '',
       summary: summary || '',
       isDefault: isDefault,
-      isPublic: true
+      isPublic: true,
+      lastUpdated: new Date() // Explicitly set lastUpdated
     });
 
     res.status(201).json({
@@ -3060,6 +3082,7 @@ router.post('/cover-letters/upload', authenticateToken, coverLetterUpload.single
       summary: description || `Cover letter uploaded on ${new Date().toLocaleDateString()}`,
       isDefault: isDefault,
       isPublic: true,
+      lastUpdated: new Date(), // Explicitly set lastUpdated
       metadata: {
         filename,
         originalName,
@@ -3502,9 +3525,21 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
 
     const employerId = req.user.id;
 
-    // Employer jobs
+    // Employer jobs - filter by user's region to ensure Gulf employers only see Gulf jobs
+    const whereClause = { employerId };
+    
+    // Add region filtering to ensure Gulf employers only see Gulf jobs in normal dashboard
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all jobs (backward compatibility)
+    
     const jobs = await Job.findAll({
-      where: { employerId },
+      where: whereClause,
       attributes: ['id', 'title', 'status', 'region', 'createdAt'],
       include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
       order: [['createdAt', 'DESC']]

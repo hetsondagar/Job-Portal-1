@@ -154,8 +154,11 @@ router.post('/', authenticateToken, async (req, res) => {
           });
         }
 
-        // Attach to user for future requests
-        await req.user.update({ companyId: companyRecord.id });
+        // Attach to user for future requests and set as admin (since they created the company)
+        await req.user.update({ 
+          companyId: companyRecord.id,
+          user_type: 'admin' // User becomes admin when they create a company
+        });
         companyId = companyRecord.id;
         console.log('🏢 Created and attached company to employer:', companyId);
       } catch (companyErr) {

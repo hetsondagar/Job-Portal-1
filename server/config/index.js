@@ -28,6 +28,8 @@ const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
 const CandidateLike = require('../models/CandidateLike');
 const HotVacancy = require('../models/HotVacancy');
+const EmployerQuota = require('../models/EmployerQuota');
+const UserActivityLog = require('../models/UserActivityLog');
 const HotVacancyPhoto = require('../models/HotVacancyPhoto');
 const FeaturedJob = require('../models/FeaturedJob');
 const ViewTracking = require('../models/ViewTracking');
@@ -237,6 +239,8 @@ module.exports = {
   JobPhoto,
   CandidateLike,
   HotVacancy,
+  EmployerQuota,
+  UserActivityLog,
   HotVacancyPhoto,
   FeaturedJob,
   ViewTracking,

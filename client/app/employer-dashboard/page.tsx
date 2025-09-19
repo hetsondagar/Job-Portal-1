@@ -317,7 +317,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
     }
   }
 
-  const quickActions = [
+  const allQuickActions = [
     {
       title: "Post a Job",
       description: "Create a new job posting",
@@ -367,7 +367,23 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       href: "/employer-dashboard/analytics",
       color: "from-orange-500 to-orange-600",
     },
+    {
+      title: "Usage Pulse",
+      description: "Monitor quota usage and activity",
+      icon: TrendingUp,
+      href: "/admin/usage-pulse",
+      color: "from-red-500 to-red-600",
+      adminOnly: true, // Only show for admin users
+    },
   ]
+
+  // Filter quick actions based on user type
+  const quickActions = allQuickActions.filter(action => {
+    if (action.adminOnly && user?.userType !== 'admin') {
+      return false
+    }
+    return true
+  })
 
   // Calculate profile completion based on user and company data
   const calculateProfileCompletion = () => {

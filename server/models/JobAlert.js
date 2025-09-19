@@ -16,10 +16,120 @@ const JobAlert = sequelize.define('JobAlert', {
       model: 'users',
       key: 'id'
     }
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'name'
+  },
+  keywords: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'keywords'
+  },
+  locations: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'locations'
+  },
+  categories: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'categories'
+  },
+  experienceLevel: {
+    type: DataTypes.ENUM('entry', 'junior', 'mid', 'senior', 'executive'),
+    allowNull: true,
+    field: 'experience_level'
+  },
+  salaryMin: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    field: 'salary_min'
+  },
+  salaryMax: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    field: 'salary_max'
+  },
+  jobType: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'job_type'
+  },
+  frequency: {
+    type: DataTypes.ENUM('daily', 'weekly', 'monthly'),
+    allowNull: false,
+    defaultValue: 'weekly',
+    field: 'frequency'
+  },
+  emailEnabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'email_enabled'
+  },
+  pushEnabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'push_enabled'
+  },
+  smsEnabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'sms_enabled'
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_active'
+  },
+  lastSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_sent_at'
+  },
+  currency: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'INR',
+    field: 'currency'
+  },
+  remoteWork: {
+    type: DataTypes.ENUM('any', 'remote', 'on-site', 'hybrid'),
+    allowNull: true,
+    defaultValue: 'any',
+    field: 'remote_work'
+  },
+  nextSendAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'next_send_at'
+  },
+  maxResults: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 10,
+    field: 'max_results'
+  },
+  metadata: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {},
+    field: 'metadata'
   }
 }, {
   tableName: 'job_alerts',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   underscored: true,
   indexes: [
     {
