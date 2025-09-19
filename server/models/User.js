@@ -22,11 +22,11 @@ const User = sequelize.define('User', {
   },
   first_name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // Allow null for OAuth users
   },
   last_name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // Allow null for OAuth users
   },
   phone: {
     type: DataTypes.STRING,
@@ -73,6 +73,14 @@ const User = sequelize.define('User', {
   current_location: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true
+  },
+  password_skipped: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   preferred_locations: {
     type: DataTypes.JSONB,

@@ -302,8 +302,10 @@ router.get('/profile', authenticateToken, async (req, res) => {
       oauthProvider: req.user.oauth_provider,
       oauthId: req.user.oauth_id,
       hasPassword: !!(req.user.password && String(req.user.password).trim().length > 0),
-      requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0),
+      passwordSkipped: Boolean(req.user.password_skipped),
+      requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0) && req.user.oauth_provider && req.user.oauth_provider !== 'local' && !req.user.password_skipped,
       profileCompleted: Boolean(req.user.first_name && req.user.last_name && req.user.phone) && ((req.user.profile_completion || 0) >= 60),
+      region: req.user.region,
       skills: req.user.skills,
       languages: req.user.languages,
       expectedSalary: req.user.expected_salary,
@@ -520,6 +522,8 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'firstName': 'first_name',
       'lastName': 'last_name',
       'phone': 'phone',
+      'region': 'region',
+      'passwordSkipped': 'password_skipped',
       'currentLocation': 'current_location',
       'headline': 'headline',
       'summary': 'summary',
@@ -572,6 +576,12 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
 
     // Update last profile update timestamp
     updateData.lastProfileUpdate = new Date();
+    
+    // For first-time OAuth users completing profile setup, update last_login_at
+    if (!req.user.last_login_at && req.user.oauth_provider && req.user.oauth_provider !== 'local') {
+      updateData.last_login_at = new Date();
+      console.log('✅ First-time OAuth user completed profile setup, updating last_login_at');
+    }
 
     // Calculate profile completion percentage
     const profileFields = [

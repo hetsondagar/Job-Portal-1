@@ -57,14 +57,16 @@ export default function EmployerLoginPage() {
         if (apiService.isAuthenticated()) {
           const me = await apiService.getCurrentUser()
           if (me.success && me.data?.user && me.data.user.userType === 'employer') {
-            // Determine region → target dashboard
-            let region: string | undefined
-            const companyId = (me.data.user as any).companyId
-            if (companyId) {
-              const companyResp = await apiService.getCompany(companyId)
-              if (companyResp.success && companyResp.data) {
-                localStorage.setItem('company', JSON.stringify(companyResp.data))
-                region = companyResp.data.region
+            // Determine region → target dashboard (prefer user region, fallback to company region)
+            let region: string | undefined = (me.data.user as any)?.region
+            if (!region) {
+              const companyId = (me.data.user as any).companyId
+              if (companyId) {
+                const companyResp = await apiService.getCompany(companyId)
+                if (companyResp.success && companyResp.data) {
+                  localStorage.setItem('company', JSON.stringify(companyResp.data))
+                  region = companyResp.data.region
+                }
               }
             }
             const target = region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
@@ -101,8 +103,12 @@ export default function EmployerLoginPage() {
       if (result?.user?.userType === 'employer') {
         console.log('✅ User is employer, checking region for dashboard redirect')
         
-        // Check if user has company data with region
-        if (result?.company?.region === 'gulf') {
+        // Check if user has region preference (from user profile or company data)
+        const userRegion = (result?.user as any)?.region
+        const companyRegion = result?.company?.region
+        const regionToUse = userRegion || companyRegion
+        
+        if (regionToUse === 'gulf') {
           console.log('✅ Gulf region employer, redirecting to Gulf dashboard')
           toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
           setTimeout(() => {

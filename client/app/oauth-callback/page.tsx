@@ -121,11 +121,77 @@ export default function OAuthCallbackPage() {
             }
           }
           
+          // Check if user has previously skipped password setup (from API or localStorage)
+          const apiPasswordSkipped = Boolean((response.data.user as any).passwordSkipped)
+          const localStorageSkipped = localStorage.getItem(`oauth:pwdSkipped:${response.data.user.id}`) === 'true' || 
+                                     localStorage.getItem(`oauth:pwdSkipped:${response.data.user.email}`) === 'true'
+          const hasSkippedPassword = apiPasswordSkipped || localStorageSkipped
+          
           // Determine if required personal details are missing
           const needsProfileSetup = !response.data.user.firstName || !response.data.user.lastName || !response.data.user.phone
           const hasPassword = Boolean((response.data.user as any).hasPassword)
-          const mustSetupPassword = (response.data.user as any).requiresPasswordSetup === true && !hasPassword
+          // Use the backend-calculated requiresPasswordSetup field
+          const mustSetupPassword = Boolean((response.data.user as any).requiresPasswordSetup)
           const profileCompleted = Boolean((response.data.user as any).profileCompleted)
+          
+          // Check if user has already completed initial setup
+          // A user who has completed setup has either:
+          // 1. Set a password OR skipped password setup
+          // 2. AND has basic profile info (phone number)
+          const hasCompletedInitialSetup = (hasPassword || hasSkippedPassword) && 
+                                          Boolean(response.data.user.phone)
+          
+          // For debugging: log the exact values
+          console.log('🔍 JOBSEEKER SETUP CHECK:', {
+            hasPassword,
+            hasSkippedPassword,
+            phone: response.data.user.phone,
+            hasCompletedInitialSetup,
+            willShowDialogs: !hasCompletedInitialSetup
+          })
+          
+          // Also check profile completion for returning users  
+          const hasCompletedProfileBefore = response.data.user.profileCompletion && response.data.user.profileCompletion >= 60
+          
+          // DEBUG: Log all the key values
+          console.log('🔍 DEBUG - OAuth Callback Values:', {
+            userType: response.data.user.userType,
+            oauthProvider: (response.data.user as any).oauthProvider,
+            last_login_at: response.data.user.last_login_at,
+            hasPassword: hasPassword,
+            passwordValue: (response.data.user as any).password || 'null',
+            passwordSkipped: (response.data.user as any).passwordSkipped,
+            hasSkippedPassword: hasSkippedPassword,
+            hasCompletedInitialSetup: hasCompletedInitialSetup,
+            profileCompletion: response.data.user.profileCompletion,
+            hasCompletedProfileBefore: hasCompletedProfileBefore,
+            requiresPasswordSetup: (response.data.user as any).requiresPasswordSetup,
+            mustSetupPassword: mustSetupPassword,
+            needsProfileSetup: needsProfileSetup,
+            profileCompleted: profileCompleted,
+            firstName: response.data.user.firstName,
+            lastName: response.data.user.lastName,
+            phone: response.data.user.phone
+          })
+
+          console.log('🚨 PASSWORD DIALOG CONDITION:', {
+            'isFirstTime': !hasCompletedInitialSetup,
+            'requiresPasswordSetup': (response.data.user as any).requiresPasswordSetup,
+            'mustSetupPassword': mustSetupPassword,
+            'willShowPasswordDialog': !hasCompletedInitialSetup && mustSetupPassword
+          })
+
+          console.log('🔍 DETAILED CONDITION BREAKDOWN:', {
+            'hasPassword': hasPassword,
+            'hasSkippedPassword': hasSkippedPassword,
+            'phone': response.data.user.phone,
+            'hasCompletedInitialSetup': hasCompletedInitialSetup,
+            'profileCompletion': response.data.user.profileCompletion,
+            'hasCompletedProfileBefore': hasCompletedProfileBefore,
+            'isFirstTime': !hasCompletedInitialSetup,
+            'requiresPasswordSetup': (response.data.user as any).requiresPasswordSetup,
+            'FINAL_RESULT': !hasCompletedInitialSetup && mustSetupPassword
+          })
 
           // Prime form fields
           setFirstName(response.data.user.firstName || '')
@@ -144,18 +210,53 @@ export default function OAuthCallbackPage() {
           const prefLocArr = (response.data.user as any).preferredLocations || []
           setPreferredLocations(Array.isArray(prefLocArr) ? prefLocArr.join(', ') : '')
           
-          if (mustSetupPassword) {
-            // User needs to set up a password
-            setStatus('password-setup')
-            setMessage(`Welcome! Please set up a password for your ${provider} account`)
-            toast.success(`Welcome! Please set up a password for your ${provider} account`)
-            setDialogOpen(true)
-          } else if (!profileCompleted && needsProfileSetup) {
-            setStatus('profile-setup')
-            setMessage('Complete your basic details to continue')
-            toast.message('Almost there', { description: 'Please complete your basic details to continue' })
-            setDialogOpen(true)
+          // For first-time users, show both dialogs in sequence
+          console.log('🔍 DEBUG - Dialog Logic Check:', {
+            '!hasCompletedInitialSetup': !hasCompletedInitialSetup,
+            'willShowDialogs': !hasCompletedInitialSetup
+          })
+          
+          // Fallback: If user has no password and no phone, they need setup
+          const needsSetup = !hasPassword && !response.data.user.phone
+          console.log('🔍 FALLBACK CHECK:', { needsSetup, hasPassword, phone: response.data.user.phone })
+          
+          if (!hasCompletedInitialSetup || needsSetup) {
+            console.log('🔍 DEBUG - First-time user detected, checking dialog conditions')
+            if (mustSetupPassword) {
+              // First: Show password setup dialog
+              console.log('🔄 New user needs password setup')
+              setStatus('password-setup')
+              setMessage(`Welcome! Please set up a password for your ${provider} account`)
+              toast.success(`Welcome! Please set up a password for your ${provider} account`)
+              setDialogOpen(true)
+            } else if (!profileCompleted && needsProfileSetup) {
+              // Second: Show profile setup dialog (after password or if no password needed)
+              console.log('🔄 New user needs profile setup')
+              setStatus('profile-setup')
+              setMessage('Complete your basic details to continue')
+              toast.message('Almost there', { description: 'Please complete your basic details to continue' })
+              setDialogOpen(true)
+            } else {
+              // User has completed both, proceed to dashboard
+              console.log('✅ New user completed setup, proceeding to jobseeker dashboard')
+              setStatus('success')
+              setMessage(`Successfully signed in with ${provider}`)
+              toast.success(`Welcome! You've been signed in with ${provider}`)
+              
+              // Check if this is a Gulf flow
+              if (state === 'gulf') {
+                console.log('✅ Redirecting Gulf jobseeker to Gulf dashboard')
+                setTimeout(() => {
+                  router.push('/jobseeker-gulf-dashboard')
+                }, 1500)
+              } else {
+                setTimeout(() => {
+                  router.push('/dashboard')
+                }, 1500)
+              }
+            }
           } else {
+            console.log('🔍 DEBUG - Returning user or completed profile, skipping dialogs')
             // User already has a password, proceed to jobseeker dashboard
             setStatus('success')
             setMessage(`Successfully signed in with ${provider}`)
@@ -267,11 +368,13 @@ export default function OAuthCallbackPage() {
         const me = await apiService.getCurrentUser()
         const needsProfileSetup = me.success && me.data?.user && (!me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone)
         if (needsProfileSetup) {
+          // After password setup, show profile setup dialog
           setStatus('profile-setup')
           setMessage('Complete your basic details to continue')
           setDialogOpen(true)
         } else {
-        setStatus('success')
+          // User has completed both password and profile setup
+          setStatus('success')
           setMessage('Password set successfully! Redirecting...')
           // Use replace and refresh after a tiny delay to avoid login bounce
           await new Promise((r) => setTimeout(r, 150))
@@ -452,11 +555,19 @@ export default function OAuthCallbackPage() {
                       const me = await apiService.getCurrentUser();
                       if (me.success && me.data?.user) {
                         try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.id}`, 'true') } catch {}
-                        try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') } catch {}
+                        try { 
+                          localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') 
+                          // Also set the password_skipped flag in the database
+                          await apiService.updateProfile({ passwordSkipped: true })
+                        } catch {}
                         const needsProfileSetup = !me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone
                         const profileCompleted = Boolean((me.data.user as any).profileCompleted)
                         if (!profileCompleted && needsProfileSetup) {
-                          setStatus('profile-setup'); setMessage('Complete your basic details to continue'); setDialogOpen(true); return;
+                          // After skipping password, show profile setup dialog
+                          setStatus('profile-setup'); 
+                          setMessage('Complete your basic details to continue'); 
+                          setDialogOpen(true); 
+                          return;
                         }
                       }
                     } catch {}
