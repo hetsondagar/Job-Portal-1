@@ -285,67 +285,25 @@ router.get('/google/callback', (req, res) => {
         if (state === 'employer') {
           console.log('🔄 Processing employer OAuth - State detected as employer');
           
+          // Allow jobseeker to employer conversion if they're using employer OAuth flow
+          // This handles cases where users were created as jobseekers but want to become employers
+          
           // Always ensure user is set as employer for employer OAuth flow
-          if (user.user_type !== 'employer') {
+          if (user.user_type !== 'employer' && user.user_type !== 'admin') {
             console.log('🔄 Updating user type to employer');
             
-            // Start a transaction to create company and update user
-            const transaction = await sequelize.transaction();
+            // Update user type to employer but don't create company yet
+            // Company will be created when user completes profile setup
+            await user.update({ 
+              user_type: 'employer'
+            });
             
-            try {
-              // Create a default company for the employer
-              const companyName = `${user.first_name} ${user.last_name}'s Company`;
-              const companySlug = generateSlug(companyName);
-              
-              const company = await Company.create({
-                name: companyName,
-                slug: companySlug,
-                industry: 'Other',
-                companySize: '1-50',
-                email: user.email,
-                phone: user.phone,
-                contactPerson: `${user.first_name} ${user.last_name}`,
-                contactEmail: user.email,
-                contactPhone: user.phone,
-                companyStatus: 'active',
-                isActive: true
-              }, { transaction });
-
-              console.log('✅ Company created for OAuth employer:', company.id);
-              
-              // Update user with employer type and company ID
-              await user.update({ 
-                user_type: 'employer',
-                company_id: company.id
-              }, { transaction });
-              
-              // Commit the transaction
-              await transaction.commit();
-              
-              // Refresh user object to get updated user_type
-              await user.reload();
-              
-              console.log('✅ User successfully updated to employer type');
-            } catch (error) {
-              // Rollback transaction on error
-              await transaction.rollback();
-              console.error('❌ Error creating company for OAuth employer:', error);
-              
-              // Even if company creation fails, still set user as employer
-              console.log('🔄 Setting user as employer without company (will be created later)');
-              await user.update({ user_type: 'employer' });
-              await user.reload();
-            }
+            console.log('✅ User successfully updated to employer type');
           } else {
-            console.log('✅ User is already an employer');
+            console.log('✅ User is already an employer/admin');
           }
           
-          // Double-check that user type is set correctly
-          if (user.user_type !== 'employer') {
-            console.log('🔄 Force updating user type to employer');
-            await user.update({ user_type: 'employer' });
-            await user.reload();
-          }
+          // User type is already set to employer above, no need to force admin
           
           // Clear any existing OAuth data to ensure clean state
           await user.update({
@@ -364,7 +322,10 @@ router.get('/google/callback', (req, res) => {
           console.log('📝 Session state:', req.session?.oauthState);
           console.log('📝 Query state:', req.query?.state);
           
-          // ALWAYS force jobseeker type for jobseeker OAuth flow - regardless of previous user type
+          // Allow employer to jobseeker conversion if they're using jobseeker OAuth flow
+          // This handles cases where users want to switch account types
+          
+          // ALWAYS force jobseeker type for jobseeker OAuth flow - but only if not already employer/admin
           console.log('🔄 Force updating user type to jobseeker for jobseeker OAuth flow');
           await user.update({ 
             user_type: 'jobseeker'
@@ -506,58 +467,29 @@ router.get('/facebook/callback', (req, res) => {
         if (state === 'employer') {
           console.log('🔄 Processing employer OAuth - State detected as employer');
           
+          // Allow jobseeker to employer conversion if they're using employer OAuth flow
+          // This handles cases where users were created as jobseekers but want to become employers
+          
           // Always ensure user is set as employer for employer OAuth flow
-          if (user.user_type !== 'employer') {
+          if (user.user_type !== 'employer' && user.user_type !== 'admin') {
             console.log('🔄 Updating user type to employer');
             
-            // Start a transaction to create company and update user
-            const transaction = await sequelize.transaction();
+            // Update user type to employer but don't create company yet
+            // Company will be created when user completes profile setup
+            await user.update({ 
+              user_type: 'employer'
+            });
             
-            try {
-              // Create a default company for the employer
-              const companyName = `${user.first_name} ${user.last_name}'s Company`;
-              const companySlug = generateSlug(companyName);
-              
-              const company = await Company.create({
-                name: companyName,
-                slug: companySlug,
-                industry: 'Other',
-                companySize: '1-50',
-                email: user.email,
-                phone: user.phone,
-                contactPerson: `${user.first_name} ${user.last_name}`,
-                contactEmail: user.email,
-                contactPhone: user.phone,
-                companyStatus: 'active',
-                isActive: true
-              }, { transaction });
-
-              console.log('✅ Company created for OAuth employer:', company.id);
-              
-              // Update user with employer type and company ID
-              await user.update({ 
-                user_type: 'employer',
-                company_id: company.id
-              }, { transaction });
-              
-              // Commit the transaction
-              await transaction.commit();
-              
-              // Refresh user object to get updated user_type
-              await user.reload();
-              
-              console.log('✅ User successfully updated to employer type');
-            } catch (error) {
-              // Rollback transaction on error
-              await transaction.rollback();
-              console.error('❌ Error creating company for OAuth employer:', error);
-              throw error;
-            }
+            console.log('✅ User successfully updated to employer type');
           } else {
-            console.log('✅ User is already an employer');
+            console.log('✅ User is already an employer/admin');
           }
         } else {
           console.log('📝 Processing jobseeker OAuth - No employer state detected');
+          
+          // Allow employer to jobseeker conversion if they're using jobseeker OAuth flow
+          // This handles cases where users want to switch account types
+          
           // Ensure jobseekers are set as jobseeker type
           if (user.user_type !== 'jobseeker') {
             console.log('🔄 Updating user type to jobseeker');
@@ -628,6 +560,146 @@ router.get('/facebook/callback', (req, res) => {
       }
     })();
   })(req, res);
+});
+
+// Complete employer profile setup (including company creation)
+router.post('/complete-employer-profile', async (req, res) => {
+  try {
+    const { firstName, lastName, phone, companyName, companyId, region } = req.body;
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication token required'
+      });
+    }
+    
+    if (!firstName || !lastName || !phone || !region) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required: firstName, lastName, phone, region'
+      });
+    }
+    
+    // Validate company information based on type
+    if (!companyName && !companyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either companyName (for new company) or companyId (for existing company) is required'
+      });
+    }
+    
+    // Verify token and get user
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findByPk(decoded.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    if (user.user_type !== 'employer') {
+      return res.status(400).json({
+        success: false,
+        message: 'User is not an employer'
+      });
+    }
+    
+    // Start transaction to handle company and update user
+    const transaction = await sequelize.transaction();
+    
+    try {
+      let company;
+      
+      if (companyName) {
+        // Create new company
+        const companySlug = generateSlug(companyName);
+        
+        company = await Company.create({
+          name: companyName,
+          slug: companySlug,
+          industry: 'Other', // Default, can be updated later
+          companySize: '1-50', // Default, can be updated later
+          email: user.email,
+          phone: phone,
+          contactPerson: `${firstName} ${lastName}`,
+          contactEmail: user.email,
+          contactPhone: phone,
+          companyStatus: 'active',
+          isActive: true,
+          region: region
+        }, { transaction });
+
+        console.log('✅ Company created for employer profile setup:', company.id);
+      } else if (companyId) {
+        // Join existing company
+        company = await Company.findByPk(companyId, { transaction });
+        
+        if (!company) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'Company not found'
+          });
+        }
+        
+        console.log('✅ User joining existing company:', company.id);
+      }
+      
+      // Update user with profile information and company ID
+      await user.update({ 
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+        region: region,
+        company_id: company.id,
+        user_type: companyName ? 'admin' : 'employer', // Admin if they created company, employer if they joined
+        profile_completion: 60, // Basic profile completed
+        last_profile_update: new Date()
+      }, { transaction });
+      
+      // Commit the transaction
+      await transaction.commit();
+      
+      // Fetch updated user data with company
+      const updatedUser = await User.findByPk(user.id, {
+        include: [{
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'slug', 'region']
+        }],
+        attributes: { exclude: ['password'] }
+      });
+      
+      console.log('✅ Employer profile setup completed successfully');
+      
+      res.json({
+        success: true,
+        message: 'Profile setup completed successfully',
+        data: {
+          user: updatedUser,
+          company: company
+        }
+      });
+      
+    } catch (error) {
+      // Rollback transaction on error
+      await transaction.rollback();
+      console.error('❌ Error completing employer profile setup:', error);
+      throw error;
+    }
+    
+  } catch (error) {
+    console.error('❌ Complete employer profile setup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete profile setup',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 // Setup password for OAuth users

@@ -96,12 +96,18 @@ const WorkExperience = sequelize.define('WorkExperience', {
   metadata: {
     type: DataTypes.JSONB,
     defaultValue: {}
+  },
+  resumeId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'resumes',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'work_experiences',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (experience) => {
       if (experience.isCurrent) {

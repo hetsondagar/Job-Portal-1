@@ -66,7 +66,7 @@ function GulfApplicationsContent({ user }: { user: any }) {
 
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
     try {
-      const response = await apiService.updateApplicationStatus(applicationId, newStatus)
+      const response = await apiService.updateEmployerApplicationStatus(applicationId, newStatus)
       if (response.success) {
         toast.success('Application status updated successfully')
         loadApplications()

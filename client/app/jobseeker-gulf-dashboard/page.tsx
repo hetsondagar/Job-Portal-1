@@ -105,8 +105,8 @@ export default function JobseekerGulfDashboardPage() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      if (user.userType === 'employer') {
-        console.log('🔄 Employer detected on Gulf jobseeker dashboard, redirecting to employer dashboard')
+      if (user.userType === 'employer' || user.userType === 'admin') {
+        console.log('🔄 Employer/Admin detected on Gulf jobseeker dashboard, redirecting to employer dashboard')
         router.replace('/gulf-dashboard')
       }
       return;
@@ -562,7 +562,7 @@ export default function JobseekerGulfDashboardPage() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 mb-8">
-            <Link href="/gulf-jobs">
+            <Link href="/gulf-opportunities">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -794,7 +794,7 @@ export default function JobseekerGulfDashboardPage() {
                     View All Gulf Applications
                   </Button>
                 </Link>
-                <Link href="/gulf-jobs">
+                <Link href="/gulf-opportunities">
                   <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                     <Search className="w-4 h-4 mr-2" />
                     Find More Gulf Jobs
@@ -812,7 +812,7 @@ export default function JobseekerGulfDashboardPage() {
                   <Star className="w-5 h-5" />
                   <span>Featured Gulf Jobs</span>
                 </CardTitle>
-                <Link href="/gulf-jobs">
+                <Link href="/gulf-opportunities">
                   <Button variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                     View All
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -961,7 +961,7 @@ export default function JobseekerGulfDashboardPage() {
                   <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
                   <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No Gulf applications yet</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Start applying to Gulf jobs to see your applications here</p>
-                  <Link href="/gulf-jobs" className="mt-3 inline-block">
+                  <Link href="/gulf-opportunities" className="mt-3 inline-block">
                     <Button size="sm" className="bg-green-600 hover:bg-green-700">
                       Browse Gulf Jobs
                     </Button>

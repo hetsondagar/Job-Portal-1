@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import {
   Eye,
@@ -47,16 +47,25 @@ export default function EmployerLoginPage() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, loading, error, clearError } = useAuth()
   const [checking, setChecking] = useState(true)
 
   // If already authenticated (e.g., just completed OAuth), send to appropriate employer dashboard
   useEffect(() => {
+    // Check for URL parameters first
+    const error = searchParams.get('error')
+    const message = searchParams.get('message')
+    
+    if (error === 'account_type_mismatch' && message) {
+      toast.error(decodeURIComponent(message))
+    }
+    
     const checkAlreadyLoggedIn = async () => {
       try {
         if (apiService.isAuthenticated()) {
           const me = await apiService.getCurrentUser()
-          if (me.success && me.data?.user && me.data.user.userType === 'employer') {
+          if (me.success && me.data?.user && (me.data.user.userType === 'employer' || me.data.user.userType === 'admin')) {
             // Determine region → target dashboard (prefer user region, fallback to company region)
             let region: string | undefined = (me.data.user as any)?.region
             if (!region) {
@@ -79,7 +88,7 @@ export default function EmployerLoginPage() {
       setChecking(false)
     }
     checkAlreadyLoggedIn()
-  }, [router])
+  }, [router, searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,7 +102,7 @@ export default function EmployerLoginPage() {
     try {
       clearError()
       console.log('🔍 Starting employer login for:', email)
-      const result = await login({ email, password, rememberMe })
+      const result = await login({ email, password, rememberMe, loginType: 'employer' })
       
       console.log('✅ Login result:', result)
       console.log('👤 User data:', result?.user)
@@ -140,14 +149,19 @@ export default function EmployerLoginPage() {
       console.error('❌ Login error:', error)
       
       // Handle specific error types
-      if (error.message?.includes('Invalid email or password') || 
+      if (error.message?.includes('This account is registered as a jobseeker')) {
+        toast.error(error.message)
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      } else if (error.message?.includes('Invalid email or password') || 
           error.message?.includes('User not found') ||
           error.message?.includes('does not exist')) {
         toast.error("Account not found. Please register first or check your credentials.")
       } else if (error.message?.includes('Validation failed')) {
         toast.error("Please check your input and try again")
       } else {
-      toast.error(error.message || 'Login failed')
+        toast.error(error.message || 'Login failed')
       }
     }
   }

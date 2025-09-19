@@ -10,30 +10,70 @@ const JobTemplate = sequelize.define('JobTemplate', {
     companyId: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'company_id',
       comment: 'Company this template belongs to'
     },
-    title: {
+    name: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      comment: 'Template title'
+      comment: 'Template name'
     },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
       comment: 'Template description'
     },
-    categoryId: {
+    category: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'Category for this template'
+    },
+    templateData: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      comment: 'Template data structure'
+    },
+    tags: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      comment: 'Template tags'
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      comment: 'Whether template is active'
+    },
+    isPublic: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: 'Whether template is public'
+    },
+    isDefault: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: 'Whether template is default'
+    },
+    createdBy: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'category_id',
-      comment: 'Category ID for this template'
+      comment: 'User who created this template'
+    },
+    lastUsedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'When template was last used'
+    },
+    usageCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: 'Number of times template was used'
+    },
+    version: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      comment: 'Template version'
     }
 }, {
   tableName: 'job_templates',
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
   timestamps: true,
   indexes: [
     { fields: ['createdBy'] },

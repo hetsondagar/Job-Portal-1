@@ -79,6 +79,25 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
       setIsRefreshing(true)
       setLoading(true)
       console.log('🔄 Loading Gulf employer dashboard data for user:', user.id)
+      
+      // Only refresh user data if it's been more than 30 seconds since last refresh
+      // This prevents interference with auth guard
+      const lastUserRefresh = localStorage.getItem('lastUserRefresh')
+      const now = Date.now()
+      const shouldRefreshUser = !lastUserRefresh || (now - parseInt(lastUserRefresh)) > 30000
+      
+      if (shouldRefreshUser) {
+        try {
+          await refreshUser()
+          localStorage.setItem('lastUserRefresh', now.toString())
+          console.log('✅ User data refreshed')
+        } catch (userRefreshError) {
+          console.warn('⚠️ Failed to refresh user data:', userRefreshError)
+          // Continue with dashboard data loading even if user refresh fails
+        }
+      } else {
+        console.log('⏭️ Skipping user refresh - too recent')
+      }
 
       // Load dashboard stats
       const statsResponse = await apiService.getEmployerDashboardStats()
@@ -318,7 +337,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
     }
   }
 
-  const quickActions = [
+  const allQuickActions = [
     {
       title: "Post a Job",
       description: "Create a new job posting for Gulf region",
@@ -368,7 +387,24 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
       href: "/gulf-dashboard/analytics",
       color: "from-orange-500 to-orange-600",
     },
+    {
+      title: "Usage Pulse",
+      description: "Monitor quota usage and activity",
+      icon: TrendingUp,
+      href: "/admin/usage-pulse",
+      color: "from-red-500 to-red-600",
+      adminOnly: true, // Only show for admin users
+    },
   ]
+
+  // Filter quick actions based on user type
+  const quickActions = allQuickActions.filter(action => {
+    if (action.adminOnly && user?.userType !== 'admin') {
+      return false
+    }
+    return true
+  })
+  
 
   // Calculate profile completion based on user and company data
   const calculateProfileCompletion = () => {
@@ -534,15 +570,35 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
         {/* Stats Cards */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-slate-900">Gulf Region Statistics</h2>
-          <button
-            onClick={loadDashboardData}
-            disabled={loading || isRefreshing}
-            className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-            title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="text-sm">Refresh</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={async () => {
+                try {
+                  // Clear the timestamp to force refresh
+                  localStorage.removeItem('lastUserRefresh')
+                  await refreshUser()
+                  localStorage.setItem('lastUserRefresh', Date.now().toString())
+                  toast.success('User data refreshed!')
+                } catch (error) {
+                  toast.error('Failed to refresh user data')
+                }
+              }}
+              className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Refresh user data (admin status, etc.)"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="text-sm">Refresh User</span>
+            </button>
+            <button
+              onClick={loadDashboardData}
+              disabled={loading || isRefreshing}
+              className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+              title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="text-sm">Refresh Data</span>
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {loading ? (

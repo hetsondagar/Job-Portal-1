@@ -8,32 +8,50 @@ const JobApplication = sequelize.define('JobApplication', {
     primaryKey: true,
     allowNull: false
   },
-  job_id: {
+  jobId: {
     type: DataTypes.UUID,
-    allowNull: true,
+    allowNull: false,
+    field: 'job_id',
     references: {
       model: 'jobs',
       key: 'id'
-    },
-    field: 'job_id'
+    }
   },
-  user_id: {
+  userId: {
     type: DataTypes.UUID,
-    allowNull: true,
+    allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
-    },
-    field: 'user_id'
+    }
   },
   employerId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'employer_id',
     references: {
       model: 'users',
       key: 'id'
-    },
-    field: 'employer_id'
+    }
+  },
+  resumeId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'resume_id',
+    references: {
+      model: 'resumes',
+      key: 'id'
+    }
+  },
+  coverLetterId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'cover_letter_id',
+    references: {
+      model: 'cover_letters',
+      key: 'id'
+    }
   },
   status: {
     type: DataTypes.ENUM('applied', 'reviewing', 'shortlisted', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'),
@@ -42,74 +60,112 @@ const JobApplication = sequelize.define('JobApplication', {
   },
   coverLetter: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'cover_letter'
   },
   expectedSalary: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    field: 'expected_salary'
   },
   expectedSalaryCurrency: {
     type: DataTypes.STRING(3),
-    defaultValue: 'INR'
+    allowNull: true,
+    defaultValue: 'INR',
+    field: 'expected_salary_currency'
   },
   noticePeriod: {
     type: DataTypes.INTEGER,
     allowNull: true,
+    field: 'notice_period',
     comment: 'Notice period in days'
   },
   availableFrom: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'available_from'
   },
   isWillingToRelocate: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    allowNull: true,
+    defaultValue: false,
+    field: 'is_willing_to_relocate'
   },
   preferredLocations: {
     type: DataTypes.JSONB,
     allowNull: true,
+    field: 'preferred_locations',
     comment: 'Array of preferred locations'
   },
   source: {
     type: DataTypes.STRING(50),
+    allowNull: true,
     defaultValue: 'website',
     comment: 'Application source: website, email, referral, etc.'
   },
   referralCode: {
     type: DataTypes.STRING(50),
-    allowNull: true
-  },
-  resumeId: {
-    type: DataTypes.UUID,
     allowNull: true,
-    references: {
-      model: 'resumes',
-      key: 'id'
-    },
-    field: 'resume_id'
+    field: 'referral_code'
   },
-  cover_letter_id: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    // Map to existing DB column to avoid missing column errors if snake_case column isn't present yet
-    field: 'cover_letter_id',
-    references: {
-      model: 'cover_letters',
-      key: 'id'
-    }
-  },
-  status: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: 'applied'
-  },
-  applied_at: {
+  appliedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: false,
+    field: 'applied_at'
   },
-  notes: {
+  lastUpdatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'last_updated_at'
+  },
+  interviewScheduledAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'interview_scheduled_at'
+  },
+  interviewLocation: {
+    type: DataTypes.STRING(200),
+    allowNull: true,
+    field: 'interview_location'
+  },
+  interviewType: {
+    type: DataTypes.ENUM('phone', 'video', 'in-person', 'technical', 'hr', 'technical_test', 'in_person'),
+    allowNull: true,
+    field: 'interview_type'
+  },
+  employerNotes: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'employer_notes',
+    comment: 'Private notes for employer'
+  },
+  candidateNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'candidate_notes',
+    comment: 'Notes visible to candidate'
+  },
+  interviewNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'interview_notes'
+  },
+  offerDetails: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    field: 'offer_details',
+    comment: 'Offer letter details'
+  },
+  additionalDocuments: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    field: 'additional_documents',
+    comment: 'Array of additional document URLs'
+  },
+  metadata: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    comment: 'Additional application data'
   }
 }, {
   sequelize,
@@ -120,5 +176,29 @@ const JobApplication = sequelize.define('JobApplication', {
   updatedAt: 'updated_at',
   paranoid: false
 });
+
+// Instance methods
+JobApplication.prototype.canWithdraw = function() {
+  // Applications can be withdrawn if they are in certain statuses
+  const withdrawableStatuses = ['applied', 'reviewing', 'shortlisted'];
+  return withdrawableStatuses.includes(this.status);
+};
+
+JobApplication.prototype.canUpdateStatus = function(newStatus) {
+  // Define valid status transitions
+  const validTransitions = {
+    'applied': ['reviewing', 'rejected', 'withdrawn'],
+    'reviewing': ['shortlisted', 'rejected', 'withdrawn'],
+    'shortlisted': ['interview_scheduled', 'rejected', 'withdrawn'],
+    'interview_scheduled': ['interviewed', 'rejected', 'withdrawn'],
+    'interviewed': ['offered', 'rejected', 'withdrawn'],
+    'offered': ['hired', 'rejected', 'withdrawn'],
+    'hired': [], // Final state
+    'rejected': [], // Final state
+    'withdrawn': [] // Final state
+  };
+  
+  return validTransitions[this.status]?.includes(newStatus) || false;
+};
 
 module.exports = JobApplication;

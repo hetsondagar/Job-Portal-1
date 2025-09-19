@@ -85,6 +85,7 @@ export interface LoginData {
   email: string;
   password: string;
   rememberMe?: boolean;
+  loginType?: 'jobseeker' | 'employer';
 }
 
 export interface ForgotPasswordData {
@@ -336,11 +337,32 @@ class ApiService {
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const url = response.url
-    const responseClone = response.clone()
-    let data: any
+    const url = response.url;
+    console.log('🔍 handleResponse - Starting with URL:', url, 'Status:', response.status);
+    
+    // Basic error check
+    if (!response.ok) {
+      console.log('❌ Response not OK:', response.status, response.statusText);
+    }
+    
+    // Simple fallback logging in case the main logging fails
+    try {
+      console.log('🔍 handleResponse - Processing response:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+    } catch (logError) {
+      console.log('🔍 handleResponse - Basic info:', url, response.status, response.statusText);
+    }
     
     try {
+      const responseClone = response.clone()
+      let data: any
+      
+      try {
       // Detect opaque/network errors (often CORS or network failure)
       if ((response as any).type === 'opaque' || response.status === 0) {
         console.error('❌ Network/CORS error:', { url, type: (response as any).type, status: response.status })
@@ -385,11 +407,70 @@ class ApiService {
 
     if (!response.ok) {
       // If parsed body is empty object, try to capture raw text for better diagnostics
-      const rawText = (!data || (typeof data === 'object' && Object.keys(data).length === 0))
-        ? await responseClone.text().catch(() => '')
-        : '';
-      const bodyForLog = (rawText && rawText.trim().length > 0) ? rawText : data;
-      console.error('❌ API error:', { url, status: response.status, statusText: response.statusText, body: bodyForLog });
+      let rawText = '';
+      let bodyForLog = data;
+      
+      try {
+        if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
+          rawText = await responseClone.text().catch(() => '');
+          bodyForLog = (rawText && rawText.trim().length > 0) ? rawText : 'Empty response body';
+        }
+        
+        // Safely stringify the body for logging
+        let safeBodyForLog = bodyForLog;
+        try {
+          if (bodyForLog === null || bodyForLog === undefined) {
+            safeBodyForLog = 'null/undefined response body';
+          } else if (typeof bodyForLog === 'string') {
+            safeBodyForLog = bodyForLog;
+          } else if (typeof bodyForLog === 'object') {
+            if (Object.keys(bodyForLog).length === 0) {
+              safeBodyForLog = 'Empty object response body';
+            } else {
+              safeBodyForLog = JSON.stringify(bodyForLog);
+            }
+          } else {
+            safeBodyForLog = String(bodyForLog);
+          }
+        } catch (stringifyError) {
+          safeBodyForLog = `[Unable to stringify response body: ${stringifyError instanceof Error ? stringifyError.message : String(stringifyError)}]`;
+        }
+        
+        // Safe error logging with individual try-catch blocks
+        try {
+          console.error('❌ API error - URL:', url);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Status:', response.status, response.statusText);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Body:', safeBodyForLog);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Headers:', Object.fromEntries(response.headers.entries()));
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error - Timestamp:', new Date().toISOString());
+        } catch (e) {}
+        
+      } catch (logError) {
+        // Fallback error logging
+        try {
+          console.error('❌ API error (logging failed) - URL:', url);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error (logging failed) - Status:', response.status);
+        } catch (e) {}
+        
+        try {
+          console.error('❌ API error (logging failed) - LogError:', logError instanceof Error ? logError.message : String(logError));
+        } catch (e) {}
+      }
       
       // Handle rate limiting specifically
       if (response.status === 429) {
@@ -454,8 +535,17 @@ class ApiService {
       } as ApiResponse<T>;
     }
 
-    console.log('✅ handleResponse - Success:', data)
-    return data as ApiResponse<T>
+      console.log('✅ handleResponse - Success:', data)
+      return data as ApiResponse<T>
+    } catch (error) {
+      console.log('❌ handleResponse - Unexpected error caught:', error);
+      console.error('❌ handleResponse - Unexpected error:', error);
+      return {
+        success: false,
+        message: 'An unexpected error occurred while processing the response',
+        errors: ['UNEXPECTED_ERROR']
+      } as ApiResponse<T>;
+    }
   }
 
   // Authentication endpoints
@@ -843,6 +933,19 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async createJob(data: any): Promise<ApiResponse<any>> {
+    console.log('🔍 createJob - Sending data:', data);
+    const response = await fetch(`${API_BASE_URL}/jobs/create`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
   async updateJobStatus(id: string, status: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/jobs/${id}/status`, {
       method: 'PATCH',
@@ -989,6 +1092,33 @@ class ApiService {
     return response;
   }
 
+  async completeEmployerProfile(data: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    companyName?: string;
+    companyId?: string;
+    region: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/oauth/complete-employer-profile`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getCompanies(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/companies`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
   async setupOAuthPassword(password: string): Promise<ApiResponse> {
     const response = await fetch(`${API_BASE_URL}/oauth/setup-password`, {
       method: 'POST',
@@ -1117,6 +1247,27 @@ class ApiService {
   }
 
   async updateApplicationStatus(applicationId: string, status: string): Promise<ApiResponse<any>> {
+    // Use the jobseeker endpoint for updating application status (withdrawing)
+    const response = await fetch(`${API_BASE_URL}/user/applications/${applicationId}/status`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  // Employer method for updating application status
+  async updateEmployerApplicationStatus(applicationId: string, status: string): Promise<ApiResponse<any>> {
+    console.log('🔍 updateEmployerApplicationStatus called:', {
+      applicationId,
+      status,
+      url: `${API_BASE_URL}/user/employer/applications/${applicationId}/status`
+    });
+    
     // Use the employer endpoint for updating application status
     const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}/status`, {
       method: 'PUT',
@@ -1125,6 +1276,13 @@ class ApiService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ status }),
+    });
+
+    console.log('🔍 updateEmployerApplicationStatus response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
     });
 
     return this.handleResponse<any>(response);
@@ -1704,11 +1862,15 @@ class ApiService {
   }
 
   // Usage Pulse endpoints
-  async getUsageSummary(companyId: string): Promise<ApiResponse<any>> {
-    const endpoint = `/usage/summary?companyId=${encodeURIComponent(companyId)}`;
+  async getUsageSummary(): Promise<ApiResponse<any>> {
+    const endpoint = `/usage/summary`;
+    console.log('🔍 Frontend calling getUsageSummary:', endpoint);
     return this.makeRequest(endpoint, async () => {
       const response = await fetch(`${this.baseURL}${endpoint}`, { headers: this.getAuthHeaders() });
-      return this.handleResponse<any>(response);
+      console.log('🔍 getUsageSummary response status:', response.status);
+      const result = await this.handleResponse<any>(response);
+      console.log('🔍 getUsageSummary result:', result);
+      return result;
     });
   }
 
@@ -1727,9 +1889,8 @@ class ApiService {
     });
   }
 
-  async getUsageSearchInsights(params: { companyId?: string; from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
+  async getUsageSearchInsights(params: { from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
     const sp = new URLSearchParams();
-    if (params.companyId) sp.append('companyId', params.companyId);
     if (params.from) sp.append('from', params.from);
     if (params.to) sp.append('to', params.to);
     if (params.limit) sp.append('limit', String(params.limit));
@@ -1740,9 +1901,8 @@ class ApiService {
     });
   }
 
-  async getUsagePostingInsights(params: { companyId?: string; from?: string; to?: string }): Promise<ApiResponse<any>> {
+  async getUsagePostingInsights(params: { from?: string; to?: string }): Promise<ApiResponse<any>> {
     const sp = new URLSearchParams();
-    if (params.companyId) sp.append('companyId', params.companyId);
     if (params.from) sp.append('from', params.from);
     if (params.to) sp.append('to', params.to);
     const endpoint = `/usage/posting-insights${sp.toString() ? `?${sp.toString()}` : ''}`;
@@ -1752,9 +1912,8 @@ class ApiService {
     });
   }
 
-  async getRecruiterPerformance(params: { companyId?: string; from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
+  async getRecruiterPerformance(params: { from?: string; to?: string; limit?: number }): Promise<ApiResponse<any>> {
     const sp = new URLSearchParams();
-    if (params.companyId) sp.append('companyId', params.companyId);
     if (params.from) sp.append('from', params.from);
     if (params.to) sp.append('to', params.to);
     if (params.limit) sp.append('limit', String(params.limit));
@@ -2121,6 +2280,7 @@ class ApiService {
 
     return response;
   }
+
 
   // Download candidate cover letter (for employers)
   async downloadCandidateCoverLetter(candidateId: string, coverLetterId: string): Promise<Response> {
@@ -2711,18 +2871,27 @@ class ApiService {
     sortBy?: string;
     sortOrder?: string;
   }): Promise<ApiResponse<{ jobs: Job[]; pagination: any }>> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
-        }
+    try {
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            queryParams.append(key, value.toString());
+          }
+        });
+      }
+      const response = await fetch(`${API_BASE_URL}/gulf/jobs?${queryParams.toString()}`, {
+        headers: this.getAuthHeaders(),
       });
+      return this.handleResponse<{ jobs: Job[]; pagination: any }>(response);
+    } catch (error) {
+      console.error('❌ Error fetching Gulf jobs:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch Gulf jobs',
+        data: { jobs: [], pagination: {} }
+      };
     }
-    const response = await fetch(`${API_BASE_URL}/gulf/jobs?${queryParams.toString()}`, {
-      headers: this.getAuthHeaders(),
-    });
-    return this.handleResponse<{ jobs: Job[]; pagination: any }>(response);
   }
 
   async getGulfJobById(id: string): Promise<ApiResponse<Job>> {
@@ -2768,18 +2937,27 @@ class ApiService {
     limit?: number;
     status?: string;
   }): Promise<ApiResponse<{ applications: JobApplication[]; pagination: any }>> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
-        }
+    try {
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            queryParams.append(key, value.toString());
+          }
+        });
+      }
+      const response = await fetch(`${API_BASE_URL}/gulf/applications?${queryParams.toString()}`, {
+        headers: this.getAuthHeaders(),
       });
+      return this.handleResponse<{ applications: JobApplication[]; pagination: any }>(response);
+    } catch (error) {
+      console.error('❌ Error fetching Gulf job applications:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch Gulf job applications',
+        data: { applications: [], pagination: {} }
+      };
     }
-    const response = await fetch(`${API_BASE_URL}/gulf/applications?${queryParams.toString()}`, {
-      headers: this.getAuthHeaders(),
-    });
-    return this.handleResponse<{ applications: JobApplication[]; pagination: any }>(response);
   }
 
   async getGulfJobBookmarks(params?: {

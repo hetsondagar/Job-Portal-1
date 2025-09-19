@@ -55,14 +55,14 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (search) {
       whereClause[Op.or] = [
-        { title: { [Op.iLike]: `%${search}%` } },
+        { name: { [Op.iLike]: `%${search}%` } },
         { description: { [Op.iLike]: `%${search}%` } }
       ];
     }
 
     const templates = await JobTemplate.findAll({
       where: whereClause,
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     res.json({
@@ -122,10 +122,10 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     const template = await JobTemplate.create({
-      title,
+      name: title,
       description,
-      categoryId,
-      companyId: companyId || req.user.company_id
+      category: categoryId,
+      companyId: companyId || req.user.companyId
     });
 
     res.status(201).json({
@@ -150,7 +150,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     const template = await JobTemplate.findOne({
       where: {
-        id
+        id,
+        companyId: req.user.companyId
       }
     });
 
@@ -162,9 +163,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     await template.update({
-      title: title || template.title,
+      name: title || template.name,
       description: description !== undefined ? description : template.description,
-      categoryId: categoryId || template.categoryId
+      category: categoryId || template.category
     });
 
     res.json({
@@ -252,14 +253,42 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
 
     // Create job from template
     const jobData = {
-      title: template.title || 'Untitled Job',
+      title: template.name || 'Untitled Job',
       description: template.description || '',
-      company_id: company.id,
-      created_by: req.user.id,
-      is_active: false // Start as draft
+      companyId: company.id,
+      employerId: req.user.id,
+      status: 'draft', // Start as draft
+      region: user.region || 'india' // Set region based on user's region
     };
 
     const job = await Job.create(jobData);
+
+    // Consume job posting quota
+    try {
+      const EmployerQuotaService = require('../services/employerQuotaService');
+      await EmployerQuotaService.checkAndConsume(req.user.id, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
+        activityType: 'job_post',
+        details: { title: job.title, status: job.status, source: 'template' },
+        jobId: job.id,
+        defaultLimit: 50
+      });
+    } catch (e) {
+      console.error('⚠️ Failed to consume job posting quota from template:', e?.message || e);
+      // Don't fail the job creation if quota check fails
+    }
+
+    // Log employer activity: job posted from template
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logJobPost(req.user.id, job.id, { 
+        title: job.title, 
+        status: job.status,
+        source: 'template',
+        templateId: id
+      });
+    } catch (e) {
+      console.error('⚠️ Failed to log job_post activity from template:', e?.message || e);
+    }
 
     res.status(201).json({
       success: true,

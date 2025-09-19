@@ -101,10 +101,10 @@ class ViewTrackingService {
         attributes: [
           'viewType',
           [ViewTracking.sequelize.fn('COUNT', ViewTracking.sequelize.col('id')), 'count'],
-          [ViewTracking.sequelize.fn('DATE', ViewTracking.sequelize.col('createdAt')), 'date']
+          [ViewTracking.sequelize.fn('DATE', ViewTracking.sequelize.col('created_at')), 'date']
         ],
-        group: ['viewType', ViewTracking.sequelize.fn('DATE', ViewTracking.sequelize.col('createdAt'))],
-        order: [[ViewTracking.sequelize.fn('DATE', ViewTracking.sequelize.col('createdAt')), 'DESC']]
+        group: ['viewType', ViewTracking.sequelize.fn('DATE', ViewTracking.sequelize.col('created_at'))],
+        order: [[ViewTracking.sequelize.fn('DATE', ViewTracking.sequelize.col('created_at')), 'DESC']]
       });
 
       return { success: true, data: stats };
@@ -169,7 +169,7 @@ class ViewTrackingService {
             required: false
           }
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit
       });
 

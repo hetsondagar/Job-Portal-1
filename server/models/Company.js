@@ -28,36 +28,40 @@ const Company = sequelize.define('Company', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  industry: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  sector: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   website: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  industry: {
+  email: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  company_size: {
+  phone: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  founded_year: {
-    type: DataTypes.INTEGER,
+  address: {
+    type: DataTypes.TEXT,
     allowNull: true
   },
-  headquarters: {
+  city: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  contact_email: {
+  state: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  contact_phone: {
+  country: {
     type: DataTypes.STRING,
-    allowNull: true
-  },
-  social_links: {
-    type: DataTypes.JSONB,
     allowNull: true,
     defaultValue: 'India'
   },
@@ -66,34 +70,186 @@ const Company = sequelize.define('Company', {
     allowNull: true
   },
   latitude: {
-    type: DataTypes.DECIMAL(10, 8),
+    type: DataTypes.DECIMAL,
     allowNull: true
   },
   longitude: {
-    type: DataTypes.DECIMAL(11, 8),
+    type: DataTypes.DECIMAL,
     allowNull: true
   },
   rating: {
-    type: DataTypes.DECIMAL(3, 2),
+    type: DataTypes.DECIMAL,
     allowNull: true,
     defaultValue: 0
   },
+  mission: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  vision: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  values: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  perks: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  shortDescription: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  companySize: {
+    type: DataTypes.ENUM('1-50', '51-200', '201-500', '500-1000', '1000+'),
+    allowNull: true
+  },
+  foundedYear: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
   totalReviews: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     defaultValue: 0
   },
-  is_verified: {
+  isVerified: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
     defaultValue: false
   },
-  is_active: {
+  isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
     defaultValue: true
+  },
+  isFeatured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  socialLinks: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  benefits: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  technologies: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  companyType: {
+    type: DataTypes.ENUM('startup', 'midsize', 'enterprise', 'multinational'),
+    allowNull: true
+  },
+  fundingStage: {
+    type: DataTypes.ENUM('bootstrapped', 'seed', 'series-a', 'series-b', 'series-c', 'public'),
+    allowNull: true
+  },
+  revenue: {
+    type: DataTypes.ENUM('0-1cr', '1-10cr', '10-50cr', '50-100cr', '100cr+'),
+    allowNull: true
+  },
+  culture: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  workEnvironment: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  hiringProcess: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  contactPerson: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  contactEmail: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  contactPhone: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  verificationStatus: {
+    type: DataTypes.ENUM('unverified', 'pending', 'verified', 'premium_verified'),
+    allowNull: true,
+    defaultValue: 'unverified'
+  },
+  verificationDocuments: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  totalJobsPosted: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  activeJobsCount: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  totalApplications: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  averageResponseTime: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  metaTitle: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  metaDescription: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  keywords: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  companyStatus: {
+    type: DataTypes.ENUM('active', 'inactive', 'suspended', 'pending_approval'),
+    allowNull: true,
+    defaultValue: 'pending_approval'
+  },
+  lastActivityAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  profileCompletion: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true,
+    defaultValue: 'india'
   }
 }, {
   tableName: 'companies',
+  timestamps: true,
+  underscored: false,
   hooks: {
     // Removed auto slug generation - handled manually in auth routes
   }

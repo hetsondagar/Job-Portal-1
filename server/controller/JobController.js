@@ -166,8 +166,11 @@ exports.createJob = async (req, res, next) => {
       mappedExperienceLevel = experienceMap[experience] || 'entry';
     }
 
-    // Use authenticated user's ID as created_by (matching the association)
+    // Use authenticated user's ID as employerId (matching the association)
     const createdBy = req.user.id;
+    
+    // Set region based on user's region to ensure Gulf employers create Gulf jobs
+    const jobRegion = req.user.region || 'india'; // Default to 'india' if no region set
     
     // Generate slug from title
     const slug = title.toLowerCase()
@@ -183,7 +186,7 @@ exports.createJob = async (req, res, next) => {
       description: String(description).trim(),
       location: String(location).trim(),
       companyId: finalCompanyId,
-      created_by: createdBy, // Use created_by to match the association
+      employerId: createdBy, // Use employerId to match the association
       jobType: type || jobType, // Handle both field names
       experienceLevel: mappedExperienceLevel,
       experienceMin: experienceMin || null,
@@ -219,13 +222,14 @@ exports.createJob = async (req, res, next) => {
       latitude,
       longitude,
       requirements: requirements && requirements.trim() ? requirements : null,
-      responsibilities: responsibilities && responsibilities.trim() ? responsibilities : null
+      responsibilities: responsibilities && responsibilities.trim() ? responsibilities : null,
+      region: jobRegion // Set region based on user's region
     };
 
     console.log('📝 Creating job with data:', {
       title: jobData.title,
       company_id: jobData.companyId,
-      created_by: jobData.employerId,
+      employerId: jobData.employerId,
       jobType: jobData.jobType,
       location: jobData.location,
       status: jobData.status
@@ -235,12 +239,14 @@ exports.createJob = async (req, res, next) => {
 
     // Consume job posting quota
     try {
-      await EmployerQuotaService.checkAndConsume(employerId, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
+      console.log('🔍 Consuming job posting quota for employer:', employerId, 'job:', job.id);
+      const quotaResult = await EmployerQuotaService.checkAndConsume(employerId, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
         activityType: 'job_post',
         details: { title: job.title, status: job.status },
         jobId: job.id,
         defaultLimit: 50
       });
+      console.log('✅ Job posting quota consumed successfully:', quotaResult);
     } catch (e) {
       console.error('⚠️ Failed to consume job posting quota:', e?.message || e);
       // Don't fail the job creation if quota check fails
@@ -326,7 +332,7 @@ exports.getAllJobs = async (req, res, next) => {
       jobType,
       experienceLevel,
       search,
-      sortBy = 'created_at',
+      sortBy = 'createdAt',
       sortOrder = 'DESC'
     } = req.query;
 
@@ -336,9 +342,9 @@ exports.getAllJobs = async (req, res, next) => {
     // Add filters
     if (status) {
       if (status === 'active') {
-        whereClause.is_active = true;
+        whereClause.status = 'active';
       } else if (status === 'inactive') {
-        whereClause.is_active = false;
+        whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
     }
     if (companyId) whereClause.company_id = companyId;
@@ -359,7 +365,7 @@ exports.getAllJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'company_size', 'website', 'contact_email', 'contact_phone'],
+          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone'],
           required: false
         },
         {
@@ -414,7 +420,7 @@ exports.getJobById = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'company_size', 'website', 'contact_email', 'contact_phone'],
+          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone'],
           required: false // Make it optional since companyId can be NULL
         },
         {
@@ -428,7 +434,7 @@ exports.getJobById = async (req, res, next) => {
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { is_active: true },
           required: false,
-          order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
+          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
         }
       ]
     });
@@ -443,7 +449,7 @@ exports.getJobById = async (req, res, next) => {
     // Track the view (async, don't wait for it)
     ViewTrackingService.trackView({
       viewerId: req.user?.id || null, // null for anonymous users
-      viewedUserId: job.created_by, // Track profile view for the job poster
+      viewedUserId: job.employerId, // Track profile view for the job poster
       jobId: job.id,
       viewType: 'job_view',
       ipAddress: req.ip || req.connection.remoteAddress,
@@ -488,7 +494,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'company_size'],
+          attributes: ['id', 'name', 'industry', 'companySize'],
           required: false
         }
       ]
@@ -541,7 +547,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'company_size', 'website'],
+          attributes: ['id', 'name', 'industry', 'companySize', 'website'],
           required: false
         },
         {
@@ -554,7 +560,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       order: [
         // Prioritize by similarity factors
         ['views', 'DESC'], // More viewed jobs first
-        ['created_at', 'DESC'] // Recent jobs first
+        ['createdAt', 'DESC'] // Recent jobs first
       ],
       limit: parseInt(limit)
     });
@@ -571,7 +577,7 @@ exports.getSimilarJobs = async (req, res, next) => {
           {
             model: Company,
             as: 'company',
-            attributes: ['id', 'name', 'industry', 'company_size', 'website'],
+            attributes: ['id', 'name', 'industry', 'companySize', 'website'],
             required: false
           },
           {
@@ -583,7 +589,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         ],
         order: [
           ['views', 'DESC'],
-          ['created_at', 'DESC']
+          ['createdAt', 'DESC']
         ],
         limit: parseInt(limit) - similarJobs.length
       });
@@ -599,7 +605,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       location: job.location,
       salary: job.salary || 'Salary not specified',
       type: job.jobType,
-      posted: new Date(job.created_at).toLocaleDateString(),
+      posted: new Date(job.createdAt).toLocaleDateString(),
       applications: job.applications || 0,
       views: job.views || 0,
       experienceLevel: job.experienceLevel,
@@ -607,7 +613,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       description: job.description?.substring(0, 150) + '...',
       companyInfo: {
         industry: job.company?.industry,
-        size: job.company?.company_size,
+        size: job.company?.companySize,
         website: job.company?.website
       }
     }));
@@ -644,7 +650,7 @@ exports.getJobForEdit = async (req, res, next) => {
     }
 
     // Verify that the job belongs to the authenticated employer
-    if (job.created_by !== req.user.id) {
+    if (job.employerId !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'You can only edit your own jobs'
@@ -741,19 +747,29 @@ exports.getJobsByEmployer = async (req, res, next) => {
     const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
     const offset = (page - 1) * limit;
     
-    const whereClause = { created_by: req.user.id };
+    const whereClause = { employerId: req.user.id };
+    
+    // Add region filtering to ensure Gulf employers only see Gulf jobs
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all jobs (backward compatibility)
     
     // Add filters
     if (status && status !== 'all') {
       if (status === 'draft') {
-        // For drafts, show inactive jobs
-        whereClause.is_active = false;
+        // For drafts, show draft jobs
+        whereClause.status = 'draft';
       } else if (status === 'active') {
         // For active jobs, show active jobs
-        whereClause.is_active = true;
+        whereClause.status = 'active';
       } else {
-        // For other statuses, use is_active based on status
-        whereClause.is_active = status === 'active';
+        // For other statuses, use exact status match
+        whereClause.status = status;
       }
       console.log('🔍 Filtering by status:', status);
     }
@@ -770,14 +786,14 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     // Map camelCase sortBy to snake_case database columns
     const sortByMapping = {
-      'createdAt': 'created_at',
+      'createdAt': 'createdAt',
       'updatedAt': 'updated_at',
       'title': 'title',
-      'status': 'is_active',
+      'status': 'status',
       'location': 'location'
     };
     
-    const dbSortBy = sortByMapping[sortBy] || 'created_at';
+    const dbSortBy = sortByMapping[sortBy] || 'createdAt';
 
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
@@ -833,13 +849,13 @@ exports.getJobsByCompany = async (req, res, next) => {
     const { page = 1, limit = 10, status } = req.query;
 
     const offset = (page - 1) * limit;
-    const whereClause = { company_id: companyId };
+    const whereClause = { companyId: companyId };
 
     if (status) {
       if (status === 'active') {
-        whereClause.is_active = true;
+        whereClause.status = 'active';
       } else if (status === 'inactive') {
-        whereClause.is_active = false;
+        whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
     }
 
@@ -849,11 +865,11 @@ exports.getJobsByCompany = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'company_size'],
+          attributes: ['id', 'name', 'industry', 'companySize'],
           required: false // Make it optional since companyId can be NULL
         }
       ],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -895,9 +911,8 @@ exports.updateJobStatus = async (req, res, next) => {
       });
     }
 
-    // Map status to is_active
-    const isActive = status === 'active';
-    await job.update({ is_active: isActive });
+    // Update job status
+    await job.update({ status: status });
 
     return res.status(200).json({
       success: true,
@@ -942,7 +957,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
           as: 'company',
 
-          attributes: ['id', 'name', 'industry', 'company_size'],
+          attributes: ['id', 'name', 'industry', 'companySize'],
           required: false
 
         }
@@ -1047,7 +1062,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
           as: 'company',
 
-          attributes: ['id', 'name', 'industry', 'company_size', 'website'],
+          attributes: ['id', 'name', 'industry', 'companySize', 'website'],
           required: false
 
         },
@@ -1072,7 +1087,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
         ['views', 'DESC'], // More viewed jobs first
 
-        ['created_at', 'DESC'] // Recent jobs first
+        ['createdAt', 'DESC'] // Recent jobs first
       ],
 
       limit: parseInt(limit)
@@ -1105,7 +1120,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
             as: 'company',
 
-            attributes: ['id', 'name', 'industry', 'company_size', 'website'],
+            attributes: ['id', 'name', 'industry', 'companySize', 'website'],
             required: false
 
           },
@@ -1128,7 +1143,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
           ['views', 'DESC'],
 
-          ['created_at', 'DESC']
+          ['createdAt', 'DESC']
         ],
 
         limit: parseInt(limit) - similarJobs.length
@@ -1159,7 +1174,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
       type: job.jobType,
 
-      posted: new Date(job.created_at).toLocaleDateString(),
+      posted: new Date(job.createdAt).toLocaleDateString(),
       applications: job.applications || 0,
 
       views: job.views || 0,
@@ -1174,7 +1189,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
         industry: job.company?.industry,
 
-        size: job.company?.company_size,
+        size: job.company?.companySize,
         website: job.company?.website
 
       }
@@ -1247,7 +1262,7 @@ exports.getJobForEdit = async (req, res, next) => {
 
     // Verify that the job belongs to the authenticated employer
 
-    if (job.created_by !== req.user.id) {
+    if (job.employerId !== req.user.id) {
       return res.status(403).json({
 
         success: false,
@@ -1440,8 +1455,17 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     
 
-    const whereClause = { created_by: req.user.id };
+    const whereClause = { employerId: req.user.id };
     
+    // Add region filtering to ensure Gulf employers only see Gulf jobs
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all jobs (backward compatibility)
 
     // Add filters
 
@@ -1502,14 +1526,14 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     // Map camelCase sortBy to snake_case database columns
     const sortByMapping = {
-      'createdAt': 'created_at',
+      'createdAt': 'createdAt',
       'updatedAt': 'updated_at',
       'title': 'title',
       'status': 'status',
       'location': 'location'
     };
     
-    const dbSortBy = sortByMapping[sortBy] || 'created_at';
+    const dbSortBy = sortByMapping[sortBy] || 'createdAt';
 
 
     const { count, rows: jobs } = await Job.findAndCountAll({
@@ -1619,7 +1643,7 @@ exports.getJobsByCompany = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
-    const whereClause = { company_id: companyId };
+    const whereClause = { companyId: companyId };
 
 
     if (status) whereClause.status = status;
@@ -1638,14 +1662,14 @@ exports.getJobsByCompany = async (req, res, next) => {
 
           as: 'company',
 
-          attributes: ['id', 'name', 'industry', 'company_size'],
+          attributes: ['id', 'name', 'industry', 'companySize'],
           required: false // Make it optional since companyId can be NULL
 
         }
 
       ],
 
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
 
       offset: parseInt(offset)

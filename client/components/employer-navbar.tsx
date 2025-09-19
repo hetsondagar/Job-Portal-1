@@ -30,7 +30,7 @@ export function EmployerNavbar() {
   // Get company data if user is an employer
   useEffect(() => {
     const fetchCompanyData = async () => {
-      if (user?.userType === 'employer' && user?.companyId) {
+      if ((user?.userType === 'employer' || user?.userType === 'admin') && user?.companyId) {
         try {
           const response = await apiService.getCompany(user.companyId)
           if (response.success && response.data) {

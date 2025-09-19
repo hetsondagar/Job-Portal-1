@@ -84,9 +84,9 @@ export default function OAuthCallbackPage() {
         if (response.success && response.data?.user) {
           console.log('✅ User data retrieved successfully:', response.data.user)
           
-          // Check if this is an employer user - if so, redirect to employer callback
-          if (response.data.user.userType === 'employer') {
-            console.log('❌ Employer user detected in jobseeker OAuth callback - redirecting to employer callback')
+          // Check if this is an employer or admin user - if so, redirect to employer callback
+          if (response.data.user.userType === 'employer' || response.data.user.userType === 'admin') {
+            console.log('❌ Employer/Admin user detected in jobseeker OAuth callback - redirecting to employer callback')
             toast.error('This account is registered as an employer. Redirecting to employer login.')
             setTimeout(() => {
               router.push('/employer-login')

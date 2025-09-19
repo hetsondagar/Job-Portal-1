@@ -108,7 +108,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       let selectedResumeId = resumeId;
       if (!selectedResumeId) {
         const defaultResume = await Resume.findOne({
-          where: { userId, is_default: true }
+          where: { userId, isDefault: true }
         });
         if (defaultResume) {
           selectedResumeId = defaultResume.id;
@@ -144,7 +144,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
     let selectedResumeId = resumeId;
     if (!selectedResumeId) {
       const defaultResume = await Resume.findOne({
-        where: { userId, is_default: true }
+        where: { userId, isDefault: true }
       });
       if (defaultResume) {
         selectedResumeId = defaultResume.id;
@@ -155,7 +155,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
     const application = await JobApplication.create({
       jobId,
       userId,
-      employer_id: job.employerId, // Use employerId from job
+      employerId: job.employerId, // Use employerId from job
       status: 'applied',
       coverLetter,
       expectedSalary,
@@ -164,7 +164,9 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       isWillingToRelocate,
       preferredLocations,
       resumeId: selectedResumeId,
-      source: 'website'
+      source: 'website',
+      appliedAt: new Date(),
+      lastUpdatedAt: new Date()
     });
 
     console.log('✅ Job application created:', { 

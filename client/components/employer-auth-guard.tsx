@@ -16,45 +16,61 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isChecking, setIsChecking] = useState(true)
+  const [timeoutReached, setTimeoutReached] = useState(false)
 
   useEffect(() => {
+    // Set a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.log('⏰ EmployerAuthGuard timeout reached')
+      setTimeoutReached(true)
+      setIsChecking(false)
+    }, 10000) // 10 second timeout
+
     // While auth provider is loading, or we have a token but no user yet, keep checking
-    if (loading) return;
+    if (loading) {
+      return () => clearTimeout(timeout)
+    }
 
     const hasToken = typeof window !== 'undefined' && apiService.isAuthenticated()
 
     console.log('🔍 EmployerAuthGuard - State:', {
       loading,
-        hasUser: !!user,
-        userType: user?.userType,
-      hasToken
-      })
+      hasUser: !!user,
+      userType: user?.userType,
+      hasToken,
+      timeoutReached
+    })
       
-      if (!user) {
+    if (!user) {
       // If we have a token, wait for profile fetch to hydrate user instead of redirecting
-      if (hasToken) {
+      if (hasToken && !timeoutReached) {
         setIsChecking(true)
-        return
+        return () => clearTimeout(timeout)
       }
       
       // No token and no user → go to employer-login
+      clearTimeout(timeout)
       router.replace('/employer-login')
-        return
-      }
+      return
+    }
       
     // We have a user - check if they're employer or admin
     if (user.userType !== 'employer' && user.userType !== 'admin') {
-        if (user.userType === 'jobseeker') {
+      clearTimeout(timeout)
+      if (user.userType === 'jobseeker') {
         router.replace('/dashboard')
-        } else {
+      } else {
         router.replace('/login')
-        }
-        return
       }
+      return
+    }
       
     // Auth OK
-      setIsChecking(false)
-  }, [user, loading, router])
+    clearTimeout(timeout)
+    setIsChecking(false)
+    
+    return () => clearTimeout(timeout)
+  }, [user, loading, router, timeoutReached])
 
   // Show loading while checking authentication
   if (loading || isChecking) {
@@ -71,16 +87,28 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
               Employer Access
             </CardTitle>
             <p className="text-slate-600 dark:text-slate-300 mt-2">
-              Verifying your credentials...
+              {timeoutReached ? 'Taking longer than expected...' : 'Verifying your credentials...'}
             </p>
           </CardHeader>
           <CardContent className="text-center">
             <div className="flex justify-center mb-4">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
             </div>
-            <p className="text-slate-600 dark:text-slate-300">
-              Please wait while we verify your employer account
+            <p className="text-slate-600 dark:text-slate-300 mb-4">
+              {timeoutReached 
+                ? 'Still verifying your account. You can try refreshing the page.'
+                : 'Please wait while we verify your employer account'
+              }
             </p>
+            {timeoutReached && (
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline"
+                className="mt-2"
+              >
+                Refresh Page
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

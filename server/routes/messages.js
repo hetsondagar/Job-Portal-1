@@ -168,7 +168,7 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
       id: msg.id,
       content: msg.content,
       messageType: msg.messageType,
-      created_at: msg.createdAt,
+      createdAt: msg.createdAt,
       isRead: msg.isRead,
       isFromMe: msg.senderId === req.user.id,
       sender: {
@@ -257,7 +257,7 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
         id: message.id,
         content: message.content,
         messageType: message.messageType,
-        created_at: message.createdAt,
+        createdAt: message.createdAt,
         isFromMe: true,
         sender: {
           id: req.user.id,

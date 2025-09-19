@@ -11,70 +11,41 @@ const Job = sequelize.define('Job', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  slug: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
   description: {
     type: DataTypes.TEXT,
     allowNull: false
   },
-  company_id: {
+  companyId: {
     type: DataTypes.UUID,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: 'companies',
       key: 'id'
     }
   },
-  category_id: {
+  employerId: {
     type: DataTypes.UUID,
-    allowNull: true,
+    allowNull: false,
     references: {
-      model: 'job_categories',
+      model: 'users',
       key: 'id'
     }
   },
+  shortDescription: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   location: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: false
   },
-  salary_min: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-  salary_max: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-  salary_currency: {
+  city: {
     type: DataTypes.STRING,
-    allowNull: true
-  },
-  employment_type: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  experience_level: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  skills_required: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
-  },
-  benefits: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
-  },
-  requirements: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  responsibilities: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  application_deadline: {
-    type: DataTypes.DATE,
     allowNull: true
   },
   state: {
@@ -86,17 +57,25 @@ const Job = sequelize.define('Job', {
     allowNull: true,
     defaultValue: 'India'
   },
-  region: {
-    type: DataTypes.ENUM('india', 'gulf', 'other'),
-    allowNull: true,
-    defaultValue: 'india'
-  },
   latitude: {
-    type: DataTypes.DECIMAL(10, 8),
+    type: DataTypes.DECIMAL,
     allowNull: true
   },
   longitude: {
-    type: DataTypes.DECIMAL(11, 8),
+    type: DataTypes.DECIMAL,
+    allowNull: true
+  },
+  status: {
+    type: DataTypes.ENUM('draft', 'active', 'paused', 'closed', 'expired'),
+    allowNull: false,
+    defaultValue: 'draft'
+  },
+  requirements: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  responsibilities: {
+    type: DataTypes.TEXT,
     allowNull: true
   },
   jobType: {
@@ -116,17 +95,12 @@ const Job = sequelize.define('Job', {
     type: DataTypes.INTEGER, // in years
     allowNull: true
   },
-  salary: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'Salary range as entered by user (e.g., "₹8-15 LPA")'
-  },
   salaryMin: {
-    type: DataTypes.DECIMAL(10, 2),
+    type: DataTypes.DECIMAL,
     allowNull: true
   },
   salaryMax: {
-    type: DataTypes.DECIMAL(10, 2),
+    type: DataTypes.DECIMAL,
     allowNull: true
   },
   salaryCurrency: {
@@ -144,50 +118,236 @@ const Job = sequelize.define('Job', {
     allowNull: true,
     defaultValue: true
   },
-  is_featured: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
-  },
-  is_remote: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
-  },
-  is_internship: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
-  },
-  visibility_type: {
+  department: {
     type: DataTypes.STRING,
     allowNull: true
   },
-  view_count: {
+  category: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  skills: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  remoteWork: {
+    type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
+    allowNull: true,
+    defaultValue: 'on-site'
+  },
+  travelRequired: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  shiftTiming: {
+    type: DataTypes.ENUM('day', 'night', 'rotational', 'flexible'),
+    allowNull: true,
+    defaultValue: 'day'
+  },
+  noticePeriod: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  education: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  certifications: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  languages: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  isUrgent: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  isFeatured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  isPremium: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  views: {
     type: DataTypes.INTEGER,
     allowNull: true,
     defaultValue: 0
   },
-  application_count: {
+  applications: {
     type: DataTypes.INTEGER,
     allowNull: true,
     defaultValue: 0
   },
-  created_by: {
+  validTill: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  publishedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  closedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  tags: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  metadata: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  isPrivate: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  visibilityType: {
+    type: DataTypes.ENUM('public', 'private', 'referral-only', 'invite-only'),
+    allowNull: true,
+    defaultValue: 'public'
+  },
+  allowedViewers: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  referralCode: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  scheduledPublishAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  scheduledExpiryAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  autoRenew: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  renewalPeriod: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  maxRenewals: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  currentRenewalCount: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  templateId: {
     type: DataTypes.UUID,
+    allowNull: true
+  },
+  bulkImportId: {
+    type: DataTypes.UUID,
+    allowNull: true
+  },
+  searchImpressions: {
+    type: DataTypes.INTEGER,
     allowNull: true,
-    references: {
-      model: 'users',
-      key: 'id'
-    }
+    defaultValue: 0
+  },
+  searchClicks: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  applicationRate: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    defaultValue: 0
+  },
+  qualityScore: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    defaultValue: 0
+  },
+  seoScore: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    defaultValue: 0
+  },
+  isATSEnabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false
+  },
+  atsKeywords: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  targetAudience: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  promotionSettings: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  bookmarkCount: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  salary: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  duration: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  startDate: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  workMode: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  learningObjectives: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  mentorship: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true,
+    defaultValue: 'india'
   }
 }, {
   sequelize,
   modelName: 'Job',
   tableName: 'jobs',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
   paranoid: false
 });
 

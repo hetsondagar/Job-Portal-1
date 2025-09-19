@@ -26,7 +26,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   const [formData, setFormData] = useState<any>({})
 
   const companySizes = [
-    "1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"
+    "1-50", "51-200", "201-500", "500-1000", "1000+"
   ]
 
   const industries = [

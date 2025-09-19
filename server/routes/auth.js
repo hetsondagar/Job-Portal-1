@@ -332,13 +332,16 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       console.log('✅ Company created successfully:', company.id);
       }
 
+      // Determine user type based on whether they're creating a new company or joining existing one
+      const userType = companyId ? 'employer' : 'admin'; // New company = admin, existing company = employer
+      
       // Create new employer user
       console.log('📝 Creating employer user with data:', {
         email,
         first_name: firstName,
         last_name: lastName,
         phone,
-        user_type: 'employer',
+        user_type: userType,
         account_status: 'active',
         company_id: company.id
       });
@@ -349,7 +352,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         first_name: firstName,
         last_name: lastName,
         phone,
-        user_type: 'employer',
+        user_type: userType, // ✅ Dynamic user type based on company creation/joining
         account_status: 'active',
         is_email_verified: false,
         company_id: company.id,
@@ -450,8 +453,8 @@ router.post('/login', validateLogin, async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
-    console.log('🧪 Login debug: rawEmail=', req.body?.email, 'sanitizedEmail=', email);
+    const { email, password, loginType } = req.body;
+    console.log('🧪 Login debug: rawEmail=', req.body?.email, 'sanitizedEmail=', email, 'loginType=', loginType);
 
     // Find user by email (exact match first)
     let user = await User.findOne({ where: { email } });
@@ -507,6 +510,29 @@ router.post('/login', validateLogin, async (req, res) => {
 
     console.log('✅ Password verified successfully');
 
+    // Validate login type if specified
+    if (loginType) {
+      console.log('🔍 Validating login type:', { loginType, userType: user.user_type });
+      
+      if (loginType === 'employer' && user.user_type === 'jobseeker') {
+        console.log('❌ Jobseeker trying to login through employer login');
+        return res.status(403).json({
+          success: false,
+          message: 'This account is registered as a jobseeker. Please use the jobseeker login page.',
+          redirectTo: '/login'
+        });
+      }
+      
+      if (loginType === 'jobseeker' && (user.user_type === 'employer' || user.user_type === 'admin')) {
+        console.log('❌ Employer/Admin trying to login through jobseeker login');
+        return res.status(403).json({
+          success: false,
+          message: 'This account is registered as an employer. Please use the employer login page.',
+          redirectTo: '/employer-login'
+        });
+      }
+    }
+
     // Update last login
     await user.update({ last_login_at: new Date() });
 
@@ -537,10 +563,10 @@ router.post('/login', validateLogin, async (req, res) => {
           id: company.id,
           name: company.name,
           industry: company.industry,
-          companySize: company.company_size,
+          companySize: company.companySize,
           website: company.website,
-          email: company.contact_email,
-          phone: company.contact_phone
+          email: company.contactEmail,
+          phone: company.contactPhone
         };
       }
     }

@@ -14,12 +14,13 @@ import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { useAuth } from "@/hooks/useAuth"
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, loading, error, clearError } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
@@ -30,6 +31,14 @@ export default function LoginPage() {
 
   // If already authenticated (e.g., just completed OAuth), send to dashboard instead of showing login
   useEffect(() => {
+    // Check for URL parameters first
+    const error = searchParams.get('error')
+    const message = searchParams.get('message')
+    
+    if (error === 'account_type_mismatch' && message) {
+      toast.error(decodeURIComponent(message))
+    }
+    
     const checkAlreadyLoggedIn = async () => {
       try {
         if (apiService.isAuthenticated()) {
@@ -45,7 +54,7 @@ export default function LoginPage() {
       setChecking(false)
     }
     checkAlreadyLoggedIn()
-  }, [router])
+  }, [router, searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,7 +69,7 @@ export default function LoginPage() {
     
     try {
       console.log('🔄 Attempting login...')
-      const result = await login({ email, password, rememberMe })
+      const result = await login({ email, password, rememberMe, loginType: 'jobseeker' })
       console.log('✅ Login successful:', result)
       
       // Check if login was successful and redirect accordingly
@@ -80,7 +89,12 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error('❌ Login error:', error)
       // Check if the error indicates user doesn't exist
-      if (error.message?.includes('Invalid email or password') || 
+      if (error.message?.includes('This account is registered as an employer')) {
+        toast.error(error.message)
+        setTimeout(() => {
+          window.location.href = '/employer-login'
+        }, 2000)
+      } else if (error.message?.includes('Invalid email or password') || 
           error.message?.includes('User not found') ||
           error.message?.includes('does not exist')) {
         toast.error("Account not found. Please register first.")

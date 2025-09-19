@@ -71,20 +71,19 @@ const SearchHistory = sequelize.define('SearchHistory', {
 }, {
   tableName: 'search_history',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  underscored: false,
   indexes: [
     {
-      fields: ['user_id']
+      fields: ['userId']
     },
     {
-      fields: ['search_query']
+      fields: ['searchQuery']
     },
     {
-      fields: ['created_at']
+      fields: ['createdAt']
     },
     {
-      fields: ['search_type']
+      fields: ['searchType']
     },
     {
       fields: ['location']

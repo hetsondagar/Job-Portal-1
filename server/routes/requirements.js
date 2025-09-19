@@ -45,7 +45,7 @@ const authenticateToken = async (req, res, next) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const body = req.body || {};
-    console.log('📝 Create Requirement request by user:', req.user?.id, 'company_id:', req.user?.company_id);
+    console.log('📝 Create Requirement request by user:', req.user?.id, 'companyId:', req.user?.companyId);
     console.log('📝 Payload:', JSON.stringify(body));
 
     // Only employers/admins can create requirements
@@ -93,8 +93,8 @@ router.post('/', authenticateToken, async (req, res) => {
       normalizedTravelRequired = body.travelRequired;
     }
 
-    // Resolve company_id: prefer provided, else user's company, else create/attach one
-    let companyId = body.companyId || req.user.company_id;
+    // Resolve companyId: prefer provided, else user's company, else create/attach one
+    let companyId = body.companyId || req.user.companyId;
     if (!companyId) {
       try {
         // Try from provided companyName
@@ -154,8 +154,11 @@ router.post('/', authenticateToken, async (req, res) => {
           });
         }
 
-        // Attach to user for future requests
-        await req.user.update({ company_id: companyRecord.id });
+        // Attach to user for future requests and set as admin (since they created the company)
+        await req.user.update({ 
+          companyId: companyRecord.id,
+          user_type: 'admin' // User becomes admin when they create a company
+        });
         companyId = companyRecord.id;
         console.log('🏢 Created and attached company to employer:', companyId);
       } catch (companyErr) {
@@ -168,8 +171,8 @@ router.post('/', authenticateToken, async (req, res) => {
       title: String(body.title).trim(),
       description: String(body.description).trim(),
       location: String(body.location).trim(),
-      company_id: companyId,
-      created_by: req.user.id,
+      companyId: companyId,
+      createdBy: req.user.id,
       experience: body.experience || null,
       experienceMin: body.workExperienceMin || body.experienceMin || null,
       experienceMax: body.workExperienceMax || body.experienceMax || null,
@@ -239,7 +242,8 @@ router.post('/', authenticateToken, async (req, res) => {
             title: requirement.title,
             location: requirement.location,
             jobType: requirement.jobType,
-            companyId: requirement.companyId
+            companyId: requirement.companyId,
+            companyName: req.user.company?.name || 'Unknown Company'
           }
         }
       );
@@ -276,7 +280,7 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log('🔍 Requirements API - User:', {
       id: req.user?.id,
       user_type: req.user?.user_type,
-      company_id: req.user?.company_id
+      companyId: req.user?.companyId
     });
     
     // Check if user is an employer
@@ -285,7 +289,7 @@ router.get('/', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers can view requirements.' });
     }
     
-    const companyId = req.user.company_id;
+    const companyId = req.user.companyId;
     console.log('🔍 Requirements API - Company ID:', companyId);
     
     if (!companyId) {
@@ -295,8 +299,8 @@ router.get('/', authenticateToken, async (req, res) => {
     
     console.log('🔍 Requirements API - Fetching requirements for company:', companyId);
     const rows = await Requirement.findAll({ 
-      where: { company_id: companyId }, 
-      order: [['created_at', 'DESC']] 
+      where: { companyId: companyId }, 
+      order: [['createdAt', 'DESC']] 
     });
     
     console.log('✅ Requirements API - Found requirements:', rows.length);
@@ -333,7 +337,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     const requirement = await Requirement.findOne({
       where: { 
         id: id,
-        company_id: req.user.company_id 
+        companyId: req.user.companyId 
       }
     });
     
@@ -445,7 +449,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     const requirement = await Requirement.findOne({
       where: { 
         id,
-        company_id: req.user.company_id 
+        companyId: req.user.companyId 
       }
     });
     
@@ -554,7 +558,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     console.log('🔍 Final where clause:', JSON.stringify(whereClause, null, 2));
     
     // Determine sort order - simplified
-    let orderClause = [['created_at', 'DESC']]; // Default sort by creation date
+    let orderClause = [['createdAt', 'DESC']]; // Default sort by creation date
     
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -572,7 +576,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
         'experience_years', 'preferred_locations', 'education', 'designation',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'created_at'
+        'is_email_verified', 'is_phone_verified', 'createdAt'
       ]
     });
     
@@ -585,7 +589,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       console.warn('⚠️ No candidates matched strict filters. Applying relaxed search fallback.');
       const relaxed = await User.findAndCountAll({
         where: { user_type: 'jobseeker', is_active: true, account_status: 'active' },
-        order: [['created_at', 'DESC']],
+        order: [['createdAt', 'DESC']],
         limit: limitNum,
         offset,
         attributes: [
@@ -594,7 +598,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
           'experience_years', 'preferred_locations', 'education', 'designation',
           'profile_completion', 'last_login_at', 'last_profile_update',
-          'is_email_verified', 'is_phone_verified', 'created_at'
+          'is_email_verified', 'is_phone_verified', 'createdAt'
         ]
       });
       finalCandidates = relaxed.rows;
@@ -815,7 +819,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         'current_location', 'headline', 'summary', 'skills', 'languages',
         'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'created_at',
+        'is_email_verified', 'is_phone_verified', 'createdAt',
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
@@ -834,10 +838,10 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     try {
       const workExpResults = await sequelize.query(`
         SELECT * FROM work_experiences 
-        WHERE user_id = :userId 
-        ORDER BY start_date DESC
+        WHERE "userId" = :userId 
+        ORDER BY "startDate" DESC
       `, {
-        replacements: { user_id: candidateId },
+        replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       workExperience = workExpResults || [];
@@ -850,10 +854,10 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     try {
       const eduResults = await sequelize.query(`
         SELECT * FROM educations 
-        WHERE user_id = :userId 
-        ORDER BY end_date DESC
+        WHERE "userId" = :userId 
+        ORDER BY "endDate" DESC
       `, {
-        replacements: { user_id: candidateId },
+        replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       education = eduResults || [];
@@ -894,16 +898,16 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               user_id as "userId",
               title,
               summary,
-              is_default as "isDefault",
-              is_public as "isPublic",
+              "isDefault",
+              "isPublic",
               views,
               downloads,
               last_updated as "lastUpdated",
-              created_at as "createdAt",
+              createdAt as "createdAt",
               metadata
             FROM resumes 
             WHERE user_id = :userId 
-            ORDER BY is_default DESC, created_at DESC
+            ORDER BY "isDefault" DESC, "createdAt" DESC
           `, {
             replacements: { user_id: candidateId },
             type: QueryTypes.SELECT
@@ -926,16 +930,16 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             user_id as "userId",
             title,
             summary,
-            is_default as "isDefault",
-            is_public as "isPublic",
+            "isDefault",
+            "isPublic",
             views,
             downloads,
             last_updated as "lastUpdated",
-            created_at as "createdAt",
+            createdAt as "createdAt",
             metadata
           FROM resumes 
           WHERE user_id = :userId 
-          ORDER BY is_default DESC, created_at DESC
+          ORDER BY "isDefault" DESC, "createdAt" DESC
         `, {
           replacements: { user_id: candidateId },
           type: QueryTypes.SELECT
@@ -955,7 +959,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       
       const coverLetterResults = await CoverLetter.findAll({
         where: { user_id: candidateId },
-        order: [['is_default', 'DESC'], ['lastUpdated', 'DESC']]
+        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
       });
       
       coverLetters = coverLetterResults || [];
@@ -973,16 +977,16 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             title,
             content,
             summary,
-            is_default as "isDefault",
-            is_public as "isPublic",
+            "isDefault",
+            "isPublic",
             views,
             downloads,
             last_updated as "lastUpdated",
-            created_at as "createdAt",
+            createdAt as "createdAt",
             metadata
           FROM cover_letters 
           WHERE user_id = :userId 
-          ORDER BY is_default DESC, last_updated DESC
+          ORDER BY "isDefault" DESC, "lastUpdated" DESC
         `, {
           replacements: { user_id: candidateId },
           type: QueryTypes.SELECT
@@ -1133,7 +1137,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               title: resume.title || 'Resume',
               filename: filename,
               fileSize: fileSize,
-              uploadDate: resume.createdAt || resume.created_at,
+              uploadDate: resume.createdAt || resume.createdAt,
               lastUpdated: resume.lastUpdated || resume.last_updated,
               is_default: resume.isDefault ?? resume.is_default ?? false,
               fileUrl: toAbsoluteUrl(filePath)
@@ -1166,7 +1170,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               summary: coverLetter.summary || '',
               filename: filename,
               fileSize: fileSize,
-              uploadDate: coverLetter.createdAt || coverLetter.created_at,
+              uploadDate: coverLetter.createdAt || coverLetter.createdAt,
               lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
               is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
               isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
@@ -1222,7 +1226,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 title: resume.title || 'Resume',
                 filename: filename,
                 fileSize: fileSize,
-                uploadDate: resume.createdAt || resume.created_at,
+                uploadDate: resume.createdAt || resume.createdAt,
                 lastUpdated: resume.lastUpdated || resume.last_updated,
                 is_default: resume.isDefault ?? resume.is_default ?? false,
                 fileUrl: toAbsoluteUrl(filePath)
@@ -1249,7 +1253,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 summary: coverLetter.summary || '',
                 filename: filename,
                 fileSize: fileSize,
-                uploadDate: coverLetter.createdAt || coverLetter.created_at,
+                uploadDate: coverLetter.createdAt || coverLetter.createdAt,
                 lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
                 is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
                 isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
@@ -1387,7 +1391,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        company_id: req.user.company_id || req.user.companyId
+        companyId: req.user.companyId || req.user.companyId
       }
     });
     
@@ -1466,7 +1470,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       // Find or create a placeholder job for requirement-based shortlisting
       let placeholderJob = await Job.findOne({
         where: {
-          company_id: req.user.company_id || req.user.companyId,
+          companyId: req.user.companyId || req.user.companyId,
           title: 'Requirement Shortlist'
         }
       });
@@ -1477,30 +1481,47 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
           title: 'Requirement Shortlist',
           slug: 'requirement-shortlist-' + Date.now(),
           description: 'Placeholder job for requirement-based candidate shortlisting',
-          company_id: req.user.company_id || req.user.companyId,
-          createdBy: req.user.id,
-          employer_id: req.user.id,
+          companyId: req.user.companyId || req.user.companyId,
+          employerId: req.user.id,
           location: 'Remote',
           status: 'draft',
-          isActive: false,
           isPlaceholder: true
         });
       }
 
-      // Create new shortlist entry
-      const shortlistApplication = await JobApplication.create({
-        user_id: candidateId,
-        employer_id: req.user.id,
-        job_id: placeholderJob.id,
-        status: 'shortlisted',
-        source: 'requirement_shortlist',
-        applied_at: new Date(),
-        metadata: {
-          requirementId: requirementId,
-          requirementTitle: requirement.title,
-          shortlistedFrom: 'requirements'
+      // Check if application already exists, if so update it, otherwise create new one
+      const [shortlistApplication, created] = await JobApplication.findOrCreate({
+        where: {
+          userId: candidateId,
+          jobId: placeholderJob.id
+        },
+        defaults: {
+          employerId: req.user.id,
+          status: 'shortlisted',
+          source: 'requirement_shortlist',
+          appliedAt: new Date(),
+          lastUpdatedAt: new Date(),
+          metadata: {
+            requirementId: requirementId,
+            requirementTitle: requirement.title,
+            shortlistedFrom: 'requirements'
+          }
         }
       });
+
+      // If application already existed, update its status to shortlisted
+      if (!created) {
+        await shortlistApplication.update({
+          status: 'shortlisted',
+          lastUpdatedAt: new Date(),
+          metadata: {
+            ...shortlistApplication.metadata,
+            requirementId: requirementId,
+            requirementTitle: requirement.title,
+            shortlistedFrom: 'requirements'
+          }
+        });
+      }
       
       console.log(`✅ Candidate ${candidateId} shortlisted by employer ${req.user.id} for requirement ${requirementId}`);
 
@@ -1514,8 +1535,9 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
             requirementId: requirementId,
             applicationId: shortlistApplication.id,
             jobId: placeholderJob.id,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
+            requirementTitle: requirement.title,
+            candidateName: candidate.first_name + ' ' + candidate.last_name,
+            companyName: req.user.company?.name || 'Unknown Company'
           }
         );
       } catch (activityError) {
@@ -1563,7 +1585,7 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        company_id: req.user.company_id 
+        companyId: req.user.companyId 
       }
     });
     
@@ -1689,7 +1711,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        companyId: req.user.company_id 
+        companyId: req.user.companyId 
       }
     });
     
@@ -1800,7 +1822,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        company_id: req.user.company_id 
+        companyId: req.user.companyId 
       }
     });
     

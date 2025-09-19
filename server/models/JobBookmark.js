@@ -31,7 +31,6 @@ const JobBookmark = sequelize.define('JobBookmark', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  timestamps: true,
   underscored: true,
   indexes: [
     {

@@ -11,7 +11,6 @@ const UserDashboard = sequelize.define('UserDashboard', {
     type: DataTypes.UUID,
     allowNull: false,
     unique: true,
-    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -20,176 +19,135 @@ const UserDashboard = sequelize.define('UserDashboard', {
   // Application statistics
   totalApplications: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'total_applications'
+    defaultValue: 0
   },
   applicationsUnderReview: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'applications_under_review'
+    defaultValue: 0
   },
   applicationsShortlisted: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'applications_shortlisted'
+    defaultValue: 0
   },
   applicationsRejected: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'applications_rejected'
+    defaultValue: 0
   },
   applicationsAccepted: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'applications_accepted'
+    defaultValue: 0
   },
   lastApplicationDate: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_application_date'
+    allowNull: true
   },
   
   // Bookmark statistics
   totalBookmarks: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'total_bookmarks'
+    defaultValue: 0
   },
   lastBookmarkDate: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_bookmark_date'
+    allowNull: true
   },
   
   // Search statistics
   totalSearches: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'total_searches'
+    defaultValue: 0
   },
   savedSearches: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'saved_searches'
+    defaultValue: 0
   },
   lastSearchDate: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_search_date'
+    allowNull: true
   },
   
   // Resume statistics
   totalResumes: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'total_resumes'
+    defaultValue: 0
   },
   hasDefaultResume: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    field: 'has_default_resume'
+    defaultValue: false
   },
   lastResumeUpdate: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_resume_update'
+    allowNull: true
   },
   
   // Job alert statistics
   totalJobAlerts: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'total_job_alerts'
+    defaultValue: 0
   },
   activeJobAlerts: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'active_job_alerts'
-  },
-  lastJobAlertDate: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_job_alert_date'
+    defaultValue: 0
   },
   
   // Profile statistics
   profileViews: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'profile_views'
+    defaultValue: 0
   },
   lastProfileView: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_profile_update'
-  },
-  profileCompletionPercentage: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'profile_completion_percentage'
+    allowNull: true
   },
   
   // Activity tracking
   lastLoginDate: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_login_date'
+    allowNull: true
   },
   lastActivityDate: {
     type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_activity_date'
+    allowNull: true
   },
   totalLoginCount: {
     type: DataTypes.INTEGER,
-    defaultValue: 0,
-    field: 'total_login_count'
+    defaultValue: 0
   },
   
   // Dashboard preferences
   dashboardLayout: {
     type: DataTypes.JSONB,
     defaultValue: {},
-    field: 'dashboard_layout',
     comment: 'User preferences for dashboard layout and widgets'
   },
-  notificationPreferences: {
+  favoriteActions: {
     type: DataTypes.JSONB,
     defaultValue: {},
-    field: 'notification_preferences',
-    comment: 'User notification preferences'
-  },
-  privacySettings: {
-    type: DataTypes.JSONB,
-    defaultValue: {},
-    field: 'privacy_settings',
-    comment: 'User privacy settings'
+    comment: 'User favorite actions and shortcuts'
   },
   
   // Analytics metadata
   metadata: {
     type: DataTypes.JSONB,
     defaultValue: {},
-    field: 'metadata',
     comment: 'Additional dashboard analytics and user behavior data'
   }
 }, {
   tableName: 'user_dashboard',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  underscored: false,
   indexes: [
     {
-      fields: ['user_id']
+      fields: ['userId']
     },
     {
-      fields: ['last_activity_date']
+      fields: ['lastActivityDate']
     },
     {
-      fields: ['total_applications']
+      fields: ['totalApplications']
     },
     {
-      fields: ['total_bookmarks']
+      fields: ['totalBookmarks']
     }
   ],
   hooks: {
