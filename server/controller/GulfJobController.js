@@ -471,10 +471,14 @@ const getGulfJobAlerts = async (req, res) => {
     });
 
     // Filter alerts to only include Gulf-related ones
+    const GULF_LOCATIONS = ['dubai', 'uae', 'qatar', 'saudi', 'kuwait', 'bahrain', 'oman', 'gulf'];
     const gulfAlerts = alerts.filter(alert => {
-      const keywords = alert.keywords?.toLowerCase() || '';
-      const location = alert.location?.toLowerCase() || '';
-      return GULF_LOCATIONS.some(gulfLocation => 
+      const kw = Array.isArray(alert.keywords) ? alert.keywords.join(' ') : (alert.keywords || '');
+      const locArr = (alert.locations || alert.location);
+      const loc = Array.isArray(locArr) ? locArr.join(' ') : (locArr || '');
+      const keywords = String(kw).toLowerCase();
+      const location = String(loc).toLowerCase();
+      return GULF_LOCATIONS.some(gulfLocation =>
         keywords.includes(gulfLocation) || location.includes(gulfLocation)
       );
     });

@@ -111,18 +111,18 @@ export default function EmployerOAuthCallbackPage() {
             setRegion(userRegion)
           } else {
             // Fetch company to get region if user doesn't have one
-            try {
-              const cid = (response.data.user as any)?.companyId
-              if (cid) {
-                const companyResp = await apiService.getCompany(cid)
-                if (companyResp.success && companyResp.data) {
-                  localStorage.setItem('company', JSON.stringify(companyResp.data))
-                  setRegion((companyResp.data.region as any) || '')
-                }
+          try {
+            const cid = (response.data.user as any)?.companyId
+            if (cid) {
+              const companyResp = await apiService.getCompany(cid)
+              if (companyResp.success && companyResp.data) {
+                localStorage.setItem('company', JSON.stringify(companyResp.data))
+                setRegion((companyResp.data.region as any) || '')
               }
-            } catch (err) {
-              console.warn('Failed to fetch company for employer OAuth:', err)
             }
+          } catch (err) {
+            console.warn('Failed to fetch company for employer OAuth:', err)
+          }
           }
 
           // Check if user has already completed initial setup

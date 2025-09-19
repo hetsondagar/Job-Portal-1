@@ -1297,71 +1297,50 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     let applications;
     try {
       applications = await JobApplication.findAll({
-      where: { employerId: req.user.id },
-      include: [
-        {
-          model: Job,
-          as: 'job',
-          include: [
-            {
-              model: Company,
-              as: 'company',
-              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
-            }
-          ]
-        },
-        {
-          model: User,
-          as: 'applicant',
-          attributes: [
-            'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
-            'headline', 'summary', 'skills', 'languages', 'certifications',
-            'current_location', 'willing_to_relocate', 'expected_salary',
-            'notice_period', 'date_of_birth', 'gender', 'social_links',
-            'profile_completion', 'verification_level', 'last_profile_update'
-          ],
-          include: [
-            {
-              model: WorkExperience,
-              as: 'workExperiences',
-              attributes: [
-                'id', 'jobTitle', 'location', 'startDate', 'endDate', 'isCurrent',
-                'achievements', 'skills', 'salary', 'salaryCurrency'
-              ],
-              order: [['startDate', 'DESC']]
-            },
-            {
-              model: Education,
-              as: 'educations',
-              attributes: [
-                'id', 'institution', 'degree', 'fieldOfStudy', 'location',
-                'startDate', 'endDate', 'isCurrent', 'cgpa', 'description',
-                'achievements', 'grade', 'percentage'
-              ],
-              order: [['startDate', 'DESC']]
-            }
-          ]
-        },
-        {
-          model: Resume,
-          as: 'jobResume',
-          attributes: [
-            'id', 'title', 'summary', 'objective', 'skills', 'languages',
-            'certifications', 'projects', 'achievements', 'isDefault',
-            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
-          ]
-        },
-        {
-          model: CoverLetter,
-          as: 'jobCoverLetter',
-          attributes: [
-            'id', 'title', 'content', 'summary', 'isDefault',
-            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
-          ]
-        }
-      ],
-      order: [['appliedAt', 'DESC']]
-    });
+        where: { employerId: req.user.id },
+        include: [
+          {
+            model: Job,
+            as: 'job',
+            include: [
+              {
+                model: Company,
+                as: 'company',
+                attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+              }
+            ]
+          },
+          {
+            model: User,
+            as: 'applicant',
+            attributes: [
+              'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+              'headline', 'summary', 'skills', 'languages', 'certifications',
+              'current_location', 'willing_to_relocate', 'expected_salary',
+              'notice_period', 'date_of_birth', 'gender', 'social_links',
+              'profile_completion', 'verification_level', 'last_profile_update'
+            ]
+          },
+          {
+            model: Resume,
+            as: 'jobResume',
+            attributes: [
+              'id', 'title', 'summary', 'objective', 'skills', 'languages',
+              'certifications', 'projects', 'achievements', 'isDefault',
+              'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+            ]
+          },
+          {
+            model: CoverLetter,
+            as: 'jobCoverLetter',
+            attributes: [
+              'id', 'title', 'content', 'summary', 'isDefault',
+              'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+            ]
+          }
+        ],
+        order: [['appliedAt', 'DESC']]
+      });
       console.log('✅ Sequelize query completed successfully');
     } catch (queryError) {
       console.error('❌ Sequelize query failed:', queryError);
@@ -1394,13 +1373,41 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       });
     }
 
+    // Fetch experiences and education separately to avoid nested SQL JSON path issues
+    const applicantIds = Array.from(new Set(applications.map(a => a.applicant?.id).filter(Boolean)));
+    let experiencesByUser = new Map();
+    let educationsByUser = new Map();
+    if (applicantIds.length > 0) {
+      // Use raw queries to avoid column name casing issues
+      const [wxRows] = await sequelize.query(
+        'SELECT * FROM work_experiences WHERE user_id IN (:ids)',
+        { replacements: { ids: applicantIds }, raw: true }
+      );
+      wxRows.forEach(row => {
+        const arr = experiencesByUser.get(row.user_id) || [];
+        arr.push(WorkExperience.build(row, { isNewRecord: false }));
+        experiencesByUser.set(row.user_id, arr);
+      });
+      const [edRows] = await sequelize.query(
+        'SELECT * FROM educations WHERE user_id IN (:ids)',
+        { replacements: { ids: applicantIds }, raw: true }
+      );
+      edRows.forEach(row => {
+        const arr = educationsByUser.get(row.user_id) || [];
+        arr.push(Education.build(row, { isNewRecord: false }));
+        educationsByUser.set(row.user_id, arr);
+      });
+    }
+
     // Transform the data to include comprehensive jobseeker profile information
     const enrichedApplications = applications.map(application => {
       const applicant = application.applicant;
       const jobResume = application.jobResume;
+      const applicantWorkExperiences = experiencesByUser.get(applicant?.id) || [];
+      const applicantEducations = educationsByUser.get(applicant?.id) || [];
       
       // Calculate total work experience
-      const totalExperience = applicant.workExperiences?.reduce((total, exp) => {
+      const totalExperience = applicantWorkExperiences.reduce((total, exp) => {
         const start = new Date(exp.startDate);
         const end = exp.endDate ? new Date(exp.endDate) : new Date();
         const diffInMs = end - start;
@@ -1412,7 +1419,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       const experienceMonths = Math.floor((totalExperience % 365) / 30);
 
       // Get highest education
-      const highestEducation = applicant.educations?.sort((a, b) => {
+      const highestEducation = applicantEducations.sort((a, b) => {
         const levelOrder = { 'phd': 6, 'master': 5, 'bachelor': 4, 'diploma': 3, 'high-school': 2, 'certification': 1, 'other': 0 };
         return (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0);
       })[0];
@@ -1420,8 +1427,8 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       // Combine all skills from profile, work experience, and resume
       const allSkills = new Set();
       if (applicant.skills) applicant.skills.forEach(skill => allSkills.add(skill));
-      if (applicant.workExperiences) {
-        applicant.workExperiences.forEach(exp => {
+      if (applicantWorkExperiences) {
+        applicantWorkExperiences.forEach(exp => {
           if (exp.skills) exp.skills.forEach(skill => allSkills.add(skill));
           if (exp.technologies) exp.technologies.forEach(tech => allSkills.add(tech));
         });
@@ -1445,20 +1452,20 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
             formattedPeriod: highestEducation.getFormattedPeriod()
           } : null,
           allSkills: Array.from(allSkills),
-          workExperiences: applicant.workExperiences?.map(exp => ({
+          workExperiences: applicantWorkExperiences.map(exp => ({
             ...exp.toJSON(),
             duration: exp.getDuration(),
             formattedPeriod: exp.getFormattedPeriod(),
             skillsString: exp.getSkillsString(),
             technologiesString: exp.getTechnologiesString()
-          })) || [],
-          educations: applicant.educations?.map(edu => ({
+          })),
+          educations: applicantEducations.map(edu => ({
             ...edu.toJSON(),
             duration: edu.getDuration(),
             formattedPeriod: edu.getFormattedPeriod(),
             gradeDisplay: edu.getGradeDisplay(),
             fullDegree: edu.getFullDegree()
-          })) || [],
+          })),
           resumes: applicant.resumes?.map(resume => ({
             ...resume.toJSON(),
             skillsString: resume.getSkillsString(),
@@ -1551,8 +1558,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
               attributes: [
                 'id', 'jobTitle', 'location', 'startDate', 'endDate', 'isCurrent',
                 'achievements', 'skills', 'salary', 'salaryCurrency'
-              ],
-              order: [['startDate', 'DESC']]
+              ]
             },
             {
               model: Education,
@@ -1562,8 +1568,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
                 'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa',
                 'description', 'activities', 'achievements', 'location',
                 'educationType', 'isVerified', 'verificationDate'
-              ],
-              order: [['startDate', 'DESC']]
+              ]
             },
             {
               model: Resume,
@@ -3411,6 +3416,57 @@ router.get('/employer/applications/:applicationId/resume/view', authenticateToke
       message: 'Failed to view resume',
       error: error.message
     });
+  }
+});
+
+// Employer dashboard summary (parity with normal employer dashboard, Gulf-compatible)
+router.get('/employer/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const { Job, JobApplication, Company } = require('../config/index');
+
+    if (!req.user || req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view dashboard.' });
+    }
+
+    const employerId = req.user.id;
+
+    // Employer jobs
+    const jobs = await Job.findAll({
+      where: { employerId },
+      attributes: ['id', 'title', 'status', 'region', 'createdAt'],
+      include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Applications for employer jobs
+    const applications = await JobApplication.findAll({
+      where: { employerId },
+      attributes: ['id', 'jobId', 'userId', 'status', 'appliedAt'],
+      order: [['appliedAt', 'DESC']]
+    });
+
+    const activeJobs = jobs.filter(j => j.status === 'active' || !j.status).length;
+    const totalApplications = applications.length;
+    const reviewingApplications = applications.filter(a => a.status === 'reviewing').length;
+    const shortlistedApplications = applications.filter(a => a.status === 'shortlisted').length;
+    const hiredCandidates = applications.filter(a => a.status === 'hired').length;
+
+    res.json({
+      success: true,
+      data: {
+        activeJobs,
+        totalJobs: jobs.length,
+        totalApplications,
+        reviewingApplications,
+        shortlistedApplications,
+        hiredCandidates,
+        recentApplications: applications.slice(0, 5),
+        recentJobs: jobs.slice(0, 5)
+      }
+    });
+  } catch (error) {
+    console.error('Error generating employer dashboard:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch employer dashboard', error: error.message });
   }
 });
 

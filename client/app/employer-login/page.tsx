@@ -60,12 +60,12 @@ export default function EmployerLoginPage() {
             // Determine region → target dashboard (prefer user region, fallback to company region)
             let region: string | undefined = (me.data.user as any)?.region
             if (!region) {
-              const companyId = (me.data.user as any).companyId
-              if (companyId) {
-                const companyResp = await apiService.getCompany(companyId)
-                if (companyResp.success && companyResp.data) {
-                  localStorage.setItem('company', JSON.stringify(companyResp.data))
-                  region = companyResp.data.region
+            const companyId = (me.data.user as any).companyId
+            if (companyId) {
+              const companyResp = await apiService.getCompany(companyId)
+              if (companyResp.success && companyResp.data) {
+                localStorage.setItem('company', JSON.stringify(companyResp.data))
+                region = companyResp.data.region
                 }
               }
             }

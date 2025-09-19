@@ -134,8 +134,8 @@ const JobAlert = sequelize.define('JobAlert', {
       try {
         const DashboardService = require('../services/dashboardService');
         await DashboardService.updateDashboardStats(alert.userId, {
-          totalJobAlerts: sequelize.literal('totalJobAlerts + 1'),
-          activeJobAlerts: sequelize.literal('activeJobAlerts + 1')
+          totalJobAlerts: sequelize.literal('"totalJobAlerts" + 1'),
+          activeJobAlerts: sequelize.literal('"activeJobAlerts" + 1')
         });
         
         // Record activity
@@ -157,9 +157,9 @@ const JobAlert = sequelize.define('JobAlert', {
         // Check if active status changed
         if (alert.changed('isActive')) {
           if (alert.isActive) {
-            updates.activeJobAlerts = sequelize.literal('activeJobAlerts + 1');
+            updates.activeJobAlerts = sequelize.literal('"activeJobAlerts" + 1');
           } else {
-            updates.activeJobAlerts = sequelize.literal('activeJobAlerts - 1');
+            updates.activeJobAlerts = sequelize.literal('"activeJobAlerts" - 1');
           }
         }
         
@@ -181,12 +181,12 @@ const JobAlert = sequelize.define('JobAlert', {
         const DashboardService = require('../services/dashboardService');
         
         const updates = {
-          totalJobAlerts: sequelize.literal('totalJobAlerts - 1')
+          totalJobAlerts: sequelize.literal('\"totalJobAlerts\" - 1')
         };
         
         // Decrement active count if it was active
         if (alert.isActive) {
-          updates.activeJobAlerts = sequelize.literal('activeJobAlerts - 1');
+          updates.activeJobAlerts = sequelize.literal('"activeJobAlerts" - 1');
         }
         
         await DashboardService.updateDashboardStats(alert.userId, updates);
