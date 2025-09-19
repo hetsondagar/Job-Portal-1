@@ -226,7 +226,7 @@ class DashboardService {
           include: [{
             model: require('../models/Job'),
             as: 'job',
-            attributes: ['id', 'title', 'location', 'salary_min', 'salary_max', 'company_id']
+            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
           }]
         });
       } catch (error) {
@@ -244,7 +244,7 @@ class DashboardService {
           include: [{
             model: require('../models/Job'),
             as: 'job',
-            attributes: ['id', 'title', 'location', 'salary_min', 'salary_max', 'company_id']
+            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
           }]
         });
       } catch (error) {

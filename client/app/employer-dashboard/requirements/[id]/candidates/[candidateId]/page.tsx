@@ -61,6 +61,15 @@ export default function CandidateProfilePage() {
         setLoading(true)
         setError(null)
         
+        // Track profile view for quota consumption
+        try {
+          await apiService.trackProfileView(params.candidateId as string)
+          console.log('✅ Profile view tracked successfully')
+        } catch (error) {
+          console.error('⚠️ Failed to track profile view:', error)
+          // Don't fail the profile load if tracking fails
+        }
+        
         const response = await apiService.getCandidateProfile(
           params.id as string,
           params.candidateId as string

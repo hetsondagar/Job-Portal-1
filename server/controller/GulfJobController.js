@@ -352,11 +352,13 @@ const getGulfJobApplications = async (req, res) => {
               }
             ]
           },
+          required: true, // Use INNER JOIN to ensure we only get applications with Gulf jobs
           include: [
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'logo', 'industry']
+              attributes: ['id', 'name', 'logo', 'industry'],
+              required: false // Use LEFT JOIN for company
             }
           ]
         }
@@ -380,6 +382,12 @@ const getGulfJobApplications = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching Gulf job applications:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      query: req.query
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch Gulf job applications',

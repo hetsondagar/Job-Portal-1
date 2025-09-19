@@ -84,11 +84,39 @@ const Education = sequelize.define('Education', {
     allowNull: true,
     field: 'verification_date'
   },
+  scale: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: '10'
+  },
+  country: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  level: {
+    type: DataTypes.ENUM('high-school', 'diploma', 'bachelor', 'master', 'phd', 'certification', 'other'),
+    allowNull: true
+  },
+  order: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  metadata: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  resumeId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'resumes',
+      key: 'id'
+    }
+  }
 }, {
   tableName: 'educations',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (education) => {
       if (education.isCurrent) {

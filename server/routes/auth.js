@@ -332,13 +332,16 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       console.log('✅ Company created successfully:', company.id);
       }
 
+      // Determine user type based on whether they're creating a new company or joining existing one
+      const userType = companyId ? 'employer' : 'admin'; // New company = admin, existing company = employer
+      
       // Create new employer user
       console.log('📝 Creating employer user with data:', {
         email,
         first_name: firstName,
         last_name: lastName,
         phone,
-        user_type: 'employer',
+        user_type: userType,
         account_status: 'active',
         company_id: company.id
       });
@@ -349,7 +352,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         first_name: firstName,
         last_name: lastName,
         phone,
-        user_type: 'employer',
+        user_type: userType, // ✅ Dynamic user type based on company creation/joining
         account_status: 'active',
         is_email_verified: false,
         company_id: company.id,
@@ -537,10 +540,10 @@ router.post('/login', validateLogin, async (req, res) => {
           id: company.id,
           name: company.name,
           industry: company.industry,
-          companySize: company.company_size,
+          companySize: company.companySize,
           website: company.website,
-          email: company.contact_email,
-          phone: company.contact_phone
+          email: company.contactEmail,
+          phone: company.contactPhone
         };
       }
     }

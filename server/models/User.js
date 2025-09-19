@@ -108,9 +108,10 @@ const User = sequelize.define('User', {
     allowNull: true
   },
   // For employers
-  company_id: {
+  companyId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'

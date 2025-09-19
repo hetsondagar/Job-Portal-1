@@ -313,9 +313,9 @@ router.get('/google/callback', (req, res) => {
 
               console.log('✅ Company created for OAuth employer:', company.id);
               
-              // Update user with employer type and company ID
+              // Update user with admin type and company ID (since they created the company)
               await user.update({ 
-                user_type: 'employer',
+                user_type: 'admin',
                 company_id: company.id
               }, { transaction });
               
@@ -325,25 +325,25 @@ router.get('/google/callback', (req, res) => {
               // Refresh user object to get updated user_type
               await user.reload();
               
-              console.log('✅ User successfully updated to employer type');
+              console.log('✅ User successfully updated to admin type');
             } catch (error) {
               // Rollback transaction on error
               await transaction.rollback();
               console.error('❌ Error creating company for OAuth employer:', error);
               
-              // Even if company creation fails, still set user as employer
-              console.log('🔄 Setting user as employer without company (will be created later)');
-              await user.update({ user_type: 'employer' });
+              // Even if company creation fails, still set user as admin
+              console.log('🔄 Setting user as admin without company (will be created later)');
+              await user.update({ user_type: 'admin' });
               await user.reload();
             }
           } else {
-            console.log('✅ User is already an employer');
+            console.log('✅ User is already an admin');
           }
           
           // Double-check that user type is set correctly
-          if (user.user_type !== 'employer') {
-            console.log('🔄 Force updating user type to employer');
-            await user.update({ user_type: 'employer' });
+          if (user.user_type !== 'admin') {
+            console.log('🔄 Force updating user type to admin');
+            await user.update({ user_type: 'admin' });
             await user.reload();
           }
           
@@ -534,9 +534,9 @@ router.get('/facebook/callback', (req, res) => {
 
               console.log('✅ Company created for OAuth employer:', company.id);
               
-              // Update user with employer type and company ID
+              // Update user with admin type and company ID (since they created the company)
               await user.update({ 
-                user_type: 'employer',
+                user_type: 'admin',
                 company_id: company.id
               }, { transaction });
               
@@ -546,7 +546,7 @@ router.get('/facebook/callback', (req, res) => {
               // Refresh user object to get updated user_type
               await user.reload();
               
-              console.log('✅ User successfully updated to employer type');
+              console.log('✅ User successfully updated to admin type');
             } catch (error) {
               // Rollback transaction on error
               await transaction.rollback();
@@ -554,7 +554,7 @@ router.get('/facebook/callback', (req, res) => {
               throw error;
             }
           } else {
-            console.log('✅ User is already an employer');
+            console.log('✅ User is already an admin');
           }
         } else {
           console.log('📝 Processing jobseeker OAuth - No employer state detected');

@@ -133,7 +133,7 @@ exports.createHotVacancy = async (req, res, next) => {
       state,
       country,
       companyId,
-      created_by: req.user.id,
+      employerId: req.user.id,
       jobType,
       experienceLevel,
       experienceMin,
@@ -179,6 +179,41 @@ exports.createHotVacancy = async (req, res, next) => {
     const hotVacancy = await HotVacancy.create(hotVacancyData);
 
     console.log('✅ Hot vacancy created successfully:', hotVacancy.id);
+
+    // Consume job posting quota for hot vacancy
+    try {
+      const EmployerQuotaService = require('../services/employerQuotaService');
+      await EmployerQuotaService.checkAndConsume(req.user.id, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
+        activityType: 'hot_vacancy_created',
+        details: { 
+          title: hotVacancy.title, 
+          status: hotVacancy.status,
+          pricingTier: hotVacancy.pricingTier,
+          urgencyLevel: hotVacancy.urgencyLevel
+        },
+        jobId: hotVacancy.id,
+        defaultLimit: 50
+      });
+    } catch (e) {
+      console.error('⚠️ Failed to consume job posting quota for hot vacancy:', e?.message || e);
+      // Don't fail the hot vacancy creation if quota check fails
+    }
+
+    // Log employer activity: hot vacancy posted
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logActivity(req.user.id, 'hot_vacancy_created', {
+        jobId: hotVacancy.id,
+        details: { 
+          title: hotVacancy.title, 
+          status: hotVacancy.status,
+          pricingTier: hotVacancy.pricingTier,
+          urgencyLevel: hotVacancy.urgencyLevel
+        }
+      });
+    } catch (e) {
+      console.error('⚠️ Failed to log hot_vacancy_created activity:', e?.message || e);
+    }
 
     // Create notification for the employer about hot vacancy creation
     try {
@@ -228,7 +263,7 @@ exports.getHotVacanciesByEmployer = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const whereClause = {
-      created_by: req.user.id
+      employerId: req.user.id
     };
 
     if (status) {
@@ -241,7 +276,7 @@ exports.getHotVacanciesByEmployer = async (req, res, next) => {
 
     const { count, rows: hotVacancies } = await HotVacancy.findAndCountAll({
       where: whereClause,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -293,7 +328,7 @@ exports.getHotVacancyById = async (req, res, next) => {
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { isActive: true },
           required: false,
-          order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
+          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
         }
       ]
     });
@@ -306,7 +341,7 @@ exports.getHotVacancyById = async (req, res, next) => {
     }
 
     // Check if user has permission to view this hot vacancy
-    if (hotVacancy.created_by !== req.user.id && req.user.user_type !== 'admin') {
+    if (hotVacancy.employerId !== req.user.id && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -347,7 +382,7 @@ exports.updateHotVacancy = async (req, res, next) => {
     }
 
     // Check if user has permission to update this hot vacancy
-    if (hotVacancy.created_by !== req.user.id) {
+    if (hotVacancy.employerId !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -393,6 +428,22 @@ exports.updateHotVacancy = async (req, res, next) => {
         console.error('❌ Error creating hot vacancy activation notification:', notificationError);
         // Don't fail the main request if notification creation fails
       }
+
+      // Log employer activity: hot vacancy activated
+      try {
+        const EmployerActivityService = require('../services/employerActivityService');
+        await EmployerActivityService.logActivity(req.user.id, 'hot_vacancy_activated', {
+          jobId: hotVacancy.id,
+          details: { 
+            title: hotVacancy.title, 
+            status: 'active',
+            pricingTier: hotVacancy.pricingTier,
+            urgencyLevel: hotVacancy.urgencyLevel
+          }
+        });
+      } catch (e) {
+        console.error('⚠️ Failed to log hot_vacancy_activated activity:', e?.message || e);
+      }
     }
 
     return res.status(200).json({
@@ -428,7 +479,7 @@ exports.deleteHotVacancy = async (req, res, next) => {
     }
 
     // Check if user has permission to delete this hot vacancy
-    if (hotVacancy.created_by !== req.user.id) {
+    if (hotVacancy.employerId !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -501,7 +552,7 @@ exports.getPublicHotVacancies = async (req, res, next) => {
       order: [
         ['priorityListing', 'DESC'],
         ['urgencyLevel', 'DESC'],
-        ['created_at', 'DESC']
+        ['createdAt', 'DESC']
       ],
       limit: parseInt(limit),
       offset: parseInt(offset)

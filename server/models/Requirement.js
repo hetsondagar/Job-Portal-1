@@ -18,7 +18,6 @@ const Requirement = sequelize.define('Requirement', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -27,7 +26,6 @@ const Requirement = sequelize.define('Requirement', {
   createdBy: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'created_by',
     references: {
       model: 'users',
       key: 'id'
@@ -39,13 +37,11 @@ const Requirement = sequelize.define('Requirement', {
   },
   experienceMin: {
     type: DataTypes.INTEGER,
-    allowNull: true,
-    field: 'experience_min'
+    allowNull: true
   },
   experienceMax: {
     type: DataTypes.INTEGER,
-    allowNull: true,
-    field: 'experience_max'
+    allowNull: true
   },
   salary: {
     type: DataTypes.STRING,
@@ -53,13 +49,11 @@ const Requirement = sequelize.define('Requirement', {
   },
   salaryMin: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true,
-    field: 'salary_min'
+    allowNull: true
   },
   salaryMax: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true,
-    field: 'salary_max'
+    allowNull: true
   },
   currency: {
     type: DataTypes.STRING,
@@ -70,7 +64,6 @@ const Requirement = sequelize.define('Requirement', {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: false,
     defaultValue: 'full-time',
-    field: 'job_type'
   },
   skills: {
     type: DataTypes.JSONB,
@@ -79,7 +72,6 @@ const Requirement = sequelize.define('Requirement', {
   keySkills: {
     type: DataTypes.JSONB,
     defaultValue: [],
-    field: 'key_skills'
   },
   education: {
     type: DataTypes.STRING,
@@ -88,29 +80,24 @@ const Requirement = sequelize.define('Requirement', {
   validTill: {
     type: DataTypes.DATE,
     allowNull: true,
-    field: 'valid_till'
   },
   noticePeriod: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'notice_period'
   },
   remoteWork: {
     type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
     allowNull: true,
     defaultValue: 'on-site',
-    field: 'remote_work'
   },
   travelRequired: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'travel_required'
   },
   shiftTiming: {
     type: DataTypes.ENUM('day', 'night', 'rotational', 'flexible'),
     allowNull: true,
     defaultValue: 'day',
-    field: 'shift_timing'
   },
   benefits: {
     type: DataTypes.JSONB,
@@ -119,32 +106,26 @@ const Requirement = sequelize.define('Requirement', {
   candidateDesignations: {
     type: DataTypes.JSONB,
     defaultValue: [],
-    field: 'candidate_designations'
   },
   candidateLocations: {
     type: DataTypes.JSONB,
     defaultValue: [],
-    field: 'candidate_locations'
   },
   includeWillingToRelocate: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'include_willing_to_relocate'
   },
   currentSalaryMin: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
-    field: 'current_salary_min'
   },
   currentSalaryMax: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
-    field: 'current_salary_max'
   },
   includeNotMentioned: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'include_not_mentioned'
   },
   status: {
     type: DataTypes.ENUM('draft', 'active', 'paused', 'closed'),
@@ -154,12 +135,10 @@ const Requirement = sequelize.define('Requirement', {
   isUrgent: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'is_urgent'
   },
   isFeatured: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'is_featured'
   },
   views: {
     type: DataTypes.INTEGER,
@@ -176,12 +155,10 @@ const Requirement = sequelize.define('Requirement', {
   publishedAt: {
     type: DataTypes.DATE,
     allowNull: true,
-    field: 'published_at'
   },
   closedAt: {
     type: DataTypes.DATE,
     allowNull: true,
-    field: 'closed_at'
   },
   tags: {
     type: DataTypes.JSONB,
@@ -194,8 +171,6 @@ const Requirement = sequelize.define('Requirement', {
 }, {
   tableName: 'requirements',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (requirement) => {
       if (requirement.status === 'active' && !requirement.publishedAt) {

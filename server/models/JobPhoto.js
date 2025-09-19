@@ -106,9 +106,6 @@ const JobPhoto = sequelize.define('JobPhoto', {
 }, {
   tableName: 'job_photos',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  timestamps: true,
   underscored: true,
   indexes: [
     {

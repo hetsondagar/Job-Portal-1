@@ -56,7 +56,7 @@ export default function EmployerLoginPage() {
       try {
         if (apiService.isAuthenticated()) {
           const me = await apiService.getCurrentUser()
-          if (me.success && me.data?.user && me.data.user.userType === 'employer') {
+          if (me.success && me.data?.user && (me.data.user.userType === 'employer' || me.data.user.userType === 'admin')) {
             // Determine region → target dashboard (prefer user region, fallback to company region)
             let region: string | undefined = (me.data.user as any)?.region
             if (!region) {

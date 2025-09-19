@@ -273,7 +273,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
 
   const handleStatusUpdate = async (applicationId: string, newStatus: string) => {
     try {
-      const response = await apiService.updateApplicationStatus(applicationId, newStatus)
+      const response = await apiService.updateEmployerApplicationStatus(applicationId, newStatus)
       if (response.success) {
         if (newStatus === 'rejected') {
           // Remove rejected application from the list

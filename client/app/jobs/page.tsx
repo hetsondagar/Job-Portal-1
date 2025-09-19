@@ -345,7 +345,12 @@ export default function JobsPage() {
         console.log('🔍 ApplicationId not found, fetching applications...')
         
         // First try to refresh user data to get the latest application mapping
-        await fetchUserData()
+        try {
+          await fetchUserData()
+        } catch (fetchError) {
+          console.error('❌ Error fetching user data:', fetchError)
+          // Continue with the withdrawal attempt even if we can't fetch user data
+        }
         
         // Check again after refresh
         applicationId = jobIdToApplicationId[jobId]
@@ -353,21 +358,26 @@ export default function JobsPage() {
         
         // If still not found, do a direct API call
         if (!applicationId) {
-          const appsResp = await apiService.getApplications()
-          console.log('📊 Applications response:', appsResp)
-          
-          if (appsResp.success && Array.isArray(appsResp.data)) {
-            console.log('📋 All applications:', appsResp.data.map((a: any) => ({ id: a.id, jobId: a.jobId, status: a.status })))
+          try {
+            const appsResp = await apiService.getApplications()
+            console.log('📊 Applications response:', appsResp)
             
-            // Look for any application with this jobId (including withdrawn ones for debugging)
-            const found = appsResp.data.find((a: any) => a.jobId === jobId)
-            console.log('🎯 Found application:', found)
-            
-            if (found?.id) {
-              applicationId = found.id
-              setJobIdToApplicationId(prev => ({ ...prev, [jobId]: found.id }))
-              console.log('✅ Using applicationId:', applicationId)
+            if (appsResp && appsResp.success && Array.isArray(appsResp.data)) {
+              console.log('📋 All applications:', appsResp.data.map((a: any) => ({ id: a.id, jobId: a.jobId, status: a.status })))
+              
+              // Look for any application with this jobId (including withdrawn ones for debugging)
+              const found = appsResp.data.find((a: any) => a.jobId === jobId)
+              console.log('🎯 Found application:', found)
+              
+              if (found?.id) {
+                applicationId = found.id
+                setJobIdToApplicationId(prev => ({ ...prev, [jobId]: found.id }))
+                console.log('✅ Using applicationId:', applicationId)
+              }
             }
+          } catch (apiError) {
+            console.error('❌ Error fetching applications:', apiError)
+            // Continue with the withdrawal attempt even if we can't fetch applications
           }
         }
       }
@@ -381,7 +391,7 @@ export default function JobsPage() {
       console.log('🚀 Withdrawing application:', applicationId)
       const resp = await apiService.updateApplicationStatus(applicationId, 'withdrawn')
       
-      if (resp.success) {
+      if (resp && resp.success) {
         toast.success('Application withdrawn successfully')
         // Reflect in UI: mark as not applied
         setAppliedJobs(prev => {
@@ -399,7 +409,7 @@ export default function JobsPage() {
         console.log('✅ Application withdrawn successfully')
       } else {
         console.error('❌ Withdrawal failed:', resp)
-        toast.error(resp.message || 'Failed to withdraw application')
+        toast.error(resp?.message || 'Failed to withdraw application')
       }
     } catch (error) {
       console.error('❌ Error withdrawing application:', error)

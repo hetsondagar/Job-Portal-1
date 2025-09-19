@@ -208,7 +208,7 @@ export default function EmployerRegisterPage() {
         subscribeUpdates: formData.subscribeUpdates,
       })
       
-      if (result?.user?.userType === 'employer') {
+      if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {
         // Check region for dashboard redirect
         if (result?.company?.region === 'gulf') {
           toast.success('Employer account created successfully! Redirecting to Gulf dashboard...')

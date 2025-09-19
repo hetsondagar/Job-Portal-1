@@ -5,12 +5,18 @@ class EmployerActivityService {
     try {
       if (!userId || !activityType) return null;
 
+      // Validate UUIDs
+      const isValidUUID = (str) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(str);
+      };
+
       const payload = {
         userId,
         activityType,
         details: options.details || {},
-        jobId: options.jobId || null,
-        applicationId: options.applicationId || null,
+        jobId: (options.jobId && isValidUUID(options.jobId)) ? options.jobId : null,
+        applicationId: (options.applicationId && isValidUUID(options.applicationId)) ? options.applicationId : null,
         timestamp: options.timestamp || new Date()
       };
 
@@ -88,8 +94,9 @@ class EmployerActivityService {
       ...('requirementId' in context ? { requirementId: context.requirementId } : {}),
       ...('applicationId' in context ? { applicationId: context.applicationId } : {}),
       ...('jobId' in context ? { jobId: context.jobId } : {}),
-      ...('ipAddress' in context ? { ipAddress: context.ipAddress } : {}),
-      ...('userAgent' in context ? { userAgent: context.userAgent } : {})
+      ...('requirementTitle' in context ? { requirementTitle: context.requirementTitle } : {}),
+      ...('candidateName' in context ? { candidateName: context.candidateName } : {}),
+      ...('companyName' in context ? { companyName: context.companyName } : {})
     };
     return this.logActivity(userId, 'candidate_shortlisted', { details });
   }
@@ -119,8 +126,9 @@ class EmployerActivityService {
       ...('interviewType' in context ? { interviewType: context.interviewType } : {}),
       ...('location' in context ? { location: context.location } : {}),
       ...('meetingLink' in context ? { meetingLink: context.meetingLink } : {}),
-      ...('ipAddress' in context ? { ipAddress: context.ipAddress } : {}),
-      ...('userAgent' in context ? { userAgent: context.userAgent } : {})
+      ...('candidateName' in context ? { candidateName: context.candidateName } : {}),
+      ...('jobTitle' in context ? { jobTitle: context.jobTitle } : {}),
+      ...('companyName' in context ? { companyName: context.companyName } : {})
     };
     return this.logActivity(userId, 'interview_scheduled', { details, applicationId: context.applicationId, jobId: context.jobId });
   }

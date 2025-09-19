@@ -6,7 +6,8 @@ const QUOTA_TYPES = {
   JOB_POSTINGS: 'job_postings',
   RESUME_VIEWS: 'resume_views',
   REQUIREMENTS_POSTED: 'requirements_posted',
-  PROFILE_VISITS: 'profile_visits'
+  PROFILE_VISITS: 'profile_visits',
+  RESUME_SEARCH: 'resume_search'
 };
 
 class EmployerQuotaService {

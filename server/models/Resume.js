@@ -7,47 +7,84 @@ const Resume = sequelize.define('Resume', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
+  title: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+  summary: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  skills: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
     }
   },
-  filename: {
-    type: DataTypes.STRING,
-    allowNull: false
+  objective: {
+    type: DataTypes.TEXT,
+    allowNull: true
   },
-  filePath: {
-    type: DataTypes.STRING,
+  languages: {
+    type: DataTypes.JSONB,
     allowNull: true,
-    field: 'file_path'
+    defaultValue: []
   },
-  fileType: {
-    type: DataTypes.STRING,
+  certifications: {
+    type: DataTypes.JSONB,
     allowNull: true,
-    field: 'file_type'
+    defaultValue: []
+  },
+  projects: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  achievements: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
   },
   isDefault: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    field: 'is_default'
+    allowNull: true,
+    defaultValue: false
+  },
+  isPublic: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: true
   },
   views: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     defaultValue: 0
   },
   downloads: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     defaultValue: 0
+  },
+  lastUpdated: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  metadata: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
   }
 }, {
   tableName: 'resumes',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  underscored: false,
   hooks: {
     beforeCreate: async (resume) => {
       resume.lastUpdated = new Date();

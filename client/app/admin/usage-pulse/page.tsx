@@ -30,20 +30,24 @@ export default function UsagePulsePage() {
 
   useEffect(() => {
     const load = async () => {
-      if (!companyId) return
+      // ✅ No need to check companyId - backend will use authenticated user's company
       const [s, si, pi, rp] = await Promise.all([
-        apiService.getUsageSummary(companyId),
-        apiService.getUsageSearchInsights({ companyId }),
-        apiService.getUsagePostingInsights({ companyId }),
-        apiService.getRecruiterPerformance({ companyId })
+        apiService.getUsageSummary(), // ✅ Remove companyId parameter
+        apiService.getUsageSearchInsights({}), // ✅ Remove companyId parameter
+        apiService.getUsagePostingInsights({}), // ✅ Remove companyId parameter
+        apiService.getRecruiterPerformance({}) // ✅ Remove companyId parameter
       ])
-      if (s.success && s.data) setSummary(s.data)
+      console.log('🔍 Admin usage pulse - getUsageSummary result:', s)
+      if (s.success && s.data) {
+        console.log('🔍 Admin usage pulse - setting summary data:', s.data)
+        setSummary(s.data)
+      }
       if (si.success && si.data) setSearchInsights(si.data)
       if (pi.success && pi.data) setPostingInsights(pi.data)
       if (rp.success && rp.data) setPerformance(rp.data)
     }
     load()
-  }, [companyId])
+  }, []) // ✅ Remove companyId dependency
 
   useEffect(() => {
     const loadActivities = async () => {
@@ -90,7 +94,10 @@ export default function UsagePulsePage() {
   };
 
   const quotaChartData = useMemo(() => {
-    return summary.flatMap((r: any) => {
+    console.log('🔍 Admin usage pulse - processing summary data:', summary)
+    const result = summary.flatMap((r: any) => {
+      console.log('🔍 Processing recruiter:', r)
+      console.log('🔍 Recruiter quotas:', r.quotas)
       return (r.quotas || []).map((q: any) => ({
         recruiter: r.email || r.name,
         quotaType: q.quotaType,
@@ -99,6 +106,8 @@ export default function UsagePulsePage() {
         quotaLabel: `${r.email || r.name || r.userId} — ${formatQuotaType(q.quotaType)}`
       }))
     })
+    console.log('🔍 Final quota chart data:', result)
+    return result
   }, [summary])
 
   const postingSeries = useMemo(() => {
@@ -170,7 +179,7 @@ export default function UsagePulsePage() {
                         const res = await apiService.updateQuota({ userId: recruiter.userId, quotaType: row.quotaType, limit: current })
                         if (res.success) {
                           // Refresh summary
-                          const s = await apiService.getUsageSummary(companyId)
+                          const s = await apiService.getUsageSummary()
                           if (s.success) setSummary(s.data || [])
                         }
                       }}
@@ -223,18 +232,34 @@ export default function UsagePulsePage() {
                   <td className="p-2">{a.activityType}</td>
                   <td className="p-2">
                     <div className="text-sm">
+                      {/* Show human-readable activity description if available */}
+                      {a.activityDescription && (
+                        <div className="font-medium text-gray-800 mb-2">
+                          {a.activityDescription}
+                        </div>
+                      )}
+                      
+                      {/* Show job information */}
                       {a.job?.title && (
                         <div className="font-medium text-blue-600">Job: {a.job.title}</div>
                       )}
+                      
+                      {/* Show applicant information */}
                       {a.applicant && (
                         <div className="text-gray-700">Applicant: {a.applicant.name || a.applicant.email}</div>
                       )}
+                      
+                      {/* Show meaningful details only */}
                       {a.details && Object.keys(a.details).length > 0 && (
                         <div className="text-gray-600 mt-1">
                           {Object.entries(a.details)
                             .filter(([key, value]) => {
-                              // Hide ID fields and redundant info
-                              const hiddenKeys = ['jobId', 'applicationId', 'applicantId', 'title'];
+                              // Hide technical data and ID fields
+                              const hiddenKeys = [
+                                'jobId', 'applicationId', 'applicantId', 'candidateId', 'requirementId', 'interviewId',
+                                'ipAddress', 'userAgent', 'sessionId', 'referrer',
+                                'title' // Hide if we already show job title above
+                              ];
                               return !hiddenKeys.includes(key) && value !== null && value !== undefined;
                             })
                             .map(([key, value]: [string, any]) => (

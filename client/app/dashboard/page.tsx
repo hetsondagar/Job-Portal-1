@@ -62,8 +62,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      if (user.userType === 'employer') {
-      console.log('🔄 Employer detected on jobseeker dashboard, redirecting to employer dashboard')
+      if (user.userType === 'employer' || user.userType === 'admin') {
+      console.log('🔄 Employer/Admin detected on jobseeker dashboard, redirecting to employer dashboard')
         router.replace('/employer-dashboard')
       }
       return;
@@ -259,6 +259,7 @@ export default function DashboardPage() {
       setCoverLettersLoading(false)
     }
   }
+
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -867,6 +868,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
+
 
           {/* Stats Overview - Enhanced for Jobseekers */}
           {user.userType === 'jobseeker' && (

@@ -20,7 +20,6 @@ const JobAlert = sequelize.define('JobAlert', {
 }, {
   tableName: 'job_alerts',
   timestamps: true,
-<<<<<<< HEAD
   underscored: true,
   indexes: [
     {
@@ -121,10 +120,6 @@ const JobAlert = sequelize.define('JobAlert', {
       }
     }
   }
-=======
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
->>>>>>> c2d8c46e9f208357c6add02e1349b8dd86595f70
 });
 
 module.exports = JobAlert; 

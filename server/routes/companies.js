@@ -67,11 +67,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Join existing company (employer without a company)
+// Join existing company (job seekers become employers, existing employers without company)
 router.post('/join', authenticateToken, async (req, res) => {
   try {
-    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only employers can join companies' });
+    // Allow job seekers to become employers by joining a company
+    if (req.user.user_type !== 'jobseeker' && req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Invalid user type for joining company' });
     }
     if (req.user.company_id) {
       return res.status(400).json({ success: false, message: 'User already associated with a company' });
@@ -84,11 +85,31 @@ router.post('/join', authenticateToken, async (req, res) => {
     if (!company) {
       return res.status(404).json({ success: false, message: 'Company not found' });
     }
+    
     // Persist role into user preferences (non-breaking)
     const prefs = req.user.preferences || {};
     prefs.employerRole = (role && typeof role === 'string') ? role : (prefs.employerRole || 'recruiter');
-    await req.user.update({ company_id: company.id, preferences: prefs });
-    return res.json({ success: true, message: 'Joined company successfully', data: { companyId: company.id, role: prefs.employerRole } });
+    
+    // Update user: job seekers become employers, existing employers stay employers
+    const newUserType = req.user.user_type === 'jobseeker' ? 'employer' : req.user.user_type;
+    
+    await req.user.update({ 
+      user_type: newUserType, // ✅ Job seekers become employers when joining company
+      company_id: company.id, 
+      preferences: prefs 
+    });
+    
+    console.log(`✅ User ${req.user.id} joined company ${company.id} as ${newUserType}`);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Joined company successfully', 
+      data: { 
+        companyId: company.id, 
+        role: prefs.employerRole,
+        userType: newUserType
+      } 
+    });
   } catch (error) {
     console.error('Join company error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -269,11 +290,11 @@ router.get('/:id/jobs', authenticateToken, async (req, res) => {
         company_id: id,
         status: 'active'
       },
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       attributes: [
         'id', 'title', 'location', 'jobType', 'experienceLevel', 
         'salaryMin', 'salaryMax', 'description', 'requirements',
-        'created_at', 'is_urgent'
+        'createdAt', 'is_urgent'
       ]
     });
 
