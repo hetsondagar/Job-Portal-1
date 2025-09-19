@@ -26,6 +26,7 @@ const RequirementApplication = sequelize.define('RequirementApplication', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -136,6 +137,9 @@ const RequirementApplication = sequelize.define('RequirementApplication', {
   }
 }, {
   tableName: 'requirement_applications',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (application) => {
       application.appliedAt = new Date();

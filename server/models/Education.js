@@ -86,6 +86,9 @@ const Education = sequelize.define('Education', {
   },
 }, {
   tableName: 'educations',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (education) => {
       if (education.isCurrent) {

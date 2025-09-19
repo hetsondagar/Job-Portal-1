@@ -22,11 +22,11 @@ const User = sequelize.define('User', {
   },
   first_name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // Allow null for OAuth users
   },
   last_name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // Allow null for OAuth users
   },
   phone: {
     type: DataTypes.STRING,
@@ -73,6 +73,14 @@ const User = sequelize.define('User', {
   current_location: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  region: {
+    type: DataTypes.ENUM('india', 'gulf', 'other'),
+    allowNull: true
+  },
+  password_skipped: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   preferred_locations: {
     type: DataTypes.JSONB,
@@ -192,23 +200,12 @@ const User = sequelize.define('User', {
     defaultValue: 'public'
   },
   email_notifications: {
-    type: DataTypes.JSONB,
-    defaultValue: {
-      jobAlerts: true,
-      applicationUpdates: true,
-      messages: true,
-      companyUpdates: true,
-      marketing: false
-    }
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   },
   push_notifications: {
-    type: DataTypes.JSONB,
-    defaultValue: {
-      jobAlerts: true,
-      applicationUpdates: true,
-      messages: true,
-      companyUpdates: true
-    }
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   },
   // Account status & verification
   account_status: {

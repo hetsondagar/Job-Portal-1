@@ -70,7 +70,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           oauth_refresh_token: refreshToken,
           oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
           is_email_verified: true,
-          last_login_at: new Date(),
+          // Only update last_login_at if user has logged in before
+          ...(existingUser.last_login_at && { last_login_at: new Date() }),
           // Sync Google profile data if not already set
           first_name: existingUser.first_name || profile.name.givenName || profile.displayName.split(' ')[0],
           last_name: existingUser.last_name || profile.name.familyName || profile.displayName.split(' ').slice(1).join(' ') || '',
@@ -100,7 +101,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             headline: profile.displayName || `${profile.name.givenName} ${profile.name.familyName}`,
             summary: `Profile synced from Google account`,
             current_location: profile._json?.locale || 'Not specified',
-            profile_completion: 60, // Basic profile completion
+            profile_completion: 0, // Start with 0 for first-time users to trigger setup dialogs
             last_profile_update: new Date()
           });
         }
@@ -111,7 +112,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           oauth_access_token: accessToken,
           oauth_refresh_token: refreshToken,
           oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
-          last_login_at: new Date(),
+          // Only update last_login_at if user has logged in before
+          ...(user.last_login_at && { last_login_at: new Date() }),
           // Sync latest Google profile data
           first_name: profile.name.givenName || user.first_name,
           last_name: profile.name.familyName || user.last_name,
@@ -175,7 +177,8 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
             oauth_refresh_token: refreshToken,
             oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
             is_email_verified: true,
-            last_login_at: new Date()
+            // Only update last_login_at if user has logged in before
+            ...(existingUser.last_login_at && { last_login_at: new Date() })
           });
           user = existingUser;
         } else {
@@ -204,7 +207,8 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
           oauth_access_token: accessToken,
           oauth_refresh_token: refreshToken,
           oauth_token_expires_at: new Date(Date.now() + 3600000), // 1 hour
-          last_login_at: new Date()
+          // Only update last_login_at if user has logged in before
+          ...(user.last_login_at && { last_login_at: new Date() })
         });
       }
 
@@ -363,9 +367,8 @@ router.get('/google/callback', (req, res) => {
           // ALWAYS force jobseeker type for jobseeker OAuth flow - regardless of previous user type
           console.log('🔄 Force updating user type to jobseeker for jobseeker OAuth flow');
           await user.update({ 
-            user_type: 'jobseeker',
-            // Ensure jobseeker-specific fields are set
-            profile_completion: Math.max(user.profile_completion || 0, 60)
+            user_type: 'jobseeker'
+            // Don't set profile_completion here - let it remain 0 for first-time users
           });
           await user.reload();
           
@@ -380,7 +383,7 @@ router.get('/google/callback', (req, res) => {
           if (!user.headline && user.first_name) {
             await user.update({ 
               headline: `Professional at ${user.first_name} ${user.last_name || ''}`.trim(),
-              profile_completion: Math.min(user.profile_completion + 10, 100)
+              // Don't increase profile_completion here - let it remain 0 for first-time users
             });
             console.log('✅ Basic profile data set for jobseeker');
           }
@@ -401,6 +404,15 @@ router.get('/google/callback', (req, res) => {
           });
           
           console.log('✅ OAuth data updated for jobseeker user');
+        }
+        
+        // Only update last login time for returning users (users who have logged in before)
+        // For first-time OAuth users, we'll update this after they complete setup
+        if (user.last_login_at) {
+          await user.update({ last_login_at: new Date() });
+          console.log('✅ Updated last login time for returning user:', user.id);
+        } else {
+          console.log('📝 First-time OAuth user - not updating last_login_at yet');
         }
         
         const token = generateToken(user);
@@ -564,10 +576,19 @@ router.get('/facebook/callback', (req, res) => {
           if (!user.headline && user.first_name) {
             await user.update({ 
               headline: `Professional at ${user.first_name} ${user.last_name || ''}`.trim(),
-              profile_completion: Math.min(user.profile_completion + 10, 100)
+              // Don't increase profile_completion here - let it remain 0 for first-time users
             });
             console.log('✅ Basic profile data set for jobseeker');
           }
+        }
+        
+        // Only update last login time for returning users (users who have logged in before)
+        // For first-time OAuth users, we'll update this after they complete setup
+        if (user.last_login_at) {
+          await user.update({ last_login_at: new Date() });
+          console.log('✅ Updated last login time for returning user:', user.id);
+        } else {
+          console.log('📝 First-time OAuth user - not updating last_login_at yet');
         }
         
         const token = generateToken(user);
@@ -652,7 +673,12 @@ router.post('/setup-password', async (req, res) => {
     }
     
     // Set password for OAuth user and mark as capable of local login
-    await user.update({ password, oauth_provider: user.oauth_provider || 'google' });
+    // Also update last_login_at for first-time users completing setup
+    await user.update({ 
+      password, 
+      oauth_provider: user.oauth_provider || 'google',
+      last_login_at: new Date() // Mark as having completed first login
+    });
 
     // Issue a fresh JWT so the client session is stable post-setup
     const newToken = jwt.sign(
@@ -775,7 +801,7 @@ router.post('/sync-google-profile', async (req, res) => {
         current_location: googleProfileData.locale || user.current_location,
         summary: googleProfileData.name ? `Profile synced from Google account - ${googleProfileData.name}` : user.summary,
         last_profile_update: new Date(),
-        profile_completion: Math.min(user.profile_completion + 20, 100) // Increase profile completion
+        // Don't increase profile_completion here - let it remain 0 for first-time users
       };
 
       // For jobseekers, add more profile details

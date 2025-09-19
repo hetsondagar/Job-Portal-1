@@ -302,8 +302,10 @@ router.get('/profile', authenticateToken, async (req, res) => {
       oauthProvider: req.user.oauth_provider,
       oauthId: req.user.oauth_id,
       hasPassword: !!(req.user.password && String(req.user.password).trim().length > 0),
-      requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0),
+      passwordSkipped: Boolean(req.user.password_skipped),
+      requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0) && req.user.oauth_provider && req.user.oauth_provider !== 'local' && !req.user.password_skipped,
       profileCompleted: Boolean(req.user.first_name && req.user.last_name && req.user.phone) && ((req.user.profile_completion || 0) >= 60),
+      region: req.user.region,
       skills: req.user.skills,
       languages: req.user.languages,
       expectedSalary: req.user.expected_salary,
@@ -520,6 +522,8 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'firstName': 'first_name',
       'lastName': 'last_name',
       'phone': 'phone',
+      'region': 'region',
+      'passwordSkipped': 'password_skipped',
       'currentLocation': 'current_location',
       'headline': 'headline',
       'summary': 'summary',
@@ -572,6 +576,12 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
 
     // Update last profile update timestamp
     updateData.lastProfileUpdate = new Date();
+    
+    // For first-time OAuth users completing profile setup, update last_login_at
+    if (!req.user.last_login_at && req.user.oauth_provider && req.user.oauth_provider !== 'local') {
+      updateData.last_login_at = new Date();
+      console.log('✅ First-time OAuth user completed profile setup, updating last_login_at');
+    }
 
     // Calculate profile completion percentage
     const profileFields = [
@@ -707,8 +717,8 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     const { Notification } = require('../config/index');
     
     const notifications = await Notification.findAll({
-      where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      where: { user_id: req.user.id },
+      order: [['created_at', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
 
@@ -747,7 +757,7 @@ router.get('/employer/notifications', authenticateToken, async (req, res) => {
         userId: req.user.id,
         type: employerNotificationTypes
       },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -978,7 +988,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
     const { JobApplication, Job, Company, User, Resume } = require('../config/index');
     
     const applications = await JobApplication.findAll({
-      where: { userId: req.user.id },
+      where: { user_id: req.user.id },
       include: [
         {
           model: Job,
@@ -987,7 +997,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+              attributes: ['id', 'name', 'industry', 'company_size', 'website', 'contact_email', 'contact_phone']
             },
             {
               model: User,
@@ -999,7 +1009,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
         {
           model: Resume,
           as: 'jobResume',
-          attributes: ['id', 'title', 'summary', 'isDefault', 'lastUpdated']
+          attributes: ['id', 'filename', 'filePath', 'fileType', 'isDefault', 'views', 'downloads']
         }
       ],
       order: [['applied_at', 'DESC']]
@@ -1053,8 +1063,8 @@ router.post('/applications', authenticateToken, async (req, res) => {
     // Check if user already applied for this job
     const existingApplication = await JobApplication.findOne({
       where: { 
-        jobId, 
-        userId: req.user.id 
+        job_id: jobId, 
+        user_id: req.user.id 
       }
     });
 
@@ -1067,9 +1077,8 @@ router.post('/applications', authenticateToken, async (req, res) => {
 
     // Create application
     const applicationData = {
-      jobId,
-      userId: req.user.id,
-      employerId: job.employer.id,
+      job_id: jobId,
+      user_id: req.user.id,
       coverLetter,
       expectedSalary,
       noticePeriod,
@@ -1124,12 +1133,12 @@ router.get('/debug/applications', authenticateToken, async (req, res) => {
     
     // Get all applications with basic info
     const allApps = await JobApplication.findAll({
-      attributes: ['id', 'jobId', 'userId', 'employerId', 'status', 'appliedAt'],
+      attributes: ['id', 'job_id', 'user_id', 'status', 'applied_at'],
       include: [
         {
           model: Job,
           as: 'job',
-          attributes: ['id', 'title', 'employerId']
+          attributes: ['id', 'title', 'created_by']
         },
         {
           model: User,
@@ -1182,7 +1191,7 @@ router.get('/employer/applications/test', authenticateToken, async (req, res) =>
     
     // Simple count query first
     const count = await JobApplication.count({
-      where: { employerId: req.user.id }
+      where: { employer_id: req.user.id }
     });
     
     console.log('🧪 Found', count, 'applications for employer');
@@ -1271,7 +1280,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     // First, let's check if there are any applications at all
     console.log('🔍 Fetching all applications...');
     const allApplications = await JobApplication.findAll({
-      attributes: ['id', 'jobId', 'userId', 'employerId', 'status', 'appliedAt'],
+      attributes: ['id', 'job_id', 'user_id', 'status', 'applied_at'],
       limit: 10
     });
     console.log('📊 All applications in database (first 10):', allApplications.map(app => ({
@@ -1287,71 +1296,50 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     let applications;
     try {
       applications = await JobApplication.findAll({
-      where: { employerId: req.user.id },
-      include: [
-        {
-          model: Job,
-          as: 'job',
-          include: [
-            {
-              model: Company,
-              as: 'company',
-              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
-            }
-          ]
-        },
-        {
-          model: User,
-          as: 'applicant',
-          attributes: [
-            'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
-            'headline', 'summary', 'skills', 'languages', 'certifications',
-            'current_location', 'willing_to_relocate', 'expected_salary',
-            'notice_period', 'date_of_birth', 'gender', 'social_links',
-            'profile_completion', 'verification_level', 'last_profile_update'
-          ],
-          include: [
-            {
-              model: WorkExperience,
-              as: 'workExperiences',
-              attributes: [
-                'id', 'jobTitle', 'location', 'startDate', 'endDate', 'isCurrent',
-                'achievements', 'skills', 'salary', 'salaryCurrency'
-              ],
-              order: [['startDate', 'DESC']]
-            },
-            {
-              model: Education,
-              as: 'educations',
-              attributes: [
-                'id', 'institution', 'degree', 'fieldOfStudy', 'location',
-                'startDate', 'endDate', 'isCurrent', 'cgpa', 'description',
-                'achievements', 'grade', 'percentage'
-              ],
-              order: [['startDate', 'DESC']]
-            }
-          ]
-        },
-        {
-          model: Resume,
-          as: 'jobResume',
-          attributes: [
-            'id', 'title', 'summary', 'objective', 'skills', 'languages',
-            'certifications', 'projects', 'achievements', 'isDefault',
-            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
-          ]
-        },
-        {
-          model: CoverLetter,
-          as: 'jobCoverLetter',
-          attributes: [
-            'id', 'title', 'content', 'summary', 'isDefault',
-            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
-          ]
-        }
-      ],
-      order: [['appliedAt', 'DESC']]
-    });
+        where: { employerId: req.user.id },
+        include: [
+          {
+            model: Job,
+            as: 'job',
+            include: [
+              {
+                model: Company,
+                as: 'company',
+                attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+              }
+            ]
+          },
+          {
+            model: User,
+            as: 'applicant',
+            attributes: [
+              'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+              'headline', 'summary', 'skills', 'languages', 'certifications',
+              'current_location', 'willing_to_relocate', 'expected_salary',
+              'notice_period', 'date_of_birth', 'gender', 'social_links',
+              'profile_completion', 'verification_level', 'last_profile_update'
+            ]
+          },
+          {
+            model: Resume,
+            as: 'jobResume',
+            attributes: [
+              'id', 'title', 'summary', 'objective', 'skills', 'languages',
+              'certifications', 'projects', 'achievements', 'isDefault',
+              'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+            ]
+          },
+          {
+            model: CoverLetter,
+            as: 'jobCoverLetter',
+            attributes: [
+              'id', 'title', 'content', 'summary', 'isDefault',
+              'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+            ]
+          }
+        ],
+        order: [['appliedAt', 'DESC']]
+      });
       console.log('✅ Sequelize query completed successfully');
     } catch (queryError) {
       console.error('❌ Sequelize query failed:', queryError);
@@ -1384,13 +1372,41 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       });
     }
 
+    // Fetch experiences and education separately to avoid nested SQL JSON path issues
+    const applicantIds = Array.from(new Set(applications.map(a => a.applicant?.id).filter(Boolean)));
+    let experiencesByUser = new Map();
+    let educationsByUser = new Map();
+    if (applicantIds.length > 0) {
+      // Use raw queries to avoid column name casing issues
+      const [wxRows] = await sequelize.query(
+        'SELECT * FROM work_experiences WHERE user_id IN (:ids)',
+        { replacements: { ids: applicantIds }, raw: true }
+      );
+      wxRows.forEach(row => {
+        const arr = experiencesByUser.get(row.user_id) || [];
+        arr.push(WorkExperience.build(row, { isNewRecord: false }));
+        experiencesByUser.set(row.user_id, arr);
+      });
+      const [edRows] = await sequelize.query(
+        'SELECT * FROM educations WHERE user_id IN (:ids)',
+        { replacements: { ids: applicantIds }, raw: true }
+      );
+      edRows.forEach(row => {
+        const arr = educationsByUser.get(row.user_id) || [];
+        arr.push(Education.build(row, { isNewRecord: false }));
+        educationsByUser.set(row.user_id, arr);
+      });
+    }
+
     // Transform the data to include comprehensive jobseeker profile information
     const enrichedApplications = applications.map(application => {
       const applicant = application.applicant;
       const jobResume = application.jobResume;
+      const applicantWorkExperiences = experiencesByUser.get(applicant?.id) || [];
+      const applicantEducations = educationsByUser.get(applicant?.id) || [];
       
       // Calculate total work experience
-      const totalExperience = applicant.workExperiences?.reduce((total, exp) => {
+      const totalExperience = applicantWorkExperiences.reduce((total, exp) => {
         const start = new Date(exp.startDate);
         const end = exp.endDate ? new Date(exp.endDate) : new Date();
         const diffInMs = end - start;
@@ -1402,7 +1418,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       const experienceMonths = Math.floor((totalExperience % 365) / 30);
 
       // Get highest education
-      const highestEducation = applicant.educations?.sort((a, b) => {
+      const highestEducation = applicantEducations.sort((a, b) => {
         const levelOrder = { 'phd': 6, 'master': 5, 'bachelor': 4, 'diploma': 3, 'high-school': 2, 'certification': 1, 'other': 0 };
         return (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0);
       })[0];
@@ -1410,8 +1426,8 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       // Combine all skills from profile, work experience, and resume
       const allSkills = new Set();
       if (applicant.skills) applicant.skills.forEach(skill => allSkills.add(skill));
-      if (applicant.workExperiences) {
-        applicant.workExperiences.forEach(exp => {
+      if (applicantWorkExperiences) {
+        applicantWorkExperiences.forEach(exp => {
           if (exp.skills) exp.skills.forEach(skill => allSkills.add(skill));
           if (exp.technologies) exp.technologies.forEach(tech => allSkills.add(tech));
         });
@@ -1435,20 +1451,20 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
             formattedPeriod: highestEducation.getFormattedPeriod()
           } : null,
           allSkills: Array.from(allSkills),
-          workExperiences: applicant.workExperiences?.map(exp => ({
+          workExperiences: applicantWorkExperiences.map(exp => ({
             ...exp.toJSON(),
             duration: exp.getDuration(),
             formattedPeriod: exp.getFormattedPeriod(),
             skillsString: exp.getSkillsString(),
             technologiesString: exp.getTechnologiesString()
-          })) || [],
-          educations: applicant.educations?.map(edu => ({
+          })),
+          educations: applicantEducations.map(edu => ({
             ...edu.toJSON(),
             duration: edu.getDuration(),
             formattedPeriod: edu.getFormattedPeriod(),
             gradeDisplay: edu.getGradeDisplay(),
             fullDegree: edu.getFullDegree()
-          })) || [],
+          })),
           resumes: applicant.resumes?.map(resume => ({
             ...resume.toJSON(),
             skillsString: resume.getSkillsString(),
@@ -1510,7 +1526,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
     const application = await JobApplication.findOne({
       where: { 
         id: id,
-        employerId: req.user.id 
+        employer_id: req.user.id 
       },
       include: [
         {
@@ -1520,7 +1536,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+              attributes: ['id', 'name', 'industry', 'company_size', 'website', 'contact_email', 'contact_phone']
             }
           ]
         },
@@ -1541,8 +1557,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
               attributes: [
                 'id', 'jobTitle', 'location', 'startDate', 'endDate', 'isCurrent',
                 'achievements', 'skills', 'salary', 'salaryCurrency'
-              ],
-              order: [['startDate', 'DESC']]
+              ]
             },
             {
               model: Education,
@@ -1552,8 +1567,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
                 'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa',
                 'description', 'activities', 'achievements', 'location',
                 'educationType', 'isVerified', 'verificationDate'
-              ],
-              order: [['startDate', 'DESC']]
+              ]
             },
             {
               model: Resume,
@@ -1697,7 +1711,7 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
     const application = await JobApplication.findOne({
       where: { 
         id: id, 
-        employerId: req.user.id 
+        employer_id: req.user.id 
       }
     });
 
@@ -1809,8 +1823,8 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
     const { JobAlert } = require('../config/index');
     
     const alerts = await JobAlert.findAll({
-      where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
+      where: { user_id: req.user.id },
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -1916,7 +1930,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
     const { JobBookmark, Job, Company } = require('../config/index');
     
     const bookmarks = await JobBookmark.findAll({
-      where: { userId: req.user.id },
+      where: { user_id: req.user.id },
       include: [
         {
           model: Job,
@@ -1929,7 +1943,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
           ]
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -2188,49 +2202,38 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     }
     
     // Get employer's jobs
-    console.log('🔍 Querying jobs for employerId:', req.user.id);
+    console.log('🔍 Querying jobs for created_by:', req.user.id);
     const jobs = await Job.findAll({
-      where: { employerId: req.user.id },
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['id', 'name', 'industry', 'companySize']
-      }]
+      where: { created_by: req.user.id }
     });
     console.log('✅ Found jobs:', jobs.length);
     
-    // Get applications for employer's jobs
-    console.log('🔍 Querying applications for employerId:', req.user.id);
-    const applications = await JobApplication.findAll({
-      where: { employerId: req.user.id },
-      include: [{
-        model: Job,
-        as: 'job',
-        attributes: ['id', 'title', 'location']
-      }, {
-        model: User,
-        as: 'applicant',
-        attributes: ['id', 'first_name', 'last_name', 'email', 'headline', 'current_location', 'skills']
-      }]
+    // Get applications for employer's jobs using raw query
+    console.log('🔍 Querying applications for employer jobs:', req.user.id);
+    const applications = await sequelize.query(`
+      SELECT ja.*, j.title as job_title, j.location as job_location,
+             u.first_name, u.last_name, u.email, u.headline, u.current_location, u.skills
+      FROM job_applications ja
+      JOIN jobs j ON ja.job_id = j.id
+      JOIN users u ON ja.user_id = u.id
+      WHERE j.created_by = :userId
+    `, {
+      replacements: { userId: req.user.id },
+      type: sequelize.QueryTypes.SELECT
     });
     console.log('✅ Found applications:', applications.length);
     
     // Get hot vacancies for employer
     const { HotVacancy } = require('../config/index');
     const hotVacancies = await HotVacancy.findAll({
-      where: { employerId: req.user.id },
-      order: [['createdAt', 'DESC']],
-      limit: 5,
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['id', 'name', 'industry', 'companySize']
-      }]
+      where: { created_by: req.user.id },
+      order: [['created_at', 'DESC']],
+      limit: 5
     });
     console.log('✅ Found hot vacancies:', hotVacancies.length);
     
     // Calculate stats
-    const activeJobs = jobs.filter(job => job.status === 'active' || !job.status).length;
+    const activeJobs = jobs.filter(job => job.is_active === true || job.is_active === null).length;
     const totalApplications = applications.length;
     const hiredCandidates = applications.filter(app => app.status === 'hired').length;
     const reviewingApplications = applications.filter(app => app.status === 'reviewing').length;
@@ -2437,8 +2440,8 @@ router.put('/dashboard-stats', authenticateToken, async (req, res) => {
 router.get('/resumes', authenticateToken, async (req, res) => {
   try {
     const resumes = await Resume.findAll({
-      where: { userId: req.user.id },
-      order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+      where: { user_id: req.user.id },
+      order: [['isDefault', 'DESC'], ['created_at', 'DESC']]
     });
 
     res.json({
@@ -2458,25 +2461,25 @@ router.get('/resumes', authenticateToken, async (req, res) => {
 router.get('/resumes/stats', authenticateToken, async (req, res) => {
   try {
     const totalResumes = await Resume.count({
-      where: { userId: req.user.id }
+      where: { user_id: req.user.id }
     });
 
     const defaultResume = await Resume.findOne({
-      where: { userId: req.user.id, isDefault: true }
+      where: { user_id: req.user.id, isDefault: true }
     });
 
     const recentResumes = await Resume.findAll({
-      where: { userId: req.user.id },
-      order: [['lastUpdated', 'DESC']],
+      where: { user_id: req.user.id },
+      order: [['created_at', 'DESC']],
       limit: 3
     });
 
     const totalViews = await Resume.sum('views', {
-      where: { userId: req.user.id }
+      where: { user_id: req.user.id }
     }) || 0;
 
     const totalDownloads = await Resume.sum('downloads', {
-      where: { userId: req.user.id }
+      where: { user_id: req.user.id }
     }) || 0;
 
     res.json({
@@ -2772,8 +2775,8 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
 router.get('/cover-letters', authenticateToken, async (req, res) => {
   try {
     const coverLetters = await CoverLetter.findAll({
-      where: { userId: req.user.id },
-      order: [['lastUpdated', 'DESC']]
+      where: { user_id: req.user.id },
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -3204,7 +3207,7 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
     const application = await JobApplication.findOne({
       where: { 
         id: applicationId, 
-        employerId: req.user.id 
+        employer_id: req.user.id 
       },
       include: [
         {
@@ -3404,6 +3407,57 @@ router.get('/employer/applications/:applicationId/resume/view', authenticateToke
   }
 });
 
+// Employer dashboard summary (parity with normal employer dashboard, Gulf-compatible)
+router.get('/employer/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const { Job, JobApplication, Company } = require('../config/index');
+
+    if (!req.user || req.user.user_type !== 'employer') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view dashboard.' });
+    }
+
+    const employerId = req.user.id;
+
+    // Employer jobs
+    const jobs = await Job.findAll({
+      where: { employerId },
+      attributes: ['id', 'title', 'status', 'region', 'createdAt'],
+      include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Applications for employer jobs
+    const applications = await JobApplication.findAll({
+      where: { employerId },
+      attributes: ['id', 'jobId', 'userId', 'status', 'appliedAt'],
+      order: [['appliedAt', 'DESC']]
+    });
+
+    const activeJobs = jobs.filter(j => j.status === 'active' || !j.status).length;
+    const totalApplications = applications.length;
+    const reviewingApplications = applications.filter(a => a.status === 'reviewing').length;
+    const shortlistedApplications = applications.filter(a => a.status === 'shortlisted').length;
+    const hiredCandidates = applications.filter(a => a.status === 'hired').length;
+
+    res.json({
+      success: true,
+      data: {
+        activeJobs,
+        totalJobs: jobs.length,
+        totalApplications,
+        reviewingApplications,
+        shortlistedApplications,
+        hiredCandidates,
+        recentApplications: applications.slice(0, 5),
+        recentJobs: jobs.slice(0, 5)
+      }
+    });
+  } catch (error) {
+    console.error('Error generating employer dashboard:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch employer dashboard', error: error.message });
+  }
+});
+
 // Employer endpoint to download resume from application
 router.get('/employer/applications/:applicationId/resume/download', authenticateToken, async (req, res) => {
   try {
@@ -3427,7 +3481,7 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const application = await JobApplication.findOne({
       where: { 
         id: applicationId, 
-        employerId: req.user.id 
+        employer_id: req.user.id 
       },
       include: [
         {

@@ -11,6 +11,7 @@ const JobBookmark = sequelize.define('JobBookmark', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -19,45 +20,17 @@ const JobBookmark = sequelize.define('JobBookmark', {
   jobId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'job_id',
     references: {
       model: 'jobs',
       key: 'id'
     }
-  },
-  folder: {
-    type: DataTypes.STRING(50),
-    defaultValue: 'default',
-    comment: 'Bookmark folder/category'
-  },
-  notes: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    comment: 'Personal notes about the job'
-  },
-  priority: {
-    type: DataTypes.ENUM('low', 'medium', 'high'),
-    defaultValue: 'medium'
-  },
-  isApplied: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  appliedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  reminderDate: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'Reminder to apply or follow up'
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    comment: 'Additional bookmark data'
   }
 }, {
   tableName: 'job_bookmarks',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   timestamps: true,
   underscored: true,
   indexes: [

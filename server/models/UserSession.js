@@ -69,6 +69,9 @@ const UserSession = sequelize.define('UserSession', {
   }
 }, {
   tableName: 'user_sessions',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       fields: ['user_id']

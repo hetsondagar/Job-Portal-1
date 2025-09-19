@@ -33,8 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Rate limiting: minimum 5 seconds between refresh calls
-  const MIN_REFRESH_INTERVAL = 5000; // 5 seconds
+  // Rate limiting: minimum 10 seconds between refresh calls
+  const MIN_REFRESH_INTERVAL = 10000; // 10 seconds
 
   // Normalize backend /auth/me response (snake_case) to frontend User (camelCase)
   const mapUserFromApi = (u: any): User => ({
@@ -202,16 +202,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('user', JSON.stringify(normalized));
         }
         
-        // Update dashboard stats for login activity
-        try {
-          await apiService.updateDashboardStats({
-            lastLoginDate: new Date().toISOString(),
-            totalLoginCount: 1
-          });
-        } catch (error) {
-          console.error('Error updating dashboard stats on login:', error);
-          // Don't fail login if dashboard update fails
-        }
+        // Dashboard stats update removed temporarily to fix login issues
+        // TODO: Re-enable dashboard stats update once the endpoint is working properly
         
         // Return the response data so the calling component can handle redirection
         return { ...response.data, user: normalized } as any;

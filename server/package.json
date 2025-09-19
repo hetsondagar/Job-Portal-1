@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
+    "start": "node production-start.js",
     "dev": "nodemon index.js",
+    "dev:safe": "node start-server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "db:init": "node scripts/init-db.js",
@@ -41,7 +42,7 @@
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
     "compression": "^1.8.1",

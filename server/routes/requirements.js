@@ -93,7 +93,7 @@ router.post('/', authenticateToken, async (req, res) => {
       normalizedTravelRequired = body.travelRequired;
     }
 
-    // Resolve companyId: prefer provided, else user's company, else create/attach one
+    // Resolve company_id: prefer provided, else user's company, else create/attach one
     let companyId = body.companyId || req.user.company_id;
     if (!companyId) {
       try {
@@ -168,8 +168,8 @@ router.post('/', authenticateToken, async (req, res) => {
       title: String(body.title).trim(),
       description: String(body.description).trim(),
       location: String(body.location).trim(),
-      companyId,
-      createdBy: req.user.id,
+      company_id: companyId,
+      created_by: req.user.id,
       experience: body.experience || null,
       experienceMin: body.workExperienceMin || body.experienceMin || null,
       experienceMax: body.workExperienceMax || body.experienceMax || null,
@@ -295,8 +295,8 @@ router.get('/', authenticateToken, async (req, res) => {
     
     console.log('🔍 Requirements API - Fetching requirements for company:', companyId);
     const rows = await Requirement.findAll({ 
-      where: { companyId }, 
-      order: [['createdAt', 'DESC']] 
+      where: { company_id: companyId }, 
+      order: [['created_at', 'DESC']] 
     });
     
     console.log('✅ Requirements API - Found requirements:', rows.length);
@@ -333,7 +333,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     const requirement = await Requirement.findOne({
       where: { 
         id: id,
-        companyId: req.user.company_id 
+        company_id: req.user.company_id 
       }
     });
     
@@ -398,7 +398,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         viewerId: req.user.id,
         // ViewTracking.viewType enum allows: 'job_view', 'profile_view', 'company_view'
         // Use 'profile_view' to represent candidate profile views
-        viewType: 'profile_view'
+        view_type: 'profile_view'
       }
     });
     
@@ -445,7 +445,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     const requirement = await Requirement.findOne({
       where: { 
         id,
-        companyId: req.user.company_id 
+        company_id: req.user.company_id 
       }
     });
     
@@ -554,7 +554,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     console.log('🔍 Final where clause:', JSON.stringify(whereClause, null, 2));
     
     // Determine sort order - simplified
-    let orderClause = [['createdAt', 'DESC']]; // Default sort by creation date
+    let orderClause = [['created_at', 'DESC']]; // Default sort by creation date
     
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -572,7 +572,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
         'experience_years', 'preferred_locations', 'education', 'designation',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt'
+        'is_email_verified', 'is_phone_verified', 'created_at'
       ]
     });
     
@@ -585,7 +585,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       console.warn('⚠️ No candidates matched strict filters. Applying relaxed search fallback.');
       const relaxed = await User.findAndCountAll({
         where: { user_type: 'jobseeker', is_active: true, account_status: 'active' },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: limitNum,
         offset,
         attributes: [
@@ -594,7 +594,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
           'experience_years', 'preferred_locations', 'education', 'designation',
           'profile_completion', 'last_login_at', 'last_profile_update',
-          'is_email_verified', 'is_phone_verified', 'createdAt'
+          'is_email_verified', 'is_phone_verified', 'created_at'
         ]
       });
       finalCandidates = relaxed.rows;
@@ -711,17 +711,17 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       const candidateIds = transformedCandidates.map(c => c.id);
       if (candidateIds.length > 0) {
         const counts = await CandidateLike.findAll({
-          attributes: ['candidateId', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
-          where: { candidateId: candidateIds },
-          group: ['candidateId']
+          attributes: ['candidate_id', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
+          where: { candidate_id: candidateIds },
+          group: ['candidate_id']
         });
-        const idToCount = new Map(counts.map(r => [r.get('candidateId'), parseInt(String(r.get('cnt')))]));
+        const idToCount = new Map(counts.map(r => [r.get('candidate_id'), parseInt(String(r.get('cnt')))]));
 
         const liked = await CandidateLike.findAll({
-          attributes: ['candidateId'],
-          where: { employerId: req.user.id, candidateId: candidateIds }
+          attributes: ['candidate_id'],
+          where: { employer_id: req.user.id, candidate_id: candidateIds }
         });
-        const likedSet = new Set(liked.map(r => r.get('candidateId')));
+        const likedSet = new Set(liked.map(r => r.get('candidate_id')));
 
         transformedCandidates.forEach(c => {
           c.likeCount = idToCount.get(c.id) || 0;
@@ -815,7 +815,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         'current_location', 'headline', 'summary', 'skills', 'languages',
         'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt',
+        'is_email_verified', 'is_phone_verified', 'created_at',
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
@@ -837,7 +837,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         WHERE user_id = :userId 
         ORDER BY start_date DESC
       `, {
-        replacements: { userId: candidateId },
+        replacements: { user_id: candidateId },
         type: QueryTypes.SELECT
       });
       workExperience = workExpResults || [];
@@ -853,7 +853,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         WHERE user_id = :userId 
         ORDER BY end_date DESC
       `, {
-        replacements: { userId: candidateId },
+        replacements: { user_id: candidateId },
         type: QueryTypes.SELECT
       });
       education = eduResults || [];
@@ -881,7 +881,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         WHERE "userId" = :userId 
         ORDER BY "isDefault" DESC, "createdAt" DESC
       `, {
-        replacements: { userId: candidateId },
+        replacements: { user_id: candidateId },
         type: QueryTypes.SELECT
       });
       
@@ -905,7 +905,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             WHERE user_id = :userId 
             ORDER BY is_default DESC, created_at DESC
           `, {
-            replacements: { userId: candidateId },
+            replacements: { user_id: candidateId },
             type: QueryTypes.SELECT
           });
         } catch (altErr) {
@@ -937,7 +937,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           WHERE user_id = :userId 
           ORDER BY is_default DESC, created_at DESC
         `, {
-          replacements: { userId: candidateId },
+          replacements: { user_id: candidateId },
           type: QueryTypes.SELECT
         });
         resumes = resumeResults || [];
@@ -954,8 +954,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       const { CoverLetter } = require('../config/index');
       
       const coverLetterResults = await CoverLetter.findAll({
-        where: { userId: candidateId },
-        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+        where: { user_id: candidateId },
+        order: [['is_default', 'DESC'], ['lastUpdated', 'DESC']]
       });
       
       coverLetters = coverLetterResults || [];
@@ -984,7 +984,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           WHERE user_id = :userId 
           ORDER BY is_default DESC, last_updated DESC
         `, {
-          replacements: { userId: candidateId },
+          replacements: { user_id: candidateId },
           type: QueryTypes.SELECT
         });
         coverLetters = coverLetterResults || [];
@@ -1135,7 +1135,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               fileSize: fileSize,
               uploadDate: resume.createdAt || resume.created_at,
               lastUpdated: resume.lastUpdated || resume.last_updated,
-              isDefault: resume.isDefault ?? resume.is_default ?? false,
+              is_default: resume.isDefault ?? resume.is_default ?? false,
               fileUrl: toAbsoluteUrl(filePath)
             };
             
@@ -1168,7 +1168,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               fileSize: fileSize,
               uploadDate: coverLetter.createdAt || coverLetter.created_at,
               lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
-              isDefault: coverLetter.isDefault ?? coverLetter.is_default ?? false,
+              is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
               isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
               fileUrl: toAbsoluteUrl(filePath),
               metadata: metadata
@@ -1224,7 +1224,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 fileSize: fileSize,
                 uploadDate: resume.createdAt || resume.created_at,
                 lastUpdated: resume.lastUpdated || resume.last_updated,
-                isDefault: resume.isDefault ?? resume.is_default ?? false,
+                is_default: resume.isDefault ?? resume.is_default ?? false,
                 fileUrl: toAbsoluteUrl(filePath)
               };
             });
@@ -1251,7 +1251,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 fileSize: fileSize,
                 uploadDate: coverLetter.createdAt || coverLetter.created_at,
                 lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
-                isDefault: coverLetter.isDefault ?? coverLetter.is_default ?? false,
+                is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
                 isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
                 fileUrl: toAbsoluteUrl(filePath),
                 metadata: metadata
@@ -1271,8 +1271,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       const { JobApplication } = require('../config/index');
       const existingShortlist = await JobApplication.findOne({
         where: {
-          userId: candidateId,
-          employerId: req.user.id,
+          user_id: candidateId,
+          employer_id: req.user.id,
           source: 'requirement_shortlist'
         }
       });
@@ -1387,7 +1387,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        companyId: req.user.company_id || req.user.companyId
+        company_id: req.user.company_id || req.user.companyId
       }
     });
     
@@ -1423,8 +1423,8 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
     // Use raw query for metadata search since Sequelize doesn't handle nested JSON queries well
     const existingShortlist = await JobApplication.findOne({
       where: {
-        userId: candidateId,
-        employerId: req.user.id,
+        user_id: candidateId,
+        employer_id: req.user.id,
         source: 'requirement_shortlist'
       }
     });
@@ -1447,7 +1447,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       const newStatus = existingShortlist.status === 'shortlisted' ? 'applied' : 'shortlisted';
       await existingShortlist.update({ 
         status: newStatus,
-        updatedAt: new Date()
+        updated_at: new Date()
       });
       
       console.log(`✅ Candidate ${candidateId} ${newStatus === 'shortlisted' ? 'shortlisted' : 'unshortlisted'} by employer ${req.user.id} for requirement ${requirementId}`);
@@ -1466,7 +1466,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       // Find or create a placeholder job for requirement-based shortlisting
       let placeholderJob = await Job.findOne({
         where: {
-          companyId: req.user.company_id || req.user.companyId,
+          company_id: req.user.company_id || req.user.companyId,
           title: 'Requirement Shortlist'
         }
       });
@@ -1477,9 +1477,9 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
           title: 'Requirement Shortlist',
           slug: 'requirement-shortlist-' + Date.now(),
           description: 'Placeholder job for requirement-based candidate shortlisting',
-          companyId: req.user.company_id || req.user.companyId,
+          company_id: req.user.company_id || req.user.companyId,
           createdBy: req.user.id,
-          employerId: req.user.id,
+          employer_id: req.user.id,
           location: 'Remote',
           status: 'draft',
           isActive: false,
@@ -1489,12 +1489,12 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
 
       // Create new shortlist entry
       const shortlistApplication = await JobApplication.create({
-        userId: candidateId,
-        employerId: req.user.id,
-        jobId: placeholderJob.id,
+        user_id: candidateId,
+        employer_id: req.user.id,
+        job_id: placeholderJob.id,
         status: 'shortlisted',
         source: 'requirement_shortlist',
-        appliedAt: new Date(),
+        applied_at: new Date(),
         metadata: {
           requirementId: requirementId,
           requirementTitle: requirement.title,
@@ -1563,7 +1563,7 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        companyId: req.user.company_id 
+        company_id: req.user.company_id 
       }
     });
     
@@ -1653,7 +1653,7 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
         messageId: newMessage.id,
         candidateId,
         requirementId,
-        employerId: req.user.id,
+        employer_id: req.user.id,
         subject: subject || 'Job Opportunity',
         message: message || 'No message provided'
       }
@@ -1800,7 +1800,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     const requirement = await Requirement.findOne({
       where: { 
         id: requirementId,
-        companyId: req.user.company_id 
+        company_id: req.user.company_id 
       }
     });
     
@@ -1815,7 +1815,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     const resume = await Resume.findOne({
       where: { 
         id: resumeId, 
-        userId: candidateId 
+        user_id: candidateId 
       }
     });
     

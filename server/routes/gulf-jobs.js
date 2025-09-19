@@ -166,7 +166,7 @@ router.delete('/jobs/:id/bookmark', authenticateToken, async (req, res) => {
 router.post('/alerts', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { keywords, location, jobType, experienceLevel, salaryMin, salaryMax, isActive = true } = req.body;
+    const { name, keywords, location, jobType, experienceLevel, salaryMin, salaryMax, isActive = true } = req.body;
 
     // Validate that it's Gulf-related
     const gulfLocations = ['dubai', 'uae', 'qatar', 'saudi', 'kuwait', 'bahrain', 'oman', 'gulf'];
@@ -184,9 +184,10 @@ router.post('/alerts', authenticateToken, async (req, res) => {
 
     const alert = await JobAlert.create({
       userId,
-      keywords,
-      location,
-      jobType,
+      name: name || `${(location || 'Gulf').toString().trim()} Alert`,
+      keywords: Array.isArray(keywords) ? keywords : (keywords ? [String(keywords)] : []),
+      locations: Array.isArray(location) ? location : (location ? [String(location)] : []),
+      jobType: Array.isArray(jobType) ? jobType : (jobType ? [String(jobType)] : []),
       experienceLevel,
       salaryMin,
       salaryMax,

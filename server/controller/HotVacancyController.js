@@ -133,7 +133,7 @@ exports.createHotVacancy = async (req, res, next) => {
       state,
       country,
       companyId,
-      employerId: req.user.id,
+      created_by: req.user.id,
       jobType,
       experienceLevel,
       experienceMin,
@@ -228,7 +228,7 @@ exports.getHotVacanciesByEmployer = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const whereClause = {
-      employerId: req.user.id
+      created_by: req.user.id
     };
 
     if (status) {
@@ -241,21 +241,7 @@ exports.getHotVacanciesByEmployer = async (req, res, next) => {
 
     const { count, rows: hotVacancies } = await HotVacancy.findAndCountAll({
       where: whereClause,
-      include: [
-        {
-          model: Company,
-          as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize']
-        },
-        {
-          model: HotVacancyPhoto,
-          as: 'photos',
-          attributes: ['id', 'fileUrl', 'altText', 'isPrimary'],
-          where: { isActive: true },
-          required: false
-        }
-      ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -307,7 +293,7 @@ exports.getHotVacancyById = async (req, res, next) => {
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { isActive: true },
           required: false,
-          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+          order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
         }
       ]
     });
@@ -320,7 +306,7 @@ exports.getHotVacancyById = async (req, res, next) => {
     }
 
     // Check if user has permission to view this hot vacancy
-    if (hotVacancy.employerId !== req.user.id && req.user.user_type !== 'admin') {
+    if (hotVacancy.created_by !== req.user.id && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -361,7 +347,7 @@ exports.updateHotVacancy = async (req, res, next) => {
     }
 
     // Check if user has permission to update this hot vacancy
-    if (hotVacancy.employerId !== req.user.id) {
+    if (hotVacancy.created_by !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -442,7 +428,7 @@ exports.deleteHotVacancy = async (req, res, next) => {
     }
 
     // Check if user has permission to delete this hot vacancy
-    if (hotVacancy.employerId !== req.user.id) {
+    if (hotVacancy.created_by !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -515,7 +501,7 @@ exports.getPublicHotVacancies = async (req, res, next) => {
       order: [
         ['priorityListing', 'DESC'],
         ['urgencyLevel', 'DESC'],
-        ['createdAt', 'DESC']
+        ['created_at', 'DESC']
       ],
       limit: parseInt(limit),
       offset: parseInt(offset)

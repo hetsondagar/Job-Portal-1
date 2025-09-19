@@ -25,7 +25,10 @@ const CandidateLike = sequelize.define('CandidateLike', {
 		}
 	}
 }, {
-	tableName: 'candidate_likes',
+  tableName: 'candidate_likes',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
 	timestamps: true,
 	underscored: true,
 	indexes: [

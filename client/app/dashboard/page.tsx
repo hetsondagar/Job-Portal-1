@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [coverLetterUploading, setCoverLetterUploading] = useState(false)
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null)
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
     if (loading) return;
@@ -75,25 +76,38 @@ export default function DashboardPage() {
     router.replace('/login')
   }, [user, loading, router])
 
+  // Single useEffect to handle all data fetching with proper debouncing
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !dataLoaded) {
       setCurrentUser(user)
-      fetchDashboardStats()
-      fetchResumes()
-      fetchBookmarks()
-      fetchJobAlerts()
-      fetchApplications()
-      fetchCoverLetters()
-      fetchInterviews()
-    }
-  }, [user, loading])
+      
+      // Debounce all API calls to prevent excessive requests
+      const timeoutId = setTimeout(async () => {
+        try {
+          // Fetch critical data first
+          await Promise.all([
+            fetchDashboardStats(),
+            fetchApplications(),
+            fetchBookmarks()
+          ])
+          
+          // Then fetch secondary data
+          await Promise.all([
+            fetchResumes(),
+            fetchJobAlerts(),
+            fetchCoverLetters(),
+            fetchInterviews()
+          ])
+          
+          setDataLoaded(true)
+        } catch (error) {
+          console.error('Error loading dashboard data:', error)
+        }
+      }, 500) // 500ms delay to prevent rapid-fire API calls
 
-  // Refresh user data when component mounts to ensure we have the latest data
-  useEffect(() => {
-    if (!loading && user) {
-      debouncedRefreshUser()
+      return () => clearTimeout(timeoutId)
     }
-  }, [loading, user, debouncedRefreshUser])
+  }, [user, loading, dataLoaded])
 
   const fetchDashboardStats = async () => {
     try {
@@ -150,23 +164,43 @@ export default function DashboardPage() {
     }
   }
 
-  // Function to refresh dashboard data
+  // Function to refresh dashboard data with rate limiting
   const refreshDashboard = async () => {
-    await fetchDashboardStats()
-    await fetchResumes()
-    await fetchBookmarks()
-    await fetchJobAlerts()
-    await fetchApplications()
-    await fetchCoverLetters()
-    await fetchInterviews()
+    // Prevent rapid successive refreshes
+    if (statsLoading || applicationsLoading || bookmarksLoading) {
+      toast.info('Please wait, data is already being refreshed...')
+      return
+    }
+
+    try {
+      // Show loading state
+      setStatsLoading(true)
+      setDataLoaded(false) // Reset data loaded state
+      
+      // Fetch critical data first, then others
+      await Promise.all([
+        fetchDashboardStats(),
+        fetchApplications(),
+        fetchBookmarks()
+      ])
+      
+      // Fetch secondary data
+      await Promise.all([
+        fetchResumes(),
+        fetchJobAlerts(),
+        fetchCoverLetters(),
+        fetchInterviews()
+      ])
+      
+      setDataLoaded(true)
+      toast.success('Dashboard refreshed successfully!')
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error)
+      toast.error('Failed to refresh dashboard data')
+    }
   }
 
-  // Listen for user changes to refresh dashboard data
-  useEffect(() => {
-    if (user) {
-      refreshDashboard()
-    }
-  }, [user])
+  // Removed excessive refresh useEffect - data is now fetched only once on mount
 
   const fetchResumes = async () => {
     try {
@@ -408,16 +442,24 @@ export default function DashboardPage() {
                 <p className="text-slate-600 dark:text-slate-300">
                   Here's what's happening with your job search
                 </p>
+                {!dataLoaded && (
+                  <div className="mt-2 flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span>Loading dashboard data...</span>
+                  </div>
+                )}
               </div>
               <Button
                 onClick={refreshDashboard}
                 variant="outline"
                 size="sm"
                 className="flex items-center space-x-2"
-                disabled={statsLoading}
+                disabled={statsLoading || applicationsLoading || bookmarksLoading}
               >
-                <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
+                <RefreshCw className={`w-4 h-4 ${(statsLoading || applicationsLoading || bookmarksLoading) ? 'animate-spin' : ''}`} />
+                <span>
+                  {(statsLoading || applicationsLoading || bookmarksLoading) ? 'Refreshing...' : 'Refresh'}
+                </span>
               </Button>
             </div>
           </div>

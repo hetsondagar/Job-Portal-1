@@ -143,7 +143,7 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
           attributes: ['id', 'first_name', 'last_name', 'user_type', 'company_id']
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -168,7 +168,7 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
       id: msg.id,
       content: msg.content,
       messageType: msg.messageType,
-      createdAt: msg.createdAt,
+      created_at: msg.createdAt,
       isRead: msg.isRead,
       isFromMe: msg.senderId === req.user.id,
       sender: {
@@ -257,7 +257,7 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
         id: message.id,
         content: message.content,
         messageType: message.messageType,
-        createdAt: message.createdAt,
+        created_at: message.createdAt,
         isFromMe: true,
         sender: {
           id: req.user.id,

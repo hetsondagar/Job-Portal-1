@@ -48,7 +48,7 @@ router.post('/', authenticateToken, async (req, res) => {
       title, 
       description, 
       interviewType, 
-      scheduledAt, 
+      scheduled_at, 
       duration, 
       timezone, 
       location, 
@@ -74,7 +74,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const jobApplication = await JobApplication.findOne({
       where: { 
         id: jobApplicationId,
-        employerId: req.user.id 
+        employer_id: req.user.id 
       },
       include: [
         { model: Job, as: 'job' },
@@ -141,7 +141,7 @@ router.post('/', authenticateToken, async (req, res) => {
     // Update job application status to interview_scheduled
     await jobApplication.update({
       status: 'interview_scheduled',
-      interviewScheduledAt: new Date(scheduledAt),
+      interviewScheduledAt: new Date(scheduled_at),
       lastUpdatedAt: new Date()
     });
 
@@ -151,11 +151,11 @@ router.post('/', authenticateToken, async (req, res) => {
       userId: candidateId,
       type: 'interview_scheduled',
       title: 'Interview Scheduled',
-      message: `You have an interview scheduled for ${interview.title} on ${new Date(scheduledAt).toLocaleDateString()}`,
+      message: `You have an interview scheduled for ${interview.title} on ${new Date(scheduled_at).toLocaleDateString()}`,
       data: {
         interviewId: interview.id,
         jobApplicationId,
-        scheduledAt,
+        scheduled_at,
         interviewType,
         location,
         meetingLink
@@ -229,7 +229,7 @@ router.get('/employer', authenticateToken, async (req, res) => {
 
     console.log('🔍 Employer interviews request:', { status, page, limit, employerId: req.user.id });
 
-    const whereClause = { employerId: req.user.id };
+    const whereClause = { employer_id: req.user.id };
     if (status) {
       whereClause.status = status;
     }
@@ -238,17 +238,7 @@ router.get('/employer', authenticateToken, async (req, res) => {
 
     const interviews = await Interview.findAndCountAll({
       where: whereClause,
-      include: [
-        {
-          model: JobApplication,
-          as: 'jobApplication',
-          include: [
-            { model: Job, as: 'job' },
-            { model: User, as: 'applicant' }
-          ]
-        }
-      ],
-      order: [['scheduledAt', 'ASC']],
+      order: [['scheduled_at', 'ASC']],
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit)
     });
@@ -294,7 +284,7 @@ router.get('/candidate', authenticateToken, async (req, res) => {
     const { Interview, JobApplication, User, Job } = require('../config/index');
     const { status, page = 1, limit = 10 } = req.query;
 
-    const whereClause = { candidateId: req.user.id };
+    const whereClause = { candidate_id: req.user.id };
     if (status) {
       whereClause.status = status;
     }
@@ -303,15 +293,17 @@ router.get('/candidate', authenticateToken, async (req, res) => {
       where: whereClause,
       include: [
         {
-          model: JobApplication,
-          as: 'jobApplication',
-          include: [
-            { model: Job, as: 'job' },
-            { model: User, as: 'employer' }
-          ]
+          model: Job,
+          as: 'job',
+          attributes: ['id', 'title', 'description', 'location', 'company_id']
+        },
+        {
+          model: User,
+          as: 'employer',
+          attributes: ['id', 'first_name', 'last_name', 'email']
         }
       ],
-      order: [['scheduledAt', 'ASC']],
+      order: [['scheduled_at', 'ASC']],
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit)
     });
@@ -365,7 +357,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions
-    if (req.user.user_type === 'employer' && interview.employerId !== req.user.id) {
+    if (req.user.user_type === 'employer' && interview.employer_id !== req.user.id) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied' 
@@ -459,7 +451,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions (only employer can cancel)
-    if (req.user.user_type !== 'employer' || interview.employerId !== req.user.id) {
+    if (req.user.user_type !== 'employer' || interview.employer_id !== req.user.id) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. Only employers can cancel interviews.' 
@@ -540,7 +532,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions
-    if (req.user.user_type === 'employer' && interview.employerId !== req.user.id) {
+    if (req.user.user_type === 'employer' && interview.employer_id !== req.user.id) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied' 

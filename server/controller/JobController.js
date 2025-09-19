@@ -166,8 +166,8 @@ exports.createJob = async (req, res, next) => {
       mappedExperienceLevel = experienceMap[experience] || 'entry';
     }
 
-    // Use authenticated user's ID as employerId (matching the association)
-    const employerId = req.user.id;
+    // Use authenticated user's ID as created_by (matching the association)
+    const createdBy = req.user.id;
     
     // Generate slug from title
     const slug = title.toLowerCase()
@@ -183,7 +183,7 @@ exports.createJob = async (req, res, next) => {
       description: String(description).trim(),
       location: String(location).trim(),
       companyId: finalCompanyId,
-      employerId, // Use employerId to match the association
+      created_by: createdBy, // Use created_by to match the association
       jobType: type || jobType, // Handle both field names
       experienceLevel: mappedExperienceLevel,
       experienceMin: experienceMin || null,
@@ -224,8 +224,8 @@ exports.createJob = async (req, res, next) => {
 
     console.log('📝 Creating job with data:', {
       title: jobData.title,
-      companyId: jobData.companyId,
-      employerId: jobData.employerId,
+      company_id: jobData.companyId,
+      created_by: jobData.employerId,
       jobType: jobData.jobType,
       location: jobData.location,
       status: jobData.status
@@ -326,7 +326,7 @@ exports.getAllJobs = async (req, res, next) => {
       jobType,
       experienceLevel,
       search,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'DESC'
     } = req.query;
 
@@ -334,11 +334,17 @@ exports.getAllJobs = async (req, res, next) => {
     const whereClause = {};
 
     // Add filters
-    if (status) whereClause.status = status;
-    if (companyId) whereClause.companyId = companyId;
+    if (status) {
+      if (status === 'active') {
+        whereClause.is_active = true;
+      } else if (status === 'inactive') {
+        whereClause.is_active = false;
+      }
+    }
+    if (companyId) whereClause.company_id = companyId;
     if (location) whereClause.location = { [Job.sequelize.Op.iLike]: `%${location}%` };
-    if (jobType) whereClause.jobType = jobType;
-    if (experienceLevel) whereClause.experienceLevel = experienceLevel;
+    if (jobType) whereClause.employment_type = jobType;
+    if (experienceLevel) whereClause.experience_level = experienceLevel;
     if (search) {
       whereClause[Job.sequelize.Op.or] = [
         { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
@@ -353,7 +359,7 @@ exports.getAllJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone'],
+          attributes: ['id', 'name', 'industry', 'company_size', 'website', 'contact_email', 'contact_phone'],
           required: false
         },
         {
@@ -366,7 +372,7 @@ exports.getAllJobs = async (req, res, next) => {
           model: JobPhoto,
           as: 'photos',
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
-          where: { isActive: true },
+          where: { is_active: true },
           required: false
         }
       ],
@@ -408,7 +414,7 @@ exports.getJobById = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone'],
+          attributes: ['id', 'name', 'industry', 'company_size', 'website', 'contact_email', 'contact_phone'],
           required: false // Make it optional since companyId can be NULL
         },
         {
@@ -420,9 +426,9 @@ exports.getJobById = async (req, res, next) => {
           model: JobPhoto,
           as: 'photos',
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
-          where: { isActive: true },
+          where: { is_active: true },
           required: false,
-          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+          order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
         }
       ]
     });
@@ -437,7 +443,7 @@ exports.getJobById = async (req, res, next) => {
     // Track the view (async, don't wait for it)
     ViewTrackingService.trackView({
       viewerId: req.user?.id || null, // null for anonymous users
-      viewedUserId: job.employerId, // Track profile view for the job poster
+      viewedUserId: job.created_by, // Track profile view for the job poster
       jobId: job.id,
       viewType: 'job_view',
       ipAddress: req.ip || req.connection.remoteAddress,
@@ -482,7 +488,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize'],
+          attributes: ['id', 'name', 'industry', 'company_size'],
           required: false
         }
       ]
@@ -535,7 +541,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website'],
+          attributes: ['id', 'name', 'industry', 'company_size', 'website'],
           required: false
         },
         {
@@ -548,7 +554,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       order: [
         // Prioritize by similarity factors
         ['views', 'DESC'], // More viewed jobs first
-        ['createdAt', 'DESC'] // Recent jobs first
+        ['created_at', 'DESC'] // Recent jobs first
       ],
       limit: parseInt(limit)
     });
@@ -565,7 +571,7 @@ exports.getSimilarJobs = async (req, res, next) => {
           {
             model: Company,
             as: 'company',
-            attributes: ['id', 'name', 'industry', 'companySize', 'website'],
+            attributes: ['id', 'name', 'industry', 'company_size', 'website'],
             required: false
           },
           {
@@ -577,7 +583,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         ],
         order: [
           ['views', 'DESC'],
-          ['createdAt', 'DESC']
+          ['created_at', 'DESC']
         ],
         limit: parseInt(limit) - similarJobs.length
       });
@@ -593,7 +599,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       location: job.location,
       salary: job.salary || 'Salary not specified',
       type: job.jobType,
-      posted: new Date(job.createdAt).toLocaleDateString(),
+      posted: new Date(job.created_at).toLocaleDateString(),
       applications: job.applications || 0,
       views: job.views || 0,
       experienceLevel: job.experienceLevel,
@@ -601,7 +607,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       description: job.description?.substring(0, 150) + '...',
       companyInfo: {
         industry: job.company?.industry,
-        size: job.company?.companySize,
+        size: job.company?.company_size,
         website: job.company?.website
       }
     }));
@@ -638,7 +644,7 @@ exports.getJobForEdit = async (req, res, next) => {
     }
 
     // Verify that the job belongs to the authenticated employer
-    if (job.employerId !== req.user.id) {
+    if (job.created_by !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: 'You can only edit your own jobs'
@@ -735,23 +741,19 @@ exports.getJobsByEmployer = async (req, res, next) => {
     const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
     const offset = (page - 1) * limit;
     
-    const whereClause = { employerId: req.user.id };
+    const whereClause = { created_by: req.user.id };
     
     // Add filters
     if (status && status !== 'all') {
       if (status === 'draft') {
-        // For drafts, only show jobs with explicit 'draft' status
-        whereClause.status = 'draft';
+        // For drafts, show inactive jobs
+        whereClause.is_active = false;
       } else if (status === 'active') {
-        // For active jobs, show jobs with 'active' status OR null/undefined status (legacy jobs)
-        whereClause[Job.sequelize.Op.or] = [
-          { status: 'active' },
-          { status: null },
-          { status: undefined }
-        ];
+        // For active jobs, show active jobs
+        whereClause.is_active = true;
       } else {
-        // For other statuses, use exact match
-        whereClause.status = status;
+        // For other statuses, use is_active based on status
+        whereClause.is_active = status === 'active';
       }
       console.log('🔍 Filtering by status:', status);
     }
@@ -766,9 +768,20 @@ exports.getJobsByEmployer = async (req, res, next) => {
       ];
     }
 
+    // Map camelCase sortBy to snake_case database columns
+    const sortByMapping = {
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at',
+      'title': 'title',
+      'status': 'is_active',
+      'location': 'location'
+    };
+    
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
+
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
-      order: [[sortBy, sortOrder]],
+      order: [[dbSortBy, sortOrder]],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -820,9 +833,15 @@ exports.getJobsByCompany = async (req, res, next) => {
     const { page = 1, limit = 10, status } = req.query;
 
     const offset = (page - 1) * limit;
-    const whereClause = { companyId };
+    const whereClause = { company_id: companyId };
 
-    if (status) whereClause.status = status;
+    if (status) {
+      if (status === 'active') {
+        whereClause.is_active = true;
+      } else if (status === 'inactive') {
+        whereClause.is_active = false;
+      }
+    }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
@@ -830,11 +849,11 @@ exports.getJobsByCompany = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize'],
+          attributes: ['id', 'name', 'industry', 'company_size'],
           required: false // Make it optional since companyId can be NULL
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -876,7 +895,9 @@ exports.updateJobStatus = async (req, res, next) => {
       });
     }
 
-    await job.update({ status });
+    // Map status to is_active
+    const isActive = status === 'active';
+    await job.update({ is_active: isActive });
 
     return res.status(200).json({
       success: true,
@@ -892,3 +913,851 @@ exports.updateJobStatus = async (req, res, next) => {
     });
   }
 };
+
+/**
+
+ * Get similar jobs based on job criteria
+
+ */
+
+exports.getSimilarJobs = async (req, res, next) => {
+
+  try {
+
+    const { id } = req.params;
+
+    const { limit = 5 } = req.query;
+
+
+
+    // First get the current job to understand its criteria
+
+    const currentJob = await Job.findByPk(id, {
+
+      include: [
+
+        {
+
+          model: Company,
+
+          as: 'company',
+
+          attributes: ['id', 'name', 'industry', 'company_size'],
+          required: false
+
+        }
+
+      ]
+
+    });
+
+
+
+    if (!currentJob) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: 'Job not found'
+
+      });
+
+    }
+
+
+
+    // Build similarity criteria
+
+    const whereClause = {
+
+      id: { [require('sequelize').Op.ne]: id }, // Exclude current job
+
+      status: 'active' // Only show active jobs
+
+    };
+
+
+
+    // Add location similarity (same city/state)
+
+    if (currentJob.location) {
+
+      const locationParts = currentJob.location.toLowerCase().split(',').map(part => part.trim());
+
+      if (locationParts.length > 0) {
+
+        whereClause.location = {
+
+          [require('sequelize').Op.iLike]: `%${locationParts[0]}%`
+
+        };
+
+      }
+
+    }
+
+
+
+    // Add job type similarity
+
+    if (currentJob.jobType) {
+
+      whereClause.jobType = currentJob.jobType;
+
+    }
+
+
+
+    // Add experience level similarity
+
+    if (currentJob.experienceLevel) {
+
+      whereClause.experienceLevel = currentJob.experienceLevel;
+
+    }
+
+
+
+    // Add department/category similarity
+
+    if (currentJob.department) {
+
+      whereClause.department = {
+
+        [require('sequelize').Op.iLike]: `%${currentJob.department}%`
+
+      };
+
+    }
+
+
+
+    // Find similar jobs
+
+    const similarJobs = await Job.findAll({
+
+      where: whereClause,
+
+      include: [
+
+        {
+
+          model: Company,
+
+          as: 'company',
+
+          attributes: ['id', 'name', 'industry', 'company_size', 'website'],
+          required: false
+
+        },
+
+        {
+
+          model: User,
+
+          as: 'employer',
+
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+
+          required: false
+
+        }
+
+      ],
+
+      order: [
+
+        // Prioritize by similarity factors
+
+        ['views', 'DESC'], // More viewed jobs first
+
+        ['created_at', 'DESC'] // Recent jobs first
+      ],
+
+      limit: parseInt(limit)
+
+    });
+
+
+
+    // If we don't have enough similar jobs, get more general matches
+
+    if (similarJobs.length < limit) {
+
+      const additionalJobs = await Job.findAll({
+
+        where: {
+
+          id: { [require('sequelize').Op.ne]: id },
+
+          status: 'active',
+
+          id: { [require('sequelize').Op.notIn]: similarJobs.map(job => job.id) }
+
+        },
+
+        include: [
+
+          {
+
+            model: Company,
+
+            as: 'company',
+
+            attributes: ['id', 'name', 'industry', 'company_size', 'website'],
+            required: false
+
+          },
+
+          {
+
+            model: User,
+
+            as: 'employer',
+
+            attributes: ['id', 'first_name', 'last_name', 'email'],
+
+            required: false
+
+          }
+
+        ],
+
+        order: [
+
+          ['views', 'DESC'],
+
+          ['created_at', 'DESC']
+        ],
+
+        limit: parseInt(limit) - similarJobs.length
+
+      });
+
+
+
+      similarJobs.push(...additionalJobs);
+
+    }
+
+
+
+    // Format the response
+
+    const formattedJobs = similarJobs.map(job => ({
+
+      id: job.id,
+
+      title: job.title,
+
+      company: job.company?.name || 'Company not specified',
+
+      location: job.location,
+
+      salary: job.salary || 'Salary not specified',
+
+      type: job.jobType,
+
+      posted: new Date(job.created_at).toLocaleDateString(),
+      applications: job.applications || 0,
+
+      views: job.views || 0,
+
+      experienceLevel: job.experienceLevel,
+
+      department: job.department,
+
+      description: job.description?.substring(0, 150) + '...',
+
+      companyInfo: {
+
+        industry: job.company?.industry,
+
+        size: job.company?.company_size,
+        website: job.company?.website
+
+      }
+
+    }));
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Similar jobs retrieved successfully',
+
+      data: formattedJobs
+
+    });
+
+  } catch (error) {
+
+    console.error('Get similar jobs error:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to retrieve similar jobs',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+
+
+/**
+
+ * Get job by ID for editing (with employer verification)
+
+ */
+
+exports.getJobForEdit = async (req, res, next) => {
+
+  try {
+
+    const { id } = req.params;
+
+
+
+    const job = await Job.findByPk(id);
+
+
+
+    if (!job) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: 'Job not found'
+
+      });
+
+    }
+
+
+
+    // Verify that the job belongs to the authenticated employer
+
+    if (job.created_by !== req.user.id) {
+      return res.status(403).json({
+
+        success: false,
+
+        message: 'You can only edit your own jobs'
+
+      });
+
+    }
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Job retrieved successfully for editing',
+
+      data: job
+
+    });
+
+  } catch (error) {
+
+    console.error('Get job for edit error:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to retrieve job for editing',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+
+
+/**
+
+ * Update job
+
+ */
+
+exports.updateJob = async (req, res, next) => {
+
+  try {
+
+    const { id } = req.params;
+
+    const updateData = req.body;
+
+
+
+    const job = await Job.findByPk(id);
+
+    if (!job) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: 'Job not found'
+
+      });
+
+    }
+
+
+
+    await job.update(updateData);
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Job updated successfully',
+
+      data: job
+
+    });
+
+  } catch (error) {
+
+    console.error('Update job error:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to update job',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+
+
+/**
+
+ * Delete job
+
+ */
+
+exports.deleteJob = async (req, res, next) => {
+
+  try {
+
+    const { id } = req.params;
+
+
+
+    const job = await Job.findByPk(id);
+
+    if (!job) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: 'Job not found'
+
+      });
+
+    }
+
+
+
+    await job.destroy();
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Job deleted successfully'
+
+    });
+
+  } catch (error) {
+
+    console.error('Delete job error:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to delete job',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+
+
+/**
+
+ * Get jobs by employer (authenticated user)
+
+ */
+
+exports.getJobsByEmployer = async (req, res, next) => {
+
+  try {
+
+    console.log('🔍 Fetching jobs for employer:', req.user.id, req.user.email);
+
+    console.log('🔍 Query parameters:', req.query);
+
+    
+
+    const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+
+    const offset = (page - 1) * limit;
+
+    
+
+    const whereClause = { created_by: req.user.id };
+    
+
+    // Add filters
+
+    if (status && status !== 'all') {
+
+      if (status === 'draft') {
+
+        // For drafts, only show jobs with explicit 'draft' status
+
+        whereClause.status = 'draft';
+
+      } else if (status === 'active') {
+
+        // For active jobs, show jobs with 'active' status OR null/undefined status (legacy jobs)
+
+        whereClause[Job.sequelize.Op.or] = [
+
+          { status: 'active' },
+
+          { status: null },
+
+          { status: undefined }
+
+        ];
+
+      } else {
+
+        // For other statuses, use exact match
+
+        whereClause.status = status;
+
+      }
+
+      console.log('🔍 Filtering by status:', status);
+
+    }
+
+    
+
+    console.log('🔍 Final where clause:', whereClause);
+
+    if (search) {
+
+      whereClause[Job.sequelize.Op.or] = [
+
+        { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+
+        { description: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+
+        { location: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+
+        { department: { [Job.sequelize.Op.iLike]: `%${search}%` } }
+
+      ];
+
+    }
+
+
+    // Map camelCase sortBy to snake_case database columns
+    const sortByMapping = {
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at',
+      'title': 'title',
+      'status': 'status',
+      'location': 'location'
+    };
+    
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
+
+
+    const { count, rows: jobs } = await Job.findAndCountAll({
+
+      where: whereClause,
+
+      order: [[dbSortBy, sortOrder]],
+      limit: parseInt(limit),
+
+      offset: parseInt(offset)
+
+    });
+
+
+
+    console.log(`✅ Found ${count} jobs for employer ${req.user.id}`);
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Employer jobs retrieved successfully',
+
+      data: jobs,
+
+      pagination: {
+
+        page: parseInt(page),
+
+        limit: parseInt(limit),
+
+        total: count,
+
+        pages: Math.ceil(count / limit)
+
+      }
+
+    }); 
+
+  } catch (error) {
+
+    console.error('❌ Get employer jobs error:', error);
+
+    console.error('Error details:', {
+
+      name: error.name,
+
+      message: error.message,
+
+      stack: error.stack
+
+    });
+
+
+
+    // Handle specific database errors
+
+    if (error.name === 'SequelizeConnectionError' || error.name === 'SequelizeConnectionTimedOutError') {
+
+      return res.status(503).json({
+
+        success: false,
+
+        message: 'Database connection error. Please try again later.',
+
+        error: 'DATABASE_CONNECTION_ERROR'
+
+      });
+
+    }
+
+
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to retrieve employer jobs',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+
+
+/**
+
+ * Get jobs by company
+
+ */
+
+exports.getJobsByCompany = async (req, res, next) => {
+
+  try {
+
+    const { companyId } = req.params;
+
+    const { page = 1, limit = 10, status } = req.query;
+
+
+
+    const offset = (page - 1) * limit;
+
+    const whereClause = { company_id: companyId };
+
+
+    if (status) whereClause.status = status;
+
+
+
+    const { count, rows: jobs } = await Job.findAndCountAll({
+
+      where: whereClause,
+
+      include: [
+
+        {
+
+          model: Company,
+
+          as: 'company',
+
+          attributes: ['id', 'name', 'industry', 'company_size'],
+          required: false // Make it optional since companyId can be NULL
+
+        }
+
+      ],
+
+      order: [['created_at', 'DESC']],
+      limit: parseInt(limit),
+
+      offset: parseInt(offset)
+
+    });
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Company jobs retrieved successfully',
+
+      data: jobs,
+
+      pagination: {
+
+        page: parseInt(page),
+
+        limit: parseInt(limit),
+
+        total: count,
+
+        pages: Math.ceil(count / limit)
+
+      }
+
+    });
+
+  } catch (error) {
+
+    console.error('Get company jobs error:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to retrieve company jobs',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+
+
+/**
+
+ * Update job status
+
+ */
+
+exports.updateJobStatus = async (req, res, next) => {
+
+  try {
+
+    const { id } = req.params;
+
+    const { status } = req.body;
+
+
+
+    const job = await Job.findByPk(id);
+
+    if (!job) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: 'Job not found'
+
+      });
+
+    }
+
+
+
+    await job.update({ status });
+
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: 'Job status updated successfully',
+
+      data: job
+
+    });
+
+  } catch (error) {
+
+    console.error('Update job status error:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to update job status',
+
+      error: error.message
+
+    });
+
+  }
+
+};
+
+

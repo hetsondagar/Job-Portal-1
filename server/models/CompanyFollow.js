@@ -53,6 +53,9 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
 }, {
   tableName: 'company_follows',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  timestamps: true,
   underscored: true,
   indexes: [
     {

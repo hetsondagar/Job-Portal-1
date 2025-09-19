@@ -537,10 +537,10 @@ router.post('/login', validateLogin, async (req, res) => {
           id: company.id,
           name: company.name,
           industry: company.industry,
-          companySize: company.companySize,
+          companySize: company.company_size,
           website: company.website,
-          email: company.email,
-          phone: company.phone
+          email: company.contact_email,
+          phone: company.contact_phone
         };
       }
     }

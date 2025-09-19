@@ -75,30 +75,42 @@ export default function EmployerOAuthCallbackPage() {
           localStorage.setItem('user', JSON.stringify(response.data.user))
           console.log('✅ User data stored in localStorage')
           
-          // FORCE user to be employer type for this callback page
-          console.log('🔄 Force setting user type to employer for employer OAuth callback')
-          const updatedUser = {
-            ...response.data.user,
-            userType: 'employer'
+          // Store user data as received from backend
+          console.log('✅ User type from backend:', response.data.user.userType)
+          
+          // Check if this is a jobseeker user - if so, redirect to jobseeker callback
+          if (response.data.user.userType === 'jobseeker') {
+            console.log('❌ Jobseeker user detected in employer OAuth callback - redirecting to jobseeker callback')
+            toast.error('This account is registered as a jobseeker. Redirecting to jobseeker login.')
+            setTimeout(() => {
+              router.push('/login')
+            }, 2000)
+            return
           }
-          localStorage.setItem('user', JSON.stringify(updatedUser))
-          response.data.user = updatedUser
-          console.log('✅ User type forced to employer')
+          
+          // Check if user has previously skipped password setup (from API or localStorage)
+          const apiPasswordSkipped = Boolean((response.data.user as any).passwordSkipped)
+          const localStorageSkipped = localStorage.getItem(`oauth:pwdSkipped:${response.data.user.id}`) === 'true' || 
+                                     localStorage.getItem(`oauth:pwdSkipped:${response.data.user.email}`) === 'true'
+          const hasSkippedPassword = apiPasswordSkipped || localStorageSkipped
           
           const needsProfileSetup = !response.data.user.firstName || !response.data.user.lastName || !response.data.user.phone
-          const mustSetupPassword = (response.data.user as any).requiresPasswordSetup === true
+          const hasPassword = Boolean((response.data.user as any).hasPassword)
+          // Use the backend-calculated requiresPasswordSetup field
+          const mustSetupPassword = Boolean((response.data.user as any).requiresPasswordSetup)
           const profileCompleted = Boolean((response.data.user as any).profileCompleted)
-          
-          // Check if user has previously skipped password setup
-          const hasSkippedPassword = localStorage.getItem(`oauth:pwdSkipped:${response.data.user.id}`) === 'true' || 
-                                   localStorage.getItem(`oauth:pwdSkipped:${response.data.user.email}`) === 'true'
           setFirstName(response.data.user.firstName || '')
           setLastName(response.data.user.lastName || '')
           setPhone(response.data.user.phone || '')
           setCompanyName((response.data.user as any)?.company?.name || '')
           setCompanyId((response.data.user as any)?.companyId || null)
 
-          // Fetch company to get region if available
+          // Set region from user profile or fetch from company
+          const userRegion = (response.data.user as any)?.region
+          if (userRegion) {
+            setRegion(userRegion)
+          } else {
+            // Fetch company to get region if user doesn't have one
           try {
             const cid = (response.data.user as any)?.companyId
             if (cid) {
@@ -111,21 +123,106 @@ export default function EmployerOAuthCallbackPage() {
           } catch (err) {
             console.warn('Failed to fetch company for employer OAuth:', err)
           }
+          }
 
-          if (mustSetupPassword && !hasSkippedPassword) {
-            // User needs to set up a password and hasn't skipped it before
-            console.log('🔄 User needs password setup')
+          // Check if user has already completed initial setup
+          // For employers, a user who has completed setup has either:
+          // 1. Set a password OR skipped password setup
+          // 2. AND has basic profile info (phone number OR company info)
+          const hasCompletedInitialSetup = (hasPassword || hasSkippedPassword) && 
+                                          (Boolean(response.data.user.phone) || Boolean((response.data.user as any)?.companyId))
+          
+          // For debugging: log the exact values
+          console.log('🔍 EMPLOYER SETUP CHECK:', {
+            hasPassword,
+            hasSkippedPassword,
+            phone: response.data.user.phone,
+            companyId: (response.data.user as any)?.companyId,
+            hasCompletedInitialSetup,
+            willShowDialogs: !hasCompletedInitialSetup
+          })
+          
+          // Also check profile completion for returning users  
+          const hasCompletedProfileBefore = response.data.user.profileCompletion && response.data.user.profileCompletion >= 60
+
+          // DEBUG: Log all the key values
+          console.log('🔍 DEBUG - Employer OAuth Callback Values:', {
+            userType: response.data.user.userType,
+            oauthProvider: (response.data.user as any).oauthProvider,
+            last_login_at: response.data.user.last_login_at,
+            hasPassword: hasPassword,
+            passwordValue: (response.data.user as any).password || 'null',
+            passwordSkipped: (response.data.user as any).passwordSkipped,
+            hasSkippedPassword: hasSkippedPassword,
+            hasCompletedInitialSetup: hasCompletedInitialSetup,
+            profileCompletion: response.data.user.profileCompletion,
+            hasCompletedProfileBefore: hasCompletedProfileBefore,
+            requiresPasswordSetup: (response.data.user as any).requiresPasswordSetup,
+            mustSetupPassword: mustSetupPassword,
+            needsProfileSetup: needsProfileSetup,
+            profileCompleted: profileCompleted,
+            firstName: response.data.user.firstName,
+            lastName: response.data.user.lastName,
+            phone: response.data.user.phone
+          })
+
+          console.log('🚨 EMPLOYER PASSWORD DIALOG CONDITION:', {
+            'isFirstTime': !hasCompletedInitialSetup,
+            'requiresPasswordSetup': (response.data.user as any).requiresPasswordSetup,
+            'mustSetupPassword': mustSetupPassword,
+            'willShowPasswordDialog': !hasCompletedInitialSetup && mustSetupPassword
+          })
+
+          console.log('🔍 EMPLOYER DETAILED CONDITION BREAKDOWN:', {
+            'hasPassword': hasPassword,
+            'hasSkippedPassword': hasSkippedPassword,
+            'phone': response.data.user.phone,
+            'hasCompletedInitialSetup': hasCompletedInitialSetup,
+            'profileCompletion': response.data.user.profileCompletion,
+            'hasCompletedProfileBefore': hasCompletedProfileBefore,
+            'isFirstTime': !hasCompletedInitialSetup,
+            'requiresPasswordSetup': (response.data.user as any).requiresPasswordSetup,
+            'FINAL_RESULT': !hasCompletedInitialSetup && mustSetupPassword
+          })
+
+          // For first-time users, show both dialogs in sequence
+          // Fallback: If user has no password and no phone/company, they need setup
+          const needsSetup = !hasPassword && !response.data.user.phone && !(response.data.user as any)?.companyId
+          console.log('🔍 EMPLOYER FALLBACK CHECK:', { needsSetup, hasPassword, phone: response.data.user.phone, companyId: (response.data.user as any)?.companyId })
+          
+          if (!hasCompletedInitialSetup || needsSetup) {
+            if (mustSetupPassword) {
+              // First: Show password setup dialog
+              console.log('🔄 New user needs password setup')
             setStatus('password-setup')
             setMessage(`Welcome! Please set up a password for your ${provider} account`)
             toast.success(`Welcome! Please set up a password for your ${provider} account`)
             setDialogOpen(true)
           } else if (!profileCompleted && needsProfileSetup) {
+              // Second: Show profile setup dialog (after password or if no password needed)
+              console.log('🔄 New user needs profile setup')
             setStatus('profile-setup')
             setMessage('Complete your basic details to continue')
             setDialogOpen(true)
           } else {
-            // User already has a password, proceed to employer dashboard
-            console.log('✅ User has password, proceeding to employer dashboard')
+              // User has completed both, proceed to dashboard
+              console.log('✅ New user completed setup, proceeding to employer dashboard')
+              setStatus('success')
+              setMessage(`Successfully signed in with ${provider}`)
+              toast.success(`Welcome to your employer dashboard!`)
+              
+              setTimeout(() => {
+                const userRegion = (response.data.user as any)?.region
+                const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
+                const regionToUse = userRegion || region || storedCompany?.region
+                const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+                console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
+                router.replace(target)
+              }, 1200)
+            }
+          } else {
+            // User already has a password or is returning, proceed to employer dashboard
+            console.log('✅ User is ready, proceeding to employer dashboard')
             setStatus('success')
             setMessage(`Successfully signed in with ${provider}`)
             toast.success(`Welcome to your employer dashboard!`)
@@ -133,11 +230,11 @@ export default function EmployerOAuthCallbackPage() {
             console.log('✅ Redirecting employer to employer dashboard')
             // Redirect based on region
             setTimeout(() => {
-              const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+              const userRegion = (response.data.user as any)?.region
               const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-              const regionToUse = region || storedCompany?.region || storedUser?.company?.region || storedUser?.region
+              const regionToUse = userRegion || region || storedCompany?.region
               const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-              console.log('🔄 Executing redirect to', target)
+              console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
               router.replace(target)
             }, 1200)
           }
@@ -208,16 +305,21 @@ export default function EmployerOAuthCallbackPage() {
         const me = await apiService.getCurrentUser()
         const needsProfileSetup = me.success && me.data?.user && (!me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone)
         if (needsProfileSetup) {
+          // After password setup, show profile setup dialog
           setStatus('profile-setup')
           setMessage('Complete your basic details to continue')
+          setDialogOpen(true)
         } else {
+          // User has completed both password and profile setup
           setStatus('success')
           setMessage('Password set successfully! Redirecting to your dashboard...')
           setTimeout(() => {
-            const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+            const userRegion = (response.data.user as any)?.region
             const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-            const regionToUse = region || storedCompany?.region || storedUser?.company?.region || storedUser?.region
-            router.replace(regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+            const regionToUse = userRegion || region || storedCompany?.region
+            const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+            console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
+            router.replace(target)
           }, 1000)
         }
       } else {
@@ -234,8 +336,8 @@ export default function EmployerOAuthCallbackPage() {
 
   const handleProfileSetup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!firstName || !lastName || !phone) {
-      toast.error('Please fill in first name, last name, and phone')
+    if (!firstName || !lastName || !phone || !region) {
+      toast.error('Please fill in first name, last name, phone, and region')
       return
     }
     try {
@@ -243,7 +345,8 @@ export default function EmployerOAuthCallbackPage() {
       const resp = await apiService.updateProfile({
         firstName,
         lastName,
-        phone
+        phone,
+        region
       } as any)
       if (resp.success) {
         // Update company region if provided
@@ -258,13 +361,26 @@ export default function EmployerOAuthCallbackPage() {
           console.warn('Failed to update company region:', err)
         }
 
+        // Store user region in localStorage for future logins
+        try {
+          const me = await apiService.getCurrentUser()
+          if (me.success && me.data?.user) {
+            const userData = { ...me.data.user, region }
+            localStorage.setItem('user', JSON.stringify(userData))
+          }
+        } catch (err) {
+          console.warn('Failed to update user region in localStorage:', err)
+        }
+
         toast.success('Profile updated')
         setStatus('success')
         setMessage('Profile completed! Redirecting...')
         setTimeout(() => {
+          const userRegion = (response.data.user as any)?.region
           const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-          const tgtRegion = region || storedCompany?.region
+          const tgtRegion = userRegion || region || storedCompany?.region
           const tgt = (tgtRegion === 'gulf') ? '/gulf-dashboard' : '/employer-dashboard'
+          console.log('✅ Redirecting employer to dashboard based on region:', tgtRegion, '→', tgt)
           router.replace(tgt)
         }, 800)
       } else {
@@ -418,10 +534,15 @@ export default function EmployerOAuthCallbackPage() {
                         const me = await apiService.getCurrentUser();
                         if (me.success && me.data?.user) {
                           try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.id}`, 'true') } catch {}
-                          try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') } catch {}
+                          try { 
+                            localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') 
+                            // Also set the password_skipped flag in the database
+                            await apiService.updateProfile({ passwordSkipped: true })
+                          } catch {}
                           const needsProfileSetup = !me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone
                           const profileCompleted = Boolean((me.data.user as any).profileCompleted)
                           if (!profileCompleted && needsProfileSetup) {
+                          // After skipping password, show profile setup dialog
                             setStatus('profile-setup'); 
                             setMessage('Complete your basic details to continue'); 
                             setDialogOpen(true); 
@@ -434,10 +555,11 @@ export default function EmployerOAuthCallbackPage() {
                       await new Promise(r => setTimeout(r, 150)); 
                       
                       // Redirect based on region
-                      const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+                      const userRegion = (response.data.user as any)?.region
                       const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-                      const regionToUse = region || storedCompany?.region || storedUser?.company?.region || storedUser?.region
+                      const regionToUse = userRegion || region || storedCompany?.region
                       const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+                      console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
                       router.replace(target)
                       router.refresh?.();
                     })();
@@ -472,6 +594,7 @@ export default function EmployerOAuthCallbackPage() {
                   value={region} 
                   onChange={(e) => setRegion(e.target.value as any)} 
                   className="h-12 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3"
+                  required
                 >
                   <option value="">Select region</option>
                   <option value="india">India</option>
