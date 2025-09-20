@@ -27,9 +27,9 @@ process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'yK9WCII787btQrSqZJVdq0Cx61
 process.env.DB_NAME = process.env.DB_NAME || 'jobportal_dev_0u1u';
 
 // CORS defaults
-process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://your-frontend-url.vercel.app';
-process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'https://your-frontend-url.vercel.app';
-process.env.BACKEND_URL = process.env.BACKEND_URL || 'https://your-backend-url.onrender.com';
+process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://job-portal-nine-rouge.vercel.app';
+process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app';
+process.env.BACKEND_URL = process.env.BACKEND_URL || 'https://job-portal-97q3.onrender.com';
 
 console.log('🚀 Starting Job Portal Server (Production Mode)');
 console.log('📋 Environment:', process.env.NODE_ENV);
