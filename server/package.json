@@ -8,6 +8,7 @@
     "start": "node production-start.js",
     "dev": "nodemon index.js",
     "dev:safe": "node start-server.js",
+    "setup:production": "node setup-production.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "db:init": "node scripts/init-db.js",
@@ -35,7 +36,6 @@
     "@types/uuid": "^10.0.0",
     "jest": "^30.0.5",
     "nodemon": "^3.1.10",
-    "sequelize-cli": "^6.6.3",
     "supertest": "^7.1.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
@@ -76,6 +76,7 @@
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
     "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.3",
     "sharp": "^0.34.3",
     "stripe": "^18.3.0",
     "swagger-jsdoc": "^6.2.8",

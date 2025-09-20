@@ -6,13 +6,20 @@
  */
 
 
+// Load environment variables from .env file if it exists
+try {
+  require('dotenv').config();
+} catch (error) {
+  console.log('ℹ️ No .env file found, using environment variables or defaults');
+}
+
 // Set default environment variables if not provided
-process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 process.env.PORT = process.env.PORT || '8000';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'pL7nX2rQv9aJ4tGd8bE6wYcM5oF1uZsH3kD0jVxN7qR2lC8mT4gP9yK6hW3sA0z';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'your-session-secret-key-make-it-very-long-and-secure-for-production-use';
 
-// Database defaults
+// Database defaults for production
 process.env.DB_HOST = process.env.DB_HOST || 'dpg-d372gajuibrs738lnm5g-a.singapore-postgres.render.com';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_USER = process.env.DB_USER || 'jobportal_dev_0u1u_user';
@@ -20,9 +27,9 @@ process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'yK9WCII787btQrSqZJVdq0Cx61
 process.env.DB_NAME = process.env.DB_NAME || 'jobportal_dev_0u1u';
 
 // CORS defaults
-process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
-process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-process.env.BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://your-frontend-url.vercel.app';
+process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'https://your-frontend-url.vercel.app';
+process.env.BACKEND_URL = process.env.BACKEND_URL || 'https://your-backend-url.onrender.com';
 
 console.log('🚀 Starting Job Portal Server (Production Mode)');
 console.log('📋 Environment:', process.env.NODE_ENV);
@@ -43,7 +50,14 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Test database connection first
-const { testConnection } = require('./config/sequelize');
+let testConnection;
+try {
+  const sequelizeConfig = require('./config/sequelize');
+  testConnection = sequelizeConfig.testConnection;
+} catch (error) {
+  console.error('❌ Failed to load sequelize config:', error.message);
+  process.exit(1);
+}
 
 async function startServer() {
   try {
