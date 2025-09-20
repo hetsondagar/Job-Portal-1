@@ -164,6 +164,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Test endpoint to check if routes are working
+app.get('/api/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'API routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);

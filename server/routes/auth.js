@@ -10,6 +10,15 @@ const emailService = require('../services/simpleEmailService');
 
 const router = express.Router();
 
+// Test endpoint to verify auth routes are working
+router.get('/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Auth routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Validation middleware
 const validateSignup = [
   body('email')
