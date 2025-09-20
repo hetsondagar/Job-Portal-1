@@ -65,6 +65,18 @@ async function startServer() {
     await testConnection();
     
     console.log('✅ Database connection successful');
+    
+    // Setup database tables
+    console.log('🔄 Setting up database...');
+    try {
+      const { setupProductionDatabase } = require('./production-db-setup');
+      await setupProductionDatabase();
+      console.log('✅ Database setup completed');
+    } catch (dbSetupError) {
+      console.log('⚠️ Database setup warning:', dbSetupError.message);
+      console.log('🔄 Continuing with server start...');
+    }
+    
     console.log('🚀 Starting Express server...');
     
     // Import and start the main server
