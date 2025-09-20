@@ -5,20 +5,19 @@
  * Handles all potential issues and provides comprehensive error handling
  */
 
-require('dotenv').config();
 
 // Set default environment variables if not provided
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 process.env.PORT = process.env.PORT || '8000';
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-here-make-it-very-long-and-secure-for-production-use';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'pL7nX2rQv9aJ4tGd8bE6wYcM5oF1uZsH3kD0jVxN7qR2lC8mT4gP9yK6hW3sA0z';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'your-session-secret-key-make-it-very-long-and-secure-for-production-use';
 
 // Database defaults
-process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+process.env.DB_HOST = process.env.DB_HOST || 'dpg-d372gajuibrs738lnm5g-a.singapore-postgres.render.com';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
-process.env.DB_USER = process.env.DB_USER || 'postgres';
-process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'password';
-process.env.DB_NAME = process.env.DB_NAME || 'jobportal_dev';
+process.env.DB_USER = process.env.DB_USER || 'jobportal_dev_0u1u_user';
+process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'yK9WCII787btQrSqZJVdq0Cx61rZoTsc';
+process.env.DB_NAME = process.env.DB_NAME || 'jobportal_dev_0u1u';
 
 // CORS defaults
 process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
