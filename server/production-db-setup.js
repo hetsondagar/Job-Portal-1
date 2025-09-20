@@ -8,7 +8,27 @@
 // Load environment variables
 require('dotenv').config();
 
-const { sequelize } = require('./config/sequelize');
+const { Sequelize } = require('sequelize');
+const config = require('./config/database');
+
+// Create a separate sequelize instance for database setup
+const env = process.env.NODE_ENV || 'production';
+const dbConfig = config[env];
+
+const sequelize = new Sequelize(
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
+  {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    dialect: dbConfig.dialect,
+    logging: console.log,
+    pool: dbConfig.pool,
+    define: dbConfig.define,
+    dialectOptions: dbConfig.dialectOptions
+  }
+);
 
 async function setupProductionDatabase() {
   try {
@@ -33,11 +53,9 @@ async function setupProductionDatabase() {
     
     // Sync database (create tables if they don't exist)
     console.log('🔄 Syncing database...');
-    try {
-      await sequelize.sync({ force: false, alter: true });
-      console.log('✅ Database sync completed');
-    } catch (syncError) {
-      console.log('⚠️ Sync error, trying individual model sync:', syncError.message);
+    
+    // Always try individual model sync first since sequelize.sync() is not working
+    console.log('🔄 Running individual model sync...');
       
       // Try syncing individual models
       try {
@@ -195,7 +213,6 @@ async function setupProductionDatabase() {
         console.log('❌ Individual sync failed:', individualSyncError.message);
         throw individualSyncError;
       }
-    }
     
     // Check tables after sync
     console.log('🔍 Checking tables after sync...');
@@ -235,8 +252,8 @@ async function setupProductionDatabase() {
     console.error('❌ Production database setup failed:', error);
     throw error;
   } finally {
-    // Don't close the connection as it's used by the main server
-    // await sequelize.close();
+    // Close this separate connection
+    await sequelize.close();
   }
 }
 
