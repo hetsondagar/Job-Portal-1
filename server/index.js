@@ -98,8 +98,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
+// Handle preflight requests explicitly - removed wildcard to fix path-to-regexp error
+// app.options('*', cors(corsOptions)); // This was causing the path-to-regexp error
 
 // Additional CORS middleware for debugging
 app.use((req, res, next) => {
@@ -258,7 +258,6 @@ app.use('/api/requirements', requirementsRoutes);
 app.use('/api/job-alerts', jobAlertsRoutes);
 app.use('/api/job-templates', jobTemplatesRoutes);
 app.use('/api/candidate-likes', candidateLikesRoutes);
-app.use('/api/candidate-upvotes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/hot-vacancies', require('./routes/hot-vacancies'));
 app.use('/api/featured-jobs', featuredJobsRoutes);
