@@ -62,45 +62,10 @@ export default function JobseekerGulfDashboardPage() {
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null)
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
 
-  // Mock Gulf jobs data
-  const gulfJobs = [
-    {
-      id: 1,
-      title: "Senior Software Engineer",
-      company: "Dubai Tech Solutions",
-      location: "Dubai, UAE",
-      salary: "AED 25,000 - 35,000",
-      type: "Full-time",
-      experience: "5-8 years",
-      posted: "2 days ago",
-      featured: true,
-      urgent: true
-    },
-    {
-      id: 2,
-      title: "Marketing Manager",
-      company: "Qatar Airways",
-      location: "Doha, Qatar",
-      salary: "QAR 18,000 - 25,000",
-      type: "Full-time",
-      experience: "3-5 years",
-      posted: "1 week ago",
-      featured: false,
-      urgent: false
-    },
-    {
-      id: 3,
-      title: "Financial Analyst",
-      company: "Saudi Aramco",
-      location: "Riyadh, Saudi Arabia",
-      salary: "SAR 20,000 - 30,000",
-      type: "Full-time",
-      experience: "2-4 years",
-      posted: "3 days ago",
-      featured: true,
-      urgent: false
-    }
-  ]
+  // Dynamic Gulf jobs data
+  const [gulfJobs, setGulfJobs] = useState<any[]>([])
+  const [gulfJobsLoading, setGulfJobsLoading] = useState(true)
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (loading) return;
@@ -129,6 +94,7 @@ export default function JobseekerGulfDashboardPage() {
       fetchApplications()
       fetchCoverLetters()
       fetchInterviews()
+      fetchGulfJobs()
     }
   }, [user, loading])
 
@@ -161,13 +127,20 @@ export default function JobseekerGulfDashboardPage() {
       // Fetch Gulf applications from API
       const response = await apiService.getGulfJobApplications()
       if (response.success && response.data) {
-        setApplications(response.data.applications || [])
+        const applications = response.data.applications || []
+        setApplications(applications)
+        
+        // Update applied jobs set
+        const appliedJobIds = new Set(applications.map((app: any) => app.jobId || app.job?.id))
+        setAppliedJobs(appliedJobIds)
       } else {
         setApplications([])
+        setAppliedJobs(new Set())
       }
     } catch (error) {
       console.error('Error fetching Gulf applications:', error)
       setApplications([])
+      setAppliedJobs(new Set())
     } finally {
       setApplicationsLoading(false)
     }
@@ -217,6 +190,7 @@ export default function JobseekerGulfDashboardPage() {
     await fetchApplications()
     await fetchCoverLetters()
     await fetchInterviews()
+    await fetchGulfJobs()
   }
 
   // Listen for user changes to refresh dashboard data
@@ -279,6 +253,38 @@ export default function JobseekerGulfDashboardPage() {
       console.error('Error fetching cover letters:', error)
     } finally {
       setCoverLettersLoading(false)
+    }
+  }
+
+  const fetchGulfJobs = async () => {
+    try {
+      setGulfJobsLoading(true)
+      const response = await apiService.getGulfJobs({ limit: 6 })
+      if (response.success && response.data) {
+        // Transform backend jobs to match frontend format
+        const transformedJobs = response.data.jobs.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          company: job.company?.name || 'Unknown Company',
+          location: job.location,
+          salary: job.salary || (job.salaryMin && job.salaryMax 
+            ? `${job.salaryCurrency || 'AED'} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
+            : 'Competitive'),
+          type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
+          experience: job.experienceLevel || 'Not specified',
+          posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+          featured: job.isFeatured || false,
+          urgent: job.urgent || false
+        }))
+        setGulfJobs(transformedJobs)
+      } else {
+        setGulfJobs([])
+      }
+    } catch (error) {
+      console.error('Error fetching Gulf jobs:', error)
+      setGulfJobs([])
+    } finally {
+      setGulfJobsLoading(false)
     }
   }
 
@@ -432,8 +438,8 @@ export default function JobseekerGulfDashboardPage() {
     try {
       console.log(`🔍 Applying for Gulf job ${jobId}...`)
       
-      // Find the job data from the mock data
-      const job = gulfJobs.find(j => j.id === Number(jobId))
+      // Find the job data from the dynamic data
+      const job = gulfJobs.find(j => j.id === jobId)
       if (!job) {
         toast.error('Job not found')
         return
@@ -456,6 +462,9 @@ export default function JobseekerGulfDashboardPage() {
           duration: 5000,
         })
         console.log('Gulf job application submitted:', jobId)
+        
+        // Add job to applied jobs set immediately for better UX
+        setAppliedJobs(prev => new Set([...prev, jobId]))
         
         // Refresh applications to show the new one
         fetchApplications()
@@ -621,7 +630,7 @@ export default function JobseekerGulfDashboardPage() {
                   </div>
                 </div>
                 <Badge variant="secondary" className="bg-white/20 text-white">
-                  {gulfJobs.length} Active Jobs
+                  {gulfJobsLoading ? 'Loading...' : `${gulfJobs.length} Active Jobs`}
                 </Badge>
               </div>
             </CardContent>
@@ -1059,8 +1068,27 @@ export default function JobseekerGulfDashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {gulfJobs.map((job) => (
+              {gulfJobsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="bg-white dark:bg-slate-700 border-green-200 dark:border-green-800">
+                      <CardHeader className="pb-3">
+                        <div className="animate-pulse">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="animate-pulse">
+                          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : gulfJobs.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {gulfJobs.map((job) => (
                   <Card key={job.id} className="bg-white dark:bg-slate-700 hover:shadow-lg transition-all duration-200 cursor-pointer border-green-200 dark:border-green-800">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -1106,16 +1134,45 @@ export default function JobseekerGulfDashboardPage() {
                       </div>
                       
                       <Button 
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => handleApplyToGulfJob(job.id.toString())}
+                        className={`w-full ${
+                          appliedJobs.has(job.id) 
+                            ? 'bg-green-500 text-white cursor-not-allowed' 
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                        onClick={() => handleApplyToGulfJob(job.id)}
+                        disabled={appliedJobs.has(job.id)}
                       >
-                        <Briefcase className="w-4 h-4 mr-2" />
-                        Apply Now
+                        {appliedJobs.has(job.id) ? (
+                          <>
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Applied
+                          </>
+                        ) : (
+                          <>
+                            <Briefcase className="w-4 h-4 mr-2" />
+                            Apply Now
+                          </>
+                        )}
                       </Button>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-slate-400 dark:text-slate-500 mb-4">
+                    <Briefcase className="w-12 h-12 mx-auto" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    No Gulf Jobs Available
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    Check back later for new Gulf opportunities
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
