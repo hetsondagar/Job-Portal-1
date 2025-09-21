@@ -24,7 +24,8 @@ import {
   Star,
   Briefcase,
   Calendar,
-  Clock
+  Clock,
+  X
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { useAuth } from '@/hooks/useAuth'
@@ -56,6 +57,7 @@ export default function GulfOpportunitiesPage() {
   const [gulfJobs, setGulfJobs] = useState<any[]>([])
   const [gulfJobsLoading, setGulfJobsLoading] = useState(true)
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
+  const [withdrawingJobs, setWithdrawingJobs] = useState<Set<string>>(new Set())
 
   // Fetch applied jobs for logged in users
   const fetchAppliedJobs = async () => {
@@ -70,6 +72,63 @@ export default function GulfOpportunitiesPage() {
       }
     } catch (error) {
       console.error('Error fetching applied jobs:', error)
+    }
+  }
+
+  // Handle application withdrawal
+  const handleWithdrawApplication = async (jobId: string) => {
+    if (!user) {
+      setShowLoginDialog(true)
+      return
+    }
+
+    try {
+      // Prevent multiple simultaneous withdrawals
+      if (withdrawingJobs.has(jobId)) {
+        return
+      }
+      
+      setWithdrawingJobs(prev => new Set([...prev, jobId]))
+      console.log('🔄 Attempting to withdraw application for Gulf job:', jobId)
+      
+      // Get the application ID for this job
+      const response = await apiService.getGulfJobApplications()
+      if (response.success && response.data) {
+        const applications = response.data.applications || []
+        const application = applications.find((app: any) => (app.jobId || app.job?.id) === jobId)
+        
+        if (application) {
+          const withdrawResponse = await apiService.updateApplicationStatus(application.id, 'withdrawn')
+          
+          if (withdrawResponse.success) {
+            toast.success('Application withdrawn successfully')
+            // Remove from applied jobs set
+            setAppliedJobs(prev => {
+              const next = new Set(prev)
+              next.delete(jobId)
+              return next
+            })
+            // Refresh applied jobs to ensure consistency
+            await fetchAppliedJobs()
+          } else {
+            toast.error(withdrawResponse.message || 'Failed to withdraw application')
+          }
+        } else {
+          toast.error('Application not found')
+        }
+      } else {
+        toast.error('Failed to fetch applications')
+      }
+    } catch (error) {
+      console.error('Error withdrawing application:', error)
+      toast.error('Failed to withdraw application. Please try again.')
+    } finally {
+      // Remove from withdrawing state
+      setWithdrawingJobs(prev => {
+        const next = new Set(prev)
+        next.delete(jobId)
+        return next
+      })
     }
   }
 
@@ -534,6 +593,28 @@ export default function GulfOpportunitiesPage() {
                         </>
                       )}
                     </Button>
+                    
+                    {appliedJobs.has(job.id) && (
+                      <Button
+                        onClick={() => handleWithdrawApplication(job.id)}
+                        variant="outline"
+                        size="sm"
+                        disabled={withdrawingJobs.has(job.id)}
+                        className="w-full mt-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50"
+                      >
+                        {withdrawingJobs.has(job.id) ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                            Withdrawing...
+                          </>
+                        ) : (
+                          <>
+                            <X className="w-4 h-4 mr-2" />
+                            Withdraw Application
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
                 ))

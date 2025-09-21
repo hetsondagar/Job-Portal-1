@@ -67,6 +67,22 @@ export default function JobseekerGulfDashboardPage() {
   const [gulfJobsLoading, setGulfJobsLoading] = useState(true)
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
 
+  // Fetch applied jobs for logged in users
+  const fetchAppliedJobs = async () => {
+    if (!user) return
+    
+    try {
+      const response = await apiService.getGulfJobApplications()
+      if (response.success && response.data) {
+        const applications = response.data.applications || []
+        const appliedJobIds = new Set(applications.map((app: any) => app.jobId || app.job?.id))
+        setAppliedJobs(appliedJobIds)
+      }
+    } catch (error) {
+      console.error('Error fetching applied jobs:', error)
+    }
+  }
+
   useEffect(() => {
     if (loading) return;
     if (user) {
@@ -191,6 +207,7 @@ export default function JobseekerGulfDashboardPage() {
     await fetchCoverLetters()
     await fetchInterviews()
     await fetchGulfJobs()
+    await fetchAppliedJobs()
   }
 
   // Listen for user changes to refresh dashboard data
@@ -336,6 +353,7 @@ export default function JobseekerGulfDashboardPage() {
         toast.success('Application withdrawn successfully')
         fetchApplications() // Refresh applications list
         fetchDashboardStats() // Refresh dashboard stats
+        fetchAppliedJobs() // Refresh applied jobs state to update Apply Now buttons
       } else {
         toast.error(response.message || 'Failed to withdraw application')
       }
