@@ -401,6 +401,33 @@ export default function JobseekerGulfDashboardPage() {
     setShowCoverLetterSelect(true)
   }
 
+  const handleViewResume = async (resumeId: string) => {
+    try {
+      await apiService.downloadResume(resumeId)
+    } catch (error) {
+      console.error('Error viewing resume:', error)
+      toast.error('Failed to view resume')
+    }
+  }
+
+  const handleDownloadResume = async (resumeId: string) => {
+    try {
+      await apiService.downloadResume(resumeId)
+    } catch (error) {
+      console.error('Error downloading resume:', error)
+      toast.error('Failed to download resume')
+    }
+  }
+
+  const handleDownloadCoverLetter = async (coverLetterId: string) => {
+    try {
+      await apiService.downloadCoverLetter(coverLetterId)
+    } catch (error) {
+      console.error('Error downloading cover letter:', error)
+      toast.error('Failed to download cover letter')
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await logout()
@@ -596,24 +623,41 @@ export default function JobseekerGulfDashboardPage() {
               </Card>
             </Link>
 
-            <Card 
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800"
-              onClick={() => setShowResumeModal(true)}
-            >
-              <CardContent className="p-6 h-full flex flex-col justify-center">
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <Link href="/resumes">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
+                <CardContent className="p-6 h-full flex flex-col justify-center">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Gulf Resume</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {resumes.length === 0 ? 'Upload resume' : `${resumes.length} uploaded`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">Gulf Resume</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {resumes.length === 0 ? 'Upload resume' : `${resumes.length} uploaded`}
-                    </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/cover-letters">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
+                <CardContent className="p-6 h-full flex flex-col justify-center">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Cover Letters</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {coverLetters.length === 0 ? 'Upload cover letter' : `${coverLetters.length} uploaded`}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
 
             <Link href="/gulf-bookmarks">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
@@ -666,6 +710,160 @@ export default function JobseekerGulfDashboardPage() {
                 </CardContent>
               </Card>
             </Link>
+          </div>
+
+          {/* Resume and Cover Letter Management */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Resume Section */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-green-200 dark:border-green-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2 text-green-700 dark:text-green-400">
+                    <FileText className="w-5 h-5" />
+                    <span>Gulf Resumes</span>
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={handleUploadResume}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {resumes.length === 0 ? (
+                  <div className="text-center py-6">
+                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No resumes uploaded yet</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Upload your first Gulf resume to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {resumes.map((resume) => (
+                      <div key={resume.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            <p className="font-medium text-slate-900 dark:text-white truncate">
+                              {resume.title || 'Untitled Resume'}
+                            </p>
+                            {resume.isDefault && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Default
+                              </Badge>
+                            )}
+                          </div>
+                          {resume.summary && (
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 truncate">
+                              {resume.summary}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewResume(resume.id)}
+                            className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          >
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadResume(resume.id)}
+                            className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          >
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cover Letter Section */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-green-200 dark:border-green-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2 text-green-700 dark:text-green-400">
+                    <FileText className="w-5 h-5" />
+                    <span>Gulf Cover Letters</span>
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={handleUploadCoverLetter}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {coverLetters.length === 0 ? (
+                  <div className="text-center py-6">
+                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">No cover letters uploaded yet</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Upload your first Gulf cover letter to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {coverLetters.map((coverLetter) => (
+                      <div key={coverLetter.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            <p className="font-medium text-slate-900 dark:text-white truncate">
+                              {coverLetter.title || 'Untitled Cover Letter'}
+                            </p>
+                            {coverLetter.isDefault && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Default
+                              </Badge>
+                            )}
+                          </div>
+                          {coverLetter.summary && (
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 truncate">
+                              {coverLetter.summary}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await apiService.downloadCoverLetter(coverLetter.id)
+                              } catch (error) {
+                                console.error('Error viewing cover letter:', error)
+                                toast.error('Failed to view cover letter')
+                              }
+                            }}
+                            className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          >
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadCoverLetter(coverLetter.id)}
+                            className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          >
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Upcoming Gulf Interviews Section */}
