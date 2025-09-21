@@ -61,6 +61,12 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
 
   useEffect(() => {
     if (user) {
+      // Ensure user region is set to 'gulf' when accessing Gulf dashboard
+      if (user.region !== 'gulf') {
+        console.log('🔧 Setting user region to gulf for Gulf dashboard access')
+        // Update user region in the auth context
+        refreshUser()
+      }
       loadDashboardData()
     }
   }, [user])

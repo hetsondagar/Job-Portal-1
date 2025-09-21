@@ -21,6 +21,9 @@ export function EmployerNavbar() {
   const { user, logout } = useAuth()
   const [company, setCompany] = useState<any>(null)
   const isAdmin = (user?.userType === 'admin') || (user?.preferences?.employerRole === 'admin')
+  
+  // Check if we're in Gulf dashboard context
+  const isGulfContext = typeof window !== 'undefined' && window.location.pathname.startsWith('/gulf-dashboard')
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -74,31 +77,31 @@ export function EmployerNavbar() {
   const getJobsMenuItems = (userRegion: string) => [
     {
       name: "Post a Free Job",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/post-job" : "/employer-dashboard/post-job",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/post-job" : "/employer-dashboard/post-job",
       icon: Plus,
       description: "Post your job for free and reach thousands of candidates",
     },
     {
       name: "Job Drafts",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/drafts" : "/employer-dashboard/drafts",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/drafts" : "/employer-dashboard/drafts",
       icon: FileText,
       description: "View and manage your unpublished job drafts",
     },
     {
       name: "Hot Vacancies",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/hot-vacancies" : "/employer-dashboard/hot-vacancies",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/hot-vacancies" : "/employer-dashboard/hot-vacancies",
       icon: Briefcase,
       description: "Premium urgent hiring solutions for immediate recruitment",
     },
     {
       name: "Post an Internship",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/post-internship" : "/employer-dashboard/post-internship",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/post-internship" : "/employer-dashboard/post-internship",
       icon: Users,
       description: "Find talented interns for your organization",
     },
     {
       name: "Manage Jobs and Responses",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/manage-jobs" : "/employer-dashboard/manage-jobs",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/manage-jobs" : "/employer-dashboard/manage-jobs",
       icon: BarChart3,
       description: "Track and manage all your job postings",
     },
@@ -107,13 +110,13 @@ export function EmployerNavbar() {
   const getDatabaseMenuItems = (userRegion: string) => [
     {
       name: "Create New Requirement",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/create-requirement" : "/employer-dashboard/create-requirement",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/create-requirement" : "/employer-dashboard/create-requirement",
       icon: Plus,
       description: "Define your hiring requirements and find candidates",
     },
     {
       name: "Manage Requirements",
-      href: userRegion === 'gulf' ? "/gulf-dashboard/requirements" : "/employer-dashboard/requirements",
+      href: (userRegion === 'gulf' || isGulfContext) ? "/gulf-dashboard/requirements" : "/employer-dashboard/requirements",
       icon: FileText,
       description: "View and manage all your hiring requirements",
     },
@@ -124,7 +127,7 @@ export function EmployerNavbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href={user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'} className="flex items-center space-x-2">
+          <Link href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard' : '/employer-dashboard'} className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
@@ -279,25 +282,25 @@ export function EmployerNavbar() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'} className="cursor-pointer">
+                  <Link href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard' : '/employer-dashboard'} className="cursor-pointer">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={user?.region === 'gulf' ? '/gulf-dashboard/settings' : '/employer-dashboard/settings'} className="cursor-pointer">
+                  <Link href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard/settings' : '/employer-dashboard/settings'} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile & Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={user?.region === 'gulf' ? '/gulf-dashboard/notifications' : '/employer-dashboard/notifications'} className="cursor-pointer">
+                  <Link href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard/notifications' : '/employer-dashboard/notifications'} className="cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Notifications</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={user?.region === 'gulf' ? '/gulf-dashboard/settings?tab=subscription' : '/employer-dashboard/settings?tab=subscription'} className="cursor-pointer">
+                  <Link href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard/settings?tab=subscription' : '/employer-dashboard/settings?tab=subscription'} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Subscription</span>
                   </Link>
@@ -351,7 +354,7 @@ export function EmployerNavbar() {
                     </Link>
                   )}
                   <Link
-                    href={user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'}
+                    href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard' : '/employer-dashboard'}
                     className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
@@ -403,7 +406,7 @@ export function EmployerNavbar() {
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4">
                   <h3 className="font-semibold text-slate-900 dark:text-white">Account</h3>
                   <Link
-                    href={user?.region === 'gulf' ? '/gulf-dashboard/settings' : '/employer-dashboard/settings'}
+                    href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard/settings' : '/employer-dashboard/settings'}
                     className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
@@ -411,7 +414,7 @@ export function EmployerNavbar() {
                     <span className="text-slate-700 dark:text-slate-200">Profile & Settings</span>
                   </Link>
                   <Link
-                    href={user?.region === 'gulf' ? '/gulf-dashboard/notifications' : '/employer-dashboard/notifications'}
+                    href={(user?.region === 'gulf' || isGulfContext) ? '/gulf-dashboard/notifications' : '/employer-dashboard/notifications'}
                     className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 dark:hover:bg-slate-700/80 transition-colors"
                     onClick={() => setIsOpen(false)}
                   >

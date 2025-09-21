@@ -5,6 +5,8 @@ const JobApplication = require('../models/JobApplication');
 const JobBookmark = require('../models/JobBookmark');
 const JobAlert = require('../models/JobAlert');
 const User = require('../models/User');
+const Resume = require('../models/Resume');
+const CoverLetter = require('../models/CoverLetter');
 
 // Gulf region countries and cities
 const GULF_LOCATIONS = [
@@ -325,6 +327,8 @@ const getGulfJobApplications = async (req, res) => {
     const userId = req.user.id;
     const { page = 1, limit = 20, status } = req.query;
 
+    console.log('🔍 Fetching Gulf job applications for user:', userId);
+
     const offset = (page - 1) * limit;
     const whereClause = {
       userId: userId
@@ -333,6 +337,8 @@ const getGulfJobApplications = async (req, res) => {
     if (status) {
       whereClause.status = status;
     }
+
+    console.log('🔍 Query parameters:', { userId, page, limit, status, whereClause });
 
     const { count, rows: applications } = await JobApplication.findAndCountAll({
       where: whereClause,
@@ -367,6 +373,8 @@ const getGulfJobApplications = async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
+
+    console.log('🔍 Query results:', { count, applicationsCount: applications.length });
 
     res.json({
       success: true,

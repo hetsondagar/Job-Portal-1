@@ -1156,6 +1156,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
     const applicationData = {
       jobId: jobId,
       userId: req.user.id,
+      employerId: job.employerId, // Add the employer ID from the job
       coverLetter,
       expectedSalary,
       noticePeriod,
