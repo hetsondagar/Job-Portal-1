@@ -52,6 +52,10 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+// Trust proxy for rate limiting behind reverse proxy (Render, etc.)
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

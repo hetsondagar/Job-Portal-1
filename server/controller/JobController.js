@@ -728,7 +728,7 @@ exports.deleteJob = async (req, res, next) => {
     }
 
     // Delete related records first to avoid foreign key constraint violations
-    const { JobApplication, JobBookmark, Interview, UserActivityLog } = require('../config/index');
+    const { JobApplication, JobBookmark, Interview, UserActivityLog, sequelize } = require('../config/index');
     
     console.log('🗑️ Starting job deletion process for job ID:', id);
     
@@ -1442,7 +1442,7 @@ exports.deleteJob = async (req, res, next) => {
 
 
     // Delete related records first to avoid foreign key constraint violations
-    const { JobApplication, JobBookmark, Interview, UserActivityLog } = require('../config/index');
+    const { JobApplication, JobBookmark, Interview, UserActivityLog, sequelize } = require('../config/index');
     
     console.log('🗑️ Starting job deletion process for job ID:', id);
     
@@ -1471,6 +1471,13 @@ exports.deleteJob = async (req, res, next) => {
     // Delete interviews related to this job
     await Interview.destroy({ where: { jobId: id } });
     console.log('✅ Deleted interviews');
+    
+    // Delete view tracking records for this job
+    await sequelize.query('DELETE FROM view_tracking WHERE job_id = :jobId', {
+      replacements: { jobId: id },
+      type: sequelize.QueryTypes.DELETE
+    });
+    console.log('✅ Deleted view tracking records');
     
     // Now delete the job
     await job.destroy();

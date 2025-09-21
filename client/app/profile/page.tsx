@@ -250,7 +250,7 @@ export default function ProfilePage() {
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
-              <Link href="/dashboard">
+              <Link href={user?.userType === 'employer' ? (user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard') : (user?.region === 'gulf' ? '/jobseeker-gulf-dashboard' : '/dashboard')}>
                 <Button variant="ghost" size="sm" className="hover:bg-slate-200 dark:hover:bg-slate-700">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Dashboard
