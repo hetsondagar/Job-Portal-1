@@ -1,5 +1,6 @@
 'use strict';
 
+const { Op } = require('sequelize');
 const Job = require('../models/Job');
 const Company = require('../models/Company');
 const User = require('../models/User');
@@ -239,8 +240,8 @@ exports.createJob = async (req, res, next) => {
 
     // Consume job posting quota
     try {
-      console.log('🔍 Consuming job posting quota for employer:', employerId, 'job:', job.id);
-      const quotaResult = await EmployerQuotaService.checkAndConsume(employerId, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
+      console.log('🔍 Consuming job posting quota for employer:', createdBy, 'job:', job.id);
+      const quotaResult = await EmployerQuotaService.checkAndConsume(createdBy, EmployerQuotaService.QUOTA_TYPES.JOB_POSTINGS, {
         activityType: 'job_post',
         details: { title: job.title, status: job.status },
         jobId: job.id,
@@ -254,7 +255,7 @@ exports.createJob = async (req, res, next) => {
 
     // Log employer activity: job posted
     try {
-      await EmployerActivityService.logJobPost(employerId, job.id, { title: job.title, status: job.status });
+      await EmployerActivityService.logJobPost(createdBy, job.id, { title: job.title, status: job.status });
     } catch (e) {
       console.error('⚠️ Failed to log job_post activity:', e?.message || e);
     }

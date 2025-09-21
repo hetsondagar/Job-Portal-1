@@ -69,8 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
     // passthrough helpers if provided by API
-    requiresPasswordSetup: u.requiresPasswordSetup ?? undefined as any,
-    hasPassword: u.hasPassword ?? undefined as any,
+    ...(u.requiresPasswordSetup !== undefined && { requiresPasswordSetup: u.requiresPasswordSetup }),
+    ...(u.hasPassword !== undefined && { hasPassword: u.hasPassword }),
   });
 
   useEffect(() => {
@@ -264,10 +264,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Return the response data so the calling component can handle redirection
         return { ...response.data, user: normalized } as any;
       } else {
+        // Don't set user in context if login failed
+        setUser(null);
+        sampleJobManager.setCurrentUser(null);
         setError(response.message || 'Login failed');
         throw new Error(response.message || 'Login failed');
       }
     } catch (error: any) {
+      // Ensure user is not set in context on error
+      setUser(null);
+      sampleJobManager.setCurrentUser(null);
       setError(error.message || 'Login failed');
       throw error; // Re-throw the error so the login page can handle it
     } finally {
