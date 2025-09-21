@@ -1862,13 +1862,21 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     // Try multiple possible file paths
     let filePath;
     const possiblePaths = [
+      // Production paths (Render.com)
+      path.join('/opt/render/project/src/uploads/resumes', filename),
+      path.join('/opt/render/project/src/server/uploads/resumes', filename),
+      path.join('/tmp/uploads/resumes', filename),
+      // Development paths
       path.join(__dirname, '../uploads/resumes', filename),
       path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
       path.join(process.cwd(), 'uploads', 'resumes', filename),
       path.join('/tmp', 'uploads', 'resumes', filename),
       path.join('/var', 'tmp', 'uploads', 'resumes', filename),
+      // Metadata-based paths
       metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
-      metadata.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null
+      metadata.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
+      // Direct metadata filePath
+      metadata.filePath ? metadata.filePath : null
     ].filter(Boolean);
 
     console.log('🔍 Trying possible file paths:', possiblePaths);

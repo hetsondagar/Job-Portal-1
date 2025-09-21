@@ -452,16 +452,6 @@ function GulfApplicationsContent({ user }: { user: any }) {
                               </SelectContent>
                             </Select>
 
-                            {application.jobResume && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewResume(application.jobResume, application.id)}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Resume
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -632,7 +622,7 @@ function GulfApplicationsContent({ user }: { user: any }) {
               )}
 
               {/* Cover Letter */}
-              {selectedApplication.coverLetter && (
+              {(selectedApplication.coverLetter || selectedApplication.jobCoverLetter) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -665,9 +655,46 @@ function GulfApplicationsContent({ user }: { user: any }) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-slate-600 whitespace-pre-wrap">{selectedApplication.coverLetter}</p>
-                    </div>
+                    {selectedApplication.coverLetter && (
+                      <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                        <p className="text-slate-600 whitespace-pre-wrap">{selectedApplication.coverLetter}</p>
+                      </div>
+                    )}
+                    {selectedApplication.jobCoverLetter && (
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-semibold text-slate-900">{selectedApplication.jobCoverLetter.title}</h4>
+                          {selectedApplication.jobCoverLetter.summary && (
+                            <p className="text-slate-600 mt-2">{selectedApplication.jobCoverLetter.summary}</p>
+                          )}
+                        </div>
+                        
+                        {selectedApplication.jobCoverLetter.skills && selectedApplication.jobCoverLetter.skills.length > 0 && (
+                          <div>
+                            <h5 className="font-medium text-slate-900 mb-2">Cover Letter Skills</h5>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedApplication.jobCoverLetter.skills.map((skill: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center text-sm text-slate-500">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          Last updated: {new Date(selectedApplication.jobCoverLetter.lastUpdated).toLocaleDateString()}
+                        </div>
+                        
+                        {selectedApplication.jobCoverLetter.metadata?.filename && (
+                          <div className="flex items-center text-sm text-slate-500">
+                            <FileText className="w-4 h-4 mr-1" />
+                            File: {selectedApplication.jobCoverLetter.metadata.filename}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
