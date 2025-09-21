@@ -24,7 +24,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       console.log('⏰ EmployerAuthGuard timeout reached')
       setTimeoutReached(true)
       setIsChecking(false)
-    }, 15000) // 15 second timeout (increased for OAuth flow)
+    }, 5000) // Reduced to 5 seconds for faster response
 
     // While auth provider is loading, keep checking
     if (loading) {

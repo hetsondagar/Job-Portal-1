@@ -723,6 +723,19 @@ exports.deleteJob = async (req, res, next) => {
       });
     }
 
+    // Delete related records first to avoid foreign key constraint violations
+    const { JobApplication, JobBookmark, Interview } = require('../config/index');
+    
+    // Delete job applications
+    await JobApplication.destroy({ where: { jobId: id } });
+    
+    // Delete job bookmarks
+    await JobBookmark.destroy({ where: { jobId: id } });
+    
+    // Delete interviews related to this job
+    await Interview.destroy({ where: { jobId: id } });
+    
+    // Now delete the job
     await job.destroy();
 
     return res.status(200).json({
@@ -1404,6 +1417,19 @@ exports.deleteJob = async (req, res, next) => {
 
 
 
+    // Delete related records first to avoid foreign key constraint violations
+    const { JobApplication, JobBookmark, Interview } = require('../config/index');
+    
+    // Delete job applications
+    await JobApplication.destroy({ where: { jobId: id } });
+    
+    // Delete job bookmarks
+    await JobBookmark.destroy({ where: { jobId: id } });
+    
+    // Delete interviews related to this job
+    await Interview.destroy({ where: { jobId: id } });
+    
+    // Now delete the job
     await job.destroy();
 
 

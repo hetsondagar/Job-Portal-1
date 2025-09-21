@@ -59,6 +59,7 @@ function GulfPostJobContent({ user }: { user: any }) {
     try {
       const response = await apiService.createJob({
         ...formData,
+        status: 'active', // Set status to active for Gulf jobs
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : null,
         salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : null,
         skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),

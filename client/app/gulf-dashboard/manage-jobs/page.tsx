@@ -17,7 +17,8 @@ import {
   MapPin,
   DollarSign,
   Globe,
-  Briefcase
+  Briefcase,
+  RefreshCw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,12 +56,21 @@ function GulfManageJobsContent({ user }: { user: any }) {
   const loadJobs = async () => {
     try {
       setLoading(true)
+      console.log('🔍 Loading Gulf jobs for employer...')
       const response = await apiService.getEmployerJobs({ limit: 50 })
+      console.log('🔍 Gulf jobs response:', response)
+      
       if (response.success && response.data) {
+        console.log('✅ Gulf jobs loaded:', response.data.length, 'jobs')
         setJobs(response.data)
+      } else {
+        console.error('❌ Failed to load Gulf jobs:', response)
+        setJobs([])
+        toast.error(response.message || 'Failed to load jobs')
       }
     } catch (error) {
-      console.error('Error loading jobs:', error)
+      console.error('❌ Error loading Gulf jobs:', error)
+      setJobs([])
       toast.error('Failed to load jobs')
     } finally {
       setLoading(false)
@@ -68,20 +78,31 @@ function GulfManageJobsContent({ user }: { user: any }) {
   }
 
   const handleDeleteJob = async (jobId: string) => {
-    if (!confirm('Are you sure you want to delete this job?')) return
+    if (!confirm('Are you sure you want to delete this job? This action cannot be undone.')) return
 
     try {
+      console.log('🗑️ Deleting Gulf job:', jobId)
       const response = await apiService.deleteJob(jobId)
+      console.log('🗑️ Delete response:', response)
+      
       if (response.success) {
         toast.success('Job deleted successfully')
-        loadJobs()
+        // Remove the job from the local state immediately for better UX
+        setJobs(prevJobs => prevJobs.filter(job => job.id !== jobId))
+        // Also reload to ensure consistency
+        setTimeout(() => loadJobs(), 1000)
       } else {
-        toast.error('Failed to delete job')
+        toast.error(response.message || 'Failed to delete job')
       }
     } catch (error) {
-      console.error('Error deleting job:', error)
+      console.error('❌ Error deleting Gulf job:', error)
       toast.error('Failed to delete job')
     }
+  }
+
+  const handleRefreshJobs = () => {
+    console.log('🔄 Refreshing Gulf jobs...')
+    loadJobs()
   }
 
   const filteredJobs = jobs.filter(job => {
@@ -136,13 +157,24 @@ function GulfManageJobsContent({ user }: { user: any }) {
                 <p className="text-slate-600">Manage your job postings for the Gulf region</p>
               </div>
             </div>
-            <Button
-              onClick={() => router.push('/gulf-dashboard/post-job')}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Post New Job
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={handleRefreshJobs}
+                variant="outline"
+                disabled={loading}
+                className="flex items-center space-x-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </Button>
+              <Button
+                onClick={() => router.push('/gulf-dashboard/post-job')}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Post New Job
+              </Button>
+            </div>
           </div>
         </motion.div>
 
