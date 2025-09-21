@@ -262,18 +262,20 @@ export default function OAuthCallbackPage() {
             setMessage(`Successfully signed in with ${provider}`)
             toast.success(`Welcome! You've been signed in with ${provider}`)
             
-            // Check if this is a Gulf flow
-            if (state === 'gulf') {
+            // Check user region for proper routing
+            const userRegion = (response.data.user as any)?.region
+            
+            if (userRegion === 'gulf' || state === 'gulf') {
               console.log('✅ Redirecting Gulf jobseeker to Gulf dashboard')
               setTimeout(() => {
                 router.push('/jobseeker-gulf-dashboard')
               }, 1500)
             } else {
-            // Always redirect to jobseeker dashboard from this callback
-            console.log('✅ Redirecting jobseeker to dashboard')
-            setTimeout(() => {
-              router.push('/dashboard')
-            }, 1500) // Reduced timeout for better UX
+              // Always redirect to jobseeker dashboard from this callback
+              console.log('✅ Redirecting jobseeker to dashboard')
+              setTimeout(() => {
+                router.push('/dashboard')
+              }, 1500) // Reduced timeout for better UX
             }
           }
         } else {

@@ -106,7 +106,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await signup({
+      const result = await signup({
         fullName: formData.fullName,
         email: formData.email,
         password: formData.password,
@@ -115,11 +115,28 @@ export default function RegisterPage() {
         agreeToTerms: formData.agreeToTerms,
         subscribeNewsletter: formData.subscribeNewsletter,
       })
-      toast.success("Account created successfully! Please sign in to continue.")
-      // Redirect to login page after successful registration
-      setTimeout(() => {
-        window.location.href = '/login'
-      }, 2000)
+      
+      if (result?.user) {
+        // Check if user has region preference for routing
+        const userRegion = (result?.user as any)?.region
+        
+        if (userRegion === 'gulf') {
+          toast.success("Account created successfully! Redirecting to Gulf dashboard...")
+          setTimeout(() => {
+            window.location.href = '/jobseeker-gulf-dashboard'
+          }, 2000)
+        } else {
+          toast.success("Account created successfully! Redirecting to dashboard...")
+          setTimeout(() => {
+            window.location.href = '/dashboard'
+          }, 2000)
+        }
+      } else {
+        toast.success("Account created successfully! Please sign in to continue.")
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 2000)
+      }
     } catch (error: any) {
       // Handle specific validation errors from backend
       if (error.message && error.message.includes('Validation failed')) {
