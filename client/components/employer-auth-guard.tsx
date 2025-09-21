@@ -24,31 +24,56 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       console.log('⏰ EmployerAuthGuard timeout reached')
       setTimeoutReached(true)
       setIsChecking(false)
-    }, 10000) // 10 second timeout
+    }, 15000) // 15 second timeout (increased for OAuth flow)
 
-    // While auth provider is loading, or we have a token but no user yet, keep checking
+    // While auth provider is loading, keep checking
     if (loading) {
       return () => clearTimeout(timeout)
     }
 
     const hasToken = typeof window !== 'undefined' && apiService.isAuthenticated()
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
 
     console.log('🔍 EmployerAuthGuard - State:', {
       loading,
       hasUser: !!user,
       userType: user?.userType,
       hasToken,
+      hasStoredUser: !!storedUser,
       timeoutReached
     })
       
     if (!user) {
       // If we have a token, wait for profile fetch to hydrate user instead of redirecting
       if (hasToken && !timeoutReached) {
+        console.log('🔍 EmployerAuthGuard - Has token but no user yet, waiting...')
         setIsChecking(true)
         return () => clearTimeout(timeout)
       }
       
+      // If we have stored user data but no user state, try to parse it
+      if (hasToken && storedUser && !timeoutReached) {
+        try {
+          const userData = JSON.parse(storedUser)
+          console.log('🔍 EmployerAuthGuard - Found stored user data:', {
+            id: userData.id,
+            userType: userData.userType
+          })
+          
+          // If stored user is employer/admin, allow access
+          if (userData.userType === 'employer' || userData.userType === 'admin') {
+            console.log('✅ EmployerAuthGuard - Stored user is employer, allowing access')
+            clearTimeout(timeout)
+            setIsChecking(false)
+            return
+          }
+        } catch (error) {
+          console.error('Error parsing stored user data:', error)
+        }
+      }
+      
       // No token and no user → go to employer-login
+      console.log('🔍 EmployerAuthGuard - No valid auth, redirecting to employer-login')
       clearTimeout(timeout)
       router.replace('/employer-login')
       return
@@ -56,6 +81,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       
     // We have a user - check if they're employer or admin
     if (user.userType !== 'employer' && user.userType !== 'admin') {
+      console.log('🔍 EmployerAuthGuard - User is not employer/admin:', user.userType)
       clearTimeout(timeout)
       if (user.userType === 'jobseeker') {
         router.replace('/dashboard')
@@ -66,6 +92,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
     }
       
     // Auth OK
+    console.log('✅ EmployerAuthGuard - Auth OK, user is employer/admin')
     clearTimeout(timeout)
     setIsChecking(false)
     

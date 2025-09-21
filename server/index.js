@@ -59,17 +59,64 @@ app.use(express.urlencoded({ extended: true }));
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app',
-    process.env.CORS_ORIGIN || 'https://job-portal-nine-rouge.vercel.app',
-    'http://localhost:3000' // For local development
-  ],
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app',
+      process.env.CORS_ORIGIN || 'https://job-portal-nine-rouge.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://job-portal-nine-rouge.vercel.app',
+      'https://job-portal-97q3.onrender.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
+// Additional CORS middleware for debugging
+app.use((req, res, next) => {
+  // Log CORS-related requests
+  if (req.method === 'OPTIONS') {
+    console.log('🔍 Preflight request from:', req.headers.origin);
+    console.log('🔍 Request headers:', req.headers);
+  }
+  
+  // Set additional CORS headers
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
+  next();
+});
 
 // Session configuration for OAuth
 app.use(session({

@@ -788,6 +788,9 @@ router.post('/setup-password', async (req, res) => {
 
 // Get OAuth URLs for frontend
 router.get('/urls', (req, res) => {
+  console.log('🔍 OAuth URLs request from:', req.headers.origin);
+  console.log('🔍 User type:', req.query.userType);
+  
   const { userType = 'jobseeker' } = req.query;
   const urls = {};
   
@@ -801,9 +804,14 @@ router.get('/urls', (req, res) => {
     urls.facebook = userType === 'employer' ? `${facebookUrl}?state=employer` : facebookUrl;
   }
   
+  // Set CORS headers explicitly
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   res.json({
     success: true,
-    data: urls
+    data: urls,
+    timestamp: new Date().toISOString()
   });
 });
 

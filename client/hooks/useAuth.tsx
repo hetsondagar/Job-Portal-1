@@ -80,34 +80,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
-        // Rely on token presence, then validate with server; avoid trusting stale localStorage user
-        if (apiService.isAuthenticated()) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        
+        console.log('🔍 AuthProvider - Initializing auth:', {
+          hasToken: !!token,
+          hasStoredUser: !!storedUser,
+          tokenPreview: token ? `${token.substring(0, 20)}...` : 'null'
+        });
+        
+        // If we have both token and stored user, set user immediately to avoid race conditions
+        if (token && storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            console.log('🔍 AuthProvider - Setting user from localStorage immediately:', {
+              id: userData.id,
+              userType: userData.userType,
+              email: userData.email
+            });
+            setUser(userData);
+            sampleJobManager.setCurrentUser(userData.id);
+            
+            // Verify token in background without blocking UI
+            setTimeout(async () => {
+              try {
+                const response = await apiService.getCurrentUser();
+                if (response.success && response.data?.user) {
+                  const normalized = mapUserFromApi(response.data.user as any);
+                  console.log('🔍 AuthProvider - Token verified, updating user:', {
+                    id: normalized.id,
+                    userType: normalized.userType
+                  });
+                  setUser(normalized);
+                  sampleJobManager.setCurrentUser(normalized.id);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('user', JSON.stringify(normalized));
+                  }
+                } else {
+                  console.log('❌ AuthProvider - Token invalid, clearing auth');
+                  apiService.clearAuth();
+                  setUser(null);
+                  sampleJobManager.setCurrentUser(null);
+                }
+              } catch (error) {
+                console.error('❌ AuthProvider - Token verification failed:', error);
+                // Don't clear auth on network errors, just log
+              }
+            }, 100);
+            
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+            apiService.clearAuth();
+            setUser(null);
+            sampleJobManager.setCurrentUser(null);
+          }
+        } else if (token && !storedUser) {
+          // We have a token but no stored user, fetch user data
+          console.log('🔍 AuthProvider - Token found but no stored user, fetching...');
           const response = await apiService.getCurrentUser();
           if (response.success && response.data?.user) {
             const normalized = mapUserFromApi(response.data.user as any);
+            console.log('🔍 AuthProvider - User fetched from API:', {
+              id: normalized.id,
+              userType: normalized.userType
+            });
             setUser(normalized);
-            // Sync with sample job manager
             sampleJobManager.setCurrentUser(normalized.id);
-            // Keep storage in sync in camelCase to prevent future stale shape
             if (typeof window !== 'undefined') {
               localStorage.setItem('user', JSON.stringify(normalized));
             }
           } else {
+            console.log('❌ AuthProvider - Token invalid, clearing auth');
             apiService.clearAuth();
             setUser(null);
-            // Clear sample job manager data
             sampleJobManager.setCurrentUser(null);
           }
         } else {
+          console.log('🔍 AuthProvider - No token found, user not authenticated');
           setUser(null);
-          // Clear sample job manager data
           sampleJobManager.setCurrentUser(null);
         }
       } catch (error) {
         console.error('Auth check error:', error);
         apiService.clearAuth();
         setUser(null);
-        // Clear sample job manager data
         sampleJobManager.setCurrentUser(null);
       } finally {
         setLoading(false);
