@@ -13,7 +13,12 @@ import {
   Phone,
   Calendar,
   User,
-  Globe
+  Globe,
+  X,
+  FileText,
+  MapPin,
+  Briefcase,
+  Clock
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
@@ -44,6 +50,8 @@ function GulfApplicationsContent({ user }: { user: any }) {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedApplication, setSelectedApplication] = useState<any>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   useEffect(() => {
     loadApplications()
@@ -61,6 +69,21 @@ function GulfApplicationsContent({ user }: { user: any }) {
       toast.error('Failed to load applications')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleViewDetails = async (application: any) => {
+    try {
+      const response = await apiService.getEmployerApplicationDetails(application.id)
+      if (response.success) {
+        setSelectedApplication(response.data)
+        setIsDetailModalOpen(true)
+      } else {
+        toast.error('Failed to load application details')
+      }
+    } catch (error) {
+      console.error('Error fetching application details:', error)
+      toast.error('Failed to load application details')
     }
   }
 
@@ -270,7 +293,7 @@ function GulfApplicationsContent({ user }: { user: any }) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/gulf-dashboard/applications/${application.id}`)}
+                              onClick={() => handleViewDetails(application)}
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
@@ -337,6 +360,180 @@ function GulfApplicationsContent({ user }: { user: any }) {
       </div>
 
       <EmployerFooter />
+
+      {/* Application Detail Modal */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <User className="w-5 h-5" />
+              <span>Application Details</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedApplication && (
+            <div className="space-y-6">
+              {/* Candidate Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <User className="w-5 h-5" />
+                    <span>Candidate Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-start space-x-4">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={selectedApplication.applicant?.avatar} />
+                      <AvatarFallback>
+                        {getInitials(selectedApplication.applicant?.first_name, selectedApplication.applicant?.last_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-slate-900">
+                        {selectedApplication.applicant?.first_name} {selectedApplication.applicant?.last_name}
+                      </h3>
+                      <p className="text-slate-600 mb-2">{selectedApplication.applicant?.headline}</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-4 h-4 text-slate-400" />
+                          <span>{selectedApplication.applicant?.email}</span>
+                        </div>
+                        {selectedApplication.applicant?.phone && (
+                          <div className="flex items-center space-x-2">
+                            <Phone className="w-4 h-4 text-slate-400" />
+                            <span>{selectedApplication.applicant.phone}</span>
+                          </div>
+                        )}
+                        {selectedApplication.applicant?.current_location && (
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="w-4 h-4 text-slate-400" />
+                            <span>{selectedApplication.applicant.current_location}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4 text-slate-400" />
+                          <span>Applied {new Date(selectedApplication.appliedAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {getStatusBadge(selectedApplication.status)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Job Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Briefcase className="w-5 h-5" />
+                    <span>Job Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-slate-900">{selectedApplication.job?.title}</h4>
+                      <p className="text-slate-600">{selectedApplication.job?.company?.name}</p>
+                    </div>
+                    {selectedApplication.job?.location && (
+                      <div className="flex items-center space-x-2 text-sm text-slate-600">
+                        <MapPin className="w-4 h-4" />
+                        <span>{selectedApplication.job.location}</span>
+                      </div>
+                    )}
+                    {selectedApplication.job?.description && (
+                      <div>
+                        <h5 className="font-medium text-slate-900 mb-2">Job Description</h5>
+                        <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                          {selectedApplication.job.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Skills */}
+              {selectedApplication.applicant?.skills && selectedApplication.applicant.skills.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FileText className="w-5 h-5" />
+                      <span>Skills</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedApplication.applicant.skills.map((skill: string, index: number) => (
+                        <Badge key={index} variant="secondary">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Experience */}
+              {selectedApplication.applicant?.experience_years && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Clock className="w-5 h-5" />
+                      <span>Experience</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-slate-600">
+                      {selectedApplication.applicant.experience_years} years of experience
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cover Letter */}
+              {selectedApplication.coverLetter && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FileText className="w-5 h-5" />
+                      <span>Cover Letter</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                      {selectedApplication.coverLetter}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDetailModalOpen(false)}
+                >
+                  Close
+                </Button>
+                {selectedApplication.resume && (
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(selectedApplication.resume, '_blank')}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Resume
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

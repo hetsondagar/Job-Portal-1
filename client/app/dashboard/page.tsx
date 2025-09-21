@@ -147,10 +147,27 @@ export default function DashboardPage() {
     try {
       setInterviewsLoading(true)
       
-      const response = await apiService.getCandidateInterviews('scheduled', 1, 5)
+      // Fetch all interviews first, then filter for upcoming ones
+      const response = await apiService.getCandidateInterviews('', 1, 10)
+      
+      console.log('🔍 Interview fetch response:', response)
       
       if (response.success && response.data && response.data.interviews) {
-        setUpcomingInterviews(response.data.interviews)
+        const allInterviews = response.data.interviews
+        console.log('🔍 All interviews:', allInterviews)
+        
+        // Filter for upcoming interviews (scheduled, confirmed, or any future interviews)
+        const upcoming = allInterviews.filter((interview: any) => {
+          const interviewDate = new Date(interview.scheduledAt)
+          const now = new Date()
+          return interviewDate >= now && 
+                 (interview.status === 'scheduled' || 
+                  interview.status === 'confirmed' || 
+                  interview.status === 'pending')
+        })
+        
+        console.log('🔍 Upcoming interviews:', upcoming)
+        setUpcomingInterviews(upcoming)
       } else {
         console.log('No interviews found or response format issue:', response)
         setUpcomingInterviews([])
@@ -905,10 +922,10 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                      {applicationsLoading ? (
+                      {interviewsLoading ? (
                         <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
                       ) : (
-                        applications.filter(app => app.status === 'interviewed').length
+                        upcomingInterviews.length
                       )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-300">Interviews</div>
