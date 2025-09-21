@@ -52,61 +52,52 @@ export default function GulfOpportunitiesPage() {
   const [loginError, setLoginError] = useState('')
   const [registerError, setRegisterError] = useState('')
 
-  // Mock Gulf job data
-  const gulfJobs = [
-    {
-      id: 1,
-      title: "Senior Software Engineer",
-      company: "Dubai Tech Solutions",
-      location: "Dubai, UAE",
-      salary: "AED 25,000 - 35,000",
-      type: "Full-time",
-      experience: "5-8 years",
-      posted: "2 days ago",
-      description: "Leading fintech company seeking experienced software engineer for blockchain projects.",
-      benefits: ["Tax-free salary", "Health insurance", "Annual flight tickets", "Housing allowance"],
-      featured: true
-    },
-    {
-      id: 2,
-      title: "Marketing Manager",
-      company: "Qatar Airways",
-      location: "Doha, Qatar",
-      salary: "QAR 18,000 - 25,000",
-      type: "Full-time",
-      experience: "3-5 years",
-      posted: "1 week ago",
-      description: "Global airline seeking marketing professional for digital campaigns.",
-      benefits: ["Tax-free salary", "Health insurance", "Annual flight tickets", "Education allowance"],
-      featured: false
-    },
-    {
-      id: 3,
-      title: "Financial Analyst",
-      company: "Saudi Aramco",
-      location: "Riyadh, Saudi Arabia",
-      salary: "SAR 20,000 - 30,000",
-      type: "Full-time",
-      experience: "2-4 years",
-      posted: "3 days ago",
-      description: "Oil & gas giant seeking financial analyst for investment projects.",
-      benefits: ["Tax-free salary", "Health insurance", "Annual flight tickets", "Housing allowance"],
-      featured: true
-    },
-    {
-      id: 4,
-      title: "Project Manager",
-      company: "Kuwait Finance House",
-      location: "Kuwait City, Kuwait",
-      salary: "KWD 1,500 - 2,200",
-      type: "Full-time",
-      experience: "4-6 years",
-      posted: "5 days ago",
-      description: "Islamic banking institution seeking project manager for digital transformation.",
-      benefits: ["Tax-free salary", "Health insurance", "Annual flight tickets", "Housing allowance"],
-      featured: false
+  // Real Gulf job data
+  const [gulfJobs, setGulfJobs] = useState<any[]>([])
+  const [gulfJobsLoading, setGulfJobsLoading] = useState(true)
+
+  // Fetch real Gulf jobs
+  useEffect(() => {
+    const fetchGulfJobs = async () => {
+      try {
+        setGulfJobsLoading(true)
+        const response = await apiService.getJobs({
+          status: 'active',
+          region: 'gulf',
+          limit: 20
+        })
+        
+        if (response.success && response.data) {
+          // Transform backend jobs to match frontend format
+          const transformedJobs = response.data.map((job: any) => ({
+            id: job.id,
+            title: job.title,
+            company: job.company?.name || 'Unknown Company',
+            location: job.location,
+            salary: job.salary || (job.salaryMin && job.salaryMax 
+              ? `${job.salaryCurrency || 'AED'} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
+              : 'Competitive'),
+            type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
+            experience: job.experienceLevel || 'Not specified',
+            posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+            description: job.description,
+            benefits: job.benefits || ["Tax-free salary", "Health insurance", "Annual flight tickets"],
+            featured: job.isFeatured || false
+          }))
+          setGulfJobs(transformedJobs)
+        } else {
+          setGulfJobs([])
+        }
+      } catch (error) {
+        console.error('Error fetching Gulf jobs:', error)
+        setGulfJobs([])
+      } finally {
+        setGulfJobsLoading(false)
+      }
     }
-  ]
+
+    fetchGulfJobs()
+  }, [])
 
   const benefits = [
     {
@@ -361,7 +352,27 @@ export default function GulfOpportunitiesPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {gulfJobs.slice(0, 4).map((job) => (
+              {gulfJobsLoading ? (
+                // Loading skeleton
+                Array.from({ length: 4 }).map((_, index) => (
+                  <Card key={index} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-green-200 dark:border-green-800">
+                    <CardHeader>
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-5/6"></div>
+                        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded mt-4"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : gulfJobs.length > 0 ? (
+                gulfJobs.slice(0, 4).map((job) => (
                 <Card key={job.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 border-green-200 dark:border-green-800">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -430,7 +441,20 @@ export default function GulfOpportunitiesPage() {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              ) : (
+                <div className="col-span-2 text-center py-12">
+                  <div className="text-slate-400 dark:text-slate-500 mb-4">
+                    <Briefcase className="w-12 h-12 mx-auto" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    No Gulf Jobs Available
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    Check back later for new Gulf opportunities
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

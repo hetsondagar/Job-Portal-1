@@ -144,8 +144,11 @@ export default function JobsPage() {
       })
       
       if (response.success && response.data) {
+        // Filter out Gulf region jobs from normal jobs page
+        const filteredJobs = response.data.filter((job: any) => job.region !== 'gulf')
+        
         // Transform backend jobs to match frontend format
-        const transformedJobs = response.data.map((job: any) => ({
+        const transformedJobs = filteredJobs.map((job: any) => ({
           id: job.id,
           title: job.title,
           company: {

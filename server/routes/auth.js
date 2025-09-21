@@ -365,6 +365,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         account_status: 'active',
         is_email_verified: false,
         company_id: company.id,
+        region: region || 'india', // ✅ Set user region
         oauth_provider: 'local', // Ensure this is set for regular registrations
         // Store additional preferences
         preferences: {
