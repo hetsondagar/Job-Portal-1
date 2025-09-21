@@ -601,12 +601,16 @@ class ApiService {
 
     const result = await this.handleResponse<AuthResponse>(response);
 
+    // Only set auth data if login was successful
     if (result.success && result.data?.token) {
       localStorage.setItem('token', result.data.token);
       localStorage.setItem('user', JSON.stringify(result.data.user));
       if (result.data.company) {
         localStorage.setItem('company', JSON.stringify(result.data.company));
       }
+    } else {
+      // Clear any existing auth data on failed login
+      this.clearAuth();
     }
 
     return result;
