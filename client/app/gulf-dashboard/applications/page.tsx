@@ -60,18 +60,9 @@ function GulfApplicationsContent({ user }: { user: any }) {
   const loadApplications = async () => {
     try {
       setLoading(true)
-      const response = await apiService.getEmployerApplications()
+      const response = await apiService.getGulfEmployerApplications()
       if (response.success && response.data) {
-        // Filter applications to only show Gulf jobs
-        const gulfApplications = response.data.filter((app: any) => 
-          app.job?.region === 'gulf' || 
-          (app.job?.location && 
-            ['dubai', 'uae', 'qatar', 'saudi', 'kuwait', 'bahrain', 'oman', 'gulf'].some(loc => 
-              app.job.location.toLowerCase().includes(loc)
-            )
-          )
-        )
-        setApplications(gulfApplications)
+        setApplications(response.data)
       }
     } catch (error) {
       console.error('Error loading applications:', error)

@@ -396,6 +396,109 @@ const getGulfJobApplications = async (req, res) => {
   }
 };
 
+// Get Gulf job applications for employers (applications to their Gulf jobs)
+const getGulfEmployerApplications = async (req, res) => {
+  try {
+    const employerId = req.user.id;
+    const { page = 1, limit = 20, status } = req.query;
+
+    console.log('🔍 Fetching Gulf employer applications for employerId:', employerId);
+
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers and admins can view job applications.'
+      });
+    }
+
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      employerId: employerId
+    };
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const { count, rows: applications } = await JobApplication.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          where: {
+            [Op.or]: [
+              { region: 'gulf' },
+              { 
+                location: {
+                  [Op.iLike]: {
+                    [Op.any]: GULF_LOCATIONS.map(loc => `%${loc}%`)
+                  }
+                }
+              }
+            ]
+          },
+          required: true, // Use INNER JOIN to ensure we only get applications with Gulf jobs
+          include: [
+            {
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name', 'logo', 'industry'],
+              required: false // Use LEFT JOIN for company
+            }
+          ]
+        },
+        {
+          model: User,
+          as: 'applicant',
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'avatar', 'headline', 'current_location', 'skills', 'experience_years'],
+          required: false // Use LEFT JOIN for applicant
+        },
+        {
+          model: Resume,
+          as: 'jobResume',
+          attributes: ['id', 'title', 'summary', 'skills', 'lastUpdated', 'metadata'],
+          required: false // Use LEFT JOIN for resume
+        },
+        {
+          model: CoverLetter,
+          as: 'jobCoverLetter',
+          attributes: ['id', 'title', 'summary', 'skills', 'lastUpdated', 'metadata'],
+          required: false // Use LEFT JOIN for cover letter
+        }
+      ],
+      order: [['appliedAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      data: applications,
+      pagination: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching Gulf employer applications:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      employerId: req.user?.id,
+      query: req.query
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch Gulf employer applications',
+      error: error.message
+    });
+  }
+};
+
 // Get Gulf job bookmarks for a user
 const getGulfJobBookmarks = async (req, res) => {
   try {
@@ -620,6 +723,7 @@ module.exports = {
   getSimilarGulfJobs,
   getGulfCompanies,
   getGulfJobApplications,
+  getGulfEmployerApplications,
   getGulfJobBookmarks,
   getGulfJobAlerts,
   getGulfDashboardStats

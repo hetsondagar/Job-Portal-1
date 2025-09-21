@@ -2973,6 +2973,34 @@ class ApiService {
     }
   }
 
+  async getGulfEmployerApplications(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<ApiResponse<JobApplication[]>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            queryParams.append(key, value.toString());
+          }
+        });
+      }
+      const response = await fetch(`${API_BASE_URL}/gulf/employer/applications?${queryParams.toString()}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<JobApplication[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching Gulf employer applications:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch Gulf employer applications',
+        data: []
+      };
+    }
+  }
+
   async getGulfJobBookmarks(params?: {
     page?: number;
     limit?: number;

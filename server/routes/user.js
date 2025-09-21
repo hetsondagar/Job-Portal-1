@@ -1893,11 +1893,20 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
 // Update application status (for withdrawing applications)
 router.put('/applications/:id/status', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Jobseeker application status update request:', {
+      applicationId: req.params.id,
+      status: req.body.status,
+      userId: req.user?.id,
+      userType: req.user?.user_type,
+      body: req.body
+    });
+
     const { JobApplication } = require('../config/index');
     const { status } = req.body;
     
     // Validate status parameter
     if (!status) {
+      console.log('❌ Status validation failed: status is required');
       return res.status(400).json({
         success: false,
         message: 'Status is required'
@@ -1906,12 +1915,18 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
 
     const validStatuses = ['applied', 'reviewing', 'shortlisted', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn'];
     if (!validStatuses.includes(status)) {
+      console.log('❌ Status validation failed: invalid status value:', status);
       return res.status(400).json({
         success: false,
         message: 'Invalid status value'
       });
     }
     
+    console.log('🔍 Looking up application:', {
+      applicationId: req.params.id,
+      userId: req.user.id
+    });
+
     const application = await JobApplication.findOne({
       where: { 
         id: req.params.id, 
@@ -1919,7 +1934,18 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
       }
     });
 
+    console.log('🔍 Application lookup result:', {
+      found: !!application,
+      applicationData: application ? {
+        id: application.id,
+        jobId: application.jobId,
+        userId: application.userId,
+        status: application.status
+      } : null
+    });
+
     if (!application) {
+      console.log('❌ Application not found');
       return res.status(404).json({
         success: false,
         message: 'Application not found'
@@ -1927,11 +1953,19 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
     }
 
     // Check if the status change is allowed
-    if (status === 'withdrawn' && !application.canWithdraw()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot withdraw application at this stage'
+    if (status === 'withdrawn') {
+      console.log('🔍 Checking if application can be withdrawn:', {
+        currentStatus: application.status,
+        canWithdraw: application.canWithdraw()
       });
+      
+      if (!application.canWithdraw()) {
+        console.log('❌ Cannot withdraw application at this stage');
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot withdraw application at this stage'
+        });
+      }
     }
 
     // Update the application status and lastUpdatedAt

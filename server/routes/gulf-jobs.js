@@ -14,6 +14,7 @@ const {
   getSimilarGulfJobs,
   getGulfCompanies,
   getGulfJobApplications,
+  getGulfEmployerApplications,
   getGulfJobBookmarks,
   getGulfJobAlerts,
   getGulfDashboardStats
@@ -62,6 +63,7 @@ router.get('/companies', getGulfCompanies);
 // Protected routes (authentication required)
 router.get('/dashboard/stats', authenticateToken, getGulfDashboardStats);
 router.get('/applications', authenticateToken, getGulfJobApplications);
+router.get('/employer/applications', authenticateToken, getGulfEmployerApplications);
 router.get('/bookmarks', authenticateToken, getGulfJobBookmarks);
 router.get('/alerts', authenticateToken, getGulfJobAlerts);
 
