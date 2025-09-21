@@ -472,7 +472,7 @@ const getGulfEmployerApplications = async (req, res) => {
         {
           model: CoverLetter,
           as: 'jobCoverLetter',
-          attributes: ['id', 'title', 'summary', 'skills', 'lastUpdated', 'metadata'],
+          attributes: ['id', 'title', 'summary', 'lastUpdated', 'metadata'],
           required: false // Use LEFT JOIN for cover letter
         }
       ],
