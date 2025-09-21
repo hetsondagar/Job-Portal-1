@@ -70,7 +70,10 @@ exports.createJob = async (req, res, next) => {
       if (!description || String(description).trim() === '') errors.push('Job description is required');
       if (!location || String(location).trim() === '') errors.push('Job location is required');
       if (!requirements || (Array.isArray(requirements) ? requirements.length === 0 : String(requirements).trim() === '')) errors.push('Job requirements are required');
-      if (!department || String(department).trim() === '') errors.push('Department is required');
+      // Department is optional for Gulf region jobs
+      if (region !== 'gulf' && (!department || String(department).trim() === '')) {
+        errors.push('Department is required');
+      }
       if (!type && !jobType) errors.push('Job type is required');
       if (!experience && !experienceLevel) errors.push('Experience level is required');
       if (!salary && !salaryMin && !salaryMax) errors.push('Salary information is required');
@@ -198,7 +201,7 @@ exports.createJob = async (req, res, next) => {
       salaryCurrency,
       salaryPeriod,
       isSalaryVisible,
-      department: department && department.trim() ? department : null,
+      department: department && department.trim() ? department : (region === 'gulf' ? 'General' : null),
       category,
       skills: Array.isArray(skills) ? skills : [],
       benefits: Array.isArray(benefits) ? benefits : [],
@@ -724,19 +727,39 @@ exports.deleteJob = async (req, res, next) => {
     }
 
     // Delete related records first to avoid foreign key constraint violations
-    const { JobApplication, JobBookmark, Interview } = require('../config/index');
+    const { JobApplication, JobBookmark, Interview, UserActivityLog } = require('../config/index');
     
-    // Delete job applications
+    console.log('🗑️ Starting job deletion process for job ID:', id);
+    
+    // First, get all job applications for this job
+    const jobApplications = await JobApplication.findAll({ where: { jobId: id } });
+    console.log('🔍 Found', jobApplications.length, 'job applications to delete');
+    
+    // Delete user activity logs that reference these applications
+    for (const application of jobApplications) {
+      await UserActivityLog.destroy({ where: { applicationId: application.id } });
+    }
+    console.log('✅ Deleted user activity logs for applications');
+    
+    // Delete user activity logs that reference this job directly
+    await UserActivityLog.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted user activity logs for job');
+    
+    // Now delete job applications
     await JobApplication.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted job applications');
     
     // Delete job bookmarks
     await JobBookmark.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted job bookmarks');
     
     // Delete interviews related to this job
     await Interview.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted interviews');
     
     // Now delete the job
     await job.destroy();
+    console.log('✅ Deleted job successfully');
 
     return res.status(200).json({
       success: true,
@@ -1418,19 +1441,39 @@ exports.deleteJob = async (req, res, next) => {
 
 
     // Delete related records first to avoid foreign key constraint violations
-    const { JobApplication, JobBookmark, Interview } = require('../config/index');
+    const { JobApplication, JobBookmark, Interview, UserActivityLog } = require('../config/index');
     
-    // Delete job applications
+    console.log('🗑️ Starting job deletion process for job ID:', id);
+    
+    // First, get all job applications for this job
+    const jobApplications = await JobApplication.findAll({ where: { jobId: id } });
+    console.log('🔍 Found', jobApplications.length, 'job applications to delete');
+    
+    // Delete user activity logs that reference these applications
+    for (const application of jobApplications) {
+      await UserActivityLog.destroy({ where: { applicationId: application.id } });
+    }
+    console.log('✅ Deleted user activity logs for applications');
+    
+    // Delete user activity logs that reference this job directly
+    await UserActivityLog.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted user activity logs for job');
+    
+    // Now delete job applications
     await JobApplication.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted job applications');
     
     // Delete job bookmarks
     await JobBookmark.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted job bookmarks');
     
     // Delete interviews related to this job
     await Interview.destroy({ where: { jobId: id } });
+    console.log('✅ Deleted interviews');
     
     // Now delete the job
     await job.destroy();
+    console.log('✅ Deleted job successfully');
 
 
 
