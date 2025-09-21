@@ -140,6 +140,36 @@ export default function ResumesPage() {
     }
   }
 
+  const handleViewResume = async (resumeId: string) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/user/resumes/${resumeId}/download`, {
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to view resume');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      // Clean up the URL after a delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (error) {
+      console.error('Error viewing resume:', error)
+      toast.error('Failed to view resume')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -300,6 +330,15 @@ export default function ResumesPage() {
                        </div>
 
                        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                         <Button 
+                           variant="outline" 
+                           size="sm"
+                           onClick={() => handleViewResume(resume.id)}
+                           className="flex-1 sm:flex-none"
+                         >
+                           <Eye className="w-4 h-4 mr-1" />
+                           View
+                         </Button>
                          <Button 
                            variant="outline" 
                            size="sm"

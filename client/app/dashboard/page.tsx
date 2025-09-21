@@ -736,17 +736,19 @@ export default function DashboardPage() {
                       <Upload className="w-3 h-3 mr-1" />
                       Upload
                     </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                        handleViewCoverLetter()
-                        }}
-                      >
-                      View
-                      </Button>
+                      {coverLetters.length > 0 && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            router.push('/cover-letters')
+                          }}
+                        >
+                          View All
+                        </Button>
+                      )}
                   </div>
                 </div>
               </CardContent>
