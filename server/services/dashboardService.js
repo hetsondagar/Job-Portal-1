@@ -239,7 +239,7 @@ class DashboardService {
       try {
         recentBookmarks = await JobBookmark.findAll({
           where: { userId },
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 5,
           include: [{
             model: require('../models/Job'),
@@ -291,7 +291,7 @@ class DashboardService {
         profileViews = await Analytics.count({
           where: { 
             userId,
-            eventType: 'profile_view'
+            eventType: 'profile_update'
           }
         });
       } catch (error) {

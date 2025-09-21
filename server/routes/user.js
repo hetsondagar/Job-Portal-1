@@ -2822,25 +2822,37 @@ router.put('/resumes/:id/set-default', authenticateToken, async (req, res) => {
 // Download resume file
 router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Resume download request:', { resumeId: req.params.id, userId: req.user.id });
+    
     const resume = await Resume.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
 
     if (!resume) {
+      console.log('❌ Resume not found in database');
       return res.status(404).json({
         success: false,
         message: 'Resume not found'
       });
     }
 
+    console.log('✅ Resume found:', { 
+      id: resume.id, 
+      title: resume.title, 
+      metadata: resume.metadata 
+    });
+
     const metadata = resume.metadata || {};
     const filename = metadata.filename;
     const originalName = metadata.originalName;
 
+    console.log('🔍 Resume metadata:', { filename, originalName, metadata });
+
     if (!filename) {
+      console.log('❌ No filename in resume metadata');
       return res.status(404).json({
         success: false,
-        message: 'Resume file not found'
+        message: 'Resume file not found - no filename in metadata'
       });
     }
 
@@ -3159,25 +3171,37 @@ router.put('/cover-letters/:id/set-default', authenticateToken, async (req, res)
 // Download cover letter file
 router.get('/cover-letters/:id/download', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Cover letter download request:', { coverLetterId: req.params.id, userId: req.user.id });
+    
     const coverLetter = await CoverLetter.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
 
     if (!coverLetter) {
+      console.log('❌ Cover letter not found in database');
       return res.status(404).json({
         success: false,
         message: 'Cover letter not found'
       });
     }
 
+    console.log('✅ Cover letter found:', { 
+      id: coverLetter.id, 
+      title: coverLetter.title, 
+      metadata: coverLetter.metadata 
+    });
+
     const metadata = coverLetter.metadata || {};
     const filename = metadata.filename;
     const originalName = metadata.originalName;
 
+    console.log('🔍 Cover letter metadata:', { filename, originalName, metadata });
+
     if (!filename) {
+      console.log('❌ No filename in cover letter metadata');
       return res.status(404).json({
         success: false,
-        message: 'Cover letter file not found'
+        message: 'Cover letter file not found - no filename in metadata'
       });
     }
 
