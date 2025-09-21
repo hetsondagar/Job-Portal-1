@@ -21,11 +21,11 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
 
-  const employerServices = [
-    { name: "Post a Job", href: "/employer-dashboard/post-job" },
-    { name: "Browse Candidates", href: "/employer-dashboard/candidates" },
-    { name: "Company Dashboard", href: "/employer-dashboard" },
-    { name: "Analytics", href: "/employer-dashboard/analytics" }
+  const getEmployerServices = (userRegion: string) => [
+    { name: "Post a Job", href: userRegion === 'gulf' ? "/gulf-dashboard/post-job" : "/employer-dashboard/post-job" },
+    { name: "Browse Candidates", href: userRegion === 'gulf' ? "/gulf-dashboard/applications" : "/employer-dashboard/candidates" },
+    { name: "Company Dashboard", href: userRegion === 'gulf' ? "/gulf-dashboard" : "/employer-dashboard" },
+    { name: "Analytics", href: userRegion === 'gulf' ? "/gulf-dashboard/analytics" : "/employer-dashboard/analytics" }
   ]
 
   const handleLogout = async () => {
@@ -152,15 +152,15 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={user.name} />
-                      <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
+                      <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={`${user.firstName} ${user.lastName}`} />
+                      <AvatarFallback>{user.firstName?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-sm font-medium leading-none">{user.firstName} {user.lastName}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}
                       </p>
@@ -174,13 +174,13 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center">
+                    <Link href={user?.userType === 'employer' ? (user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard') : (user?.region === 'gulf' ? '/jobseeker-gulf-dashboard' : '/dashboard')} className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/applications" className="flex items-center">
+                    <Link href={user?.userType === 'employer' ? (user?.region === 'gulf' ? '/gulf-dashboard/applications' : '/employer-dashboard/applications') : '/applications'} className="flex items-center">
                       <FileText className="mr-2 h-4 w-4" />
                       Applications
                     </Link>
@@ -239,11 +239,11 @@ export function Navbar() {
                   <div className="border-t pt-6">
                     <div className="flex items-center space-x-3 mb-4">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={user.name} />
-                        <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
+                        <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={`${user.firstName} ${user.lastName}`} />
+                        <AvatarFallback>{user.firstName?.charAt(0) || "U"}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">{user.name}</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{user.firstName} {user.lastName}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
                       </div>
                     </div>
@@ -251,10 +251,10 @@ export function Navbar() {
                       <Link href="/profile" className="block text-sm text-slate-700 dark:text-slate-300">
                         Profile
                       </Link>
-                      <Link href="/dashboard" className="block text-sm text-slate-700 dark:text-slate-300">
+                      <Link href={user?.userType === 'employer' ? (user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard') : (user?.region === 'gulf' ? '/jobseeker-gulf-dashboard' : '/dashboard')} className="block text-sm text-slate-700 dark:text-slate-300">
                         Dashboard
                       </Link>
-                      <Link href="/applications" className="block text-sm text-slate-700 dark:text-slate-300">
+                      <Link href={user?.userType === 'employer' ? (user?.region === 'gulf' ? '/gulf-dashboard/applications' : '/employer-dashboard/applications') : '/applications'} className="block text-sm text-slate-700 dark:text-slate-300">
                         Applications
                       </Link>
                       <Link href="/bookmarks" className="block text-sm text-slate-700 dark:text-slate-300">

@@ -109,8 +109,8 @@ export default function AccountPage() {
         headline: user.headline || '',
         currentLocation: user.currentLocation || '',
         summary: user.summary || '',
-        expectedSalary: user.expectedSalary || '',
-        noticePeriod: user.noticePeriod || '',
+        expectedSalary: user.expectedSalary?.toString() || '',
+        noticePeriod: user.noticePeriod?.toString() || '',
         willingToRelocate: user.willingToRelocate || false,
         skills: user.skills || [],
         languages: user.languages || [],
@@ -167,7 +167,11 @@ export default function AccountPage() {
   const saveProfessionalData = async () => {
     try {
       setSaving(true)
-      const response = await apiService.updateProfile(professionalData)
+      const response = await apiService.updateProfile({
+        ...professionalData,
+        expectedSalary: professionalData.expectedSalary ? Number(professionalData.expectedSalary) : undefined,
+        noticePeriod: professionalData.noticePeriod ? Number(professionalData.noticePeriod) : undefined
+      })
       
       if (response.success) {
         await refreshUser()
@@ -268,7 +272,7 @@ export default function AccountPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
-              <Link href="/dashboard">
+              <Link href={user?.region === 'gulf' ? '/gulf-dashboard' : '/dashboard'}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Dashboard

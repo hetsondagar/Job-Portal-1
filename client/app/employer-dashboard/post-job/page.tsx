@@ -1095,7 +1095,7 @@ export default function PostJobPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Link href="/employer-dashboard">
+            <Link href={user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'}>
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
@@ -1368,7 +1368,7 @@ export default function PostJobPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push('/employer-dashboard/manage-jobs')}>
+            <Button variant="outline" onClick={() => router.push(user?.region === 'gulf' ? '/gulf-dashboard/manage-jobs' : '/employer-dashboard/manage-jobs')}>
               Manage Jobs
             </Button>
             {postedJobId && (

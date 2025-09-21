@@ -450,7 +450,7 @@ export default function LoginPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/employer-dashboard" className="text-slate-400 hover:text-white transition-colors text-sm">
+                  <Link href="/employer-login" className="text-slate-400 hover:text-white transition-colors text-sm">
                     Dashboard
                   </Link>
                 </li>

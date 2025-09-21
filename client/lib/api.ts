@@ -13,6 +13,7 @@ export interface User {
   firstName: string;
   lastName: string;
   userType: 'jobseeker' | 'employer' | 'admin';
+  region?: 'india' | 'gulf' | 'other';
   isEmailVerified: boolean;
   accountStatus: string;
   avatar?: string;

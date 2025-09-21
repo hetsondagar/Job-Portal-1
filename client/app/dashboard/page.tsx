@@ -64,7 +64,7 @@ export default function DashboardPage() {
     if (user) {
       if (user.userType === 'employer' || user.userType === 'admin') {
       console.log('🔄 Employer/Admin detected on jobseeker dashboard, redirecting to employer dashboard')
-        router.replace('/employer-dashboard')
+        router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
       }
       return;
     }

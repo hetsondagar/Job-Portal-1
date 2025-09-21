@@ -491,7 +491,7 @@ export default function JobseekerGulfDashboardPage() {
                 </p>
               </div>
               <div className="flex items-center space-x-3">
-                <Link href="/dashboard">
+                <Link href="/jobseeker-gulf-dashboard">
                   <Button variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                     <Globe className="w-4 h-4 mr-2" />
                     Regular Dashboard
