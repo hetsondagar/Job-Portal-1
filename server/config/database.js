@@ -20,6 +20,12 @@ module.exports = {
       timestamps: true,
       underscored: false,
       freezeTableName: true
+    },
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
     }
   },
   test: {
@@ -41,6 +47,12 @@ module.exports = {
       timestamps: true,
       underscored: false,
       freezeTableName: true
+    },
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
     }
   },
   production: {

@@ -69,12 +69,21 @@ async function startServer() {
     // Setup database tables
     console.log('🔄 Setting up database...');
     try {
-      const { setupProductionDatabase } = require('./production-db-setup');
-      await setupProductionDatabase();
+      // Try robust setup first
+      const { setupRobustDatabase } = require('./robust-db-setup');
+      await setupRobustDatabase();
       console.log('✅ Database setup completed');
-    } catch (dbSetupError) {
-      console.log('⚠️ Database setup warning:', dbSetupError.message);
-      console.log('🔄 Continuing with server start...');
+    } catch (robustError) {
+      console.log('⚠️ Robust setup failed, trying fallback:', robustError.message);
+      try {
+        // Fallback to original setup
+        const { setupProductionDatabase } = require('./production-db-setup');
+        await setupProductionDatabase();
+        console.log('✅ Database setup completed (fallback)');
+      } catch (dbSetupError) {
+        console.log('⚠️ Database setup warning:', dbSetupError.message);
+        console.log('🔄 Continuing with server start...');
+      }
     }
     
     console.log('🚀 Starting Express server...');
