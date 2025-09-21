@@ -59,7 +59,8 @@ exports.createJob = async (req, res, next) => {
       latitude,
       longitude,
       requirements,
-      responsibilities
+      responsibilities,
+      region
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
