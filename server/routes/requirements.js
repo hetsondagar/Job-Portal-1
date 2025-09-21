@@ -1865,7 +1865,10 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       path.join(__dirname, '../uploads/resumes', filename),
       path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
       path.join(process.cwd(), 'uploads', 'resumes', filename),
-      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null
+      path.join('/tmp', 'uploads', 'resumes', filename),
+      path.join('/var', 'tmp', 'uploads', 'resumes', filename),
+      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
+      metadata.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null
     ].filter(Boolean);
 
     console.log('🔍 Trying possible file paths:', possiblePaths);
@@ -1876,11 +1879,43 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     if (!filePath) {
       console.log('❌ File does not exist in any of the expected locations');
       console.log('🔍 Checked paths:', possiblePaths);
-      return res.status(404).json({
-        success: false,
-        message: 'Resume file not found on server. The file may have been lost during server restart. Please ask the candidate to re-upload their resume.',
-        code: 'FILE_NOT_FOUND'
-      });
+      
+      // Try to find the file by searching common directories
+      const searchDirs = [
+        path.join(__dirname, '../uploads'),
+        path.join(process.cwd(), 'uploads'),
+        path.join(process.cwd(), 'server', 'uploads'),
+        '/tmp/uploads',
+        '/var/tmp/uploads'
+      ];
+      
+      for (const searchDir of searchDirs) {
+        try {
+          if (fs.existsSync(searchDir)) {
+            console.log(`🔍 Searching in directory: ${searchDir}`);
+            const files = fs.readdirSync(searchDir, { recursive: true });
+            console.log(`🔍 Found ${files.length} items in ${searchDir}`);
+            
+            // Look for the specific filename
+            const found = files.find(f => f.includes(filename));
+            if (found) {
+              filePath = path.join(searchDir, found);
+              console.log(`✅ Found file at: ${filePath}`);
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`🔍 Could not search in ${searchDir}:`, error.message);
+        }
+      }
+      
+      if (!filePath) {
+        return res.status(404).json({
+          success: false,
+          message: 'Resume file not found on server. The file may have been lost during server restart. Please ask the candidate to re-upload their resume.',
+          code: 'FILE_NOT_FOUND'
+        });
+      }
     }
     
     console.log('✅ File found at:', filePath);

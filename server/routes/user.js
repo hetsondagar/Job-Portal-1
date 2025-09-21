@@ -11,6 +11,64 @@ const { sequelize } = require('../config/sequelize');
 
 const router = express.Router();
 
+// Utility function to find resume file
+function findResumeFile(filename, metadata) {
+  const possiblePaths = [
+    path.join(__dirname, '../uploads/resumes', filename),
+    path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+    path.join(process.cwd(), 'uploads', 'resumes', filename),
+    path.join('/tmp', 'uploads', 'resumes', filename),
+    path.join('/var', 'tmp', 'uploads', 'resumes', filename),
+    metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
+    metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null
+  ].filter(Boolean);
+
+  console.log('🔍 Trying possible file paths:', possiblePaths);
+  
+  // Find the first existing file
+  let filePath = possiblePaths.find(p => fs.existsSync(p));
+  
+  if (!filePath) {
+    console.log('❌ File does not exist in any of the expected locations');
+    console.log('🔍 Checked paths:', possiblePaths);
+    
+    // Try to find the file by searching common directories
+    const searchDirs = [
+      path.join(__dirname, '../uploads'),
+      path.join(process.cwd(), 'uploads'),
+      path.join(process.cwd(), 'server', 'uploads'),
+      '/tmp/uploads',
+      '/var/tmp/uploads'
+    ];
+    
+    for (const searchDir of searchDirs) {
+      try {
+        if (fs.existsSync(searchDir)) {
+          console.log(`🔍 Searching in directory: ${searchDir}`);
+          const files = fs.readdirSync(searchDir, { recursive: true });
+          console.log(`🔍 Found ${files.length} items in ${searchDir}`);
+          
+          // Look for the specific filename
+          const found = files.find(f => f.includes(filename));
+          if (found) {
+            filePath = path.join(searchDir, found);
+            console.log(`✅ Found file at: ${filePath}`);
+            break;
+          }
+        }
+      } catch (error) {
+        console.log(`🔍 Could not search in ${searchDir}:`, error.message);
+      }
+    }
+  }
+  
+  if (filePath) {
+    console.log('✅ File found at:', filePath);
+  }
+  
+  return filePath;
+}
+
 // Serve static files from uploads directory
 router.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -2859,38 +2917,16 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
       });
     }
 
-    // Try multiple possible file paths
-    let filePath;
-    const possiblePaths = [
-      path.join(__dirname, '../uploads/resumes', filename),
-      path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
-      path.join(process.cwd(), 'uploads', 'resumes', filename),
-      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null
-    ].filter(Boolean);
-
-    console.log('🔍 Trying possible file paths:', possiblePaths);
-    
-    // Find the first existing file
-    filePath = possiblePaths.find(p => fs.existsSync(p));
+    // Use utility function to find the file
+    const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      console.log('❌ File does not exist in any of the expected locations');
-      console.log('🔍 Checked paths:', possiblePaths);
-      try {
-        const uploadDir = path.join(__dirname, '../uploads/resumes');
-        const files = fs.readdirSync(uploadDir);
-        console.log('🔍 Upload directory contents:', files);
-      } catch (error) {
-        console.log('🔍 Upload directory not found or empty');
-      }
       return res.status(404).json({
         success: false,
         message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
         code: 'FILE_NOT_FOUND'
       });
     }
-    
-    console.log('✅ File found at:', filePath);
 
     // Increment download count
     await resume.update({
@@ -3710,38 +3746,16 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
       });
     }
 
-    // Try multiple possible file paths
-    let filePath;
-    const possiblePaths = [
-      path.join(__dirname, '../uploads/resumes', filename),
-      path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
-      path.join(process.cwd(), 'uploads', 'resumes', filename),
-      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null
-    ].filter(Boolean);
-
-    console.log('🔍 Trying possible file paths:', possiblePaths);
-    
-    // Find the first existing file
-    filePath = possiblePaths.find(p => fs.existsSync(p));
+    // Use utility function to find the file
+    const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      console.log('❌ File does not exist in any of the expected locations');
-      console.log('🔍 Checked paths:', possiblePaths);
-      try {
-        const uploadDir = path.join(__dirname, '../uploads/resumes');
-        const files = fs.readdirSync(uploadDir);
-        console.log('🔍 Upload directory contents:', files);
-      } catch (error) {
-        console.log('🔍 Upload directory not found or empty');
-      }
       return res.status(404).json({
         success: false,
         message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
         code: 'FILE_NOT_FOUND'
       });
     }
-    
-    console.log('✅ File found at:', filePath);
 
     console.log('✅ File exists, proceeding with download');
 
