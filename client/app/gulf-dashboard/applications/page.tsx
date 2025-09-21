@@ -87,6 +87,142 @@ function GulfApplicationsContent({ user }: { user: any }) {
     }
   }
 
+  const handleDownloadResume = async (resume: any, applicationId: string) => {
+    if (!resume?.id) {
+      toast.error('Resume not available for download')
+      return
+    }
+
+    try {
+      // For applications, we need to use the application-based download endpoint
+      const response = await apiService.downloadApplicationResume(resume.id, applicationId)
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+      }
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = resume.metadata?.filename || `${resume.title || 'Resume'}.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      
+      // Clean up
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }, 100)
+      
+      toast.success('Resume downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading resume:', error)
+      toast.error('Failed to download resume')
+    }
+  }
+
+  const handleViewResume = async (resume: any, applicationId: string) => {
+    if (!resume?.id) {
+      toast.error('Resume not available for viewing')
+      return
+    }
+
+    try {
+      // First log the resume view activity
+      try {
+        await apiService.viewApplicationResume(applicationId)
+        console.log('✅ Resume view activity logged')
+      } catch (activityError) {
+        console.error('Failed to log resume view activity:', activityError)
+        // Don't fail the view if activity logging fails
+      }
+
+      // First try to use the metadata fileUrl if available
+      if (resume.metadata?.fileUrl) {
+        window.open(resume.metadata.fileUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      // If no direct URL, fetch the resume file and create a blob URL for viewing
+      const response = await apiService.downloadApplicationResume(resume.id, applicationId)
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        
+        // Open the resume in a new tab
+        const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+        
+        // Clean up the blob URL after a delay to allow the browser to load it
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url)
+        }, 10000)
+        
+        if (!newWindow) {
+          toast.error('Please allow popups to view the resume')
+        }
+      } else {
+        toast.error('Failed to load resume for viewing')
+      }
+    } catch (error) {
+      console.error('Error viewing resume:', error)
+      toast.error('Failed to view resume')
+    }
+  }
+
+  const handleDownloadCoverLetter = async (coverLetter: any) => {
+    if (!coverLetter?.id) {
+      toast.error('Cover letter not available for download')
+      return
+    }
+
+    try {
+      // Use the cover letter download endpoint
+      const response = await apiService.downloadCoverLetter(coverLetter.id)
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = coverLetter.metadata?.filename || `${coverLetter.title || 'CoverLetter'}.pdf`
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast.success('Cover letter downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading cover letter:', error)
+      toast.error('Failed to download cover letter')
+    }
+  }
+
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
     try {
       const response = await apiService.updateEmployerApplicationStatus(applicationId, newStatus)
@@ -316,14 +452,14 @@ function GulfApplicationsContent({ user }: { user: any }) {
                               </SelectContent>
                             </Select>
 
-                            {application.resume && (
+                            {application.jobResume && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(application.resume, '_blank')}
+                                onClick={() => handleViewResume(application.jobResume, application.id)}
                               >
-                                <Download className="w-4 h-4 mr-2" />
-                                Resume
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Resume
                               </Button>
                             )}
                           </div>
@@ -499,15 +635,106 @@ function GulfApplicationsContent({ user }: { user: any }) {
               {selectedApplication.coverLetter && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FileText className="w-5 h-5" />
-                      <span>Cover Letter</span>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="w-5 h-5" />
+                        <span>Cover Letter</span>
+                      </div>
+                      {selectedApplication.jobCoverLetter?.metadata?.fileUrl && (
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <a href={selectedApplication.jobCoverLetter.metadata.fileUrl} target="_blank" rel="noopener noreferrer">
+                              <Eye className="w-4 h-4 mr-2" />
+                              View File
+                            </a>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadCoverLetter(selectedApplication.jobCoverLetter)}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap">
-                      {selectedApplication.coverLetter}
-                    </p>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-slate-600 whitespace-pre-wrap">{selectedApplication.coverLetter}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Resume */}
+              {selectedApplication.jobResume && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="w-5 h-5" />
+                        <span>Resume/CV</span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewResume(selectedApplication.jobResume, selectedApplication.id)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadResume(selectedApplication.jobResume, selectedApplication.id)}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold text-slate-900">{selectedApplication.jobResume.title}</h4>
+                        {selectedApplication.jobResume.summary && (
+                          <p className="text-slate-600 mt-2">{selectedApplication.jobResume.summary}</p>
+                        )}
+                      </div>
+                      
+                      {selectedApplication.jobResume.skills && selectedApplication.jobResume.skills.length > 0 && (
+                        <div>
+                          <h5 className="font-medium text-slate-900 mb-2">Resume Skills</h5>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedApplication.jobResume.skills.map((skill: string, index: number) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center text-sm text-slate-500">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        Last updated: {new Date(selectedApplication.jobResume.lastUpdated).toLocaleDateString()}
+                      </div>
+                      
+                      {selectedApplication.jobResume.metadata?.filename && (
+                        <div className="flex items-center text-sm text-slate-500">
+                          <FileText className="w-4 h-4 mr-1" />
+                          File: {selectedApplication.jobResume.metadata.filename}
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -520,15 +747,6 @@ function GulfApplicationsContent({ user }: { user: any }) {
                 >
                   Close
                 </Button>
-                {selectedApplication.resume && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(selectedApplication.resume, '_blank')}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Resume
-                  </Button>
-                )}
               </div>
             </div>
           )}
