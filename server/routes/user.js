@@ -2859,13 +2859,23 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
       });
     }
 
-    const filePath = path.join(__dirname, '../uploads/resumes', filename);
-    console.log('🔍 Full file path:', filePath);
-    console.log('🔍 File exists check:', fs.existsSync(filePath));
+    // Try multiple possible file paths
+    let filePath;
+    const possiblePaths = [
+      path.join(__dirname, '../uploads/resumes', filename),
+      path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+      path.join(process.cwd(), 'uploads', 'resumes', filename),
+      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null
+    ].filter(Boolean);
+
+    console.log('🔍 Trying possible file paths:', possiblePaths);
     
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.log('❌ File does not exist on server:', filePath);
+    // Find the first existing file
+    filePath = possiblePaths.find(p => fs.existsSync(p));
+    
+    if (!filePath) {
+      console.log('❌ File does not exist in any of the expected locations');
+      console.log('🔍 Checked paths:', possiblePaths);
       try {
         const uploadDir = path.join(__dirname, '../uploads/resumes');
         const files = fs.readdirSync(uploadDir);
@@ -2879,6 +2889,8 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
         code: 'FILE_NOT_FOUND'
       });
     }
+    
+    console.log('✅ File found at:', filePath);
 
     // Increment download count
     await resume.update({
@@ -3698,17 +3710,38 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
       });
     }
 
-    const filePath = path.join(__dirname, '../uploads/resumes', filename);
-    console.log('🔍 File path:', filePath);
+    // Try multiple possible file paths
+    let filePath;
+    const possiblePaths = [
+      path.join(__dirname, '../uploads/resumes', filename),
+      path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+      path.join(process.cwd(), 'uploads', 'resumes', filename),
+      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null
+    ].filter(Boolean);
+
+    console.log('🔍 Trying possible file paths:', possiblePaths);
     
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.log('❌ File does not exist on server:', filePath);
+    // Find the first existing file
+    filePath = possiblePaths.find(p => fs.existsSync(p));
+    
+    if (!filePath) {
+      console.log('❌ File does not exist in any of the expected locations');
+      console.log('🔍 Checked paths:', possiblePaths);
+      try {
+        const uploadDir = path.join(__dirname, '../uploads/resumes');
+        const files = fs.readdirSync(uploadDir);
+        console.log('🔍 Upload directory contents:', files);
+      } catch (error) {
+        console.log('🔍 Upload directory not found or empty');
+      }
       return res.status(404).json({
         success: false,
-        message: 'Resume file not found on server'
+        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
+        code: 'FILE_NOT_FOUND'
       });
     }
+    
+    console.log('✅ File found at:', filePath);
 
     console.log('✅ File exists, proceeding with download');
 

@@ -1859,15 +1859,31 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       });
     }
     
-    const filePath = path.join(__dirname, '../uploads/resumes', filename);
+    // Try multiple possible file paths
+    let filePath;
+    const possiblePaths = [
+      path.join(__dirname, '../uploads/resumes', filename),
+      path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+      path.join(process.cwd(), 'uploads', 'resumes', filename),
+      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null
+    ].filter(Boolean);
+
+    console.log('🔍 Trying possible file paths:', possiblePaths);
     
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
+    // Find the first existing file
+    filePath = possiblePaths.find(p => fs.existsSync(p));
+    
+    if (!filePath) {
+      console.log('❌ File does not exist in any of the expected locations');
+      console.log('🔍 Checked paths:', possiblePaths);
       return res.status(404).json({
         success: false,
-        message: 'Resume file not found on server'
+        message: 'Resume file not found on server. The file may have been lost during server restart. Please ask the candidate to re-upload their resume.',
+        code: 'FILE_NOT_FOUND'
       });
     }
+    
+    console.log('✅ File found at:', filePath);
     
     // Increment download count
     await resume.update({
