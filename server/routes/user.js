@@ -11,6 +11,9 @@ const { sequelize } = require('../config/sequelize');
 
 const router = express.Router();
 
+// Serve static files from uploads directory
+router.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -2857,12 +2860,23 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     }
 
     const filePath = path.join(__dirname, '../uploads/resumes', filename);
+    console.log('🔍 Full file path:', filePath);
+    console.log('🔍 File exists check:', fs.existsSync(filePath));
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log('❌ File does not exist on server:', filePath);
+      try {
+        const uploadDir = path.join(__dirname, '../uploads/resumes');
+        const files = fs.readdirSync(uploadDir);
+        console.log('🔍 Upload directory contents:', files);
+      } catch (error) {
+        console.log('🔍 Upload directory not found or empty');
+      }
       return res.status(404).json({
         success: false,
-        message: 'Resume file not found on server'
+        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
+        code: 'FILE_NOT_FOUND'
       });
     }
 
@@ -3206,12 +3220,23 @@ router.get('/cover-letters/:id/download', authenticateToken, async (req, res) =>
     }
 
     const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
+    console.log('🔍 Full file path:', filePath);
+    console.log('🔍 File exists check:', fs.existsSync(filePath));
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log('❌ File does not exist on server:', filePath);
+      try {
+        const uploadDir = path.join(__dirname, '../uploads/cover-letters');
+        const files = fs.readdirSync(uploadDir);
+        console.log('🔍 Upload directory contents:', files);
+      } catch (error) {
+        console.log('🔍 Upload directory not found or empty');
+      }
       return res.status(404).json({
         success: false,
-        message: 'Cover letter file not found on server'
+        message: 'Cover letter file not found on server. The file may have been lost during server restart. Please re-upload your cover letter.',
+        code: 'FILE_NOT_FOUND'
       });
     }
 

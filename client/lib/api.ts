@@ -2185,6 +2185,10 @@ class ApiService {
     });
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (errorData.code === 'FILE_NOT_FOUND') {
+        throw new Error('Resume file not found on server. Please re-upload your resume.');
+      }
       throw new Error('Failed to download resume');
     }
 
@@ -2279,6 +2283,10 @@ class ApiService {
     });
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (errorData.code === 'FILE_NOT_FOUND') {
+        throw new Error('Cover letter file not found on server. Please re-upload your cover letter.');
+      }
       throw new Error(`Download failed: ${response.status} ${response.statusText}`);
     }
 
