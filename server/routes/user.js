@@ -46,7 +46,9 @@ function findResumeFile(filename, metadata) {
       path.join(process.cwd(), 'uploads'),
       path.join(process.cwd(), 'server', 'uploads'),
       '/tmp/uploads',
-      '/var/tmp/uploads'
+      '/var/tmp/uploads',
+      '/opt/render/project/src/uploads',
+      '/opt/render/project/src/server/uploads'
     ];
     
     for (const searchDir of searchDirs) {
@@ -67,6 +69,12 @@ function findResumeFile(filename, metadata) {
       } catch (error) {
         console.log(`🔍 Could not search in ${searchDir}:`, error.message);
       }
+    }
+    
+    // If still not found, check if this is a production environment issue
+    if (!filePath && process.env.NODE_ENV === 'production') {
+      console.log('⚠️ Production environment detected - files may have been lost during server restart');
+      console.log('💡 Consider implementing cloud storage (S3, Cloudinary) for production');
     }
   }
   
@@ -1583,7 +1591,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
 // Get detailed application information for employer
 router.get('/employer/applications/:id', authenticateToken, async (req, res) => {
   try {
-    const { JobApplication, Job, Company, User, Resume, WorkExperience, Education } = require('../config/index');
+    const { JobApplication, Job, Company, User, Resume, CoverLetter, WorkExperience, Education } = require('../config/index');
     const { id } = req.params;
     
     // Check if user is an employer or admin
@@ -1660,6 +1668,14 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
             'certifications', 'projects', 'achievements', 'isDefault',
             'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
           ]
+        },
+        {
+          model: CoverLetter,
+          as: 'jobCoverLetter',
+          attributes: [
+            'id', 'title', 'content', 'summary', 'isDefault',
+            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+          ]
         }
       ]
     });
@@ -1674,6 +1690,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
     // Transform the data to include comprehensive jobseeker profile information
     const applicant = application.applicant;
     const jobResume = application.jobResume;
+    const jobCoverLetter = application.jobCoverLetter;
     
     // Calculate total work experience
     const totalExperience = applicant.workExperiences?.reduce((total, exp) => {
@@ -1747,6 +1764,9 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
         skillsString: jobResume.getSkillsString(),
         languagesString: jobResume.getLanguagesString(),
         certificationsString: jobResume.getCertificationsString()
+      } : null,
+      jobCoverLetter: jobCoverLetter ? {
+        ...jobCoverLetter.toJSON()
       } : null
     };
 
