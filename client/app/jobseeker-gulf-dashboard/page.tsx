@@ -428,6 +428,46 @@ export default function JobseekerGulfDashboardPage() {
     }
   }
 
+  const handleApplyToGulfJob = async (jobId: string) => {
+    try {
+      console.log(`🔍 Applying for Gulf job ${jobId}...`)
+      
+      // Find the job data from the mock data
+      const job = gulfJobs.find(j => j.id === Number(jobId))
+      if (!job) {
+        toast.error('Job not found')
+        return
+      }
+      
+      // Submit application using the API
+      const response = await apiService.applyJob(jobId, {
+        coverLetter: `I am interested in the ${job.title} position at ${job.company}. I am excited about the opportunity to work in the Gulf region.`,
+        expectedSalary: undefined,
+        noticePeriod: 30,
+        availableFrom: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        isWillingToRelocate: true, // Gulf jobs typically require relocation
+        preferredLocations: [job.location],
+        resumeId: undefined
+      })
+      
+      if (response.success) {
+        toast.success(`Application submitted successfully for ${job.title} at ${job.company}!`, {
+          description: 'Your application has been saved and will appear in your applications.',
+          duration: 5000,
+        })
+        console.log('Gulf job application submitted:', jobId)
+        
+        // Refresh applications to show the new one
+        fetchApplications()
+      } else {
+        toast.error(response.message || 'Failed to submit application. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error applying for Gulf job:', error)
+      toast.error('Failed to submit application. Please try again.')
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await logout()
@@ -491,7 +531,7 @@ export default function JobseekerGulfDashboardPage() {
                 </p>
               </div>
               <div className="flex items-center space-x-3">
-                <Link href="/jobseeker-gulf-dashboard">
+                <Link href="/dashboard">
                   <Button variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                     <Globe className="w-4 h-4 mr-2" />
                     Regular Dashboard
@@ -1065,7 +1105,10 @@ export default function JobseekerGulfDashboardPage() {
                         </div>
                       </div>
                       
-                      <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                      <Button 
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleApplyToGulfJob(job.id.toString())}
+                      >
                         <Briefcase className="w-4 h-4 mr-2" />
                         Apply Now
                       </Button>

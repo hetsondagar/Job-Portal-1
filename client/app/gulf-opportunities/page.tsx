@@ -68,8 +68,11 @@ export default function GulfOpportunitiesPage() {
         })
         
         if (response.success && response.data) {
+          // Double-check: Filter to ensure ONLY Gulf jobs are shown
+          const gulfOnlyJobs = response.data.filter((job: any) => job.region === 'gulf')
+          
           // Transform backend jobs to match frontend format
-          const transformedJobs = response.data.map((job: any) => ({
+          const transformedJobs = gulfOnlyJobs.map((job: any) => ({
             id: job.id,
             title: job.title,
             company: job.company?.name || 'Unknown Company',
@@ -246,6 +249,53 @@ export default function GulfOpportunitiesPage() {
     } catch (error: any) {
       console.error(`❌ Gulf OAuth login error:`, error)
       toast.error(`Failed to sign in with ${provider}. Please try again.`)
+    }
+  }
+
+  const handleApplyToJob = async (jobId: string) => {
+    if (!user) {
+      setShowLoginDialog(true)
+      return
+    }
+
+    try {
+      console.log(`🔍 Applying for Gulf job ${jobId}...`)
+      
+      // Find the job data
+      const job = gulfJobs.find(j => j.id === jobId)
+      if (!job) {
+        toast.error('Job not found')
+        return
+      }
+      
+      // Submit application using the API
+      const response = await apiService.applyJob(jobId, {
+        coverLetter: `I am interested in the ${job.title} position at ${job.company}. I am excited about the opportunity to work in the Gulf region.`,
+        expectedSalary: undefined,
+        noticePeriod: 30,
+        availableFrom: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        isWillingToRelocate: true, // Gulf jobs typically require relocation
+        preferredLocations: [job.location],
+        resumeId: undefined
+      })
+      
+      if (response.success) {
+        toast.success(`Application submitted successfully for ${job.title} at ${job.company}!`, {
+          description: 'Your application has been saved and will appear in your Gulf dashboard.',
+          duration: 5000,
+        })
+        console.log('Gulf job application submitted:', jobId)
+        
+        // Redirect to Gulf dashboard to see the application
+        setTimeout(() => {
+          router.push('/jobseeker-gulf-dashboard')
+        }, 2000)
+      } else {
+        toast.error(response.message || 'Failed to submit application. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error applying for Gulf job:', error)
+      toast.error('Failed to submit application. Please try again.')
     }
   }
 
@@ -434,7 +484,7 @@ export default function GulfOpportunitiesPage() {
                     
                     <Button 
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      onClick={handleExploreJobs}
+                      onClick={() => handleApplyToJob(job.id)}
                     >
                       Apply Now
                       <ArrowRight className="w-4 h-4 ml-2" />
