@@ -257,7 +257,7 @@ export default function PostJobPage() {
       return
     }
     
-    if (user.userType !== 'employer') {
+    if (user.userType !== 'employer' && user.userType !== 'admin') {
       toast.error('Only employers can save job drafts')
       setShowAuthDialog(true)
       return
@@ -344,7 +344,7 @@ export default function PostJobPage() {
       return
     }
     
-    if (user.userType !== 'employer') {
+    if (user.userType !== 'employer' && user.userType !== 'admin') {
       toast.error('Only employers can post jobs')
       setShowAuthDialog(true)
       return
