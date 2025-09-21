@@ -69,7 +69,7 @@ exports.createJob = async (req, res, next) => {
       if (!title || String(title).trim() === '') errors.push('Job title is required');
       if (!description || String(description).trim() === '') errors.push('Job description is required');
       if (!location || String(location).trim() === '') errors.push('Job location is required');
-      if (!requirements || String(requirements).trim() === '') errors.push('Job requirements are required');
+      if (!requirements || (Array.isArray(requirements) ? requirements.length === 0 : String(requirements).trim() === '')) errors.push('Job requirements are required');
       if (!department || String(department).trim() === '') errors.push('Department is required');
       if (!type && !jobType) errors.push('Job type is required');
       if (!experience && !experienceLevel) errors.push('Experience level is required');
@@ -222,8 +222,10 @@ exports.createJob = async (req, res, next) => {
       country,
       latitude,
       longitude,
-      requirements: requirements && requirements.trim() ? requirements : null,
-      responsibilities: responsibilities && responsibilities.trim() ? responsibilities : null,
+      requirements: requirements && (Array.isArray(requirements) ? requirements.length > 0 : requirements.trim()) ? 
+        (Array.isArray(requirements) ? requirements.join('\n') : requirements) : null,
+      responsibilities: responsibilities && (Array.isArray(responsibilities) ? responsibilities.length > 0 : responsibilities.trim()) ? 
+        (Array.isArray(responsibilities) ? responsibilities.join('\n') : responsibilities) : null,
       region: jobRegion // Set region based on user's region
     };
 
