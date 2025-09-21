@@ -342,11 +342,11 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
   try {
     const { candidateId } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ 
         success: false, 
-        message: 'Access denied. Only employers can view candidate profiles.' 
+        message: 'Access denied. Only employers and admins can view candidate profiles.' 
       });
     }
     
@@ -1175,10 +1175,10 @@ router.get('/employer/applications/test', authenticateToken, async (req, res) =>
     console.log('🧪 Testing employer applications endpoint...');
     console.log('🧪 User:', { id: req.user.id, type: req.user.user_type });
     
-    if (req.user.user_type !== 'employer') {
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can view job applications.'
+        message: 'Access denied. Only employers and admins can view job applications.'
       });
     }
     
@@ -1251,12 +1251,12 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       throw new Error(`Failed to import models: ${importError.message}`);
     }
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      console.log('❌ Access denied - user is not an employer:', req.user.user_type);
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      console.log('❌ Access denied - user is not an employer or admin:', req.user.user_type);
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can view job applications.'
+        message: 'Access denied. Only employers and admins can view job applications.'
       });
     }
     
@@ -1520,11 +1520,11 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
     const { JobApplication, Job, Company, User, Resume, WorkExperience, Education } = require('../config/index');
     const { id } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can view job applications.'
+        message: 'Access denied. Only employers and admins can view job applications.'
       });
     }
     
@@ -1711,11 +1711,11 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
     const { status } = req.body;
     const { id } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can update application status.'
+        message: 'Access denied. Only employers and admins can update application status.'
       });
     }
     
@@ -2371,8 +2371,8 @@ router.get('/employer/analytics', authenticateToken, async (req, res) => {
     const DashboardService = require('../services/dashboardService');
     const range = (req.query.range || '30d').toString();
 
-    if (req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can access this endpoint.' });
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can access this endpoint.' });
     }
 
     const analytics = await DashboardService.getEmployerAnalytics(req.user.id, { range });
@@ -2390,8 +2390,8 @@ router.get('/employer/analytics/export', authenticateToken, async (req, res) => 
     const range = (req.query.range || '30d').toString();
     const format = (req.query.format || 'csv').toString();
 
-    if (req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can access this endpoint.' });
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can access this endpoint.' });
     }
 
     const analytics = await DashboardService.getEmployerAnalytics(req.user.id, { range });
@@ -3263,11 +3263,11 @@ router.get('/cover-letters/:id/download', authenticateToken, async (req, res) =>
 // Download candidate cover letter (for employers)
 router.get('/employer/candidates/:candidateId/cover-letters/:coverLetterId/download', authenticateToken, async (req, res) => {
   try {
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can download candidate cover letters.'
+        message: 'Access denied. Only employers and admins can download candidate cover letters.'
       });
     }
 
@@ -3351,11 +3351,11 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
   try {
     const { applicationId } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can download cover letters.'
+        message: 'Access denied. Only employers and admins can download cover letters.'
       });
     }
 
@@ -3568,8 +3568,8 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
   try {
     const { Job, JobApplication, Company } = require('../config/index');
 
-    if (!req.user || req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view dashboard.' });
+    if (!req.user || (req.user.user_type !== 'employer' && req.user.user_type !== 'admin')) {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view dashboard.' });
     }
 
     const employerId = req.user.id;
@@ -3634,12 +3634,12 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const { JobApplication, Resume } = require('../config/index');
     const { applicationId } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      console.log('❌ Access denied - user is not an employer:', req.user.user_type);
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      console.log('❌ Access denied - user is not an employer or admin:', req.user.user_type);
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Only employers can download resumes.'
+        message: 'Access denied. Only employers and admins can download resumes.'
       });
     }
 

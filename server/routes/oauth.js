@@ -601,10 +601,10 @@ router.post('/complete-employer-profile', async (req, res) => {
       });
     }
     
-    if (user.user_type !== 'employer') {
+    if (user.user_type !== 'employer' && user.user_type !== 'admin') {
       return res.status(400).json({
         success: false,
-        message: 'User is not an employer'
+        message: 'User is not an employer or admin'
       });
     }
     

@@ -283,10 +283,10 @@ router.get('/', authenticateToken, async (req, res) => {
       companyId: req.user?.companyId
     });
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      console.log('❌ Requirements API - User is not an employer:', req.user.user_type);
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view requirements.' });
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      console.log('❌ Requirements API - User is not an employer or admin:', req.user.user_type);
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view requirements.' });
     }
     
     const companyId = req.user.companyId;
@@ -325,11 +325,11 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ 
         success: false, 
-        message: 'Access denied. Only employers can view requirement statistics.' 
+        message: 'Access denied. Only employers and admins can view requirement statistics.' 
       });
     }
     
@@ -440,9 +440,9 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 50, search, sortBy = 'relevance' } = req.query;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view candidates.' });
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view candidates.' });
     }
     
     // Get the requirement
@@ -782,9 +782,9 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
   try {
     const { requirementId, candidateId } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can view candidate profiles.' });
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view candidate profiles.' });
     }
     
     // Check if requirement exists (more flexible check)
@@ -1382,9 +1382,9 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
   try {
     const { requirementId, candidateId } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can shortlist candidates.' });
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can shortlist candidates.' });
     }
     
     // Verify the requirement belongs to the employer's company
@@ -1576,9 +1576,9 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
     const { requirementId, candidateId } = req.params;
     const { message, subject } = req.body;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
-      return res.status(403).json({ success: false, message: 'Access denied. Only employers can contact candidates.' });
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can contact candidates.' });
     }
     
     // Verify the requirement belongs to the employer's company
@@ -1810,11 +1810,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
   try {
     const { requirementId, candidateId, resumeId } = req.params;
     
-    // Check if user is an employer
-    if (req.user.user_type !== 'employer') {
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ 
         success: false, 
-        message: 'Access denied. Only employers can download candidate resumes.' 
+        message: 'Access denied. Only employers and admins can download candidate resumes.' 
       });
     }
     

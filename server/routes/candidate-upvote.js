@@ -38,10 +38,10 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Ensure only employers can like
+// Ensure only employers and admins can like
 function ensureEmployer(req, res, next) {
-	if (!req.user || req.user.user_type !== 'employer') {
-		return res.status(403).json({ success: false, message: 'Only employers can like candidates' });
+	if (!req.user || (req.user.user_type !== 'employer' && req.user.user_type !== 'admin')) {
+		return res.status(403).json({ success: false, message: 'Only employers and admins can like candidates' });
 	}
 	next();
 }

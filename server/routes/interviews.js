@@ -451,11 +451,11 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check permissions (only employer can cancel)
-    if (req.user.user_type !== 'employer' || interview.employerId !== req.user.id) {
+    // Check permissions (only employer or admin can cancel)
+    if ((req.user.user_type !== 'employer' && req.user.user_type !== 'admin') || interview.employerId !== req.user.id) {
       return res.status(403).json({ 
         success: false, 
-        message: 'Access denied. Only employers can cancel interviews.' 
+        message: 'Access denied. Only employers and admins can cancel interviews.' 
       });
     }
 

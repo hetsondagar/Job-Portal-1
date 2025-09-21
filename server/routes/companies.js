@@ -120,11 +120,11 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, industry, companySize, website, description, address, city, state, country, email, phone, region } = req.body;
     
-    // Check if user is an employer
+    // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Only employers can create companies'
+        message: 'Only employers and admins can create companies'
       });
     }
 
