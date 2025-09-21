@@ -55,6 +55,23 @@ export default function GulfOpportunitiesPage() {
   // Real Gulf job data
   const [gulfJobs, setGulfJobs] = useState<any[]>([])
   const [gulfJobsLoading, setGulfJobsLoading] = useState(true)
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
+
+  // Fetch applied jobs for logged in users
+  const fetchAppliedJobs = async () => {
+    if (!user) return
+    
+    try {
+      const response = await apiService.getGulfJobApplications()
+      if (response.success && response.data) {
+        const applications = response.data.applications || []
+        const appliedJobIds = new Set(applications.map((app: any) => app.jobId || app.job?.id))
+        setAppliedJobs(appliedJobIds)
+      }
+    } catch (error) {
+      console.error('Error fetching applied jobs:', error)
+    }
+  }
 
   // Fetch real Gulf jobs
   useEffect(() => {
@@ -101,6 +118,15 @@ export default function GulfOpportunitiesPage() {
 
     fetchGulfJobs()
   }, [])
+
+  // Fetch applied jobs when user changes
+  useEffect(() => {
+    if (user) {
+      fetchAppliedJobs()
+    } else {
+      setAppliedJobs(new Set())
+    }
+  }, [user])
 
   const benefits = [
     {
@@ -285,6 +311,9 @@ export default function GulfOpportunitiesPage() {
           duration: 5000,
         })
         console.log('Gulf job application submitted:', jobId)
+        
+        // Add job to applied jobs set immediately for better UX
+        setAppliedJobs(prev => new Set([...prev, jobId]))
         
         // Redirect to Gulf dashboard to see the application
         setTimeout(() => {
@@ -483,11 +512,27 @@ export default function GulfOpportunitiesPage() {
                     </div>
                     
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      className={`w-full ${
+                        appliedJobs.has(job.id) 
+                          ? 'bg-green-500 text-white cursor-not-allowed' 
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
                       onClick={() => handleApplyToJob(job.id)}
+                      disabled={appliedJobs.has(job.id)}
                     >
-                      Apply Now
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      {appliedJobs.has(job.id) ? (
+                        <>
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          Applied
+                        </>
+                      ) : (
+                        <>
+                          Apply Now
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
