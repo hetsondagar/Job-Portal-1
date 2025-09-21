@@ -106,12 +106,12 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     const alert = await JobAlert.create({
-      user_id: req.user.id,
+      userId: req.user.id,
       name,
       keywords: keywords || [],
       locations: locations || [],
       categories: categories || [],
-      experienceLevel,
+      experienceLevel: experienceLevel && experienceLevel !== 'any' ? experienceLevel : null,
       salaryMin,
       salaryMax,
       jobType: jobType || [],

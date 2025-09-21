@@ -367,7 +367,6 @@ export default function JobAlertsPage() {
                          <SelectItem value="junior">Junior Level</SelectItem>
                          <SelectItem value="mid">Mid Level</SelectItem>
                          <SelectItem value="senior">Senior Level</SelectItem>
-                         <SelectItem value="lead">Lead</SelectItem>
                          <SelectItem value="executive">Executive</SelectItem>
                        </SelectContent>
                     </Select>

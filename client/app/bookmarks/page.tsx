@@ -215,7 +215,8 @@ export default function BookmarksPage() {
   }
 
   const filteredBookmarks = bookmarks.filter(bookmark => {
-    const jobDetails = getJobById(bookmark.jobId)
+    // Use actual job data from bookmark if available, otherwise fallback to mock data
+    const jobDetails = bookmark.job || getJobById(bookmark.jobId)
     const matchesSearch = searchTerm === '' || 
       jobDetails?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       jobDetails?.company?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -233,8 +234,8 @@ export default function BookmarksPage() {
 
   // Sort bookmarks
   const sortedBookmarks = [...filteredBookmarks].sort((a, b) => {
-    const jobA = getJobById(a.jobId)
-    const jobB = getJobById(b.jobId)
+    const jobA = a.job || getJobById(a.jobId)
+    const jobB = b.job || getJobById(b.jobId)
     
     switch (sortBy) {
       case 'date':
@@ -477,7 +478,7 @@ export default function BookmarksPage() {
           ) : (
                          <div className="space-y-4">
                {sortedBookmarks.map((bookmark) => {
-                const jobDetails = getJobById(bookmark.jobId)
+                const jobDetails = bookmark.job || getJobById(bookmark.jobId)
                 return (
                   <Card key={bookmark.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
                     <CardContent className="p-6">
@@ -516,11 +517,21 @@ export default function BookmarksPage() {
                             </div>
                             <div className="flex items-center space-x-1">
                               <DollarSign className="w-4 h-4" />
-                              <span>{jobDetails?.salary || 'Salary'}</span>
+                              <span>
+                                {jobDetails?.salaryMin && jobDetails?.salaryMax 
+                                  ? `${jobDetails.salaryMin} - ${jobDetails.salaryMax} ${jobDetails.salaryCurrency || 'INR'}`
+                                  : jobDetails?.salary || 'Salary'
+                                }
+                              </span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Briefcase className="w-4 h-4" />
-                              <span>{jobDetails?.experience || 'Experience'}</span>
+                              <span>
+                                {jobDetails?.experienceMin && jobDetails?.experienceMax
+                                  ? `${jobDetails.experienceMin}-${jobDetails.experienceMax} years`
+                                  : jobDetails?.experienceLevel || jobDetails?.experience || 'Experience'
+                                }
+                              </span>
                             </div>
                           </div>
 
@@ -532,12 +543,12 @@ export default function BookmarksPage() {
                             </div>
                           )}
 
-                          {jobDetails?.skills && jobDetails.skills.length > 0 && (
+                          {jobDetails?.skills && Array.isArray(jobDetails.skills) && jobDetails.skills.length > 0 && (
                             <div className="mb-3">
                               <div className="flex flex-wrap gap-1">
                                 {jobDetails.skills.slice(0, 4).map((skill, index) => (
                                   <Badge key={index} variant="secondary" className="text-xs">
-                                    {skill}
+                                    {typeof skill === 'string' ? skill : skill.name || skill}
                                   </Badge>
                                 ))}
                                 {jobDetails.skills.length > 4 && (
@@ -560,11 +571,16 @@ export default function BookmarksPage() {
                           <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>Posted: {jobDetails?.posted || 'Recently'}</span>
+                              <span>
+                                Posted: {jobDetails?.createdAt 
+                                  ? new Date(jobDetails.createdAt).toLocaleDateString()
+                                  : jobDetails?.posted || 'Recently'
+                                }
+                              </span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Eye className="w-4 h-4" />
-                              <span>{jobDetails?.applicants || 0} applicants</span>
+                              <span>{jobDetails?.applications || jobDetails?.applicants || 0} applicants</span>
                             </div>
                           </div>
                         </div>

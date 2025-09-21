@@ -132,10 +132,10 @@ export default function RegisterPage() {
           }, 2000)
         }
       } else {
-        toast.success("Account created successfully! Please sign in to continue.")
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 2000)
+      toast.success("Account created successfully! Please sign in to continue.")
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 2000)
       }
     } catch (error: any) {
       // Handle specific validation errors from backend

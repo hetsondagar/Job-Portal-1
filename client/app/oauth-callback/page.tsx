@@ -271,11 +271,11 @@ export default function OAuthCallbackPage() {
                 router.push('/jobseeker-gulf-dashboard')
               }, 1500)
             } else {
-              // Always redirect to jobseeker dashboard from this callback
-              console.log('✅ Redirecting jobseeker to dashboard')
-              setTimeout(() => {
-                router.push('/dashboard')
-              }, 1500) // Reduced timeout for better UX
+            // Always redirect to jobseeker dashboard from this callback
+            console.log('✅ Redirecting jobseeker to dashboard')
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 1500) // Reduced timeout for better UX
             }
           }
         } else {
