@@ -63,6 +63,19 @@ export default function CompanyDetailPage() {
     willingToRelocate: false
   })
 
+  const locationDisplay = (() => {
+    const city = (company?.city || '').trim()
+    const state = (company?.state || '').trim()
+    const country = (company?.country || '').trim()
+    const fromAddress = (company?.address || '').split(',')[0].trim()
+    const fromJob = (companyJobs?.[0]?.city || companyJobs?.[0]?.location || '').trim()
+    const pick = city || fromAddress || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
+    return pick || '—'
+  })()
+
+  const safeBenefits: string[] = Array.isArray((company as any)?.benefits) ? (company as any).benefits as string[] : []
+  const safeJobs: any[] = Array.isArray(companyJobs) ? companyJobs : []
+
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -516,7 +529,7 @@ export default function CompanyDetailPage() {
                           </div>
                           <div className="flex items-center">
                             <MapPin className="w-5 h-5 mr-2" />
-                            {company.city || company.state || company.country || '—'}
+                            {locationDisplay}
                           </div>
                           <div className="flex items-center">
                             <Users className="w-5 h-5 mr-2" />
@@ -724,13 +737,13 @@ export default function CompanyDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-3">
-                      {(company.benefits || []).slice(0, 8).map((benefit: string, index: number) => (
+                      {safeBenefits.slice(0, 8).map((benefit: string, index: number) => (
                         <Badge key={index} variant="secondary" className="justify-center py-2 text-xs">
                           {benefit}
                         </Badge>
                       ))}
                     </div>
-                    {(company.benefits || []).length > 8 && (
+                    {safeBenefits.length > 8 && (
                       <div className="mt-3 text-center">
                         <Button variant="link" className="text-sm text-blue-600">
                           View all benefits
@@ -800,14 +813,14 @@ export default function CompanyDetailPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {companyJobs.length} job openings at {company.name}
+                  {safeJobs.length} job openings at {company.name}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">Departments hiring at {company.name}</p>
               </div>
               <Badge
                 className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
               >
-                {companyJobs.length} Active Jobs
+                {safeJobs.length} Active Jobs
               </Badge>
             </div>
 
@@ -842,15 +855,15 @@ export default function CompanyDetailPage() {
                     </div>
                   ))}
                 </div>
-              ) : companyJobs.length > 0 ? (
-                companyJobs.map((job, index) => (
+              ) : safeJobs.length > 0 ? (
+                safeJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.6 }}
                 >
-                  <Link href={`/jobs/${job.id}`}>
+                  <Link href={`/jobs/${String(job.id)}`}>
                     <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl hover:shadow-xl transition-all duration-300 group cursor-pointer">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
