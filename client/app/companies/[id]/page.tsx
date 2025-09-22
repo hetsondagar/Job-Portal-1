@@ -952,11 +952,18 @@ export default function CompanyDetailPage() {
                             <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{job.description || ''}</p>
 
                             <div className="flex flex-wrap gap-2 mb-4">
-                              {(job.requirements || []).map((requirement: any, reqIndex: number) => (
-                                <Badge key={reqIndex} variant="secondary" className="text-xs">
-                                  {requirement}
-                                </Badge>
-                              ))}
+                              {(() => {
+                                const reqs = Array.isArray(job.requirements)
+                                  ? job.requirements
+                                  : typeof job.requirements === 'string'
+                                    ? job.requirements.split(/[,\n\r]+/).map((s: string) => s.trim()).filter(Boolean)
+                                    : []
+                                return reqs.map((requirement: any, reqIndex: number) => (
+                                  <Badge key={reqIndex} variant="secondary" className="text-xs">
+                                    {requirement}
+                                  </Badge>
+                                ))
+                              })()}
                             </div>
 
                             <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
