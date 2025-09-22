@@ -55,6 +55,14 @@ export default function CandidateProfilePage() {
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const { toast } = useToast()
 
+  // Ensure API links hit backend, not the Next.js origin
+  const toAbsoluteApiUrl = (url?: string) => {
+    if (!url) return "";
+    if (/^https?:\/\//i.test(url)) return url;
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    return `${base}${url}`;
+  }
+
   useEffect(() => {
     const fetchCandidateProfile = async () => {
       try {
@@ -168,11 +176,12 @@ export default function CandidateProfilePage() {
     
     // Try fileUrl first, then metadata.fileUrl
     const fileUrl = coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl
+    const absolute = toAbsoluteApiUrl(fileUrl)
     
-    if (fileUrl) {
-      console.log('📄 Opening cover letter file:', fileUrl)
+    if (absolute) {
+      console.log('📄 Opening cover letter file:', absolute)
       // Open file in new tab
-      window.open(fileUrl, '_blank', 'noopener,noreferrer')
+      window.open(absolute, '_blank', 'noopener,noreferrer')
     } else {
       console.log('📝 No file URL, showing content')
       // Show content in modal or expand view
@@ -200,7 +209,7 @@ export default function CandidateProfilePage() {
       setIsDownloading(true)
       
       // Try direct file download first if fileUrl is available
-      const fileUrl = coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl
+      const fileUrl = toAbsoluteApiUrl(coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl)
       if (fileUrl) {
         console.log('📄 Downloading cover letter file directly:', fileUrl)
         
@@ -828,7 +837,7 @@ export default function CandidateProfilePage() {
                                       className="flex-1"
                                       asChild
                                     >
-                                      <a href={resume.fileUrl} target="_blank" rel="noopener noreferrer">
+                                      <a href={toAbsoluteApiUrl(resume.fileUrl)} target="_blank" rel="noopener noreferrer">
                                         <Eye className="w-3 h-3 mr-1" />
                                         View
                                       </a>
@@ -879,7 +888,7 @@ export default function CandidateProfilePage() {
                       
                       <div className="flex flex-col sm:flex-row gap-3 justify-center">
                             <Button className="bg-blue-600 hover:bg-blue-700" asChild>
-                              <a href={candidate.resumes[0].fileUrl} target="_blank" rel="noopener noreferrer">
+                              <a href={toAbsoluteApiUrl(candidate.resumes[0].fileUrl)} target="_blank" rel="noopener noreferrer">
                           <Eye className="w-4 h-4 mr-2" />
                           View CV
                               </a>
@@ -938,7 +947,7 @@ export default function CandidateProfilePage() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                             <Button className="w-full bg-blue-600 hover:bg-blue-700" asChild>
-                              <a href={candidate.resumes[0].fileUrl} target="_blank" rel="noopener noreferrer">
+                              <a href={toAbsoluteApiUrl(candidate.resumes[0].fileUrl)} target="_blank" rel="noopener noreferrer">
                           <Eye className="w-4 h-4 mr-2" />
                           View Full CV
                               </a>
