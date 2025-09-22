@@ -259,7 +259,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     let activeJobsCount = 0;
     try {
       const Job = require('../models/Job');
-      activeJobsCount = await Job.count({ where: { company_id: id, status: 'active' } });
+      activeJobsCount = await Job.count({ where: { companyId: id, status: 'active' } });
     } catch (e) {
       console.warn('Could not compute activeJobsCount for company', id, e?.message);
     }
@@ -302,7 +302,7 @@ router.get('/:id/jobs', authenticateToken, async (req, res) => {
     
     const jobs = await Job.findAll({
       where: { 
-        company_id: id,
+        companyId: id,
         status: 'active'
       },
       order: [['createdAt', 'DESC']],
