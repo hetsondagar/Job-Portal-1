@@ -135,8 +135,19 @@ export default function CompanyDetailPage() {
         setJobsError('Invalid company id')
       } else {
         const response = await apiService.getCompanyJobs(companyId)
-        if (response.success && Array.isArray(response.data)) {
-          setCompanyJobs(response.data)
+        if (response.success) {
+          const d: any = response.data
+          const jobs = Array.isArray(d)
+            ? d
+            : Array.isArray(d?.jobs)
+              ? d.jobs
+              : Array.isArray(d?.rows)
+                ? d.rows
+                : []
+          setCompanyJobs(jobs)
+          if (!Array.isArray(jobs)) {
+            setJobsError('Failed to parse jobs list')
+          }
         } else {
           setCompanyJobs([])
           setJobsError(response.message || 'Failed to load company jobs')
@@ -505,7 +516,7 @@ export default function CompanyDetailPage() {
                           </div>
                           <div className="flex items-center">
                             <MapPin className="w-5 h-5 mr-2" />
-                            {company.location}
+                            {company.city || company.state || company.country || '—'}
                           </div>
                           <div className="flex items-center">
                             <Users className="w-5 h-5 mr-2" />
