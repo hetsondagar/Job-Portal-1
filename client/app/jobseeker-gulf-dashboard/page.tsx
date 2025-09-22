@@ -687,7 +687,7 @@ export default function JobseekerGulfDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/gulf-applications">
+            <Link href="/gulf-dashboard/applications">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -705,7 +705,7 @@ export default function JobseekerGulfDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/resumes">
+            <Link href="/gulf-resumes">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -723,7 +723,7 @@ export default function JobseekerGulfDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/cover-letters">
+            <Link href="/gulf-cover-letters">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -921,7 +921,12 @@ export default function JobseekerGulfDashboardPage() {
                             variant="outline"
                             onClick={async () => {
                               try {
-                                await apiService.downloadCoverLetter(coverLetter.id)
+                                const response = await apiService.fetchCoverLetterFile(coverLetter.id)
+                                const blob = await response.blob()
+                                const mime = response.headers.get('content-type') || 'application/pdf'
+                                const url = window.URL.createObjectURL(new Blob([blob], { type: mime }))
+                                window.open(url, '_blank')
+                                setTimeout(() => window.URL.revokeObjectURL(url), 60000)
                               } catch (error) {
                                 console.error('Error viewing cover letter:', error)
                                 toast.error('Failed to view cover letter')

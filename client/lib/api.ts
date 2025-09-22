@@ -2322,6 +2322,23 @@ class ApiService {
     return response;
   }
 
+  // Fetch cover letter file (for viewing in a new tab)
+  async fetchCoverLetterFile(id: string): Promise<Response> {
+    const response = await fetch(`${API_BASE_URL}/user/cover-letters/${id}/download`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if ((errorData as any).code === 'FILE_NOT_FOUND') {
+        throw new Error('Cover letter file not found on server. Please re-upload your cover letter.');
+      }
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response;
+  }
+
 
   // Download candidate cover letter (for employers)
   async downloadCandidateCoverLetter(candidateId: string, coverLetterId: string): Promise<Response> {
