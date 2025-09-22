@@ -93,7 +93,7 @@ router.post('/', authenticateToken, async (req, res) => {
       normalizedTravelRequired = body.travelRequired;
     }
 
-    // Resolve companyId: prefer provided, else user's company, else create/attach one
+    // Resolve companyId: admins can specify any companyId; employers default to their own
     let companyId = body.companyId || req.user.companyId;
     if (!companyId) {
       try {
@@ -290,7 +290,9 @@ router.get('/', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view requirements.' });
     }
     
-    const companyId = req.user.companyId;
+    // Admins can view another company's requirements via query.companyId
+    const requestedCompanyId = req.query.companyId;
+    const companyId = req.user.user_type === 'admin' ? (requestedCompanyId || req.user.companyId) : req.user.companyId;
     console.log('🔍 Requirements API - Company ID:', companyId);
     
     if (!companyId) {
@@ -352,8 +354,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     // Check if requirement exists and belongs to employer's company
     const requirement = await Requirement.findOne({
       where: { 
-        id: id,
-        companyId: req.user.companyId 
+        id: id
       }
     });
     
@@ -362,6 +363,10 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         success: false, 
         message: 'Requirement not found' 
       });
+    }
+    // If not admin, enforce ownership
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
     // Get total candidates count for this requirement
@@ -464,13 +469,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     // Get the requirement
     const requirement = await Requirement.findOne({
       where: { 
-        id,
-        companyId: req.user.companyId 
+        id
       }
     });
     
     if (!requirement) {
       return res.status(404).json({ success: false, message: 'Requirement not found' });
+    }
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
     console.log('🔍 Searching candidates for requirement:', requirement.title);
