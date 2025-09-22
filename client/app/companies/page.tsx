@@ -32,6 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { apiService } from "@/lib/api"
 
 // Types for state management
 interface FilterState {
@@ -80,6 +81,11 @@ export default function CompaniesPage() {
   const [isStickyVisible, setIsStickyVisible] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Data from backend
+  const [apiCompanies, setApiCompanies] = useState<any[]>([])
+  const [loadingCompanies, setLoadingCompanies] = useState<boolean>(true)
+  const [loadError, setLoadError] = useState<string>("")
+
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -122,6 +128,36 @@ export default function CompaniesPage() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Fetch companies from backend
+  useEffect(() => {
+    const controller = new AbortController()
+    const fetchCompanies = async () => {
+      try {
+        setLoadingCompanies(true)
+        setLoadError("")
+        const resp = await apiService.listCompanies({
+          search: filters.search || undefined,
+          limit: 100,
+          offset: 0,
+        })
+        if (resp.success && Array.isArray(resp.data)) {
+          setApiCompanies(resp.data)
+        } else {
+          setApiCompanies([])
+          setLoadError(resp.message || 'Failed to load companies')
+        }
+      } catch (e: any) {
+        setLoadError('Failed to load companies')
+        setApiCompanies([])
+      } finally {
+        setLoadingCompanies(false)
+      }
+    }
+    fetchCompanies()
+    return () => controller.abort()
+  // Re-fetch on search change only; other filters are client-side
+  }, [filters.search])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -386,519 +422,50 @@ export default function CompaniesPage() {
     setCurrentPage(1)
   }, [handleIndustryCardSelection])
 
-  // Generate more companies for pagination
-  const generateCompanies = (): Company[] => {
-    const baseCompanies: Company[] = [
-      {
-        id: 1,
-        name: "TechCorp Solutions",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Technology",
-        sector: "technology",
-        location: "Bangalore",
-        employees: "500-1000",
-        rating: 4.2,
-        reviews: 234,
-        openings: 24,
-        description: "Leading technology company specializing in innovative software solutions for enterprises.",
-        founded: "2015",
-        website: "techcorp.com",
-        benefits: ["Health Insurance", "Flexible Hours", "Remote Work", "Learning Budget"],
-        featured: true,
-        salaryRange: "8-25 LPA",
-        workCulture: "Collaborative",
-        companyType: "Product",
-        urgent: false,
-      },
-      {
-        id: 2,
-        name: "FinanceFirst Bank",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Fintech",
-        sector: "finance",
-        location: "Mumbai",
-        employees: "10000+",
-        rating: 4.1,
-        reviews: 1567,
-        openings: 89,
-        description: "One of India's leading private sector banks with a strong digital presence.",
-        founded: "1994",
-        website: "financefirst.com",
-        benefits: ["Medical Insurance", "Provident Fund", "Performance Bonus", "Training Programs"],
-        featured: true,
-        salaryRange: "6-30 LPA",
-        workCulture: "Professional",
-        companyType: "Fortune 500",
-        urgent: true,
-      },
-      {
-        id: 3,
-        name: "AutoDrive Motors",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Automotive",
-        sector: "automotive",
-        location: "Chennai",
-        employees: "5000-10000",
-        rating: 4.0,
-        reviews: 892,
-        openings: 45,
-        description: "Leading automotive manufacturer with focus on electric and hybrid vehicles.",
-        founded: "1985",
-        website: "autodrive.com",
-        benefits: ["Employee Discounts", "Health Insurance", "Retirement Benefits", "Skill Development"],
-        featured: false,
-        salaryRange: "5-20 LPA",
-        workCulture: "Engineering-focused",
-        companyType: "MNC",
-        urgent: false,
-      },
-      {
-        id: 4,
-        name: "HealthCare Plus",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Healthcare",
-        sector: "healthcare",
-        location: "Delhi",
-        employees: "2000-5000",
-        rating: 4.3,
-        reviews: 567,
-        openings: 67,
-        description: "Leading healthcare provider with state-of-the-art medical facilities.",
-        founded: "2000",
-        website: "healthcareplus.com",
-        benefits: ["Medical Insurance", "Health Benefits", "Professional Development", "Work-Life Balance"],
-        featured: true,
-        salaryRange: "7-22 LPA",
-        workCulture: "Patient-focused",
-        companyType: "Healthcare",
-        urgent: false,
-      },
-      {
-        id: 5,
-        name: "EduTech Innovations",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "EdTech",
-        sector: "edtech",
-        location: "Pune",
-        employees: "500-1000",
-        rating: 4.4,
-        reviews: 345,
-        openings: 34,
-        description: "Revolutionizing education through innovative technology solutions.",
-        founded: "2018",
-        website: "edutech.com",
-        benefits: ["Learning Budget", "Remote Work", "Stock Options", "Flexible Hours"],
-        featured: true,
-        salaryRange: "8-28 LPA",
-        workCulture: "Innovative",
-        companyType: "Startup",
-        urgent: true,
-      },
-      {
-        id: 6,
-        name: "Green Energy Solutions",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Energy",
-        sector: "energy",
-        location: "Gurgaon",
-        employees: "1000-5000",
-        rating: 4.1,
-        reviews: 234,
-        openings: 23,
-        description: "Leading renewable energy company focused on sustainable solutions.",
-        founded: "2010",
-        website: "greenenergy.com",
-        benefits: ["Health Insurance", "Environmental Benefits", "Career Growth", "Performance Bonus"],
-        featured: false,
-        salaryRange: "6-24 LPA",
-        workCulture: "Sustainability-focused",
-        companyType: "Product",
-        urgent: false,
-      },
-      {
-        id: 7,
-        name: "FinTech Solutions",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Fintech",
-        sector: "fintech",
-        location: "Mumbai",
-        employees: "500-1000",
-        rating: 4.5,
-        reviews: 456,
-        openings: 56,
-        description: "Innovative fintech company revolutionizing digital payments and banking.",
-        founded: "2019",
-        website: "fintechsolutions.com",
-        benefits: ["Stock Options", "Remote Work", "Learning Budget", "Performance Bonus"],
-        featured: true,
-        salaryRange: "10-35 LPA",
-        workCulture: "Fast-paced",
-        companyType: "Unicorn",
-        urgent: true,
-      },
-      {
-        id: 8,
-        name: "Retail Giants",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Retail",
-        sector: "retail",
-        location: "Bangalore",
-        employees: "5000+",
-        rating: 3.9,
-        reviews: 1234,
-        openings: 123,
-        description: "Leading retail chain with nationwide presence and strong customer base.",
-        founded: "1995",
-        website: "retailgiants.com",
-        benefits: ["Employee Discounts", "Health Insurance", "Performance Bonus", "Career Growth"],
-        featured: false,
-        salaryRange: "4-18 LPA",
-        workCulture: "Customer-focused",
-        companyType: "MNC",
-        urgent: false,
-      },
-      {
-        id: 9,
-        name: "Consulting Partners",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Consulting",
-        sector: "consulting",
-        location: "Delhi",
-        employees: "1000-5000",
-        rating: 4.2,
-        reviews: 678,
-        openings: 78,
-        description: "Top-tier consulting firm providing strategic solutions to Fortune 500 companies.",
-        founded: "2005",
-        website: "consultingpartners.com",
-        benefits: ["Health Insurance", "Travel Benefits", "Performance Bonus", "Professional Development"],
-        featured: true,
-        salaryRange: "12-40 LPA",
-        workCulture: "Professional",
-        companyType: "Consulting",
-        urgent: false,
-      },
-      {
-        id: 10,
-        name: "Manufacturing Corp",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Manufacturing",
-        sector: "manufacturing",
-        location: "Chennai",
-        employees: "10000+",
-        rating: 3.8,
-        reviews: 890,
-        openings: 89,
-        description: "Leading manufacturing company with global operations and innovative products.",
-        founded: "1980",
-        website: "manufacturingcorp.com",
-        benefits: ["Health Insurance", "Retirement Benefits", "Performance Bonus", "Skill Development"],
-        featured: false,
-        salaryRange: "5-25 LPA",
-        workCulture: "Production-focused",
-        companyType: "MNC",
-        urgent: false,
-      },
-      {
-        id: 11,
-        name: "Digital Marketing Pro",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Digital Marketing",
-        sector: "marketing",
-        location: "Mumbai",
-        employees: "500-1000",
-        rating: 4.3,
-        reviews: 345,
-        openings: 45,
-        description: "Award-winning digital marketing agency helping brands grow online.",
-        founded: "2016",
-        website: "digitalmarketingpro.com",
-        benefits: ["Remote Work", "Creative Freedom", "Performance Bonus", "Learning Budget"],
-        featured: true,
-        salaryRange: "6-20 LPA",
-        workCulture: "Creative",
-        companyType: "Agency",
-        urgent: true,
-      },
-      {
-        id: 12,
-        name: "Logistics Express",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Logistics",
-        sector: "logistics",
-        location: "Gurgaon",
-        employees: "2000-5000",
-        rating: 4.0,
-        reviews: 456,
-        openings: 56,
-        description: "Leading logistics company providing end-to-end supply chain solutions.",
-        founded: "2008",
-        website: "logisticsexpress.com",
-        benefits: ["Health Insurance", "Travel Benefits", "Performance Bonus", "Career Growth"],
-        featured: false,
-        salaryRange: "5-22 LPA",
-        workCulture: "Efficiency-focused",
-        companyType: "Logistics",
-        urgent: false,
-      },
-      {
-        id: 13,
-        name: "Real Estate Developers",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Real Estate",
-        sector: "realestate",
-        location: "Mumbai",
-        employees: "1000-5000",
-        rating: 3.9,
-        reviews: 567,
-        openings: 67,
-        description: "Premium real estate developer creating landmark properties across India.",
-        founded: "1998",
-        website: "realestatedevelopers.com",
-        benefits: ["Health Insurance", "Property Benefits", "Performance Bonus", "Career Growth"],
-        featured: false,
-        salaryRange: "6-30 LPA",
-        workCulture: "Quality-focused",
-        companyType: "Real Estate",
-        urgent: false,
-      },
-      {
-        id: 14,
-        name: "FoodTech Innovations",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Food Technology",
-        sector: "foodtech",
-        location: "Bangalore",
-        employees: "500-1000",
-        rating: 4.4,
-        reviews: 234,
-        openings: 34,
-        description: "Innovative food technology company revolutionizing the food industry.",
-        founded: "2020",
-        website: "foodtechinnovations.com",
-        benefits: ["Health Insurance", "Food Benefits", "Stock Options", "Flexible Hours"],
-        featured: true,
-        salaryRange: "8-25 LPA",
-        workCulture: "Innovative",
-        companyType: "Startup",
-        urgent: true,
-      },
-      {
-        id: 15,
-        name: "Media Networks",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Media & Entertainment",
-        sector: "media",
-        location: "Mumbai",
-        employees: "2000-5000",
-        rating: 4.1,
-        reviews: 678,
-        openings: 78,
-        description: "Leading media company creating engaging content for millions of viewers.",
-        founded: "2003",
-        website: "medianetworks.com",
-        benefits: ["Health Insurance", "Creative Benefits", "Performance Bonus", "Professional Development"],
-        featured: true,
-        salaryRange: "7-28 LPA",
-        workCulture: "Creative",
-        companyType: "Media",
-        urgent: false,
-      },
-      {
-        id: 16,
-        name: "Pharmaceutical Research",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Pharmaceuticals",
-        sector: "pharma",
-        location: "Hyderabad",
-        employees: "5000+",
-        rating: 4.2,
-        reviews: 456,
-        openings: 56,
-        description: "Leading pharmaceutical company focused on research and development.",
-        founded: "1992",
-        website: "pharmaresearch.com",
-        benefits: ["Health Insurance", "Research Benefits", "Performance Bonus", "Professional Development"],
-        featured: false,
-        salaryRange: "8-35 LPA",
-        workCulture: "Research-focused",
-        companyType: "Pharmaceutical",
-        urgent: false,
-      },
-      {
-        id: 17,
-        name: "Telecom Solutions",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Telecommunications",
-        sector: "telecom",
-        location: "Delhi",
-        employees: "10000+",
-        rating: 3.9,
-        reviews: 1234,
-        openings: 123,
-        description: "Leading telecom provider with nationwide network coverage.",
-        founded: "1995",
-        website: "telecomsolutions.com",
-        benefits: ["Health Insurance", "Communication Benefits", "Performance Bonus", "Career Growth"],
-        featured: false,
-        salaryRange: "6-30 LPA",
-        workCulture: "Network-focused",
-        companyType: "Telecom",
-        urgent: false,
-      },
-      {
-        id: 18,
-        name: "Insurance Group",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Insurance",
-        sector: "insurance",
-        location: "Mumbai",
-        employees: "5000+",
-        rating: 4.0,
-        reviews: 890,
-        openings: 89,
-        description: "Comprehensive insurance solutions provider with strong market presence.",
-        founded: "1990",
-        website: "insurancegroup.com",
-        benefits: ["Health Insurance", "Insurance Benefits", "Performance Bonus", "Career Growth"],
-        featured: false,
-        salaryRange: "5-25 LPA",
-        workCulture: "Customer-focused",
-        companyType: "Insurance",
-        urgent: false,
-      },
-      {
-        id: 19,
-        name: "Travel & Tourism",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Travel & Tourism",
-        sector: "travel",
-        location: "Delhi",
-        employees: "1000-5000",
-        rating: 4.3,
-        reviews: 567,
-        openings: 67,
-        description: "Leading travel company offering unique travel experiences worldwide.",
-        founded: "2001",
-        website: "traveltourism.com",
-        benefits: ["Travel Benefits", "Health Insurance", "Performance Bonus", "Flexible Hours"],
-        featured: true,
-        salaryRange: "5-20 LPA",
-        workCulture: "Adventure-focused",
-        companyType: "Travel",
-        urgent: false,
-      },
-      {
-        id: 20,
-        name: "Sports & Fitness",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Sports & Fitness",
-        sector: "sports",
-        location: "Bangalore",
-        employees: "500-1000",
-        rating: 4.4,
-        reviews: 345,
-        openings: 45,
-        description: "Leading sports and fitness company promoting healthy lifestyle.",
-        founded: "2017",
-        website: "sportsfitness.com",
-        benefits: ["Fitness Benefits", "Health Insurance", "Performance Bonus", "Flexible Hours"],
-        featured: true,
-        salaryRange: "6-22 LPA",
-        workCulture: "Health-focused",
-        companyType: "Sports",
-        urgent: true,
-      },
-      {
-        id: 21,
-        name: "RemoteTech Solutions",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Technology",
-        sector: "technology",
-        location: "Remote",
-        employees: "200-500",
-        rating: 4.6,
-        reviews: 234,
-        openings: 34,
-        description: "Fully remote technology company specializing in cloud solutions and AI.",
-        founded: "2020",
-        website: "remotetech.com",
-        benefits: ["Remote Work", "Flexible Hours", "Stock Options", "Learning Budget"],
-        featured: true,
-        salaryRange: "12-35 LPA",
-        workCulture: "Remote-first",
-        companyType: "Startup",
-        urgent: true,
-      },
-      {
-        id: 22,
-        name: "HybridWorks Inc",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Consulting",
-        sector: "consulting",
-        location: "Hybrid",
-        employees: "1000-2000",
-        rating: 4.3,
-        reviews: 456,
-        openings: 56,
-        description: "Hybrid work model consulting firm helping companies adapt to new work environments.",
-        founded: "2019",
-        website: "hybridworks.com",
-        benefits: ["Hybrid Work", "Health Insurance", "Performance Bonus", "Professional Development"],
-        featured: true,
-        salaryRange: "10-30 LPA",
-        workCulture: "Flexible",
-        companyType: "Consulting",
-        urgent: false,
-      },
-      {
-        id: 23,
-        name: "Global Remote Services",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Financial Technology",
-        sector: "fintech",
-        location: "Remote",
-        employees: "500-1000",
-        rating: 4.5,
-        reviews: 345,
-        openings: 45,
-        description: "Global fintech company operating entirely remotely with teams across the world.",
-        founded: "2021",
-        website: "globalremote.com",
-        benefits: ["Remote Work", "Global Team", "Stock Options", "Flexible Hours"],
-        featured: true,
-        salaryRange: "15-40 LPA",
-        workCulture: "Global",
-        companyType: "Unicorn",
-        urgent: true,
-      },
-      {
-        id: 24,
-        name: "Hybrid Healthcare",
-        logo: "/placeholder.svg?height=80&width=80",
-        industry: "Healthcare",
-        sector: "healthcare",
-        location: "Hybrid",
-        employees: "2000-5000",
-        rating: 4.2,
-        reviews: 567,
-        openings: 67,
-        description: "Healthcare company offering hybrid work options for administrative and support roles.",
-        founded: "2018",
-        website: "hybridhealthcare.com",
-        benefits: ["Hybrid Work", "Health Insurance", "Performance Bonus", "Work-Life Balance"],
-        featured: false,
-        salaryRange: "8-25 LPA",
-        workCulture: "Patient-focused",
-        companyType: "Healthcare",
-        urgent: false,
-      },
-    ]
-
-    return baseCompanies
+  // Transform backend company to UI model with graceful fallbacks
+  const transformCompany = (c: any): Company => {
+    const employeesBySize: Record<string, string> = {
+      small: "1-50",
+      medium: "51-200",
+      large: "201-1000",
+      enterprise: "1000+",
+    }
+    const industry = c.industry || 'General'
+    const sector = (industry || '').toLowerCase().includes('tech') ? 'technology'
+      : (industry || '').toLowerCase().includes('fin') ? 'fintech'
+      : (industry || '').toLowerCase().includes('health') ? 'healthcare'
+      : (industry || '').toLowerCase().includes('auto') ? 'automotive'
+      : (industry || '').toLowerCase().includes('manufact') ? 'manufacturing'
+      : (industry || '').toLowerCase().includes('consult') ? 'consulting'
+      : (industry || '').toLowerCase().includes('energy') ? 'energy'
+      : 'technology'
+    const locationParts = [c.city, c.state, c.country].filter(Boolean)
+    return {
+      id: Number(c.id),
+      name: c.name || 'Company',
+      logo: "/placeholder.svg?height=80&width=80",
+      industry,
+      sector,
+      location: locationParts.join(', ') || '—',
+      employees: employeesBySize[String(c.companySize)] || String(c.companySize || '—'),
+      rating: 0,
+      reviews: 0,
+      openings: 0,
+      description: c.description || 'Explore roles and teams at this organization.',
+      founded: '—',
+      website: c.website || '',
+      benefits: [],
+      featured: false,
+      salaryRange: '',
+      workCulture: '',
+      companyType: '',
+      urgent: false,
+    }
   }
 
-  const allCompanies = generateCompanies()
+  const allCompanies: Company[] = useMemo(() => {
+    return (apiCompanies || []).map(transformCompany)
+  }, [apiCompanies])
 
   // Filter and sort companies
   const filteredCompanies = useMemo(() => {
@@ -1654,7 +1221,31 @@ export default function CompaniesPage() {
 
             {/* Company Grid */}
             <div className="space-y-4 sm:space-y-6">
-              {currentCompanies.length === 0 ? (
+              {loadError && (
+                <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                  {loadError}
+                </div>
+              )}
+              {loadingCompanies && (
+                <div className="space-y-4">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                        <CardContent className="p-6">
+                          <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-4"></div>
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-3"></div>
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {[...Array(4)].map((_, j) => (
+                              <div key={j} className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!loadingCompanies && currentCompanies.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
                     <Search className="w-8 h-8 text-slate-400" />
@@ -1667,7 +1258,7 @@ export default function CompaniesPage() {
                     Clear All Filters
                   </Button>
                 </div>
-              ) : (
+              ) : !loadingCompanies ? (
                 currentCompanies.map((company, index) => {
                 const sectorColors = getSectorColor(company.sector)
 
@@ -1852,7 +1443,8 @@ export default function CompaniesPage() {
                       </Card>
                   </motion.div>
                 )
-              }))}
+              }) 
+            ): null}
             </div>
 
             {/* Pagination */}

@@ -49,6 +49,8 @@ export default function CompanyDetailPage() {
   const [companyJobs, setCompanyJobs] = useState<any[]>([])
   const [loadingCompany, setLoadingCompany] = useState(true)
   const [loadingJobs, setLoadingJobs] = useState(true)
+  const [companyError, setCompanyError] = useState<string>("")
+  const [jobsError, setJobsError] = useState<string>("")
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
   const [selectedJob, setSelectedJob] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -64,53 +66,51 @@ export default function CompanyDetailPage() {
     window.scrollTo(0, 0)
   }, [])
 
-  // Fetch company data
-
+  // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
+    setLoadingCompany(true)
+    setCompanyError("")
     try {
-      setLoadingCompany(true)
-      // Try to fetch from API first, fallback to mock data
-      try {
-        const response = await apiService.getCompany(params.id as string)
-        if (response.success && response.data) {
-          setCompany(response.data)
+      // Try direct company endpoint
+      const response = await apiService.getCompany(params.id as string)
+      if (response.success && response.data) {
+        setCompany(response.data)
+        return
+      }
+      // Fallback: fetch public companies list and find by id
+      const list = await apiService.listCompanies()
+      if (list.success && Array.isArray(list.data)) {
+        const found = list.data.find((c: any) => String(c.id) === String(params.id))
+        if (found) {
+          setCompany(found)
           return
         }
-      } catch (apiError) {
-        console.log('API call failed, using mock data:', apiError)
       }
-      
-      // Fallback to mock data
-      const companyData = getCompanyData(params.id as string)
-      setCompany(companyData)
+      setCompany(null)
+      setCompanyError('Company not found')
     } catch (error) {
       console.error('Error fetching company data:', error)
-      toast.error('Failed to load company information')
+      setCompanyError('Failed to load company information')
     } finally {
       setLoadingCompany(false)
     }
   }, [params.id])
 
   const fetchCompanyJobs = useCallback(async () => {
+    setLoadingJobs(true)
+    setJobsError("")
     try {
-      setLoadingJobs(true)
-      // Try to fetch from API first, fallback to mock data
-      try {
-        const response = await apiService.getCompanyJobs(params.id as string)
-        if (response.success && response.data) {
-          setCompanyJobs(response.data)
-          return
-        }
-      } catch (apiError) {
-        console.log('API call failed, using mock data:', apiError)
+      const response = await apiService.getCompanyJobs(params.id as string)
+      if (response.success && Array.isArray(response.data)) {
+        setCompanyJobs(response.data)
+      } else {
+        setCompanyJobs([])
+        setJobsError(response.message || 'Failed to load company jobs')
       }
-      
-      // Fallback to mock data
-      const mockJobs = getMockCompanyJobs(params.id as string)
-      setCompanyJobs(mockJobs)
     } catch (error) {
       console.error('Error fetching company jobs:', error)
-      toast.error('Failed to load company jobs')
+      setCompanyJobs([])
+      setJobsError('Failed to load company jobs')
     } finally {
       setLoadingJobs(false)
     }
@@ -223,167 +223,7 @@ export default function CompanyDetailPage() {
 
 
 
-  // Mock company data - in real app, fetch based on params.id
-  const getCompanyData = (id: string) => {
-    const companies = {
-      "1": {
-        id: 1,
-        name: "TechCorp Solutions",
-        logo: "/placeholder.svg?height=120&width=120",
-        industry: "Technology",
-        sector: "technology",
-        location: "Bangalore",
-        employees: "500-1000",
-        rating: 4.2,
-        reviews: 234,
-        openings: 24,
-        description:
-          "TechCorp Solutions is a leading technology company specializing in innovative software solutions for enterprises. We pride ourselves on creating cutting-edge products that solve real-world problems and drive digital transformation.",
-        founded: "2015",
-        website: "techcorp.com",
-        headquarters: "Bangalore, India",
-        revenue: "$50-100 million",
-        ceo: "Rajesh Kumar",
-        companyType: "Product Based",
-        benefits: [
-          "Health Insurance",
-          "Flexible Hours",
-          "Remote Work",
-          "Learning Budget",
-          "Stock Options",
-          "Parental Leave",
-          "Gym Membership",
-          "Free Meals",
-          "Performance Bonus",
-          "Career Development",
-        ],
-        workCulture: "Collaborative and inclusive culture focused on innovation and growth",
-        salaryRange: "8-25 LPA",
-      },
-      "2": {
-        id: 2,
-        name: "FinanceFirst Bank",
-        logo: "/placeholder.svg?height=120&width=120",
-        industry: "Banking & Finance",
-        sector: "finance",
-        location: "Mumbai",
-        employees: "10000+",
-        rating: 4.1,
-        reviews: 1567,
-        openings: 89,
-        description:
-          "FinanceFirst Bank is one of India's leading private sector banks with a strong digital presence and commitment to customer service excellence.",
-        founded: "1994",
-        website: "financefirst.com",
-        headquarters: "Mumbai, India",
-        revenue: "$1-5 billion",
-        ceo: "Priya Sharma",
-        companyType: "Fortune 500",
-        benefits: [
-          "Medical Insurance",
-          "Provident Fund",
-          "Performance Bonus",
-          "Training Programs",
-          "Career Growth",
-          "Job Security",
-          "Employee Loans",
-          "Retirement Benefits",
-        ],
-        workCulture: "Professional environment with focus on customer service and innovation",
-        salaryRange: "6-30 LPA",
-      },
-      "3": {
-        id: 3,
-        name: "AutoDrive Motors",
-        logo: "/placeholder.svg?height=120&width=120",
-        industry: "Automotive",
-        sector: "automotive",
-        location: "Chennai",
-        employees: "5000-10000",
-        rating: 4.0,
-        reviews: 892,
-        openings: 45,
-        description:
-          "Leading automotive manufacturer with focus on electric and hybrid vehicles.",
-        founded: "1985",
-        website: "autodrive.com",
-        headquarters: "Chennai, India",
-        revenue: "$500M-1B",
-        ceo: "Vikram Singh",
-        companyType: "MNC",
-        benefits: [
-          "Employee Discounts",
-          "Health Insurance",
-          "Retirement Benefits",
-          "Skill Development",
-          "Performance Bonus",
-          "Career Growth",
-        ],
-        workCulture: "Engineering-focused culture with emphasis on innovation",
-        salaryRange: "5-20 LPA",
-      },
-      "4": {
-        id: 4,
-        name: "HealthCare Plus",
-        logo: "/placeholder.svg?height=120&width=120",
-        industry: "Healthcare",
-        sector: "healthcare",
-        location: "Delhi",
-        employees: "2000-5000",
-        rating: 4.3,
-        reviews: 567,
-        openings: 67,
-        description:
-          "Leading healthcare provider with state-of-the-art medical facilities.",
-        founded: "2000",
-        website: "healthcareplus.com",
-        headquarters: "Delhi, India",
-        revenue: "$100M-500M",
-        ceo: "Dr. Anjali Patel",
-        companyType: "Healthcare",
-        benefits: [
-          "Medical Insurance",
-          "Health Benefits",
-          "Professional Development",
-          "Work-Life Balance",
-          "Performance Bonus",
-        ],
-        workCulture: "Patient-focused culture with emphasis on care",
-        salaryRange: "7-22 LPA",
-      },
-      "5": {
-        id: 5,
-        name: "EduTech Innovations",
-        logo: "/placeholder.svg?height=120&width=120",
-        industry: "Education Technology",
-        sector: "edtech",
-        location: "Pune",
-        employees: "500-1000",
-        rating: 4.4,
-        reviews: 345,
-        openings: 34,
-        description:
-          "Revolutionizing education through innovative technology solutions.",
-        founded: "2018",
-        website: "edutech.com",
-        headquarters: "Pune, India",
-        revenue: "$10M-50M",
-        ceo: "Arun Kumar",
-        companyType: "Startup",
-        benefits: [
-          "Learning Budget",
-          "Remote Work",
-          "Stock Options",
-          "Flexible Hours",
-          "Performance Bonus",
-        ],
-        workCulture: "Innovative and fast-paced startup culture",
-        salaryRange: "8-28 LPA",
-      },
-    }
-
-    return companies[id as keyof typeof companies] || null
-  }
+  // Removed mock company data
 
   // Handle company not found
   if (loadingCompany) {
@@ -415,9 +255,7 @@ export default function CompanyDetailPage() {
                 <Building2 className="w-12 h-12 text-red-500" />
               </div>
               <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Company Not Found</h1>
-              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
-                The company you're looking for doesn't exist or may have been removed. Please check the URL or browse our companies directory.
-              </p>
+              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">{companyError || 'The company you\'re looking for doesn\'t exist or may have been removed. Please check the URL or browse our companies directory.'}</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/companies">
                   <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
@@ -476,7 +314,7 @@ export default function CompanyDetailPage() {
     },
   ]
 
-  // Use companyJobs state instead of hardcoded jobs
+  // Use companyJobs state from API
 
   const employeeSpeak = [
     {
@@ -826,7 +664,7 @@ export default function CompanyDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-3">
-                      {company.benefits.slice(0, 8).map((benefit, index) => (
+                      {company.benefits.slice(0, 8).map((benefit: string, index: number) => (
                         <Badge key={index} variant="secondary" className="justify-center py-2 text-xs">
                           {benefit}
                         </Badge>
@@ -968,19 +806,19 @@ export default function CompanyDetailPage() {
                                 <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-400 mb-4">
                                   <div className="flex items-center">
                                     <MapPin className="w-4 h-4 mr-1" />
-                                    {job.location}
+                                    {job.location || job.city || job.state || job.country || '—'}
                                   </div>
                                   <div className="flex items-center">
                                     <Briefcase className="w-4 h-4 mr-1" />
-                                    {job.experience}
+                                    {job.experience || job.experienceLevel || '—'}
                                   </div>
                                   <div className="flex items-center">
                                     <IndianRupee className="w-4 h-4 mr-1" />
-                                    {job.salary}
+                                    {job.salary || (job.salaryMin && job.salaryMax ? `${job.salaryMin}-${job.salaryMax}` : '—')}
                                   </div>
                                   <div className="flex items-center">
                                     <Clock className="w-4 h-4 mr-1" />
-                                    {job.type}
+                                    {job.type || job.jobType || '—'}
                                   </div>
                                 </div>
                               </div>
@@ -994,7 +832,7 @@ export default function CompanyDetailPage() {
                                   className={`h-10 px-6 ${
                                     sampleJobManager.hasApplied(job.id.toString())
                                       ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                                      : `bg-gradient-to-r ${sectorColors.bg} hover:shadow-lg transition-all duration-300`
+                                      : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
                                   }`}
                                   disabled={sampleJobManager.hasApplied(job.id.toString())}
                                 >
@@ -1038,10 +876,10 @@ export default function CompanyDetailPage() {
                               </div>
                             </div>
 
-                            <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{job.description}</p>
+                            <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{job.description || ''}</p>
 
                             <div className="flex flex-wrap gap-2 mb-4">
-                              {job.requirements.map((requirement, reqIndex) => (
+                              {(job.requirements || []).map((requirement: any, reqIndex: number) => (
                                 <Badge key={reqIndex} variant="secondary" className="text-xs">
                                   {requirement}
                                 </Badge>
@@ -1052,7 +890,7 @@ export default function CompanyDetailPage() {
                               <div className="flex items-center space-x-4 text-sm text-slate-500">
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
-                                  {job.postedDate}
+                                  {job.postedDate || job.createdAt || ''}
                                 </div>
                                 <Badge variant="outline" className="text-xs">
                                   {job.urgent ? "Urgent" : "Regular"}
@@ -1094,9 +932,7 @@ export default function CompanyDetailPage() {
                     <Briefcase className="w-8 h-8 text-slate-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Open Positions</h3>
-                  <p className="text-slate-600 dark:text-slate-300 mb-4">
-                    This company doesn't have any open positions at the moment.
-                  </p>
+                  <p className="text-slate-600 dark:text-slate-300 mb-4">{jobsError || "This company doesn't have any open positions at the moment."}</p>
                   <Button variant="outline" onClick={() => window.location.reload()}>
                     Check Again
                   </Button>
