@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, FileText, Eye, Download, ArrowLeft } from 'lucide-react'
+import { Upload, FileText, Eye, Download, ArrowLeft, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiService, CoverLetter } from '@/lib/api'
 
@@ -98,6 +98,21 @@ export default function GulfCoverLettersPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await apiService.deleteCoverLetter(id)
+      if (res.success) {
+        toast.success('Cover letter deleted')
+        fetchCoverLetters()
+      } else {
+        toast.error(res.message || 'Failed to delete cover letter')
+      }
+    } catch (error) {
+      console.error('Error deleting cover letter:', error)
+      toast.error('Failed to delete cover letter')
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -144,6 +159,9 @@ export default function GulfCoverLettersPage() {
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleDownload((cl as any).id)} className="border-green-600 text-green-600">
                         <Download className="w-4 h-4 mr-1" /> Download
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDelete((cl as any).id)} className="border-red-600 text-red-600">
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
                     </div>
                   </div>

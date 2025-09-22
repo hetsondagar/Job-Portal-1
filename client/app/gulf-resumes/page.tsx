@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Upload, FileText, Eye, Download, ArrowLeft } from 'lucide-react'
+import { Upload, FileText, Eye, Download, ArrowLeft, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiService, Resume } from '@/lib/api'
 
@@ -91,6 +91,21 @@ export default function GulfResumesPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await apiService.deleteResume(id)
+      if (res.success) {
+        toast.success('Resume deleted')
+        fetchResumes()
+      } else {
+        toast.error(res.message || 'Failed to delete resume')
+      }
+    } catch (error) {
+      console.error('Error deleting resume:', error)
+      toast.error('Failed to delete resume')
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -138,6 +153,9 @@ export default function GulfResumesPage() {
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleDownload(r.id)} className="border-green-600 text-green-600">
                         <Download className="w-4 h-4 mr-1" /> Download
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDelete(r.id)} className="border-red-600 text-red-600">
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
                     </div>
                   </div>
