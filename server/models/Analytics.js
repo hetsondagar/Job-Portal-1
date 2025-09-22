@@ -25,7 +25,8 @@ const Analytics = sequelize.define('Analytics', {
       'page_view', 'job_view', 'job_apply', 'job_bookmark', 'company_view', 
       'search_performed', 'filter_applied', 'login', 'logout', 'registration',
       'profile_update', 'resume_upload', 'application_submitted', 'interview_scheduled',
-      'message_sent', 'notification_clicked', 'subscription_purchased', 'payment_made'
+      'message_sent', 'notification_clicked', 'subscription_purchased', 'payment_made',
+      'profile_like'
     ),
     allowNull: false
   },
