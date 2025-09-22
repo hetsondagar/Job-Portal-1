@@ -255,6 +255,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    // Compute active jobs count
+    let activeJobsCount = 0;
+    try {
+      const Job = require('../models/Job');
+      activeJobsCount = await Job.count({ where: { company_id: id, status: 'active' } });
+    } catch (e) {
+      console.warn('Could not compute activeJobsCount for company', id, e?.message);
+    }
+
     res.json({
       success: true,
       data: {
@@ -269,7 +278,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
         address: company.address,
         city: company.city,
         state: company.state,
-        country: company.country
+        country: company.country,
+        // Extras to improve frontend display
+        activeJobsCount,
+        profileViews: company.profileViews || company.views || 0
       }
     });
 
