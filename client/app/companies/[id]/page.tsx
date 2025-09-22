@@ -68,6 +68,32 @@ export default function CompanyDetailPage() {
     window.scrollTo(0, 0)
   }, [])
 
+  // Initialize follow state from localStorage
+  useEffect(() => {
+    try {
+      const key = 'followedCompanies'
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null
+      const set: Record<string, boolean> = raw ? JSON.parse(raw) : {}
+      if (companyId && set[companyId]) setIsFollowing(true)
+    } catch {}
+  }, [companyId])
+
+  const toggleFollow = useCallback(() => {
+    try {
+      const key = 'followedCompanies'
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null
+      const set: Record<string, boolean> = raw ? JSON.parse(raw) : {}
+      const next = !isFollowing
+      if (companyId) {
+        if (next) set[companyId] = true; else delete set[companyId]
+        localStorage.setItem(key, JSON.stringify(set))
+      }
+      setIsFollowing(next)
+    } catch {
+      setIsFollowing((v) => !v)
+    }
+  }, [companyId, isFollowing])
+
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
     setLoadingCompany(true)
@@ -404,7 +430,7 @@ export default function CompanyDetailPage() {
 
   const handleShare = (platform: string) => {
     const companyUrl = `${window.location.origin}/companies/${company.id}`
-    const shareText = `Check out ${company.name} - ${company.openings} job openings available!`
+    const shareText = `Check out ${company.name} - ${companyJobs.length} job openings available!`
 
     switch (platform) {
       case "link":
@@ -491,7 +517,7 @@ export default function CompanyDetailPage() {
                       <div className="flex items-center space-x-3 mt-4 lg:mt-0">
                         <Button
                           variant="outline"
-                          onClick={() => setIsFollowing(!isFollowing)}
+                          onClick={toggleFollow}
                           className={`${isFollowing ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white/50 dark:bg-slate-700/50"} backdrop-blur-sm`}
                         >
                           <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
@@ -560,6 +586,13 @@ export default function CompanyDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center">
+                        <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
+                        <div>
+                          <div className="font-medium">Open Positions</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.activeJobsCount ?? companyJobs.length}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
                         <Globe className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Website</div>
@@ -571,6 +604,13 @@ export default function CompanyDetailPage() {
                         <div>
                           <div className="font-medium">Headquarters</div>
                           <div className="text-slate-600 dark:text-slate-400">{company.headquarters || '—'}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
+                        <div>
+                          <div className="font-medium">Profile Views</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.profileViews ?? '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">

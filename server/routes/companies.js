@@ -322,11 +322,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { name, industry, companySize, website, description, address, city, state, country } = req.body;
     
     // Check if the user has access to this company
-    if (req.user.user_type !== 'employer' || req.user.company_id !== id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+    if (req.user.user_type !== 'admin') {
+      if (req.user.user_type !== 'employer' || String(req.user.company_id) !== String(id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
     }
 
     const company = await Company.findByPk(id);
