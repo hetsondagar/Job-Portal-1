@@ -427,7 +427,13 @@ export default function JobseekerGulfDashboardPage() {
 
   const handleViewResume = async (resumeId: string) => {
     try {
-      await apiService.downloadResume(resumeId)
+      const response = await apiService.fetchResumeFile(resumeId)
+      const blob = await response.blob()
+      const mime = response.headers.get('content-type') || 'application/pdf'
+      const url = window.URL.createObjectURL(new Blob([blob], { type: mime }))
+      window.open(url, '_blank')
+      // Optional cleanup later
+      setTimeout(() => window.URL.revokeObjectURL(url), 60_000)
     } catch (error) {
       console.error('Error viewing resume:', error)
       toast.error('Failed to view resume')
@@ -445,7 +451,16 @@ export default function JobseekerGulfDashboardPage() {
 
   const handleDownloadCoverLetter = async (coverLetterId: string) => {
     try {
-      await apiService.downloadCoverLetter(coverLetterId)
+      const response = await apiService.downloadCoverLetter(coverLetterId)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'cover-letter.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
     } catch (error) {
       console.error('Error downloading cover letter:', error)
       toast.error('Failed to download cover letter')

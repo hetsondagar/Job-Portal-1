@@ -2209,6 +2209,29 @@ class ApiService {
     document.body.removeChild(a);
   }
 
+  // Fetch resume file (for viewing in a new tab)
+  async fetchResumeFile(id: string): Promise<Response> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/resumes/${id}/download`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if ((errorData as any).code === 'FILE_NOT_FOUND') {
+        throw new Error('Resume file not found on server. Please re-upload your resume.');
+      }
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response;
+  }
+
   // Cover Letter endpoints
   async getCoverLetters(): Promise<ApiResponse<CoverLetter[]>> {
     const response = await fetch(`${API_BASE_URL}/user/cover-letters`, {
