@@ -1176,7 +1176,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         { name: "Hindi", proficiency: "Native" }
       ]),
       
-      // Resume information - make this more robust
+      // Resume information - return API endpoints instead of absolute file paths
       resumes: (() => {
         try {
           const resumeArray = toArray(resumes, []);
@@ -1185,7 +1185,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             const metadata = resume.metadata || {};
             const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
             const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-            const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+            const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
+            const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
             
             const transformedResume = {
               id: resume.id,
@@ -1195,7 +1196,9 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               uploadDate: resume.createdAt || resume.createdAt,
               lastUpdated: resume.lastUpdated || resume.last_updated,
               is_default: resume.isDefault ?? resume.is_default ?? false,
-              fileUrl: toAbsoluteUrl(filePath)
+              viewUrl,
+              downloadUrl,
+              fileUrl: downloadUrl
             };
             
             console.log(`📄 Transformed resume:`, transformedResume);
@@ -1207,7 +1210,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         }
       })(),
       
-      // Cover letter information - make this more robust
+      // Cover letter information - return API endpoints instead of absolute file paths
       coverLetters: (() => {
         try {
           const coverLetterArray = toArray(coverLetters, []);
@@ -1216,7 +1219,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             const metadata = coverLetter.metadata || {};
             const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
             const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-            const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+            const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
             
             const transformedCoverLetter = {
               id: coverLetter.id,
@@ -1229,7 +1232,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
               is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
               isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
-              fileUrl: toAbsoluteUrl(filePath),
+              downloadUrl,
+              fileUrl: downloadUrl,
               metadata: metadata
             };
             
@@ -1274,7 +1278,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               const metadata = resume.metadata || {};
               const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-              const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+              const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
+              const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
               
               return {
                 id: resume.id,
@@ -1284,7 +1289,9 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 uploadDate: resume.createdAt || resume.createdAt,
                 lastUpdated: resume.lastUpdated || resume.last_updated,
                 is_default: resume.isDefault ?? resume.is_default ?? false,
-                fileUrl: toAbsoluteUrl(filePath)
+                viewUrl,
+                downloadUrl,
+                fileUrl: downloadUrl
               };
             });
           } catch (resumeErr) {
@@ -1299,7 +1306,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               const metadata = coverLetter.metadata || {};
               const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-              const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+              const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
               
               return {
                 id: coverLetter.id,
@@ -1312,7 +1319,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
                 is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
                 isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
-                fileUrl: toAbsoluteUrl(filePath),
+                downloadUrl,
+                fileUrl: downloadUrl,
                 metadata: metadata
               };
             });
