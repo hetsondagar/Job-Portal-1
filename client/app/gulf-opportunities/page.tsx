@@ -329,8 +329,17 @@ export default function GulfOpportunitiesPage() {
       console.log(`🔍 Gulf OAuth login with ${provider}`)
       
       // Redirect to OAuth endpoint with state parameter to indicate Gulf flow
-      const oauthUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/oauth/${provider}?state=gulf`
-      window.location.href = oauthUrl
+      // Get OAuth URLs from backend for Gulf jobseeker
+      const response = await apiService.getOAuthUrls('jobseeker', 'gulf')
+      
+      if (response.success && response.data) {
+        const url = provider === 'google' ? response.data.google : response.data.facebook
+        console.log('✅ Gulf OAuth URL received:', url);
+        window.location.href = url
+      } else {
+        console.error('❌ Failed to get Gulf OAuth URL:', response);
+        toast.error('Failed to get OAuth URL')
+      }
     } catch (error: any) {
       console.error(`❌ Gulf OAuth login error:`, error)
       toast.error(`Failed to sign in with ${provider}. Please try again.`)

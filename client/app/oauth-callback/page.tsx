@@ -250,9 +250,19 @@ export default function OAuthCallbackPage() {
                   router.push('/jobseeker-gulf-dashboard')
                 }, 1500)
               } else {
-                setTimeout(() => {
-                  router.push('/dashboard')
-                }, 1500)
+                // Check user region for proper routing
+                const userRegion = (response.data.user as any)?.region
+                if (userRegion === 'gulf') {
+                  console.log('✅ User region is Gulf, redirecting to Gulf dashboard')
+                  setTimeout(() => {
+                    router.push('/jobseeker-gulf-dashboard')
+                  }, 1500)
+                } else {
+                  console.log('✅ User region is India/Other, redirecting to regular dashboard')
+                  setTimeout(() => {
+                    router.push('/dashboard')
+                  }, 1500)
+                }
               }
             }
           } else {
@@ -308,9 +318,17 @@ export default function OAuthCallbackPage() {
                 router.push('/jobseeker-gulf-dashboard')
               }, 1500)
             } else {
-            setTimeout(() => {
-              router.push('/dashboard')
-            }, 1500)
+              // Check user region for proper routing
+              const userRegion = (fallbackUser as any)?.region
+              if (userRegion === 'gulf') {
+                setTimeout(() => {
+                  router.push('/jobseeker-gulf-dashboard')
+                }, 1500)
+              } else {
+                setTimeout(() => {
+                  router.push('/dashboard')
+                }, 1500)
+              }
             }
             return
           }
@@ -380,7 +398,15 @@ export default function OAuthCallbackPage() {
           setMessage('Password set successfully! Redirecting...')
           // Use replace and refresh after a tiny delay to avoid login bounce
           await new Promise((r) => setTimeout(r, 150))
-          router.replace('/dashboard')
+          
+          // Check user region for proper routing
+          const me = await apiService.getCurrentUser()
+          const userRegion = (me.data?.user as any)?.region
+          if (userRegion === 'gulf') {
+            router.replace('/jobseeker-gulf-dashboard')
+          } else {
+            router.replace('/dashboard')
+          }
           router.refresh?.()
         }
       } else {
@@ -436,7 +462,14 @@ export default function OAuthCallbackPage() {
         setDialogOpen(false)
         // Small delay and refresh to avoid transient 401s
         await new Promise((r) => setTimeout(r, 150))
-        router.replace('/dashboard')
+        
+        // Check user region for proper routing
+        const userRegion = (me.data?.user as any)?.region
+        if (userRegion === 'gulf') {
+          router.replace('/jobseeker-gulf-dashboard')
+        } else {
+          router.replace('/dashboard')
+        }
         router.refresh?.()
       } else {
         throw new Error(resp.message || 'Failed to update profile')
@@ -573,7 +606,17 @@ export default function OAuthCallbackPage() {
                         }
                       }
                     } catch {}
-                    setStatus('success'); setMessage('Continuing without password...'); await new Promise(r => setTimeout(r, 150)); router.replace('/dashboard'); router.refresh?.();
+                    setStatus('success'); setMessage('Continuing without password...'); await new Promise(r => setTimeout(r, 150)); 
+                    
+                    // Check user region for proper routing
+                    const me = await apiService.getCurrentUser()
+                    const userRegion = (me.data?.user as any)?.region
+                    if (userRegion === 'gulf') {
+                      router.replace('/jobseeker-gulf-dashboard')
+                    } else {
+                      router.replace('/dashboard')
+                    }
+                    router.refresh?.();
                   })();
                 }}>Skip for now</Button>
               </div>

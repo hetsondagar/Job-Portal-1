@@ -1052,10 +1052,15 @@ class ApiService {
   }
 
   // OAuth methods
-  async getOAuthUrls(userType: 'jobseeker' | 'employer' = 'jobseeker'): Promise<ApiResponse<{ google: string; facebook: string }>> {
-    console.log('🔍 Getting OAuth URLs for userType:', userType);
+  async getOAuthUrls(userType: 'jobseeker' | 'employer' = 'jobseeker', state?: string): Promise<ApiResponse<{ google: string; facebook: string }>> {
+    console.log('🔍 Getting OAuth URLs for userType:', userType, 'state:', state);
     
-    const response = await fetch(`${API_BASE_URL}/oauth/urls?userType=${userType}`, {
+    let url = `${API_BASE_URL}/oauth/urls?userType=${userType}`;
+    if (state) {
+      url += `&state=${state}`;
+    }
+    
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
       },

@@ -790,18 +790,39 @@ router.post('/setup-password', async (req, res) => {
 router.get('/urls', (req, res) => {
   console.log('🔍 OAuth URLs request from:', req.headers.origin);
   console.log('🔍 User type:', req.query.userType);
+  console.log('🔍 State:', req.query.state);
   
-  const { userType = 'jobseeker' } = req.query;
+  const { userType = 'jobseeker', state } = req.query;
   const urls = {};
   
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     const googleUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/google`;
-    urls.google = userType === 'employer' ? `${googleUrl}?state=employer` : googleUrl;
+    
+    // Build state parameter based on userType and additional state
+    let stateParam = '';
+    if (userType === 'employer') {
+      stateParam = 'state=employer';
+    } else if (state === 'gulf') {
+      stateParam = 'state=gulf';
+    }
+    
+    urls.google = stateParam ? `${googleUrl}?${stateParam}` : googleUrl;
+    console.log('🔍 Generated Google OAuth URL:', urls.google);
   }
   
   if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
     const facebookUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/facebook`;
-    urls.facebook = userType === 'employer' ? `${facebookUrl}?state=employer` : facebookUrl;
+    
+    // Build state parameter based on userType and additional state
+    let stateParam = '';
+    if (userType === 'employer') {
+      stateParam = 'state=employer';
+    } else if (state === 'gulf') {
+      stateParam = 'state=gulf';
+    }
+    
+    urls.facebook = stateParam ? `${facebookUrl}?${stateParam}` : facebookUrl;
+    console.log('🔍 Generated Facebook OAuth URL:', urls.facebook);
   }
   
   // Set CORS headers explicitly
