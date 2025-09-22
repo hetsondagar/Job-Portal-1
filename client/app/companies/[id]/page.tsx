@@ -474,8 +474,8 @@ export default function CompanyDetailPage() {
                         <div className="flex items-center space-x-6 text-slate-600 dark:text-slate-300">
                           <div className="flex items-center">
                             <Star className="w-5 h-5 text-yellow-400 fill-current mr-2" />
-                            <span className="font-semibold text-lg">{company.rating}</span>
-                            <span className="ml-1">({company.reviews} reviews)</span>
+                            <span className="font-semibold text-lg">{company.rating || 0}</span>
+                            <span className="ml-1">({company.reviews || 0} reviews)</span>
                           </div>
                           <div className="flex items-center">
                             <MapPin className="w-5 h-5 mr-2" />
@@ -550,34 +550,34 @@ export default function CompanyDetailPage() {
                     <CardTitle className="text-2xl">About {company.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-6">{company.description}</p>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-6">{company.description || ''}</p>
                     <div className="grid grid-cols-2 gap-6">
                       <div className="flex items-center">
                         <Calendar className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Founded</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.founded}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.founded || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Globe className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Website</div>
-                          <div className="text-blue-600">{company.website}</div>
+                          <div className="text-blue-600">{company.website || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Building2 className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Headquarters</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.headquarters}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.headquarters || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Revenue</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.revenue}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{company.revenue || '—'}</div>
                         </div>
                       </div>
                     </div>
@@ -592,7 +592,7 @@ export default function CompanyDetailPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {departments.map((dept, index) => (
-                        <Link key={index} href={`/companies/${params.id}/departments/${encodeURIComponent(dept.name)}`}>
+                        <Link key={index} href={`/companies/${companyId}/departments/${encodeURIComponent(dept.name)}`}>
                           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:shadow-md transition-all duration-300 cursor-pointer group">
                             <div className="flex-1">
                               <div className="font-medium text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
@@ -654,7 +654,7 @@ export default function CompanyDetailPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <span>Live jobs by {company.name}</span>
-                      <Badge className={`bg-gradient-to-r ${sectorColors.bg} text-white`}>{company.openings}</Badge>
+                      <Badge className={`bg-gradient-to-r ${sectorColors.bg} text-white`}>{companyJobs.length}</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -673,13 +673,13 @@ export default function CompanyDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-3">
-                      {company.benefits.slice(0, 8).map((benefit: string, index: number) => (
+                      {(company.benefits || []).slice(0, 8).map((benefit: string, index: number) => (
                         <Badge key={index} variant="secondary" className="justify-center py-2 text-xs">
                           {benefit}
                         </Badge>
                       ))}
                     </div>
-                    {company.benefits.length > 8 && (
+                    {(company.benefits || []).length > 8 && (
                       <div className="mt-3 text-center">
                         <Button variant="link" className="text-sm text-blue-600">
                           View all benefits
