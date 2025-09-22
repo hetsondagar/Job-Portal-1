@@ -259,9 +259,9 @@ export default function OAuthCallbackPage() {
                   }, 1500)
                 } else {
                   console.log('✅ User region is India/Other, redirecting to regular dashboard')
-                  setTimeout(() => {
-                    router.push('/dashboard')
-                  }, 1500)
+                setTimeout(() => {
+                  router.push('/dashboard')
+                }, 1500)
                 }
               }
             }
@@ -321,13 +321,13 @@ export default function OAuthCallbackPage() {
               // Check user region for proper routing
               const userRegion = (fallbackUser as any)?.region
               if (userRegion === 'gulf') {
-                setTimeout(() => {
-                  router.push('/jobseeker-gulf-dashboard')
-                }, 1500)
-              } else {
-                setTimeout(() => {
-                  router.push('/dashboard')
-                }, 1500)
+              setTimeout(() => {
+                router.push('/jobseeker-gulf-dashboard')
+              }, 1500)
+            } else {
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 1500)
               }
             }
             return
@@ -405,7 +405,7 @@ export default function OAuthCallbackPage() {
           if (userRegion === 'gulf') {
             router.replace('/jobseeker-gulf-dashboard')
           } else {
-            router.replace('/dashboard')
+          router.replace('/dashboard')
           }
           router.refresh?.()
         }
@@ -468,7 +468,7 @@ export default function OAuthCallbackPage() {
         if (userRegion === 'gulf') {
           router.replace('/jobseeker-gulf-dashboard')
         } else {
-          router.replace('/dashboard')
+        router.replace('/dashboard')
         }
         router.refresh?.()
       } else {

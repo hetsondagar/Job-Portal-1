@@ -174,8 +174,8 @@ exports.createJob = async (req, res, next) => {
     // Use authenticated user's ID as employerId (matching the association)
     const createdBy = req.user.id;
     
-    // Set region based on user's region to ensure Gulf employers create Gulf jobs
-    const jobRegion = req.user.region || 'india'; // Default to 'india' if no region set
+    // Set region based on request body or user's region to ensure Gulf employers create Gulf jobs
+    const jobRegion = region || req.user.region || 'india'; // Use request body region first, then user region, default to 'india'
     
     // Generate slug from title
     const slug = title.toLowerCase()
@@ -340,11 +340,21 @@ exports.getAllJobs = async (req, res, next) => {
       experienceLevel,
       search,
       sortBy = 'createdAt',
-      sortOrder = 'DESC'
+      sortOrder = 'DESC',
+      region
     } = req.query;
 
     const offset = (page - 1) * limit;
     const whereClause = {};
+
+    // Add region filtering to ensure proper job visibility
+    if (region) {
+      whereClause.region = region;
+    } else {
+      // Default behavior: exclude Gulf jobs from regular job listings
+      // This ensures Gulf jobs are only visible through Gulf-specific endpoints
+      whereClause.region = { [Op.ne]: 'gulf' };
+    }
 
     // Add filters
     if (status) {

@@ -194,7 +194,8 @@ router.post('/', authenticateToken, async (req, res) => {
       includeWillingToRelocate: !!body.includeWillingToRelocate,
       includeNotMentioned: !!body.includeNotMentioned,
       benefits: Array.isArray(body.benefits) ? body.benefits : [],
-      metadata: body.metadata || {}
+      metadata: body.metadata || {},
+      region: body.region || req.user.region || 'india' // Set region based on request body or user region
     });
 
     console.log('✅ Requirement created with id:', requirement.id);
@@ -298,8 +299,23 @@ router.get('/', authenticateToken, async (req, res) => {
     }
     
     console.log('🔍 Requirements API - Fetching requirements for company:', companyId);
+    
+    // Build where clause with region filtering
+    const whereClause = { companyId: companyId };
+    
+    // Add region filtering to ensure Gulf employers only see Gulf requirements
+    if (req.user.region === 'gulf') {
+      whereClause.region = 'gulf';
+    } else if (req.user.region === 'india') {
+      whereClause.region = 'india';
+    } else if (req.user.region === 'other') {
+      whereClause.region = 'other';
+    }
+    // If user has no region set, show all requirements (backward compatibility)
+    
+    console.log('🔍 Requirements API - Where clause:', whereClause);
     const rows = await Requirement.findAll({ 
-      where: { companyId: companyId }, 
+      where: whereClause, 
       order: [['createdAt', 'DESC']] 
     });
     
