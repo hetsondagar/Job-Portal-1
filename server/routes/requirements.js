@@ -897,7 +897,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         WHERE "userId" = :userId 
         ORDER BY "isDefault" DESC, "createdAt" DESC
       `, {
-        replacements: { user_id: candidateId },
+        replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       
@@ -921,7 +921,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             WHERE user_id = :userId 
             ORDER BY "isDefault" DESC, "createdAt" DESC
           `, {
-            replacements: { user_id: candidateId },
+            replacements: { userId: candidateId },
             type: QueryTypes.SELECT
           });
         } catch (altErr) {
@@ -953,7 +953,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           WHERE user_id = :userId 
           ORDER BY "isDefault" DESC, "createdAt" DESC
         `, {
-          replacements: { user_id: candidateId },
+          replacements: { userId: candidateId },
           type: QueryTypes.SELECT
         });
         resumes = resumeResults || [];
@@ -969,11 +969,54 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.log(`📝 Fetching cover letters for candidate ${candidateId}`);
       const { CoverLetter } = require('../config/index');
       
-      const coverLetterResults = await CoverLetter.findAll({
-        where: { user_id: candidateId },
-        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+      // Use raw queries to be resilient to column naming differences
+      let coverLetterResults = await sequelize.query(`
+        SELECT 
+          id,
+          "userId",
+          title,
+          content,
+          summary,
+          "isDefault",
+          "isPublic",
+          views,
+          downloads,
+          "lastUpdated",
+          metadata,
+          "createdAt",
+          "updatedAt"
+        FROM cover_letters 
+        WHERE "userId" = :userId 
+        ORDER BY "isDefault" DESC, "lastUpdated" DESC
+      `, {
+        replacements: { userId: candidateId },
+        type: QueryTypes.SELECT
       });
-      
+      if (!coverLetterResults || coverLetterResults.length === 0) {
+        const alt = await sequelize.query(`
+          SELECT 
+            id,
+            user_id as "userId",
+            title,
+            content,
+            summary,
+            "isDefault",
+            "isPublic",
+            views,
+            downloads,
+            last_updated as "lastUpdated",
+            metadata,
+            createdAt as "createdAt",
+            updatedAt as "updatedAt"
+          FROM cover_letters 
+          WHERE user_id = :userId 
+          ORDER BY "isDefault" DESC, "lastUpdated" DESC
+        `, {
+          replacements: { userId: candidateId },
+          type: QueryTypes.SELECT
+        });
+        coverLetterResults = alt || [];
+      }
       coverLetters = coverLetterResults || [];
       console.log(`📝 Found ${coverLetters.length} cover letters for candidate ${candidateId}`);
       if (coverLetters.length > 0) {
@@ -1000,7 +1043,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           WHERE user_id = :userId 
           ORDER BY "isDefault" DESC, "lastUpdated" DESC
         `, {
-          replacements: { user_id: candidateId },
+          replacements: { userId: candidateId },
           type: QueryTypes.SELECT
         });
         coverLetters = coverLetterResults || [];
