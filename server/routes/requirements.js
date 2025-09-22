@@ -1770,12 +1770,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
       });
     }
     
-    // Verify the requirement belongs to the employer's company
+    // Verify requirement: admins can access any requirement; employers must own it
     const requirement = await Requirement.findOne({
-      where: { 
-        id: requirementId,
-        companyId: req.user.companyId 
-      }
+      where: req.user.user_type === 'admin' 
+        ? { id: requirementId }
+        : { id: requirementId, companyId: req.user.companyId }
     });
     
     if (!requirement) {
@@ -1788,8 +1787,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
     // Get the resume
     const resume = await Resume.findOne({
       where: { 
-        id: resumeId, 
-        userId: candidateId 
+        id: resumeId,
+        [Op.or]: [
+          { userId: candidateId },
+          { user_id: candidateId }
+        ]
       }
     });
     
@@ -1881,12 +1883,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       });
     }
     
-    // Verify the requirement belongs to the employer's company
+    // Verify requirement: admins can access any requirement; employers must own it
     const requirement = await Requirement.findOne({
-      where: { 
-        id: requirementId,
-        companyId: req.user.companyId 
-      }
+      where: req.user.user_type === 'admin' 
+        ? { id: requirementId }
+        : { id: requirementId, companyId: req.user.companyId }
     });
     
     if (!requirement) {
@@ -1899,8 +1900,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     // Get the resume
     const resume = await Resume.findOne({
       where: { 
-        id: resumeId, 
-        user_id: candidateId 
+        id: resumeId,
+        [Op.or]: [
+          { userId: candidateId },
+          { user_id: candidateId }
+        ]
       }
     });
     
