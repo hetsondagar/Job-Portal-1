@@ -671,7 +671,7 @@ export default function JobseekerGulfDashboardPage() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 mb-8">
-            <Link href="/gulf-opportunities">
+            <Link href="/gulf-jobs">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
