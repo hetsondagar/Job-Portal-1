@@ -42,6 +42,8 @@ export default function CompanyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user, loading } = useAuth()
+  const companyId = String((params as any)?.id || '')
+  const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyId)
   const [isFollowing, setIsFollowing] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -71,16 +73,18 @@ export default function CompanyDetailPage() {
     setLoadingCompany(true)
     setCompanyError("")
     try {
-      // Try direct company endpoint
-      const response = await apiService.getCompany(params.id as string)
-      if (response.success && response.data) {
-        setCompany(response.data)
-        return
+      // Try direct company endpoint only if id looks valid
+      if (isValidUuid) {
+        const response = await apiService.getCompany(companyId)
+        if (response.success && response.data) {
+          setCompany(response.data)
+          return
+        }
       }
       // Fallback: fetch public companies list and find by id
       const list = await apiService.listCompanies()
       if (list.success && Array.isArray(list.data)) {
-        const found = list.data.find((c: any) => String(c.id) === String(params.id))
+        const found = list.data.find((c: any) => String(c.id) === companyId)
         if (found) {
           setCompany(found)
           return
@@ -94,18 +98,23 @@ export default function CompanyDetailPage() {
     } finally {
       setLoadingCompany(false)
     }
-  }, [params.id])
+  }, [companyId, isValidUuid])
 
   const fetchCompanyJobs = useCallback(async () => {
     setLoadingJobs(true)
     setJobsError("")
     try {
-      const response = await apiService.getCompanyJobs(params.id as string)
-      if (response.success && Array.isArray(response.data)) {
-        setCompanyJobs(response.data)
-      } else {
+      if (!isValidUuid) {
         setCompanyJobs([])
-        setJobsError(response.message || 'Failed to load company jobs')
+        setJobsError('Invalid company id')
+      } else {
+        const response = await apiService.getCompanyJobs(companyId)
+        if (response.success && Array.isArray(response.data)) {
+          setCompanyJobs(response.data)
+        } else {
+          setCompanyJobs([])
+          setJobsError(response.message || 'Failed to load company jobs')
+        }
       }
     } catch (error) {
       console.error('Error fetching company jobs:', error)
@@ -114,14 +123,14 @@ export default function CompanyDetailPage() {
     } finally {
       setLoadingJobs(false)
     }
-  }, [params.id])
+  }, [companyId, isValidUuid])
 
   useEffect(() => {
-    if (params.id) {
+    if (companyId) {
       fetchCompanyData()
       fetchCompanyJobs()
     }
-  }, [params.id, fetchCompanyData, fetchCompanyJobs])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs])
 
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {

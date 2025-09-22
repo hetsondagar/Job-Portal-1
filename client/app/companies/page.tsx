@@ -47,7 +47,7 @@ interface FilterState {
 }
 
 interface Company {
-  id: number
+  id: string
   name: string
   logo: string
   industry: string
@@ -72,7 +72,7 @@ export default function CompaniesPage() {
   // State management
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null)
-  const [selectedCompany, setSelectedCompany] = useState<number | null>(null)
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null)
   const [companiesPerPage, setCompaniesPerPage] = useState(20)
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState("rating")
@@ -142,7 +142,7 @@ export default function CompaniesPage() {
           offset: 0,
         })
         if (resp.success && Array.isArray(resp.data)) {
-          setApiCompanies(resp.data)
+          setApiCompanies(resp.data.filter((c: any) => c?.region !== 'gulf'))
         } else {
           setApiCompanies([])
           setLoadError(resp.message || 'Failed to load companies')
@@ -441,7 +441,7 @@ export default function CompaniesPage() {
       : 'technology'
     const locationParts = [c.city, c.state, c.country].filter(Boolean)
     return {
-      id: Number(c.id),
+      id: String(c.id),
       name: c.name || 'Company',
       logo: "/placeholder.svg?height=80&width=80",
       industry,
@@ -464,7 +464,9 @@ export default function CompaniesPage() {
   }
 
   const allCompanies: Company[] = useMemo(() => {
-    return (apiCompanies || []).map(transformCompany)
+    return (apiCompanies || [])
+      .filter((c: any) => c?.region !== 'gulf')
+      .map(transformCompany)
   }, [apiCompanies])
 
   // Filter and sort companies
