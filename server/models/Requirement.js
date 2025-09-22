@@ -167,11 +167,6 @@ const Requirement = sequelize.define('Requirement', {
   metadata: {
     type: DataTypes.JSONB,
     defaultValue: {}
-  },
-  region: {
-    type: DataTypes.ENUM('india', 'gulf', 'other'),
-    allowNull: true,
-    defaultValue: 'india'
   }
 }, {
   tableName: 'requirements',

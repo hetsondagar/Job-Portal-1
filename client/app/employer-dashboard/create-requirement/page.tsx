@@ -121,6 +121,20 @@ export default function CreateRequirementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Front-end validation for required fields
+    const missing: string[] = []
+    if (!formData.title.trim()) missing.push('Job Title')
+    if (!formData.description.trim()) missing.push('Job Description')
+    if (!formData.location.trim()) missing.push('Location')
+    if (missing.length > 0) {
+      toast({
+        title: 'Missing required fields',
+        description: `Please fill: ${missing.join(', ')}`,
+        variant: 'destructive'
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
