@@ -8,6 +8,7 @@ const User = require('../models/User');
 const Resume = require('../models/Resume');
 const CoverLetter = require('../models/CoverLetter');
 const { sequelize } = require('../config/sequelize');
+const { Op } = require('sequelize');
 
 const router = express.Router();
 
@@ -2877,18 +2878,15 @@ router.delete('/resumes/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Prevent deleting if referenced by active applications
+    // If referenced by applications, detach it first by nulling resumeId
     try {
       const { JobApplication } = require('../config/index');
-      const refCount = await JobApplication.count({ where: { resumeId: req.params.id } });
-      if (refCount > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot delete resume: it is referenced by job applications'
-        });
-      }
+      await JobApplication.update(
+        { resumeId: null },
+        { where: { resumeId: req.params.id } }
+      );
     } catch (refErr) {
-      console.log('Resume reference check failed (non-fatal):', refErr.message);
+      console.log('Resume reference detach failed (continuing):', refErr.message);
     }
 
     // Attempt to remove the underlying file
@@ -3253,6 +3251,17 @@ router.delete('/cover-letters/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    // Detach from any job applications first
+    try {
+      const { JobApplication } = require('../config/index');
+      await JobApplication.update(
+        { coverLetterId: null },
+        { where: { coverLetterId: req.params.id } }
+      );
+    } catch (refErr) {
+      console.log('Cover letter reference detach failed (continuing):', refErr.message);
+    }
+
     // If this was the default cover letter, make another one default
     if (coverLetter.isDefault) {
       const otherCoverLetter = await CoverLetter.findOne({
@@ -3266,6 +3275,30 @@ router.delete('/cover-letters/:id', authenticateToken, async (req, res) => {
       if (otherCoverLetter) {
         await otherCoverLetter.update({ isDefault: true });
       }
+    }
+
+    // Attempt to remove the underlying file
+    try {
+      const metadata = coverLetter.metadata || {};
+      const filename = metadata.filename;
+      if (filename) {
+        const possible = [
+          path.join('/opt/render/project/src/uploads/cover-letters', filename),
+          path.join('/opt/render/project/src/server/uploads/cover-letters', filename),
+          path.join('/tmp/uploads/cover-letters', filename),
+          path.join(__dirname, '../uploads/cover-letters', filename),
+          path.join(process.cwd(), 'server', 'uploads', 'cover-letters', filename),
+          path.join(process.cwd(), 'uploads', 'cover-letters', filename)
+        ];
+        const filePath = possible.find(p => fs.existsSync(p));
+        if (filePath) {
+          fs.unlink(filePath, (err) => {
+            if (err) console.log('Failed to delete cover letter file:', err.message);
+          });
+        }
+      }
+    } catch (fileErr) {
+      console.log('Cover letter file delete skipped:', fileErr.message);
     }
 
     await coverLetter.destroy();
