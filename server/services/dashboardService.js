@@ -66,6 +66,10 @@ class DashboardService {
    * Update dashboard statistics
    */
   static async updateDashboardStats(userId, updates = {}) {
+    // Guard: if userId is missing, skip to avoid null constraint errors
+    if (!userId) {
+      return null;
+    }
     try {
       const dashboard = await this.getUserDashboard(userId);
       
