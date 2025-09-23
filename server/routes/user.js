@@ -2002,7 +2002,16 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
 
     // Check if the status change is allowed
     if (status === 'withdrawn') {
-      const blockedStatuses = ['hired', 'withdrawn', 'rejected'];
+      // Idempotent: if already withdrawn, return success
+      if (application.status === 'withdrawn') {
+        return res.json({
+          success: true,
+          data: application,
+          message: 'Application already withdrawn'
+        });
+      }
+
+      const blockedStatuses = ['hired', 'rejected'];
       const canWithdrawNow = !blockedStatuses.includes(application.status);
       console.log('🔍 Checking if application can be withdrawn:', {
         currentStatus: application.status,
@@ -3053,7 +3062,8 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
 
     const metadata = resume.metadata || {};
     const filename = metadata.filename;
-    const originalName = metadata.originalName;
+    // Support both camelCase and snake_case
+    const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
 
     console.log('🔍 Resume metadata:', { filename, originalName, metadata });
 
@@ -3403,7 +3413,7 @@ router.get('/cover-letters/:id/download', authenticateToken, async (req, res) =>
 
     const metadata = coverLetter.metadata || {};
     const filename = metadata.filename;
-    const originalName = metadata.originalName;
+    const originalName = metadata.originalName || metadata.original_name || `cover-letter-${coverLetter.id}.pdf`;
 
     console.log('🔍 Cover letter metadata:', { filename, originalName, metadata });
 
