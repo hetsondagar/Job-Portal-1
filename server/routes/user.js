@@ -85,6 +85,53 @@ function findResumeFile(filename, metadata) {
   return filePath;
 }
 
+// Utility function to find cover letter file
+function findCoverLetterFile(filename, metadata) {
+  const possiblePaths = [
+    // Production paths (Render.com)
+    path.join('/opt/render/project/src/uploads/cover-letters', filename),
+    path.join('/opt/render/project/src/server/uploads/cover-letters', filename),
+    path.join('/tmp/uploads/cover-letters', filename),
+    // Development paths
+    path.join(__dirname, '../uploads/cover-letters', filename),
+    path.join(process.cwd(), 'server', 'uploads', 'cover-letters', filename),
+    path.join(process.cwd(), 'uploads', 'cover-letters', filename),
+    path.join('/tmp', 'uploads', 'cover-letters', filename),
+    path.join('/var', 'tmp', 'uploads', 'cover-letters', filename),
+    // Metadata-based paths
+    metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\/, '')) : null,
+    metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\/, '')) : null,
+    metadata?.filePath ? metadata.filePath : null
+  ].filter(Boolean);
+
+  let filePath = possiblePaths.find(p => fs.existsSync(p));
+
+  if (!filePath) {
+    const searchDirs = [
+      path.join(__dirname, '../uploads'),
+      path.join(process.cwd(), 'uploads'),
+      path.join(process.cwd(), 'server', 'uploads'),
+      '/tmp/uploads',
+      '/var/tmp/uploads',
+      '/opt/render/project/src/uploads',
+      '/opt/render/project/src/server/uploads'
+    ];
+    for (const dir of searchDirs) {
+      try {
+        if (fs.existsSync(dir)) {
+          const items = fs.readdirSync(dir, { recursive: true });
+          const found = items.find(f => f.includes(filename));
+          if (found) {
+            filePath = path.join(dir, found);
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+  return filePath;
+}
+
 // Serve static files from uploads directory
 router.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -1955,16 +2002,16 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
 
     // Check if the status change is allowed
     if (status === 'withdrawn') {
+      const blockedStatuses = ['hired', 'withdrawn', 'rejected'];
+      const canWithdrawNow = !blockedStatuses.includes(application.status);
       console.log('🔍 Checking if application can be withdrawn:', {
         currentStatus: application.status,
-        canWithdraw: application.canWithdraw()
+        allowed: canWithdrawNow
       });
-      
-      if (!application.canWithdraw()) {
-        console.log('❌ Cannot withdraw application at this stage');
+      if (!canWithdrawNow) {
         return res.status(400).json({
           success: false,
-          message: 'Cannot withdraw application at this stage'
+          message: `Cannot withdraw application when status is '${application.status}'`
         });
       }
     }
@@ -2821,6 +2868,44 @@ router.delete('/resumes/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    // Prevent deleting if referenced by active applications
+    try {
+      const { JobApplication } = require('../config/index');
+      const refCount = await JobApplication.count({ where: { resumeId: req.params.id } });
+      if (refCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete resume: it is referenced by job applications'
+        });
+      }
+    } catch (refErr) {
+      console.log('Resume reference check failed (non-fatal):', refErr.message);
+    }
+
+    // Attempt to remove the underlying file
+    try {
+      const metadata = resume.metadata || {};
+      const filename = metadata.filename;
+      if (filename) {
+        const possible = [
+          path.join('/opt/render/project/src/uploads/resumes', filename),
+          path.join('/opt/render/project/src/server/uploads/resumes', filename),
+          path.join('/tmp/uploads/resumes', filename),
+          path.join(__dirname, '../uploads/resumes', filename),
+          path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+          path.join(process.cwd(), 'uploads', 'resumes', filename)
+        ];
+        const filePath = possible.find(p => fs.existsSync(p));
+        if (filePath) {
+          fs.unlink(filePath, (err) => {
+            if (err) console.log('Failed to delete resume file:', err.message);
+          });
+        }
+      }
+    } catch (fileErr) {
+      console.log('Resume file delete skipped:', fileErr.message);
+    }
+
     await resume.destroy();
 
     res.json({
@@ -3330,20 +3415,8 @@ router.get('/cover-letters/:id/download', authenticateToken, async (req, res) =>
       });
     }
 
-    const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
-    console.log('🔍 Full file path:', filePath);
-    console.log('🔍 File exists check:', fs.existsSync(filePath));
-    
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.log('❌ File does not exist on server:', filePath);
-      try {
-        const uploadDir = path.join(__dirname, '../uploads/cover-letters');
-        const files = fs.readdirSync(uploadDir);
-        console.log('🔍 Upload directory contents:', files);
-      } catch (error) {
-        console.log('🔍 Upload directory not found or empty');
-      }
+    const filePath = findCoverLetterFile(filename, metadata);
+    if (!filePath) {
       return res.status(404).json({
         success: false,
         message: 'Cover letter file not found on server. The file may have been lost during server restart. Please re-upload your cover letter.',
