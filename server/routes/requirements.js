@@ -1917,7 +1917,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     
     const metadata = resume.metadata || {};
     const filename = metadata.filename;
-    const originalName = metadata.originalName;
+    const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
     
     if (!filename) {
       return res.status(404).json({
@@ -1954,7 +1954,10 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     if (!filePath) {
       console.log('❌ File does not exist in any of the expected locations');
       console.log('🔍 Checked paths:', possiblePaths);
-      
+      // Fallback: redirect to stored public path if present
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
       // Try to find the file by searching common directories
       const searchDirs = [
         path.join(__dirname, '../uploads'),
@@ -1963,19 +1966,13 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
         '/tmp/uploads',
         '/var/tmp/uploads'
       ];
-      
       for (const searchDir of searchDirs) {
         try {
           if (fs.existsSync(searchDir)) {
-            console.log(`🔍 Searching in directory: ${searchDir}`);
             const files = fs.readdirSync(searchDir, { recursive: true });
-            console.log(`🔍 Found ${files.length} items in ${searchDir}`);
-            
-            // Look for the specific filename
             const found = files.find(f => f.includes(filename));
             if (found) {
               filePath = path.join(searchDir, found);
-              console.log(`✅ Found file at: ${filePath}`);
               break;
             }
           }
@@ -1983,7 +1980,6 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
           console.log(`🔍 Could not search in ${searchDir}:`, error.message);
         }
       }
-      
       if (!filePath) {
         return res.status(404).json({
           success: false,

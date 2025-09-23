@@ -3079,6 +3079,10 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
+      // Fallback: try redirecting to the stored public path if present
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
       return res.status(404).json({
         success: false,
         message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
@@ -3427,9 +3431,12 @@ router.get('/cover-letters/:id/download', authenticateToken, async (req, res) =>
 
     const filePath = findCoverLetterFile(filename, metadata);
     if (!filePath) {
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
       return res.status(404).json({
         success: false,
-        message: 'Cover letter file not found on server. The file may have been lost during server restart. Please re-upload your cover letter.',
+        message: 'Cover letter file not found on server',
         code: 'FILE_NOT_FOUND'
       });
     }
