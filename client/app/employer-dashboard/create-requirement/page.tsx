@@ -121,6 +121,20 @@ export default function CreateRequirementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Front-end validation for required fields
+    const missing: string[] = []
+    if (!formData.title.trim()) missing.push('Job Title')
+    if (!formData.description.trim()) missing.push('Job Description')
+    if (!formData.location.trim()) missing.push('Location')
+    if (missing.length > 0) {
+      toast({
+        title: 'Missing required fields',
+        description: `Please fill: ${missing.join(', ')}`,
+        variant: 'destructive'
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -161,20 +175,22 @@ export default function CreateRequirementPage() {
         console.error('❌ Response details:', {
           success: response.success,
           message: response.message,
-          error: response.error,
+          errors: (response as any).errors,
           data: response.data
         })
         throw new Error(response.message || 'Failed to create requirement')
       }
       
+      const createdId = response.data?.id || response.data?.data?.id || ''
+      // End loading before navigating so the toast renders instantly
+      setIsLoading(false)
       toast({
         title: "Requirement Created",
-        description: `Your requirement has been created successfully. ID: ${response.data?.id || ''}`,
+        description: createdId ? `Your requirement has been created successfully. ID: ${createdId}` : 'Your requirement has been created successfully.',
       })
-      // Give the toast time to show before navigating to candidates page
-      setTimeout(() => {
-        router.push(`/employer-dashboard/requirements/${response.data?.id}/candidates`)
-      }, 1000)
+      router.push(createdId 
+        ? `/employer-dashboard/requirements/${createdId}/candidates`
+        : '/employer-dashboard/requirements')
     } catch (error: any) {
       console.error('❌ Error creating requirement:', error?.message || error)
       toast({
@@ -183,6 +199,7 @@ export default function CreateRequirementPage() {
         variant: "destructive",
       })
     } finally {
+      // Keep as a safeguard; if we navigated above, this is harmless
       setIsLoading(false)
     }
   }

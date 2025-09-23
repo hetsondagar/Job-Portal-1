@@ -93,7 +93,7 @@ router.post('/', authenticateToken, async (req, res) => {
       normalizedTravelRequired = body.travelRequired;
     }
 
-    // Resolve companyId: prefer provided, else user's company, else create/attach one
+    // Resolve companyId: admins can specify any companyId; employers default to their own
     let companyId = body.companyId || req.user.companyId;
     if (!companyId) {
       try {
@@ -194,8 +194,7 @@ router.post('/', authenticateToken, async (req, res) => {
       includeWillingToRelocate: !!body.includeWillingToRelocate,
       includeNotMentioned: !!body.includeNotMentioned,
       benefits: Array.isArray(body.benefits) ? body.benefits : [],
-      metadata: body.metadata || {},
-      region: body.region || req.user.region || 'india' // Set region based on request body or user region
+      metadata: body.metadata || {}
     });
 
     console.log('✅ Requirement created with id:', requirement.id);
@@ -290,7 +289,9 @@ router.get('/', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view requirements.' });
     }
     
-    const companyId = req.user.companyId;
+    // Admins can view another company's requirements via query.companyId
+    const requestedCompanyId = req.query.companyId;
+    const companyId = req.user.user_type === 'admin' ? (requestedCompanyId || req.user.companyId) : req.user.companyId;
     console.log('🔍 Requirements API - Company ID:', companyId);
     
     if (!companyId) {
@@ -300,18 +301,8 @@ router.get('/', authenticateToken, async (req, res) => {
     
     console.log('🔍 Requirements API - Fetching requirements for company:', companyId);
     
-    // Build where clause with region filtering
+    // Build where clause
     const whereClause = { companyId: companyId };
-    
-    // Add region filtering to ensure Gulf employers only see Gulf requirements
-    if (req.user.region === 'gulf') {
-      whereClause.region = 'gulf';
-    } else if (req.user.region === 'india') {
-      whereClause.region = 'india';
-    } else if (req.user.region === 'other') {
-      whereClause.region = 'other';
-    }
-    // If user has no region set, show all requirements (backward compatibility)
     
     console.log('🔍 Requirements API - Where clause:', whereClause);
     const rows = await Requirement.findAll({ 
@@ -352,8 +343,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     // Check if requirement exists and belongs to employer's company
     const requirement = await Requirement.findOne({
       where: { 
-        id: id,
-        companyId: req.user.companyId 
+        id: id
       }
     });
     
@@ -362,6 +352,10 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         success: false, 
         message: 'Requirement not found' 
       });
+    }
+    // If not admin, enforce ownership
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
     // Get total candidates count for this requirement
@@ -464,13 +458,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     // Get the requirement
     const requirement = await Requirement.findOne({
       where: { 
-        id,
-        companyId: req.user.companyId 
+        id
       }
     });
     
     if (!requirement) {
       return res.status(404).json({ success: false, message: 'Requirement not found' });
+    }
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
     console.log('🔍 Searching candidates for requirement:', requirement.title);
@@ -901,7 +897,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         WHERE "userId" = :userId 
         ORDER BY "isDefault" DESC, "createdAt" DESC
       `, {
-        replacements: { user_id: candidateId },
+        replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       
@@ -925,7 +921,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             WHERE user_id = :userId 
             ORDER BY "isDefault" DESC, "createdAt" DESC
           `, {
-            replacements: { user_id: candidateId },
+            replacements: { userId: candidateId },
             type: QueryTypes.SELECT
           });
         } catch (altErr) {
@@ -957,7 +953,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           WHERE user_id = :userId 
           ORDER BY "isDefault" DESC, "createdAt" DESC
         `, {
-          replacements: { user_id: candidateId },
+          replacements: { userId: candidateId },
           type: QueryTypes.SELECT
         });
         resumes = resumeResults || [];
@@ -973,11 +969,54 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.log(`📝 Fetching cover letters for candidate ${candidateId}`);
       const { CoverLetter } = require('../config/index');
       
-      const coverLetterResults = await CoverLetter.findAll({
-        where: { user_id: candidateId },
-        order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
+      // Use raw queries to be resilient to column naming differences
+      let coverLetterResults = await sequelize.query(`
+        SELECT 
+          id,
+          "userId",
+          title,
+          content,
+          summary,
+          "isDefault",
+          "isPublic",
+          views,
+          downloads,
+          "lastUpdated",
+          metadata,
+          "createdAt",
+          "updatedAt"
+        FROM cover_letters 
+        WHERE "userId" = :userId 
+        ORDER BY "isDefault" DESC, "lastUpdated" DESC
+      `, {
+        replacements: { userId: candidateId },
+        type: QueryTypes.SELECT
       });
-      
+      if (!coverLetterResults || coverLetterResults.length === 0) {
+        const alt = await sequelize.query(`
+          SELECT 
+            id,
+            user_id as "userId",
+            title,
+            content,
+            summary,
+            "isDefault",
+            "isPublic",
+            views,
+            downloads,
+            last_updated as "lastUpdated",
+            metadata,
+            createdAt as "createdAt",
+            updatedAt as "updatedAt"
+          FROM cover_letters 
+          WHERE user_id = :userId 
+          ORDER BY "isDefault" DESC, "lastUpdated" DESC
+        `, {
+          replacements: { userId: candidateId },
+          type: QueryTypes.SELECT
+        });
+        coverLetterResults = alt || [];
+      }
       coverLetters = coverLetterResults || [];
       console.log(`📝 Found ${coverLetters.length} cover letters for candidate ${candidateId}`);
       if (coverLetters.length > 0) {
@@ -1004,7 +1043,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           WHERE user_id = :userId 
           ORDER BY "isDefault" DESC, "lastUpdated" DESC
         `, {
-          replacements: { user_id: candidateId },
+          replacements: { userId: candidateId },
           type: QueryTypes.SELECT
         });
         coverLetters = coverLetterResults || [];
@@ -1137,7 +1176,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         { name: "Hindi", proficiency: "Native" }
       ]),
       
-      // Resume information - make this more robust
+      // Resume information - return API endpoints instead of absolute file paths
       resumes: (() => {
         try {
           const resumeArray = toArray(resumes, []);
@@ -1146,7 +1185,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             const metadata = resume.metadata || {};
             const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
             const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-            const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+            const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
+            const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
             
             const transformedResume = {
               id: resume.id,
@@ -1156,7 +1196,9 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               uploadDate: resume.createdAt || resume.createdAt,
               lastUpdated: resume.lastUpdated || resume.last_updated,
               is_default: resume.isDefault ?? resume.is_default ?? false,
-              fileUrl: toAbsoluteUrl(filePath)
+              viewUrl,
+              downloadUrl,
+              fileUrl: downloadUrl
             };
             
             console.log(`📄 Transformed resume:`, transformedResume);
@@ -1168,7 +1210,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         }
       })(),
       
-      // Cover letter information - make this more robust
+      // Cover letter information - return API endpoints instead of absolute file paths
       coverLetters: (() => {
         try {
           const coverLetterArray = toArray(coverLetters, []);
@@ -1177,7 +1219,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             const metadata = coverLetter.metadata || {};
             const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
             const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-            const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+            const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
             
             const transformedCoverLetter = {
               id: coverLetter.id,
@@ -1190,7 +1232,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
               is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
               isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
-              fileUrl: toAbsoluteUrl(filePath),
+              downloadUrl,
+              fileUrl: downloadUrl,
               metadata: metadata
             };
             
@@ -1235,7 +1278,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               const metadata = resume.metadata || {};
               const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-              const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
+              const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
+              const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
               
               return {
                 id: resume.id,
@@ -1245,7 +1289,9 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 uploadDate: resume.createdAt || resume.createdAt,
                 lastUpdated: resume.lastUpdated || resume.last_updated,
                 is_default: resume.isDefault ?? resume.is_default ?? false,
-                fileUrl: toAbsoluteUrl(filePath)
+                viewUrl,
+                downloadUrl,
+                fileUrl: downloadUrl
               };
             });
           } catch (resumeErr) {
@@ -1260,7 +1306,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               const metadata = coverLetter.metadata || {};
               const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-              const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
+              const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
               
               return {
                 id: coverLetter.id,
@@ -1273,7 +1319,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
                 is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
                 isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
-                fileUrl: toAbsoluteUrl(filePath),
+                downloadUrl,
+                fileUrl: downloadUrl,
                 metadata: metadata
               };
             });
@@ -1723,12 +1770,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
       });
     }
     
-    // Verify the requirement belongs to the employer's company
+    // Verify requirement: admins can access any requirement; employers must own it
     const requirement = await Requirement.findOne({
-      where: { 
-        id: requirementId,
-        companyId: req.user.companyId 
-      }
+      where: req.user.user_type === 'admin' 
+        ? { id: requirementId }
+        : { id: requirementId, companyId: req.user.companyId }
     });
     
     if (!requirement) {
@@ -1741,8 +1787,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
     // Get the resume
     const resume = await Resume.findOne({
       where: { 
-        id: resumeId, 
-        userId: candidateId 
+        id: resumeId,
+        [Op.or]: [
+          { userId: candidateId },
+          { user_id: candidateId }
+        ]
       }
     });
     
@@ -1834,12 +1883,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       });
     }
     
-    // Verify the requirement belongs to the employer's company
+    // Verify requirement: admins can access any requirement; employers must own it
     const requirement = await Requirement.findOne({
-      where: { 
-        id: requirementId,
-        companyId: req.user.companyId 
-      }
+      where: req.user.user_type === 'admin' 
+        ? { id: requirementId }
+        : { id: requirementId, companyId: req.user.companyId }
     });
     
     if (!requirement) {
@@ -1852,8 +1900,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     // Get the resume
     const resume = await Resume.findOne({
       where: { 
-        id: resumeId, 
-        user_id: candidateId 
+        id: resumeId,
+        [Op.or]: [
+          { userId: candidateId },
+          { user_id: candidateId }
+        ]
       }
     });
     

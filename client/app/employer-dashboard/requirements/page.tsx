@@ -92,11 +92,11 @@ export default function RequirementsPage() {
               companyId: refreshedUser.companyId
             })
             
-            // Check if user is an employer
-            if (refreshedUser.userType !== 'employer') {
+            // Check if user is an employer or admin
+            if (refreshedUser.userType !== 'employer' && refreshedUser.userType !== 'admin') {
               console.log('❌ Frontend: User is not an employer')
               console.log('❌ Frontend: Expected "employer", got:', refreshedUser.userType)
-              setError('Access denied. Only employers can view requirements.')
+              setError('Access denied. Only employers and admins can view requirements.')
               return
             }
           } else {
@@ -105,11 +105,11 @@ export default function RequirementsPage() {
             const userData = JSON.parse(user)
             console.log('🔍 Frontend: Using localStorage user data:', userData)
             
-            // Check if user is an employer
-            if (userData.userType !== 'employer') {
+            // Check if user is an employer or admin
+            if (userData.userType !== 'employer' && userData.userType !== 'admin') {
               console.log('❌ Frontend: User is not an employer')
               console.log('❌ Frontend: Expected "employer", got:', userData.userType)
-              setError('Access denied. Only employers can view requirements.')
+              setError('Access denied. Only employers and admins can view requirements.')
               return
             }
           }
@@ -118,11 +118,11 @@ export default function RequirementsPage() {
           // Fall back to localStorage data
           const userData = JSON.parse(user)
           
-          // Check if user is an employer
-          if (userData.userType !== 'employer') {
+          // Check if user is an employer or admin
+          if (userData.userType !== 'employer' && userData.userType !== 'admin') {
             console.log('❌ Frontend: User is not an employer')
             console.log('❌ Frontend: Expected "employer", got:', userData.userType)
-            setError('Access denied. Only employers can view requirements.')
+            setError('Access denied. Only employers and admins can view requirements.')
             return
           }
         }

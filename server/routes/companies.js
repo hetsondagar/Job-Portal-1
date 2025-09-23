@@ -255,6 +255,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    // Compute active jobs count
+    let activeJobsCount = 0;
+    try {
+      const Job = require('../models/Job');
+      activeJobsCount = await Job.count({ where: { companyId: id, status: 'active' } });
+    } catch (e) {
+      console.warn('Could not compute activeJobsCount for company', id, e?.message);
+    }
+
     res.json({
       success: true,
       data: {
@@ -269,7 +278,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
         address: company.address,
         city: company.city,
         state: company.state,
-        country: company.country
+        country: company.country,
+        // Extras to improve frontend display
+        activeJobsCount,
+        profileViews: company.profileViews || company.views || 0
       }
     });
 
@@ -290,7 +302,7 @@ router.get('/:id/jobs', authenticateToken, async (req, res) => {
     
     const jobs = await Job.findAll({
       where: { 
-        company_id: id,
+        companyId: id,
         status: 'active'
       },
       order: [['createdAt', 'DESC']],
@@ -322,11 +334,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { name, industry, companySize, website, description, address, city, state, country } = req.body;
     
     // Check if the user has access to this company
-    if (req.user.user_type !== 'employer' || req.user.company_id !== id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+    if (req.user.user_type !== 'admin') {
+      if (req.user.user_type !== 'employer' || String(req.user.company_id) !== String(id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
     }
 
     const company = await Company.findByPk(id);
