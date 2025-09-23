@@ -99,8 +99,8 @@ function findCoverLetterFile(filename, metadata) {
     path.join('/tmp', 'uploads', 'cover-letters', filename),
     path.join('/var', 'tmp', 'uploads', 'cover-letters', filename),
     // Metadata-based paths
-    metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\/, '')) : null,
-    metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\/, '')) : null,
+    metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
+    metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
     metadata?.filePath ? metadata.filePath : null
   ].filter(Boolean);
 
