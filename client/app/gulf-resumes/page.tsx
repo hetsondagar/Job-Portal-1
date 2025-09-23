@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Upload, FileText, Eye, Download, ArrowLeft, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiService, Resume } from '@/lib/api'
+import { Navbar } from '@/components/navbar'
 
 export default function GulfResumesPage() {
   const { user, loading } = useAuth()
@@ -106,9 +107,25 @@ export default function GulfResumesPage() {
     }
   }
 
+  const handleSetDefault = async (id: string) => {
+    try {
+      const resp = await apiService.setDefaultResume(id)
+      if (resp.success) {
+        toast.success('Default resume updated')
+        fetchResumes()
+      } else {
+        toast.error(resp.message || 'Failed to set default resume')
+      }
+    } catch (error) {
+      console.error('Error setting default resume:', error)
+      toast.error('Failed to set default resume')
+    }
+  }
+
   return (
-    <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <Navbar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Link href="/jobseeker-gulf-dashboard">
@@ -154,6 +171,11 @@ export default function GulfResumesPage() {
                       <Button size="sm" variant="outline" onClick={() => handleDownload(r.id)} className="border-green-600 text-green-600">
                         <Download className="w-4 h-4 mr-1" /> Download
                       </Button>
+                      {!r.isDefault && (
+                        <Button size="sm" variant="outline" onClick={() => handleSetDefault(r.id)} className="border-green-600 text-green-600">
+                          Set Default
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => handleDelete(r.id)} className="border-red-600 text-red-600">
                         <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>

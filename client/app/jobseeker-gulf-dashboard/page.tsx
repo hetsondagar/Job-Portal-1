@@ -681,13 +681,16 @@ export default function JobseekerGulfDashboardPage() {
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Gulf Jobs</h3>
                       <p className="text-sm text-slate-600 dark:text-slate-300">Find opportunities</p>
+                      {gulfJobs && gulfJobs.length > 0 && (
+                        <div className="mt-1 inline-flex"><Badge variant="secondary">{gulfJobs.length}</Badge></div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </Link>
 
-            <Link href="/gulf-dashboard/applications">
+            <Link href="/gulf-applications">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -696,14 +699,50 @@ export default function JobseekerGulfDashboardPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Applications</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {applicationsLoading ? 'Loading...' : `${applications.length} applications`}
-                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{applicationsLoading ? 'Loading...' : `${applications.length} applications`}</p>
+                      {!applicationsLoading && (
+                        <div className="mt-1 inline-flex"><Badge variant="secondary">{applications.length}</Badge></div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </Link>
+
+            {/* Search History */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800" onClick={() => router.push('/search-history')}>
+              <CardContent className="p-6 h-full flex flex-col justify-center">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Search className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">Search History</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {(stats as any)?.stats?.totalSearches ? `${(stats as any).stats.totalSearches} searches` : 'View and manage searches'}
+                    </p>
+                    {Boolean((stats as any)?.stats?.savedSearches) && (
+                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{(stats as any).stats.savedSearches} saved searches</div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notifications */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800" onClick={() => router.push('/notifications')}>
+              <CardContent className="p-6 h-full flex flex-col justify-center">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Bell className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-base">Notifications</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">Stay updated</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Link href="/gulf-resumes">
               <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800">
@@ -714,9 +753,10 @@ export default function JobseekerGulfDashboardPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Gulf Resume</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {resumes.length === 0 ? 'Upload resume' : `${resumes.length} uploaded`}
-                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{resumes.length === 0 ? 'Upload resume' : `${resumes.length} uploaded`}</p>
+                      {resumes.length > 0 && (
+                        <div className="mt-1 inline-flex"><Badge variant="secondary">{resumes.length}</Badge></div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -732,9 +772,10 @@ export default function JobseekerGulfDashboardPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Cover Letters</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {coverLetters.length === 0 ? 'Upload cover letter' : `${coverLetters.length} uploaded`}
-                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{coverLetters.length === 0 ? 'Upload cover letter' : `${coverLetters.length} uploaded`}</p>
+                      {coverLetters.length > 0 && (
+                        <div className="mt-1 inline-flex"><Badge variant="secondary">{coverLetters.length}</Badge></div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -750,9 +791,10 @@ export default function JobseekerGulfDashboardPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Saved Jobs</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {bookmarksLoading ? 'Loading...' : `${bookmarks.length} saved`}
-                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{bookmarksLoading ? 'Loading...' : `${bookmarks.length} saved`}</p>
+                      {!bookmarksLoading && (
+                        <div className="mt-1 inline-flex"><Badge variant="secondary">{bookmarks.length}</Badge></div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -768,9 +810,10 @@ export default function JobseekerGulfDashboardPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Job Alerts</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {jobAlertsLoading ? 'Loading...' : `${jobAlerts.length} active`}
-                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{jobAlertsLoading ? 'Loading...' : `${jobAlerts.length} active`}</p>
+                      {!jobAlertsLoading && (
+                        <div className="mt-1 inline-flex"><Badge variant="secondary">{jobAlerts.length}</Badge></div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

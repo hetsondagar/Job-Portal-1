@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, FileText, Eye, Download, ArrowLeft, Trash2 } from 'lucide-react'
+import { Upload, FileText, Eye, Download, ArrowLeft, Trash2, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiService, CoverLetter } from '@/lib/api'
 
@@ -113,6 +113,21 @@ export default function GulfCoverLettersPage() {
     }
   }
 
+  const handleSetDefault = async (id: string) => {
+    try {
+      const resp = await apiService.setDefaultCoverLetter(id)
+      if (resp.success) {
+        toast.success('Default cover letter updated')
+        fetchCoverLetters()
+      } else {
+        toast.error(resp.message || 'Failed to set default cover letter')
+      }
+    } catch (error) {
+      console.error('Error setting default cover letter:', error)
+      toast.error('Failed to set default cover letter')
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -160,6 +175,11 @@ export default function GulfCoverLettersPage() {
                       <Button size="sm" variant="outline" onClick={() => handleDownload((cl as any).id)} className="border-green-600 text-green-600">
                         <Download className="w-4 h-4 mr-1" /> Download
                       </Button>
+                      {!((cl as any).isDefault) && (
+                        <Button size="sm" variant="outline" onClick={() => handleSetDefault((cl as any).id)} className="border-green-600 text-green-600">
+                          <Star className="w-4 h-4 mr-1" /> Set Default
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => handleDelete((cl as any).id)} className="border-red-600 text-red-600">
                         <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
