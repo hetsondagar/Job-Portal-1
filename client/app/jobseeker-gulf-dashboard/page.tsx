@@ -710,7 +710,7 @@ export default function JobseekerGulfDashboardPage() {
             </Link>
 
             {/* Search History */}
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800" onClick={() => router.push('/search-history')}>
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800" onClick={() => router.push('/gulf-search-history')}>
               <CardContent className="p-6 h-full flex flex-col justify-center">
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -730,7 +730,7 @@ export default function JobseekerGulfDashboardPage() {
             </Card>
 
             {/* Notifications */}
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800" onClick={() => router.push('/notifications')}>
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-green-200 dark:border-green-800" onClick={() => router.push('/gulf-notifications')}>
               <CardContent className="p-6 h-full flex flex-col justify-center">
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1379,7 +1379,7 @@ export default function JobseekerGulfDashboardPage() {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start h-auto p-3 flex-col items-start space-y-1 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors border-green-200 dark:border-green-800"
-                  onClick={() => router.push('/notifications')}
+                  onClick={() => router.push('/gulf-notifications')}
                 >
                   <Bell className="w-5 h-5 text-green-600 dark:text-green-400" />
                   <span className="text-sm font-medium">Notifications</span>

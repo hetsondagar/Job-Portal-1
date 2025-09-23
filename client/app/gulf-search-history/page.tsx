@@ -13,13 +13,7 @@ import {
   ArrowLeft,
   Search,
   Clock,
-  MapPin,
-  Briefcase,
-  DollarSign,
-  Filter,
-  Trash2,
   Calendar,
-  TrendingUp,
   RefreshCw,
   X,
   Save,
@@ -29,7 +23,7 @@ import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, SearchHistory } from '@/lib/api'
 
-export default function SearchHistoryPage() {
+export default function GulfSearchHistoryPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([])
@@ -60,7 +54,6 @@ export default function SearchHistoryPage() {
   const filterAndSortHistory = () => {
     let filtered = [...searchHistory]
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(history => 
         getSearchQuery(history.searchQuery).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,10 +61,8 @@ export default function SearchHistoryPage() {
       )
     }
 
-    // Filter by type
     if (filterBy !== 'all') {
       filtered = filtered.filter(history => {
-        const query = getSearchQuery(history.searchQuery)
         if (filterBy === 'location' && history.filters?.location) return true
         if (filterBy === 'category' && history.filters?.category) return true
         if (filterBy === 'salary' && (history.filters?.salaryMin || history.filters?.salaryMax)) return true
@@ -79,7 +70,6 @@ export default function SearchHistoryPage() {
       })
     }
 
-    // Sort
     filtered.sort((a, b) => {
       if (sortBy === 'recent') {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -133,8 +123,7 @@ export default function SearchHistoryPage() {
 
   const getSearchFilters = (filters: any) => {
     if (!filters) return []
-    
-    const filterList = []
+    const filterList: string[] = []
     if (filters.location) filterList.push(`📍 ${filters.location}`)
     if (filters.category) filterList.push(`🏢 ${filters.category}`)
     if (filters.experienceLevel) filterList.push(`👤 ${filters.experienceLevel}`)
@@ -143,7 +132,6 @@ export default function SearchHistoryPage() {
       filterList.push(`💰 $${salary}`)
     }
     if (filters.jobType) filterList.push(`📋 ${filters.jobType}`)
-    
     return filterList
   }
 
@@ -165,7 +153,6 @@ export default function SearchHistoryPage() {
 
   const handleDeleteSelected = () => {
     if (selectedItems.length === 0) return
-    
     if (confirm(`Are you sure you want to delete ${selectedItems.length} search history items?`)) {
       setSearchHistory(prev => prev.filter(item => !selectedItems.includes(item.id)))
       setSelectedItems([])
@@ -175,7 +162,6 @@ export default function SearchHistoryPage() {
 
   const handleClearAll = () => {
     if (searchHistory.length === 0) return
-    
     if (confirm('Are you sure you want to clear all search history?')) {
       setSearchHistory([])
       setSelectedItems([])
@@ -184,7 +170,6 @@ export default function SearchHistoryPage() {
   }
 
   const handleSaveSearch = (history: SearchHistory) => {
-    // This would typically save to job alerts
     toast.success('Search saved to job alerts')
   }
 
@@ -212,7 +197,6 @@ export default function SearchHistoryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
-      
       <div className="pt-16 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
@@ -226,12 +210,8 @@ export default function SearchHistoryPage() {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  Search History
-                </h1>
-                <p className="text-slate-600 dark:text-slate-300">
-                  View and manage your recent job searches and filters
-                </p>
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Search History</h1>
+                <p className="text-slate-600 dark:text-slate-300">View and manage your recent job searches and filters</p>
               </div>
               <div className="flex items-center space-x-2">
                 <Badge variant="outline" className="text-sm">
@@ -242,18 +222,12 @@ export default function SearchHistoryPage() {
             </div>
           </div>
 
-          {/* Search and Filter Controls */}
           <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search in history..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                  <Input placeholder="Search in history..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                 </div>
                 <Select value={filterBy} onValueChange={setFilterBy}>
                   <SelectTrigger>
@@ -276,22 +250,11 @@ export default function SearchHistoryPage() {
                   </SelectContent>
                 </Select>
                 <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearAll}
-                    disabled={searchHistory.length === 0}
-                    className="flex-1"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
+                  <Button variant="outline" size="sm" onClick={handleClearAll} disabled={searchHistory.length === 0} className="flex-1">
+                    <RefreshCw className="w-4 h-4 mr-1" />
                     Clear All
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchSearchHistory}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" size="sm" onClick={fetchSearchHistory} className="flex-1">
                     <RefreshCw className="w-4 h-4 mr-1" />
                     Refresh
                   </Button>
@@ -300,30 +263,17 @@ export default function SearchHistoryPage() {
             </CardContent>
           </Card>
 
-          {/* Bulk Actions */}
           {selectedItems.length > 0 && (
             <Card className="mb-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <span className="text-sm text-blue-700 dark:text-blue-300">
-                      {selectedItems.length} items selected
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
+                    <span className="text-sm text-blue-700 dark:text-blue-300">{selectedItems.length} items selected</span>
+                    <Button variant="outline" size="sm" onClick={handleSelectAll} className="text-blue-600 hover:text-blue-700">
                       {selectedItems.length === filteredHistory.length ? 'Deselect All' : 'Select All'}
                     </Button>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
+                  <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
                     Delete Selected
                   </Button>
                 </div>
@@ -348,12 +298,8 @@ export default function SearchHistoryPage() {
             <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
               <CardContent className="p-12 text-center">
                 <Search className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                  No search history yet
-                </h3>
-                <p className="text-slate-600 dark:text-slate-300 mb-6">
-                  Your job searches will appear here for easy reference
-                </p>
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">No search history yet</h3>
+                <p className="text-slate-600 dark:text-slate-300 mb-6">Your job searches will appear here for easy reference</p>
                 <Link href="/jobs">
                   <Button>Start Searching</Button>
                 </Link>
@@ -365,24 +311,10 @@ export default function SearchHistoryPage() {
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
                   <CardContent className="p-12 text-center">
                     <Search className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                      {searchTerm || filterBy !== 'all' ? 'No matching searches' : 'No search history yet'}
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-300 mb-6">
-                      {searchTerm || filterBy !== 'all' 
-                        ? 'Try adjusting your search or filter criteria'
-                        : 'Your job searches will appear here for easy reference'
-                      }
-                    </p>
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{searchTerm || filterBy !== 'all' ? 'No matching searches' : 'No search history yet'}</h3>
+                    <p className="text-slate-600 dark:text-slate-300 mb-6">{searchTerm || filterBy !== 'all' ? 'Try adjusting your search or filter criteria' : 'Your job searches will appear here for easy reference'}</p>
                     {(searchTerm || filterBy !== 'all') && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setSearchTerm('')
-                          setFilterBy('all')
-                        }}
-                        className="mr-2"
-                      >
+                      <Button variant="outline" onClick={() => { setSearchTerm(''); setFilterBy('all') }} className="mr-2">
                         <X className="w-4 h-4 mr-1" />
                         Clear Filters
                       </Button>
@@ -394,43 +326,27 @@ export default function SearchHistoryPage() {
                 </Card>
               ) : (
                 filteredHistory.map((history) => (
-                  <Card 
-                    key={history.id} 
-                    className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl transition-all duration-200 hover:shadow-lg ${
-                      selectedItems.includes(history.id) ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
-                    }`}
-                  >
+                  <Card key={history.id} className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl transition-all duration-200 hover:shadow-lg ${selectedItems.includes(history.id) ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-start space-x-3 mb-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedItems.includes(history.id)}
-                              onChange={() => handleSelectItem(history.id)}
-                              className="mt-1 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                            />
+                            <input type="checkbox" checked={selectedItems.includes(history.id)} onChange={() => handleSelectItem(history.id)} className="mt-1 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
                             <div className="flex-1">
                               <div className="flex items-center space-x-3 mb-2">
-                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                  {getSearchQuery(history.searchQuery)}
-                                </h3>
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{getSearchQuery(history.searchQuery)}</h3>
                                 <Badge variant="outline" className="text-xs">
                                   <Clock className="w-3 h-3 mr-1" />
                                   {formatDate(history.createdAt)}
                                 </Badge>
                               </div>
-                              
                               {history.filters && Object.keys(history.filters).length > 0 && (
                                 <div className="flex flex-wrap gap-2 mb-3">
                                   {getSearchFilters(history.filters).map((filter, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs">
-                                      {filter}
-                                    </Badge>
+                                    <Badge key={index} variant="secondary" className="text-xs">{filter}</Badge>
                                   ))}
                                 </div>
                               )}
-
                               <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
                                 <div className="flex items-center space-x-1">
                                   <Search className="w-4 h-4" />
@@ -444,7 +360,6 @@ export default function SearchHistoryPage() {
                             </div>
                           </div>
                         </div>
-
                         <div className="flex flex-col space-y-2 ml-4">
                           <Link href={`/jobs?q=${encodeURIComponent(getSearchQuery(history.searchQuery))}`}>
                             <Button variant="outline" size="sm" className="w-full">
@@ -452,21 +367,11 @@ export default function SearchHistoryPage() {
                               Search Again
                             </Button>
                           </Link>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSaveSearch(history)}
-                            className="w-full"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => handleSaveSearch(history)} className="w-full">
                             <Save className="w-4 h-4 mr-1" />
                             Save
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleShareSearch(history)}
-                            className="w-full"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => handleShareSearch(history)} className="w-full">
                             <Share2 className="w-4 h-4 mr-1" />
                             Share
                           </Button>
@@ -483,3 +388,5 @@ export default function SearchHistoryPage() {
     </div>
   )
 }
+
+

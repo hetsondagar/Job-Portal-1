@@ -20,6 +20,9 @@ export default function GulfResumesPage() {
   const [resumes, setResumes] = useState<Resume[]>([])
   const [resumesLoading, setResumesLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const [viewingIds, setViewingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!loading && !user) {
@@ -71,6 +74,8 @@ export default function GulfResumesPage() {
 
   const handleView = async (id: string) => {
     try {
+      if (viewingIds.has(id)) return
+      setViewingIds(prev => new Set([...prev, id]))
       const response = await apiService.fetchResumeFile(id)
       const blob = await response.blob()
       const mime = response.headers.get('content-type') || 'application/pdf'
@@ -79,21 +84,36 @@ export default function GulfResumesPage() {
       setTimeout(() => window.URL.revokeObjectURL(url), 60000)
     } catch (error) {
       console.error('Error viewing resume:', error)
-      toast.error('Failed to view resume')
+      const message = (error as Error)?.message?.includes('FILE_NOT_FOUND')
+        ? 'Resume file missing on server. Please re-upload.'
+        : 'Failed to view resume'
+      toast.error(message)
+    } finally {
+      setViewingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
   const handleDownload = async (id: string) => {
     try {
+      if (downloadingIds.has(id)) return
+      setDownloadingIds(prev => new Set([...prev, id]))
       await apiService.downloadResume(id)
     } catch (error) {
       console.error('Error downloading resume:', error)
-      toast.error('Failed to download resume')
+      const message = (error as Error)?.message?.includes('FILE_NOT_FOUND')
+        ? 'Resume file missing on server. Please re-upload.'
+        : 'Failed to download resume'
+      toast.error(message)
+    } finally {
+      setDownloadingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
   const handleDelete = async (id: string) => {
     try {
+      if (!confirm('Delete this resume? This action cannot be undone.')) return
+      if (deletingIds.has(id)) return
+      setDeletingIds(prev => new Set([...prev, id]))
       const res = await apiService.deleteResume(id)
       if (res.success) {
         toast.success('Resume deleted')
@@ -104,6 +124,8 @@ export default function GulfResumesPage() {
     } catch (error) {
       console.error('Error deleting resume:', error)
       toast.error('Failed to delete resume')
+    } finally {
+      setDeletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
@@ -165,19 +187,19 @@ export default function GulfResumesPage() {
                       {r.summary && <div className="text-xs text-slate-600 truncate">{r.summary}</div>}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleView(r.id)} className="border-green-600 text-green-600">
-                        <Eye className="w-4 h-4 mr-1" /> View
+                      <Button size="sm" variant="outline" onClick={() => handleView(r.id)} disabled={viewingIds.has(r.id)} className="border-green-600 text-green-600">
+                        <Eye className="w-4 h-4 mr-1" /> {viewingIds.has(r.id) ? 'Opening...' : 'View'}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDownload(r.id)} className="border-green-600 text-green-600">
-                        <Download className="w-4 h-4 mr-1" /> Download
+                      <Button size="sm" variant="outline" onClick={() => handleDownload(r.id)} disabled={downloadingIds.has(r.id)} className="border-green-600 text-green-600">
+                        <Download className="w-4 h-4 mr-1" /> {downloadingIds.has(r.id) ? 'Downloading...' : 'Download'}
                       </Button>
                       {!r.isDefault && (
                         <Button size="sm" variant="outline" onClick={() => handleSetDefault(r.id)} className="border-green-600 text-green-600">
                           Set Default
                         </Button>
                       )}
-                      <Button size="sm" variant="outline" onClick={() => handleDelete(r.id)} className="border-red-600 text-red-600">
-                        <Trash2 className="w-4 h-4 mr-1" /> Delete
+                      <Button size="sm" variant="outline" onClick={() => handleDelete(r.id)} disabled={deletingIds.has(r.id)} className="border-red-600 text-red-600">
+                        <Trash2 className="w-4 h-4 mr-1" /> {deletingIds.has(r.id) ? 'Deleting...' : 'Delete'}
                       </Button>
                     </div>
                   </div>

@@ -18,6 +18,9 @@ export default function GulfCoverLettersPage() {
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([])
   const [loadingCL, setLoadingCL] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const [viewingIds, setViewingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!loading && !user) {
@@ -68,6 +71,8 @@ export default function GulfCoverLettersPage() {
 
   const handleView = async (id: string) => {
     try {
+      if (viewingIds.has(id)) return
+      setViewingIds(prev => new Set([...prev, id]))
       const response = await apiService.fetchCoverLetterFile(id)
       const blob = await response.blob()
       const mime = response.headers.get('content-type') || 'application/pdf'
@@ -76,12 +81,19 @@ export default function GulfCoverLettersPage() {
       setTimeout(() => window.URL.revokeObjectURL(url), 60000)
     } catch (error) {
       console.error('Error viewing cover letter:', error)
-      toast.error('Failed to view cover letter')
+      const message = (error as Error)?.message?.includes('FILE_NOT_FOUND')
+        ? 'Cover letter file missing on server. Please re-upload.'
+        : 'Failed to view cover letter'
+      toast.error(message)
+    } finally {
+      setViewingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
   const handleDownload = async (id: string) => {
     try {
+      if (downloadingIds.has(id)) return
+      setDownloadingIds(prev => new Set([...prev, id]))
       const response = await apiService.downloadCoverLetter(id)
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
@@ -94,12 +106,20 @@ export default function GulfCoverLettersPage() {
       document.body.removeChild(a)
     } catch (error) {
       console.error('Error downloading cover letter:', error)
-      toast.error('Failed to download cover letter')
+      const message = (error as Error)?.message?.includes('FILE_NOT_FOUND')
+        ? 'Cover letter file missing on server. Please re-upload.'
+        : 'Failed to download cover letter'
+      toast.error(message)
+    } finally {
+      setDownloadingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
   const handleDelete = async (id: string) => {
     try {
+      if (!confirm('Delete this cover letter? This action cannot be undone.')) return
+      if (deletingIds.has(id)) return
+      setDeletingIds(prev => new Set([...prev, id]))
       const res = await apiService.deleteCoverLetter(id)
       if (res.success) {
         toast.success('Cover letter deleted')
@@ -110,6 +130,8 @@ export default function GulfCoverLettersPage() {
     } catch (error) {
       console.error('Error deleting cover letter:', error)
       toast.error('Failed to delete cover letter')
+    } finally {
+      setDeletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
@@ -169,19 +191,19 @@ export default function GulfCoverLettersPage() {
                       <div className="font-medium truncate">{(cl as any).title || 'Untitled Cover Letter'}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleView((cl as any).id)} className="border-green-600 text-green-600">
-                        <Eye className="w-4 h-4 mr-1" /> View
+                      <Button size="sm" variant="outline" onClick={() => handleView((cl as any).id)} disabled={viewingIds.has((cl as any).id)} className="border-green-600 text-green-600">
+                        <Eye className="w-4 h-4 mr-1" /> {viewingIds.has((cl as any).id) ? 'Opening...' : 'View'}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDownload((cl as any).id)} className="border-green-600 text-green-600">
-                        <Download className="w-4 h-4 mr-1" /> Download
+                      <Button size="sm" variant="outline" onClick={() => handleDownload((cl as any).id)} disabled={downloadingIds.has((cl as any).id)} className="border-green-600 text-green-600">
+                        <Download className="w-4 h-4 mr-1" /> {downloadingIds.has((cl as any).id) ? 'Downloading...' : 'Download'}
                       </Button>
                       {!((cl as any).isDefault) && (
                         <Button size="sm" variant="outline" onClick={() => handleSetDefault((cl as any).id)} className="border-green-600 text-green-600">
                           <Star className="w-4 h-4 mr-1" /> Set Default
                         </Button>
                       )}
-                      <Button size="sm" variant="outline" onClick={() => handleDelete((cl as any).id)} className="border-red-600 text-red-600">
-                        <Trash2 className="w-4 h-4 mr-1" /> Delete
+                      <Button size="sm" variant="outline" onClick={() => handleDelete((cl as any).id)} disabled={deletingIds.has((cl as any).id)} className="border-red-600 text-red-600">
+                        <Trash2 className="w-4 h-4 mr-1" /> {deletingIds.has((cl as any).id) ? 'Deleting...' : 'Delete'}
                       </Button>
                     </div>
                   </div>
