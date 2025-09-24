@@ -455,7 +455,17 @@ export default function CompanyDetailPage() {
 
   
 
-  const sectorColors = getSectorColor(company.sector)
+  const sectorKey = useMemo(() => {
+    const ind = (company?.industry || '').toLowerCase()
+    if (ind.includes('tech')) return 'technology'
+    if (ind.includes('fin')) return 'finance'
+    if (ind.includes('health')) return 'healthcare'
+    if (ind.includes('auto')) return 'automotive'
+    if (ind.includes('energy')) return 'energy'
+    if (ind.includes('consult')) return 'fintech'
+    return 'technology'
+  }, [company?.industry])
+  const sectorColors = getSectorColor(sectorKey)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
