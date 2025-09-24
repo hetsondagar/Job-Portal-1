@@ -177,27 +177,15 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
   }
 
   const handleDownloadCoverLetter = async (coverLetter: any) => {
-    if (!coverLetter?.id) {
-      toast.error('Cover letter not available for download')
-      return
-    }
-
     try {
-      // Use the cover letter download endpoint
-      const response = await apiService.downloadCoverLetter(coverLetter.id)
-      
-      // Get the filename from the response headers or use a default
+      // Prefer application-scoped download to enforce access checks and resilient file handling
+      const response = await apiService.downloadApplicationCoverLetter(selectedApplication?.id || '')
       const contentDisposition = response.headers.get('content-disposition')
-      let filename = coverLetter.metadata?.filename || `${coverLetter.title || 'CoverLetter'}.pdf`
-      
+      let filename = coverLetter?.metadata?.filename || `${coverLetter?.title || 'CoverLetter'}.pdf`
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
-        if (filenameMatch) {
-          filename = filenameMatch[1]
-        }
+        const match = contentDisposition.match(/filename="(.+)"/)
+        if (match) filename = match[1]
       }
-      
-      // Create blob and download
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -207,7 +195,6 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-      
       toast.success('Cover letter downloaded successfully')
     } catch (error) {
       console.error('Error downloading cover letter:', error)

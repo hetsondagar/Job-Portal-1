@@ -1243,6 +1243,19 @@ class ApiService {
     }
   }
 
+  // Employer: download cover letter for a specific application
+  async downloadApplicationCoverLetter(applicationId: string): Promise<Response> {
+    const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}/cover-letter/download`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({} as any));
+      const msg = (errorData as any)?.message || `Download failed: ${response.status} ${response.statusText}`;
+      throw new Error(msg);
+    }
+    return response;
+  }
+
   async createApplication(data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/user/applications`, {
       method: 'POST',
