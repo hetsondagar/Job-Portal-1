@@ -296,8 +296,8 @@ function CompanyDetailPage() {
 
   // Removed mock company data
 
-  // Handle company not found
-  if (loadingCompany) {
+  // Handle loading states early to avoid any render errors
+  if (loadingCompany || loadingJobs) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Navbar />
