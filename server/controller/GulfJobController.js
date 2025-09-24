@@ -7,6 +7,7 @@ const JobAlert = require('../models/JobAlert');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
 const CoverLetter = require('../models/CoverLetter');
+const CandidateLike = require('../models/CandidateLike');
 
 // Gulf region countries and cities
 const GULF_LOCATIONS = [
@@ -700,6 +701,15 @@ const getGulfDashboardStats = async (req, res) => {
       }
     });
 
+    // Get profile upvotes (likes) for this jobseeker
+    let profileLikes = 0;
+    try {
+      profileLikes = await CandidateLike.count({ where: { candidateId: userId } });
+    } catch (e) {
+      console.warn('Unable to count CandidateLike for user', userId, e?.message || e);
+      profileLikes = 0;
+    }
+
     res.json({
       success: true,
       data: {
@@ -707,11 +717,13 @@ const getGulfDashboardStats = async (req, res) => {
         gulfBookmarks,
         gulfAlerts,
         totalGulfJobs,
+        profileLikes,
         stats: {
           totalApplications: gulfApplications,
           totalBookmarks: gulfBookmarks,
           totalAlerts: gulfAlerts,
-          totalJobs: totalGulfJobs
+          totalJobs: totalGulfJobs,
+          profileLikes
         }
       }
     });
