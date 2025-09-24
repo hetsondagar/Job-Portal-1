@@ -15,6 +15,7 @@ import { motion } from "framer-motion"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 
@@ -23,7 +24,9 @@ export default function GulfCreateRequirementPage() {
 
   return (
     <EmployerAuthGuard>
-      <GulfCreateRequirementContent user={user} />
+      <GulfEmployerAuthGuard>
+        <GulfCreateRequirementContent user={user} />
+      </GulfEmployerAuthGuard>
     </EmployerAuthGuard>
   )
 }

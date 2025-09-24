@@ -2517,10 +2517,17 @@ class ApiService {
     templateData: any;
     tags?: string[];
   }): Promise<ApiResponse<any>> {
+    // Backend expects: title, description, categoryId, (companyId optional)
+    const payload = {
+      title: data.name,
+      description: data.description,
+      categoryId: data.category,
+    } as any;
+
     const response = await fetch(`${API_BASE_URL}/job-templates`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
       });
 
     return this.handleResponse<any>(response);
@@ -2534,10 +2541,16 @@ class ApiService {
     templateData: any;
     tags: string[];
   }>): Promise<ApiResponse<any>> {
+    // Backend expects: title, description, categoryId
+    const payload: any = {};
+    if (data.name !== undefined) payload.title = data.name;
+    if (data.description !== undefined) payload.description = data.description;
+    if (data.category !== undefined) payload.categoryId = data.category;
+
     const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
 
     return this.handleResponse<any>(response);

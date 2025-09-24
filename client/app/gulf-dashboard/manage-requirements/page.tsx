@@ -5,6 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -133,8 +135,10 @@ export default function GulfManageRequirementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      <EmployerNavbar />
+    <EmployerAuthGuard>
+      <GulfEmployerAuthGuard>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+          <EmployerNavbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -311,8 +315,10 @@ export default function GulfManageRequirementsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <EmployerFooter />
-    </div>
+          <EmployerFooter />
+        </div>
+      </GulfEmployerAuthGuard>
+    </EmployerAuthGuard>
   )
 }
 

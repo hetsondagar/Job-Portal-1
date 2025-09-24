@@ -38,13 +38,16 @@ import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
 
 export default function GulfDashboard() {
   const { user, refreshUser } = useAuth()
 
   return (
     <EmployerAuthGuard>
-      <GulfDashboardContent user={user} refreshUser={refreshUser} />
+      <GulfEmployerAuthGuard>
+        <GulfDashboardContent user={user} refreshUser={refreshUser} />
+      </GulfEmployerAuthGuard>
     </EmployerAuthGuard>
   )
 }

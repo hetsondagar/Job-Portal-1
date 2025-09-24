@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
@@ -210,22 +212,28 @@ export default function GulfJobTemplatesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
-        <EmployerNavbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600 mx-auto"></div>
-            <p className="mt-4 text-slate-600">Loading templates...</p>
+      <EmployerAuthGuard>
+        <GulfEmployerAuthGuard>
+          <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
+            <EmployerNavbar />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600 mx-auto"></div>
+                <p className="mt-4 text-slate-600">Loading templates...</p>
+              </div>
+            </div>
+            <EmployerFooter />
           </div>
-        </div>
-        <EmployerFooter />
-      </div>
+        </GulfEmployerAuthGuard>
+      </EmployerAuthGuard>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
-      <EmployerNavbar />
+    <EmployerAuthGuard>
+      <GulfEmployerAuthGuard>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
+          <EmployerNavbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
@@ -412,8 +420,10 @@ export default function GulfJobTemplatesPage() {
         </DialogContent>
       </Dialog>
 
-      <EmployerFooter />
-    </div>
+          <EmployerFooter />
+        </div>
+      </GulfEmployerAuthGuard>
+    </EmployerAuthGuard>
   )
 }
 

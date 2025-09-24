@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
 
 export default function GulfBulkImportPage() {
   const [imports, setImports] = useState([
@@ -88,8 +90,10 @@ export default function GulfBulkImportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
-      <EmployerNavbar />
+    <EmployerAuthGuard>
+      <GulfEmployerAuthGuard>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
+          <EmployerNavbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
@@ -235,8 +239,10 @@ export default function GulfBulkImportPage() {
         </Card>
       </div>
 
-      <EmployerFooter />
-    </div>
+          <EmployerFooter />
+        </div>
+      </GulfEmployerAuthGuard>
+    </EmployerAuthGuard>
   )
 }
 
