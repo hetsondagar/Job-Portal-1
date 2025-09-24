@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     firstName: u.first_name ?? u.firstName,
     lastName: u.last_name ?? u.lastName,
     userType: (u.user_type ?? u.userType) as User['userType'],
+    region: u.region ?? u.user_region ?? (u.preferences?.region),
     isEmailVerified: u.is_email_verified ?? u.isEmailVerified,
     accountStatus: u.account_status ?? u.accountStatus,
     avatar: u.avatar,

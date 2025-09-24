@@ -55,8 +55,11 @@ export function GulfEmployerAuthGuard({ children }: GulfEmployerAuthGuardProps) 
       return
     }
 
-    // Region enforcement for Gulf
-    if (user.region !== 'gulf') {
+    // Region enforcement for Gulf (honor explicit URL override)
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+    const requestedRegion = params.get('region') || undefined
+    const effectiveRegion = user.region || requestedRegion
+    if (effectiveRegion !== 'gulf') {
       clearTimeout(timeout)
       setIsChecking(false)
       return
@@ -100,7 +103,13 @@ export function GulfEmployerAuthGuard({ children }: GulfEmployerAuthGuardProps) 
   }
 
   // Access denied for non-gulf employers without redirecting to normal dashboard
-  if (user && (user.userType === 'employer' || user.userType === 'admin') && user.region !== 'gulf') {
+  if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+    const requestedRegion = params.get('region') || undefined
+    const effectiveRegion = (user as any)?.region || requestedRegion
+    if (effectiveRegion === 'gulf') {
+      return <>{children}</>
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30 flex items-center justify-center">
         <Card className="w-full max-w-md border-0 bg-white/80 backdrop-blur-xl shadow-2xl">
