@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
 import {
   Star,
@@ -39,7 +40,7 @@ import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { toast } from "sonner"
 
-export default function CompanyDetailPage() {
+function CompanyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user, loading } = useAuth()
@@ -1162,3 +1163,5 @@ export default function CompanyDetailPage() {
     </ErrorBoundary>
   )
 }
+
+export default dynamic(() => Promise.resolve(CompanyDetailPage), { ssr: false })

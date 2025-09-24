@@ -40,6 +40,8 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function CandidateProfilePage() {
   const params = useParams()
+  const requirementId: string = String((params as any)?.id || '')
+  const candidateIdStr: string = String((params as any)?.candidateId || '')
   const [activeTab, setActiveTab] = useState("overview")
   const [candidate, setCandidate] = useState<any>(null)
   const [requirement, setRequirement] = useState<any>(null)
@@ -71,7 +73,7 @@ export default function CandidateProfilePage() {
         
         // Track profile view for quota consumption
         try {
-          await apiService.trackProfileView(params.candidateId as string)
+          await apiService.trackProfileView(candidateIdStr)
           console.log('✅ Profile view tracked successfully')
         } catch (error) {
           console.error('⚠️ Failed to track profile view:', error)
@@ -79,8 +81,8 @@ export default function CandidateProfilePage() {
         }
         
         const response = await apiService.getCandidateProfile(
-          params.id as string,
-          params.candidateId as string
+          requirementId,
+          candidateIdStr
         )
         
         if (response.success) {
@@ -130,7 +132,7 @@ export default function CandidateProfilePage() {
       setIsDownloading(true)
       
       // Use the API service to download the resume
-      const response = await apiService.downloadCandidateResume(params.id, params.candidateId, resume.id)
+      const response = await apiService.downloadCandidateResume(requirementId, candidateIdStr, resume.id)
       
       // Get the filename from the response headers or use a default
       const contentDisposition = response.headers.get('content-disposition')
@@ -170,25 +172,78 @@ export default function CandidateProfilePage() {
     }
   }
 
+  // Handle resume view (mimic Applications viewer)
+  const handleViewResume = async (resume: any) => {
+    if (!resume?.id) {
+      toast({
+        title: "Error",
+        description: "Resume not available for viewing",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      // Prefer direct file URL if available
+      const directUrl = toAbsoluteApiUrl(resume?.metadata?.fileUrl || resume?.fileUrl)
+      if (directUrl) {
+        window.open(directUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      // Fallback: fetch via API and open blob URL
+      const response = await apiService.downloadCandidateResume(requirementId, candidateIdStr, resume.id)
+      if (!response.ok) {
+        throw new Error(`Failed to load resume: ${response.status} ${response.statusText}`)
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+      }, 10000)
+      if (!newWindow) {
+        toast({ title: 'Popup blocked', description: 'Please allow popups to view the resume', variant: 'destructive' })
+      }
+    } catch (error) {
+      console.error('Error viewing resume:', error)
+      toast({ title: 'Error', description: 'Failed to view resume', variant: 'destructive' })
+    }
+  }
+
   // Handle cover letter view
   const handleViewCoverLetter = (coverLetter: any) => {
-    console.log('🔍 Viewing cover letter:', coverLetter)
-    
-    // Try fileUrl first, then metadata.fileUrl
-    const fileUrl = coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl
-    const absolute = toAbsoluteApiUrl(fileUrl)
-    
-    if (absolute) {
-      console.log('📄 Opening cover letter file:', absolute)
-      // Open file in new tab
-      window.open(absolute, '_blank', 'noopener,noreferrer')
-    } else {
-      console.log('📝 No file URL, showing content')
-      // Show content in modal or expand view
-      toast({
-        title: "Cover Letter",
-        description: coverLetter.content || "Cover letter content not available",
-      })
+    try {
+      // Try direct url first
+      const direct = toAbsoluteApiUrl(coverLetter?.fileUrl || coverLetter?.metadata?.fileUrl)
+      if (direct) {
+        window.open(direct, '_blank', 'noopener,noreferrer')
+        return
+      }
+      // Fallback to API download -> blob view
+      if (coverLetter?.id) {
+        apiService.downloadCandidateCoverLetter(candidate.id, coverLetter.id)
+          .then(async (resp) => {
+            if (!resp.ok) throw new Error(`Failed: ${resp.status}`)
+            const blob = await resp.blob()
+            const url = window.URL.createObjectURL(blob)
+            const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+            setTimeout(() => window.URL.revokeObjectURL(url), 10000)
+            if (!newWindow) {
+              toast({ title: 'Popup blocked', description: 'Please allow popups to view the cover letter', variant: 'destructive' })
+            }
+          })
+          .catch((e) => {
+            console.error('Cover letter view error:', e)
+            toast({ title: 'Error', description: 'Failed to view cover letter', variant: 'destructive' })
+          })
+        return
+      }
+      // Last resort: show inline content
+      toast({ title: 'Cover Letter', description: coverLetter?.content || 'Cover letter not available' })
+    } catch (e) {
+      console.error('Cover letter view error:', e)
+      toast({ title: 'Error', description: 'Failed to view cover letter', variant: 'destructive' })
     }
   }
 
@@ -237,7 +292,7 @@ export default function CandidateProfilePage() {
       
       // Fallback to API download
       console.log('📄 Downloading cover letter via API:', coverLetter.id)
-      const response = await apiService.downloadCandidateCoverLetter(candidate.id, coverLetter.id)
+      const response = await apiService.downloadCandidateCoverLetter(candidateIdStr, String(coverLetter.id))
       
       // Get the filename from the response headers or use a default
       const contentDisposition = response.headers.get('content-disposition')
@@ -482,7 +537,7 @@ export default function CandidateProfilePage() {
                   </div>
                   
                   <div className="flex flex-wrap gap-2 mb-6">
-                    {candidate.keySkills.slice(0, 8).map((skill) => (
+                    {candidate.keySkills.slice(0, 8).map((skill: string) => (
                       <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-800">
                         {skill}
                       </Badge>
@@ -605,7 +660,7 @@ export default function CandidateProfilePage() {
                   <div>
                     <p className="text-sm text-slate-500">Preferred Locations</p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {candidate.preferredLocations.map((location) => (
+                      {candidate.preferredLocations.map((location: string) => (
                         <Badge key={location} variant="outline" className="text-xs">
                           {location}
                         </Badge>
@@ -627,7 +682,7 @@ export default function CandidateProfilePage() {
                   <div>
                     <p className="text-sm text-slate-500 mb-2">Technical Skills</p>
                     <div className="flex flex-wrap gap-1">
-                      {candidate.keySkills.slice(0, 6).map((skill) => (
+                      {candidate.keySkills.slice(0, 6).map((skill: string) => (
                         <Badge key={skill} variant="secondary" className="text-xs">
                           {skill}
                         </Badge>
@@ -637,7 +692,7 @@ export default function CandidateProfilePage() {
                   <div>
                     <p className="text-sm text-slate-500 mb-2">Languages</p>
                     <div className="space-y-1">
-                      {candidate.languages.map((language) => (
+                      {candidate.languages.map((language: { name: string; proficiency: string }) => (
                         <div key={language.name} className="flex justify-between text-sm">
                           <span>{language.name}</span>
                           <span className="text-slate-500">{language.proficiency}</span>
@@ -656,7 +711,7 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {candidate.certifications.map((cert) => (
+                  {candidate.certifications.map((cert: { id: string; name: string; issuer: string; date: string }) => (
                     <div key={cert.id} className="p-4 border rounded-lg">
                       <h4 className="font-medium mb-1">{cert.name}</h4>
                       <p className="text-sm text-slate-600 mb-2">{cert.issuer}</p>
@@ -675,7 +730,7 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {candidate.workExperience.map((exp) => (
+                  {candidate.workExperience.map((exp: { id: string; title: string; company: string; duration: string; location: string; description?: string; skills: string[] }) => (
                     <div key={exp.id} className="border-l-4 border-blue-500 pl-6">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -689,7 +744,7 @@ export default function CandidateProfilePage() {
                       </div>
                       <p className="text-slate-600 mb-3">{exp.description}</p>
                       <div className="flex flex-wrap gap-2">
-                        {exp.skills.map((skill) => (
+                        {exp.skills.map((skill: string) => (
                           <Badge key={skill} variant="outline" className="text-xs">
                             {skill}
                           </Badge>
@@ -709,7 +764,7 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {candidate.educationDetails.map((edu) => (
+                  {candidate.educationDetails.map((edu: { id: string; degree: string; institution: string; duration: string; location: string; cgpa?: string; percentage?: string; relevantCourses?: string[] }) => (
                     <div key={edu.id} className="border-l-4 border-green-500 pl-6">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -731,7 +786,7 @@ export default function CandidateProfilePage() {
                         <div>
                           <p className="text-sm text-slate-500 mb-2">Relevant Courses:</p>
                           <div className="flex flex-wrap gap-2">
-                            {edu.relevantCourses.map((course) => (
+                            {edu.relevantCourses.map((course: string) => (
                               <Badge key={course} variant="outline" className="text-xs">
                                 {course}
                               </Badge>
@@ -753,12 +808,12 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {candidate.projects.map((project) => (
+                  {candidate.projects.map((project: { id: string; title: string; description: string; technologies: string[]; github?: string; live?: string }) => (
                     <div key={project.id} className="border rounded-lg p-6">
                       <h3 className="font-semibold text-lg mb-2">{project.title}</h3>
                       <p className="text-slate-600 mb-4">{project.description}</p>
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {project.technologies.map((tech) => (
+                        {project.technologies.map((tech: string) => (
                           <Badge key={tech} variant="secondary" className="text-xs">
                             {tech}
                           </Badge>
@@ -835,12 +890,10 @@ export default function CandidateProfilePage() {
                                       size="sm"
                                       variant="outline"
                                       className="flex-1"
-                                      asChild
+                                      onClick={() => handleViewResume(resume)}
                                     >
-                                      <a href={toAbsoluteApiUrl(resume.fileUrl)} target="_blank" rel="noopener noreferrer">
-                                        <Eye className="w-3 h-3 mr-1" />
-                                        View
-                                      </a>
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      View
                                     </Button>
                                     <Button
                                       size="sm"
@@ -887,12 +940,10 @@ export default function CandidateProfilePage() {
                       </div>
                       
                       <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                            <Button className="bg-blue-600 hover:bg-blue-700" asChild>
-                              <a href={toAbsoluteApiUrl(candidate.resumes[0].fileUrl)} target="_blank" rel="noopener noreferrer">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View CV
-                              </a>
-                        </Button>
+                            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => handleViewResume(candidate.resumes[0])}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View CV
+                            </Button>
                             <Button 
                               variant="outline" 
                               onClick={() => handleDownloadResume(candidate.resumes[0])}
@@ -946,12 +997,10 @@ export default function CandidateProfilePage() {
                         <CardTitle className="text-lg">CV Actions</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                            <Button className="w-full bg-blue-600 hover:bg-blue-700" asChild>
-                              <a href={toAbsoluteApiUrl(candidate.resumes[0].fileUrl)} target="_blank" rel="noopener noreferrer">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Full CV
-                              </a>
-                        </Button>
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleViewResume(candidate.resumes[0])}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Full CV
+                            </Button>
                             <Button 
                               variant="outline" 
                               className="w-full"

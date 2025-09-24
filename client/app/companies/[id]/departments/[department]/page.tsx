@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, MapPin, Briefcase, Clock, IndianRupee, Star, Building2, Users, Filter, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,7 @@ import Link from "next/link"
 import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 
-export default function DepartmentJobsPage() {
+function DepartmentJobsPage() {
   const params = useParams()
   const router = useRouter()
   const [showAuthDialog, setShowAuthDialog] = useState(false)
@@ -465,3 +466,5 @@ export default function DepartmentJobsPage() {
     </ErrorBoundary>
   )
 }
+
+export default dynamic(() => Promise.resolve(DepartmentJobsPage), { ssr: false })
