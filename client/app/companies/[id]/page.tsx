@@ -65,15 +65,20 @@ function CompanyDetailPage() {
     willingToRelocate: false
   })
 
-  const locationDisplay = (() => {
-    const city = (company?.city || '').trim()
-    const state = (company?.state || '').trim()
-    const country = (company?.country || '').trim()
-    const fromAddress = (company?.address || '').split(',')[0].trim()
-    const fromJob = (companyJobs?.[0]?.city || companyJobs?.[0]?.location || '').trim()
-    const pick = city || fromAddress || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
+  // locationDisplay will be computed after loading and company existence checks
+  const locationDisplay = useMemo(() => {
+    const city = (company?.city || '').toString().trim()
+    const state = (company?.state || '').toString().trim()
+    const country = (company?.country || '').toString().trim()
+    const addressFirst = (company?.address ? String(company.address) : '')
+      .split(',')[0]
+      .trim()
+    const fromJob = (companyJobs?.[0]?.city || companyJobs?.[0]?.location || '')
+      ? String(companyJobs?.[0]?.city || companyJobs?.[0]?.location).trim()
+      : ''
+    const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
     return pick || '—'
-  })()
+  }, [company?.city, company?.state, company?.country, company?.address, companyJobs])
 
   const safeBenefits: string[] = Array.isArray((company as any)?.benefits) ? (company as any).benefits as string[] : []
   const safeJobs: any[] = Array.isArray(companyJobs) ? companyJobs : []
