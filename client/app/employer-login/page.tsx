@@ -78,7 +78,10 @@ export default function EmployerLoginPage() {
                 }
               }
             }
-            const target = region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+            // Allow explicit region override via URL param if none set on user/company
+            const requestedRegion = searchParams.get('region') || undefined
+            const finalRegion = region || requestedRegion
+            const target = finalRegion === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
             return router.replace(target)
           }
         }
@@ -115,28 +118,18 @@ export default function EmployerLoginPage() {
         // Check if user has region preference (from user profile or company data)
         const userRegion = (result?.user as any)?.region
         const companyRegion = result?.company?.region
-        const regionToUse = userRegion || companyRegion
-        
-        if (regionToUse === 'gulf') {
-          console.log('✅ Gulf region employer, redirecting to Gulf dashboard')
-          toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
-          setTimeout(() => {
-            console.log('🔄 Redirecting to /gulf-dashboard')
-            router.push('/gulf-dashboard')
-          }, 1000)
-        } else {
-          console.log('✅ India/Other region employer, redirecting to regular employer dashboard')
-          toast.success('Successfully signed in! Redirecting to employer dashboard...')
-          setTimeout(() => {
-            console.log('🔄 Redirecting to /employer-dashboard')
-            router.push('/employer-dashboard')
-          }, 1000)
-        }
+        const requestedRegion = searchParams.get('region') || undefined
+        const regionToUse = userRegion || companyRegion || requestedRegion
+
+        const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+        console.log('🔄 Redirecting employer to:', target, 'based on region:', regionToUse || 'default')
+        toast.success('Successfully signed in! Redirecting to your dashboard...')
+        router.replace(target)
       } else if (result?.user?.userType === 'admin') {
         // Admin: show employer dashboard as requested
         console.log('✅ Admin user, redirecting to employer dashboard')
         toast.success('Signed in as admin! Redirecting to dashboard...')
-        setTimeout(() => router.push('/employer-dashboard'), 600)
+        router.replace('/employer-dashboard')
       } else {
         console.log('❌ User is not employer or admin, userType:', result?.user?.userType)
         toast.error('This account is not registered as an employer. Please use the regular login.')
