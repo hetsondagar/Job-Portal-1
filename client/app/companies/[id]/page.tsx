@@ -32,6 +32,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import ErrorBoundary from "@/components/ErrorBoundary"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService, Job, Company } from '@/lib/api'
@@ -467,7 +468,18 @@ export default function CompanyDetailPage() {
   }, [company?.industry])
   const sectorColors = getSectorColor(sectorKey)
 
+  const toDisplayText = (value: any): string => {
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+    if (Array.isArray(value)) return value.map((v) => toDisplayText(v)).filter(Boolean).join(', ')
+    // object
+    if (value.title) return String(value.title)
+    if (value.name) return String(value.name)
+    try { return JSON.stringify(value) } catch { return '' }
+  }
+
   return (
+    <ErrorBoundary fallback={<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"><Navbar /><div className="pt-20 pb-8"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center py-20"><div className="w-24 h-24 mx-auto mb-6 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center"><Building2 className="w-12 h-12 text-red-500" /></div><h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Something went wrong</h1><p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">We couldn't load this company right now. Please try again.</p><Link href="/companies"><Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">Browse All Companies</Button></Link></div></div></div></div>}>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
@@ -504,7 +516,7 @@ export default function CompanyDetailPage() {
                   <div className="flex-1">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
                       <div>
-                        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{company.name}</h1>
+                        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{toDisplayText(company.name) || 'Company'}</h1>
                         <div className="flex items-center space-x-4 mb-3">
                           <Badge
                             className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
@@ -599,7 +611,7 @@ export default function CompanyDetailPage() {
                         <Calendar className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Founded</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.founded || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.founded) || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -613,28 +625,28 @@ export default function CompanyDetailPage() {
                         <Globe className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Website</div>
-                          <div className="text-blue-600">{company.website || '—'}</div>
+                          <div className="text-blue-600">{toDisplayText(company.website) || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Building2 className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Headquarters</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.headquarters || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.headquarters) || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Profile Views</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.profileViews ?? '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.profileViews) || '—'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Revenue</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.revenue || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.revenue) || '—'}</div>
                         </div>
                       </div>
                     </div>
@@ -726,15 +738,15 @@ export default function CompanyDetailPage() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Company Size</span>
-                      <span className="font-medium">{company.employees}</span>
+                      <span className="font-medium">{toDisplayText(company.employees) || '—'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Founded</span>
-                      <span className="font-medium">{company.founded}</span>
+                      <span className="font-medium">{toDisplayText(company.founded) || '—'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Website</span>
-                      <span className="font-medium text-blue-600">{company.website}</span>
+                      <span className="font-medium text-blue-600">{toDisplayText(company.website) || '—'}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -1147,5 +1159,6 @@ export default function CompanyDetailPage() {
         </div>
       </footer>
     </div>
+    </ErrorBoundary>
   )
 }

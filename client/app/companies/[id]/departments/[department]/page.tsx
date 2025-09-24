@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import ErrorBoundary from "@/components/ErrorBoundary"
 import Link from "next/link"
 import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
@@ -152,6 +153,7 @@ export default function DepartmentJobsPage() {
   }
 
   return (
+    <ErrorBoundary fallback={<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"><Navbar /><div className="pt-20 pb-12"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center py-16"><h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Something went wrong</h1><p className="text-slate-600 dark:text-slate-400">We couldn't load this department. Please go back and try again.</p><div className="mt-6"><Button variant="outline" onClick={() => router.push(`/companies/${companyId}`)}>Back to Company</Button></div></div></div></div></div>}>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
@@ -460,5 +462,6 @@ export default function DepartmentJobsPage() {
         </div>
       </footer>
     </div>
+    </ErrorBoundary>
   )
 }
