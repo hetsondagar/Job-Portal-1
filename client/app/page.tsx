@@ -178,15 +178,17 @@ export default function HomePage() {
   useEffect(() => {
     const controller = new AbortController()
     const load = async () => {
+      let companiesCountLocal = 0
       try {
         const companiesResp = await apiService.listCompanies({ limit: 20, offset: 0 })
         if (companiesResp.success && Array.isArray(companiesResp.data)) {
-          const mapped = companiesResp.data.map((c: any) => ({
+          companiesCountLocal = companiesResp.data.length
+          const baseMapped = companiesResp.data.map((c: any) => ({
             id: c.id,
             name: c.name,
             industry: c.industry || 'General',
-            openings: c.activeJobsCount || 0,
-            rating: c.rating || 0,
+            openings: 0,
+            rating: 0,
             icon: '🏢',
             color: getSectorColor(((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')),
             location: [c.city, c.state, c.country].filter(Boolean).join(', '),
@@ -194,8 +196,18 @@ export default function HomePage() {
             logo: '/placeholder.svg?height=40&width=40',
             sector: ((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')
           }))
-          setTopCompanies(mapped)
-          setFeaturedCompanies(mapped)
+          // Fetch openings count per company using public jobs-by-company endpoint
+          const withCounts = await Promise.all(baseMapped.map(async (co: any) => {
+            try {
+              const jobsResp = await apiService.getCompanyJobs(String(co.id))
+              const list = Array.isArray((jobsResp as any)?.data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any)?.data?.rows) ? (jobsResp as any).data.rows : [])
+              return { ...co, openings: Array.isArray(list) ? list.length : 0 }
+            } catch {
+              return { ...co, openings: 0 }
+            }
+          }))
+          setTopCompanies(withCounts)
+          setFeaturedCompanies(withCounts)
         } else {
           setTopCompanies([])
           setFeaturedCompanies([])
@@ -226,7 +238,7 @@ export default function HomePage() {
         setTrendingJobRoles([])
         setStats((prev) => [
           { ...prev[0], value: String(mappedJobs.length) },
-          { ...prev[1], value: String(Math.max(topCompanies.length, featuredCompanies.length)) },
+          { ...prev[1], value: String(companiesCountLocal) },
           prev[2],
           prev[3],
         ])
