@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, MapPin, Briefcase, Clock, IndianRupee, Star, Building2, Users, Filter, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -29,77 +29,29 @@ export default function DepartmentJobsPage() {
   const companyId = params.id as string
   const departmentName = decodeURIComponent(params.department as string)
 
-  // Mock company data
-  const company = {
-    id: companyId,
-    name: "TechCorp Solutions",
-    logo: "/placeholder.svg?height=80&width=80",
-    rating: 4.2,
-    reviews: 234,
-    sector: "technology",
-  }
+  const [company, setCompany] = useState<any>(null)
+  const [jobs, setJobs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>("")
 
-  // Mock department jobs
-  const departmentJobs = [
-    {
-      id: 1,
-      title: "Senior Software Engineer",
-      department: departmentName,
-      location: "Bangalore",
-      experience: "4-7 years",
-      salary: "15-25 LPA",
-      skills: ["React", "Node.js", "Python", "AWS"],
-      posted: "2 days ago",
-      applicants: 45,
-      type: "Full-time",
-      description:
-        "We are looking for a Senior Software Engineer to join our engineering team and work on cutting-edge projects.",
-      requirements: [
-        "4+ years of software development experience",
-        "Strong proficiency in React and Node.js",
-        "Experience with cloud platforms",
-        "Excellent problem-solving skills",
-      ],
-    },
-    {
-      id: 2,
-      title: "React Developer",
-      department: departmentName,
-      location: "Bangalore",
-      experience: "2-4 years",
-      salary: "8-15 LPA",
-      skills: ["React", "JavaScript", "HTML/CSS", "Redux"],
-      posted: "1 day ago",
-      applicants: 32,
-      type: "Full-time",
-      description: "Looking for an experienced React developer to build modern web applications.",
-      requirements: [
-        "2+ years React experience",
-        "Strong JavaScript skills",
-        "Experience with REST APIs",
-        "Git proficiency",
-      ],
-    },
-    {
-      id: 3,
-      title: "Full Stack Developer",
-      department: departmentName,
-      location: "Bangalore",
-      experience: "3-5 years",
-      salary: "12-20 LPA",
-      skills: ["React", "Node.js", "MongoDB", "Express"],
-      posted: "3 days ago",
-      applicants: 28,
-      type: "Full-time",
-      description: "Join our team as a Full Stack Developer and work on both frontend and backend technologies.",
-      requirements: [
-        "3+ years full-stack development",
-        "Experience with MERN stack",
-        "Database design knowledge",
-        "API development experience",
-      ],
-    },
-  ]
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const companyResp = await apiService.getCompany(companyId)
+        if (companyResp.success) setCompany(companyResp.data)
+        const jobsResp = await apiService.getCompanyJobs(companyId)
+        const list = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
+        setJobs(list)
+      } catch (e: any) {
+        setError('Failed to load department jobs')
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (companyId) load()
+  }, [companyId])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -139,6 +91,31 @@ export default function DepartmentJobsPage() {
     router.push(`/companies/${companyId}`)
   }
 
+  const companySector = (company?.industry || '').toLowerCase().includes('tech') ? 'technology'
+    : (company?.industry || '').toLowerCase().includes('fin') ? 'finance'
+    : (company?.industry || '').toLowerCase().includes('health') ? 'healthcare'
+    : (company?.industry || '').toLowerCase().includes('auto') ? 'automotive'
+    : (company?.industry || '').toLowerCase().includes('energy') ? 'energy'
+    : 'technology'
+
+  const departmentJobs = useMemo(() => {
+    return jobs
+      .filter((j) => (j.department || j.category || '').toString() === departmentName)
+      .map((j) => ({
+        id: j.id,
+        title: j.title,
+        department: j.department || j.category || departmentName,
+        location: j.location || j.city || j.state || j.country || '—',
+        experience: j.experience || j.experienceLevel || '',
+        salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax}` : ''),
+        skills: Array.isArray(j.skills) ? j.skills : [],
+        posted: j.createdAt || '',
+        applicants: j.applications || 0,
+        type: j.type || j.jobType || '—',
+        description: j.description || ''
+      }))
+  }, [jobs, departmentName])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
@@ -158,7 +135,7 @@ export default function DepartmentJobsPage() {
               onClick={handleBackNavigation}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {company.name}
+              Back to {company?.name || 'Company'}
             </Button>
           </motion.div>
 
@@ -173,13 +150,13 @@ export default function DepartmentJobsPage() {
                   </Avatar>
                   <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                      {departmentName} Jobs at {company.name}
+                    {departmentName} Jobs at {company?.name || ''}
                     </h1>
                     <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-300">
                       <div className="flex items-center">
                         <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                        <span className="font-semibold">{company.rating}</span>
-                        <span className="text-sm ml-1">({company.reviews} reviews)</span>
+                        <span className="font-semibold">{company?.rating || 0}</span>
+                        <span className="text-sm ml-1">({company?.reviews || 0} reviews)</span>
                       </div>
                       <Badge className="bg-blue-50 text-blue-700 border-blue-200">
                         {departmentJobs.length} openings
@@ -220,7 +197,7 @@ export default function DepartmentJobsPage() {
 
           {/* Jobs List */}
           <div className="space-y-6">
-            {departmentJobs.map((job, index) => (
+                  {departmentJobs.map((job, index) => (
               <motion.div
                 key={job.id}
                 initial={{ opacity: 0, y: 30 }}
@@ -285,7 +262,7 @@ export default function DepartmentJobsPage() {
                                 className={`h-10 px-6 ${
                                   sampleJobManager.hasApplied(job.id.toString())
                                     ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                                    : `bg-gradient-to-r ${getSectorColor(company.sector)} hover:shadow-lg transition-all duration-300`
+                                    : `bg-gradient-to-r ${getSectorColor(companySector)} hover:shadow-lg transition-all duration-300`
                                 }`}
                                 disabled={sampleJobManager.hasApplied(job.id.toString())}
                               >

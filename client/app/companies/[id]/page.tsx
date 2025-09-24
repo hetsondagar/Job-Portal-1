@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
   Star,
@@ -334,44 +334,17 @@ export default function CompanyDetailPage() {
     )
   }
 
-  const departments = [
-    {
-      name: "Engineering - Software & QA",
-      openings: 7,
-      growth: "+12%",
-      description: "Building scalable software solutions",
-    },
-    {
-      name: "Data Science & Analytics",
-      openings: 2,
-      growth: "+8%",
-      description: "Driving insights through data",
-    },
-    {
-      name: "Finance & Accounting",
-      openings: 2,
-      growth: "+15%",
-      description: "Managing financial operations",
-    },
-    {
-      name: "Human Resources",
-      openings: 1,
-      growth: "+5%",
-      description: "Building great teams",
-    },
-    {
-      name: "Sales & Business Development",
-      openings: 3,
-      growth: "+20%",
-      description: "Expanding market reach",
-    },
-    {
-      name: "Project & Program Management",
-      openings: 2,
-      growth: "+10%",
-      description: "Delivering successful projects",
-    },
-  ]
+  const departments = useMemo(() => {
+    const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
+    safeJobs.forEach((job) => {
+      const deptName = (job.department || job.category || 'Other').toString()
+      if (!groups[deptName]) {
+        groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
+      }
+      groups[deptName].openings += 1
+    })
+    return Object.values(groups).sort((a, b) => b.openings - a.openings)
+  }, [safeJobs])
 
   // Use companyJobs state from API
 
@@ -656,18 +629,18 @@ export default function CompanyDetailPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {departments.map((dept, index) => (
-                        <Link key={index} href={`/companies/${companyId}/departments/${encodeURIComponent(dept.name)}`}>
+                        <Link key={dept.name + index} href={`/companies/${companyId}/departments/${encodeURIComponent(dept.name)}`}>
                           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:shadow-md transition-all duration-300 cursor-pointer group">
                             <div className="flex-1">
                               <div className="font-medium text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                                 {dept.name}
                               </div>
-                              <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">{dept.description}</div>
+                              <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Open roles in {dept.name}</div>
                               <div className="text-sm text-slate-500 mt-1">{dept.openings} openings</div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <Badge variant="secondary" className="text-green-600 bg-green-50 dark:bg-green-900/20">
-                                {dept.growth}
+                              <Badge variant="secondary" className="text-blue-600 bg-blue-50 dark:bg-blue-900/20">
+                                {dept.openings}
                               </Badge>
                               <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                             </div>
@@ -678,37 +651,7 @@ export default function CompanyDetailPage() {
                   </CardContent>
                 </Card>
 
-                {/* Employee Speak */}
-                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Employee Speak</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {employeeSpeak.map((category, index) => (
-                        <div key={index} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-medium text-slate-900 dark:text-white">{category.category}</h4>
-                            <div className="flex items-center">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                              <span className="font-semibold">{category.rating}</span>
-                            </div>
-                          </div>
-                          <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                            {category.reviews} reviews
-                          </div>
-                          <div className="space-y-1">
-                            {category.highlights.map((highlight, hIndex) => (
-                              <div key={hIndex} className="text-sm text-slate-700 dark:text-slate-300">
-                                • {highlight}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Employee Speak removed (mock) */}
               </div>
 
               {/* Right Sidebar */}
@@ -753,37 +696,7 @@ export default function CompanyDetailPage() {
                   </CardContent>
                 </Card>
 
-                {/* Reviews by Job Profile */}
-                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Reviews by Job Profile</span>
-                      <Button variant="link" className="text-sm text-blue-600 p-0">
-                        View all
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-64">
-                      <div className="space-y-4">
-                        {reviewsByProfile.map((profile, index) => (
-                          <div key={index} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-sm text-slate-900 dark:text-white">
-                                {profile.profile}
-                              </span>
-                              <div className="flex items-center">
-                                <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
-                                <span className="text-sm font-semibold">{profile.rating}</span>
-                              </div>
-                            </div>
-                            <div className="text-xs text-slate-600 dark:text-slate-400">{profile.count} reviews</div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
+                {/* Reviews by Job Profile removed (mock) */}
 
                 {/* More Information */}
                 <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">

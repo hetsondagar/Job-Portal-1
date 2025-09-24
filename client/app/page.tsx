@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import { apiService } from "@/lib/api"
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -131,580 +132,20 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const stats = [
-    { value: "2M+", label: "Active Jobs", icon: Briefcase },
-    { value: "50K+", label: "Companies", icon: Building2 },
-    { value: "15M+", label: "Professionals", icon: Users },
-    { value: "95%", label: "Success Rate", icon: Star },
-  ]
+  const [stats, setStats] = useState([
+    { value: "—", label: "Active Jobs", icon: Briefcase },
+    { value: "—", label: "Companies", icon: Building2 },
+    { value: "—", label: "Professionals", icon: Users },
+    { value: "—", label: "Success Rate", icon: Star },
+  ])
 
-  const topCompanies = [
-    {
-      id: 1,
-      name: "TechCorp Solutions",
-      industry: "Technology",
-      openings: 24,
-      rating: 4.2,
-      icon: "🔍",
-      color: "from-blue-500 to-cyan-500",
-      hoverColor: "from-blue-600 to-cyan-600",
-    },
-    {
-      id: 2,
-      name: "FinanceFirst Bank",
-      industry: "Banking & Finance",
-      openings: 89,
-      rating: 4.1,
-      icon: "🏦",
-      color: "from-green-500 to-emerald-500",
-      hoverColor: "from-green-600 to-emerald-600",
-    },
-    {
-      id: 3,
-      name: "AutoDrive Motors",
-      industry: "Automotive",
-      openings: 45,
-      rating: 4.0,
-      icon: "🚗",
-      color: "from-orange-500 to-red-500",
-      hoverColor: "from-orange-600 to-red-600",
-    },
-    {
-      id: 4,
-      name: "HealthCare Plus",
-      industry: "Healthcare",
-      openings: 67,
-      rating: 4.3,
-      icon: "🏥",
-      color: "from-teal-500 to-cyan-500",
-      hoverColor: "from-teal-600 to-cyan-600",
-    },
-    {
-      id: 5,
-      name: "EduTech Innovations",
-      industry: "Education Technology",
-      openings: 34,
-      rating: 4.4,
-      icon: "📚",
-      color: "from-emerald-500 to-teal-500",
-      hoverColor: "from-emerald-600 to-teal-600",
-    },
-    {
-      id: 6,
-      name: "SalesForce",
-      industry: "Sales & CRM",
-      openings: 167,
-      rating: 4.4,
-      icon: "☁️",
-      color: "from-blue-500 to-indigo-500",
-      hoverColor: "from-blue-600 to-indigo-600",
-    },
-    {
-      id: 7,
-      name: "TCS",
-      industry: "Technology",
-      openings: 567,
-      rating: 4.2,
-      icon: "💻",
-      color: "from-purple-500 to-pink-500",
-      hoverColor: "from-purple-600 to-pink-600",
-    },
-    {
-      id: 8,
-      name: "ICICI Bank",
-      industry: "Finance",
-      openings: 234,
-      rating: 4.2,
-      icon: "💰",
-      color: "from-emerald-500 to-teal-500",
-      hoverColor: "from-emerald-600 to-teal-600",
-    },
-    {
-      id: 9,
-      name: "Wipro",
-      industry: "Technology",
-      openings: 345,
-      rating: 4.0,
-      icon: "⚡",
-      color: "from-cyan-500 to-blue-500",
-      hoverColor: "from-cyan-600 to-blue-600",
-    },
-    {
-      id: 10,
-      name: "Infosys",
-      industry: "Technology",
-      openings: 432,
-      rating: 4.1,
-      icon: "🔧",
-      color: "from-slate-500 to-gray-500",
-      hoverColor: "from-slate-600 to-gray-600",
-    },
-  ]
+  const [topCompanies, setTopCompanies] = useState<any[]>([])
 
-  const featuredJobs = [
-    {
-      id: 1,
-      title: "Senior Full Stack Developer",
-      company: "TechCorp Solutions",
-      location: "Bangalore",
-      experience: "4-7 years",
-      salary: "15-25 LPA",
-      skills: ["React", "Node.js", "Python", "AWS"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 45,
-      urgent: true,
-      sector: "technology",
-    },
-    {
-      id: 2,
-      title: "Product Manager - Growth",
-      company: "InnovateTech",
-      location: "Mumbai",
-      experience: "5-8 years",
-      salary: "20-35 LPA",
-      skills: ["Product Strategy", "Analytics", "Leadership"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 32,
-      urgent: false,
-      sector: "technology",
-    },
-    {
-      id: 3,
-      title: "Investment Banking Analyst",
-      company: "Goldman Sachs",
-      location: "Mumbai",
-      experience: "2-4 years",
-      salary: "18-30 LPA",
-      skills: ["Financial Modeling", "Valuation", "Excel"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "3 days ago",
-      applicants: 67,
-      urgent: true,
-      sector: "finance",
-    },
-    {
-      id: 4,
-      title: "Data Scientist - ML",
-      company: "DataDriven Inc",
-      location: "Hyderabad",
-      experience: "3-6 years",
-      salary: "12-22 LPA",
-      skills: ["Python", "Machine Learning", "SQL", "TensorFlow"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "3 days ago",
-      applicants: 28,
-      urgent: false,
-      sector: "technology",
-    },
-    {
-      id: 5,
-      title: "UX/UI Designer",
-      company: "DesignStudio",
-      location: "Pune",
-      experience: "2-5 years",
-      salary: "10-18 LPA",
-      skills: ["Figma", "Adobe Creative Suite", "Prototyping"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 23,
-      urgent: false,
-      sector: "design",
-    },
-    {
-      id: 6,
-      title: "DevOps Engineer",
-      company: "CloudTech Solutions",
-      location: "Chennai",
-      experience: "3-7 years",
-      salary: "14-26 LPA",
-      skills: ["Docker", "Kubernetes", "AWS", "Jenkins"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "4 days ago",
-      applicants: 34,
-      urgent: true,
-      sector: "technology",
-    },
-    {
-      id: 7,
-      title: "Sales Manager - Enterprise",
-      company: "SalesForce India",
-      location: "Delhi",
-      experience: "5-8 years",
-      salary: "16-28 LPA",
-      skills: ["B2B Sales", "CRM", "Team Leadership", "Negotiation"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 41,
-      urgent: true,
-      sector: "sales",
-    },
-    {
-      id: 8,
-      title: "Marketing Specialist - Digital",
-      company: "Digital Marketing Pro",
-      location: "Mumbai",
-      experience: "3-6 years",
-      salary: "8-16 LPA",
-      skills: ["Google Ads", "Facebook Ads", "SEO", "Content Marketing"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 29,
-      urgent: false,
-      sector: "marketing",
-    },
-    {
-      id: 9,
-      title: "Operations Manager",
-      company: "Logistics Express",
-      location: "Gurgaon",
-      experience: "4-7 years",
-      salary: "12-20 LPA",
-      skills: ["Supply Chain", "Process Optimization", "Team Management"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "3 days ago",
-      applicants: 35,
-      urgent: false,
-      sector: "operations",
-    },
-    {
-      id: 10,
-      title: "Content Writer - Creative",
-      company: "Content Studio",
-      location: "Bangalore",
-      experience: "2-4 years",
-      salary: "6-12 LPA",
-      skills: ["Creative Writing", "SEO", "Social Media", "Copywriting"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "2 days ago",
-      applicants: 18,
-      urgent: false,
-      sector: "content",
-    },
-    {
-      id: 11,
-      title: "Business Analyst",
-      company: "Consulting Partners",
-      location: "Delhi",
-      experience: "3-6 years",
-      salary: "10-18 LPA",
-      skills: ["Requirements Gathering", "SQL", "Process Analysis", "Documentation"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "4 days ago",
-      applicants: 26,
-      urgent: false,
-      sector: "business",
-    },
-    {
-      id: 12,
-      title: "Customer Success Manager",
-      company: "SaaS Solutions",
-      location: "Pune",
-      experience: "2-5 years",
-      salary: "8-15 LPA",
-      skills: ["Customer Relationship", "Product Knowledge", "Problem Solving"],
-      logo: "/placeholder.svg?height=40&width=40",
-      posted: "1 day ago",
-      applicants: 22,
-      urgent: true,
-      sector: "customer",
-    },
-  ]
+  const [featuredJobs, setFeaturedJobs] = useState<any[]>([])
 
-  const featuredCompanies = [
-    {
-      id: 1,
-      name: "Google",
-      industry: "Technology",
-      location: "Bangalore",
-      employees: "10,000+ employees",
-      rating: 4.8,
-      reviews: 1247,
-      openings: 156,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "technology",
-    },
-    {
-      id: 2,
-      name: "Microsoft",
-      industry: "Technology",
-      location: "Hyderabad",
-      employees: "8,500+ employees",
-      rating: 4.6,
-      reviews: 892,
-      openings: 89,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "technology",
-    },
-    {
-      id: 3,
-      name: "Amazon",
-      industry: "E-commerce",
-      location: "Bangalore",
-      employees: "15,000+ employees",
-      rating: 4.4,
-      reviews: 2156,
-      openings: 234,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "ecommerce",
-    },
-    {
-      id: 4,
-      name: "TCS",
-      industry: "Technology",
-      location: "Mumbai",
-      employees: "25,000+ employees",
-      rating: 4.2,
-      reviews: 3456,
-      openings: 567,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "technology",
-    },
-    {
-      id: 5,
-      name: "Infosys",
-      industry: "Technology",
-      location: "Bangalore",
-      employees: "20,000+ employees",
-      rating: 4.1,
-      reviews: 2890,
-      openings: 432,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "technology",
-    },
-    {
-      id: 6,
-      name: "HDFC Bank",
-      industry: "Finance",
-      location: "Mumbai",
-      employees: "12,000+ employees",
-      rating: 4.3,
-      reviews: 1567,
-      openings: 189,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "finance",
-    },
-    {
-      id: 7,
-      name: "Apollo Hospitals",
-      industry: "Healthcare",
-      location: "Chennai",
-      employees: "8,000+ employees",
-      rating: 4.5,
-      reviews: 2345,
-      openings: 145,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "healthcare",
-    },
-    {
-      id: 8,
-      name: "SalesForce India",
-      industry: "Sales & CRM",
-      location: "Mumbai",
-      employees: "5,000+ employees",
-      rating: 4.4,
-      reviews: 1234,
-      openings: 167,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "sales",
-    },
-    {
-      id: 9,
-      name: "Wipro",
-      industry: "Technology",
-      location: "Bangalore",
-      employees: "18,000+ employees",
-      rating: 4.0,
-      reviews: 2678,
-      openings: 345,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "technology",
-    },
-    {
-      id: 10,
-      name: "ICICI Bank",
-      industry: "Finance",
-      location: "Mumbai",
-      employees: "15,000+ employees",
-      rating: 4.2,
-      reviews: 1890,
-      openings: 234,
-      logo: "/placeholder.svg?height=40&width=40",
-      sector: "finance",
-    },
-  ]
+  const [featuredCompanies, setFeaturedCompanies] = useState<any[]>([])
 
-  const trendingJobRoles = [
-    {
-      name: "Software Engineer",
-      openings: "15,000+ jobs",
-      icon: "💻",
-      category: "software",
-      color: "from-blue-500 to-cyan-500",
-    },
-    {
-      name: "Data Scientist",
-      openings: "8,500+ jobs",
-      icon: "📊",
-      category: "data",
-      color: "from-purple-500 to-pink-500",
-    },
-    {
-      name: "Product Manager",
-      openings: "6,200+ jobs",
-      icon: "🎯",
-      category: "product",
-      color: "from-green-500 to-emerald-500",
-    },
-    {
-      name: "UX Designer",
-      openings: "4,800+ jobs",
-      icon: "🎨",
-      category: "design",
-      color: "from-orange-500 to-red-500",
-    },
-    {
-      name: "DevOps Engineer",
-      openings: "5,600+ jobs",
-      icon: "⚙️",
-      category: "devops",
-      color: "from-indigo-500 to-purple-500",
-    },
-    {
-      name: "AI/ML Engineer",
-      openings: "3,900+ jobs",
-      icon: "🤖",
-      category: "ai",
-      color: "from-teal-500 to-cyan-500",
-    },
-    {
-      name: "Sales Manager",
-      openings: "7,300+ jobs",
-      icon: "📈",
-      category: "sales",
-      color: "from-yellow-500 to-orange-500",
-    },
-    {
-      name: "Marketing Specialist",
-      openings: "5,100+ jobs",
-      icon: "📢",
-      category: "marketing",
-      color: "from-pink-500 to-rose-500",
-    },
-    {
-      name: "Business Analyst",
-      openings: "4,200+ jobs",
-      icon: "📋",
-      category: "business",
-      color: "from-slate-500 to-gray-500",
-    },
-    {
-      name: "Cloud Architect",
-      openings: "2,800+ jobs",
-      icon: "☁️",
-      category: "cloud",
-      color: "from-blue-500 to-indigo-500",
-    },
-    {
-      name: "Cybersecurity Expert",
-      openings: "3,400+ jobs",
-      icon: "🔒",
-      category: "security",
-      color: "from-red-500 to-pink-500",
-    },
-    {
-      name: "Digital Marketing",
-      openings: "6,700+ jobs",
-      icon: "📱",
-      category: "digital",
-      color: "from-green-500 to-teal-500",
-    },
-    {
-      name: "Investment Banking",
-      openings: "2,500+ jobs",
-      icon: "💰",
-      category: "finance",
-      color: "from-emerald-500 to-green-500",
-    },
-    {
-      name: "Healthcare Professional",
-      openings: "4,800+ jobs",
-      icon: "🏥",
-      category: "healthcare",
-      color: "from-red-500 to-pink-500",
-    },
-    {
-      name: "Content Writer",
-      openings: "3,200+ jobs",
-      icon: "✍️",
-      category: "content",
-      color: "from-purple-500 to-indigo-500",
-    },
-    {
-      name: "Operations Manager",
-      openings: "4,500+ jobs",
-      icon: "📦",
-      category: "operations",
-      color: "from-orange-500 to-yellow-500",
-    },
-    {
-      name: "Customer Success",
-      openings: "3,800+ jobs",
-      icon: "🎯",
-      category: "customer",
-      color: "from-blue-500 to-purple-500",
-    },
-    {
-      name: "Human Resources",
-      openings: "3,600+ jobs",
-      icon: "👥",
-      category: "hr",
-      color: "from-pink-500 to-rose-500",
-    },
-    {
-      name: "Supply Chain",
-      openings: "2,900+ jobs",
-      icon: "🚚",
-      category: "logistics",
-      color: "from-gray-500 to-slate-500",
-    },
-    {
-      name: "Quality Assurance",
-      openings: "3,100+ jobs",
-      icon: "✅",
-      category: "qa",
-      color: "from-green-500 to-emerald-500",
-    },
-    {
-      name: "Project Manager",
-      openings: "5,400+ jobs",
-      icon: "📋",
-      category: "project",
-      color: "from-indigo-500 to-blue-500",
-    },
-    {
-      name: "Financial Analyst",
-      openings: "4,300+ jobs",
-      icon: "📊",
-      category: "finance",
-      color: "from-emerald-500 to-teal-500",
-    },
-    {
-      name: "Legal Counsel",
-      openings: "2,200+ jobs",
-      icon: "⚖️",
-      category: "legal",
-      color: "from-slate-500 to-gray-500",
-    },
-    {
-      name: "Research Analyst",
-      openings: "3,700+ jobs",
-      icon: "🔬",
-      category: "research",
-      color: "from-purple-500 to-pink-500",
-    },
-  ]
+  const [trendingJobRoles, setTrendingJobRoles] = useState<any[]>([])
 
   const getSectorColor = (sector: string) => {
     switch (sector) {
@@ -732,6 +173,70 @@ export default function HomePage() {
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
     }
   }
+
+  // Fetch real data for landing
+  useEffect(() => {
+    const controller = new AbortController()
+    const load = async () => {
+      try {
+        const companiesResp = await apiService.listCompanies({ limit: 20, offset: 0 })
+        if (companiesResp.success && Array.isArray(companiesResp.data)) {
+          const mapped = companiesResp.data.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            industry: c.industry || 'General',
+            openings: c.activeJobsCount || 0,
+            rating: c.rating || 0,
+            icon: '🏢',
+            color: getSectorColor(((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')),
+            location: [c.city, c.state, c.country].filter(Boolean).join(', '),
+            employees: c.companySize || '',
+            logo: '/placeholder.svg?height=40&width=40',
+            sector: ((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')
+          }))
+          setTopCompanies(mapped)
+          setFeaturedCompanies(mapped)
+        } else {
+          setTopCompanies([])
+          setFeaturedCompanies([])
+        }
+      } catch {
+        setTopCompanies([])
+        setFeaturedCompanies([])
+      }
+
+      try {
+        const jobsResp = await apiService.getJobs({ limit: 12, status: 'active' })
+        const list = Array.isArray((jobsResp as any)?.data?.rows) ? (jobsResp as any).data.rows : (Array.isArray((jobsResp as any)?.data) ? (jobsResp as any).data : [])
+        const mappedJobs = list.map((j: any) => ({
+          id: j.id,
+          title: j.title,
+          company: j.companyName || j.company?.name || '',
+          location: j.location || j.city || j.state || j.country || '—',
+          experience: j.experienceLevel || [j.experienceMin, j.experienceMax].filter(Boolean).join('-'),
+          salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax}` : ''),
+          skills: Array.isArray(j.skills) ? j.skills : [],
+          logo: '/placeholder.svg?height=40&width=40',
+          posted: j.createdAt || '',
+          applicants: j.applications || 0,
+          urgent: j.isUrgent || j.is_urgent || false,
+          sector: 'technology',
+        }))
+        setFeaturedJobs(mappedJobs)
+        setTrendingJobRoles([])
+        setStats((prev) => [
+          { ...prev[0], value: String(mappedJobs.length) },
+          { ...prev[1], value: String(Math.max(topCompanies.length, featuredCompanies.length)) },
+          prev[2],
+          prev[3],
+        ])
+      } catch {
+        setFeaturedJobs([])
+      }
+    }
+    load()
+    return () => controller.abort()
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
@@ -1287,7 +792,7 @@ export default function HomePage() {
                       </div>
 
                         <div className="flex flex-wrap gap-2 mb-4">
-                        {job.skills.slice(0, 3).map((skill, skillIndex) => (
+                        {job.skills.slice(0, 3).map((skill: string, skillIndex: number) => (
                           <Badge
                             key={skillIndex}
                             variant="secondary"
