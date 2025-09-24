@@ -116,6 +116,41 @@ export default function DepartmentJobsPage() {
       }))
   }, [jobs, departmentName])
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Navbar />
+        <div className="pt-20 pb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-slate-600 dark:text-slate-300">Loading department jobs...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!company) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Navbar />
+        <div className="pt-20 pb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-16">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Company Not Found</h1>
+              <p className="text-slate-600 dark:text-slate-400">We couldn't load the company details. Please go back and try again.</p>
+              <div className="mt-6">
+                <Button variant="outline" onClick={() => router.push(`/companies/${companyId}`)}>Back to Company</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
@@ -146,7 +181,7 @@ export default function DepartmentJobsPage() {
                 <div className="flex items-center space-x-6">
                   <Avatar className="w-20 h-20 ring-2 ring-white/50">
                     <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
-                    <AvatarFallback className="text-2xl font-bold text-blue-600">{company.name[0]}</AvatarFallback>
+                    <AvatarFallback className="text-2xl font-bold text-blue-600">{(company.name||'')[0]}</AvatarFallback>
                   </Avatar>
                   <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">

@@ -121,7 +121,7 @@ export default function CompanyDetailPage() {
         }
       }
       // Fallback: fetch public companies list and find by id
-      const list = await apiService.listCompanies()
+      const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
       if (list.success && Array.isArray(list.data)) {
         const found = list.data.find((c: any) => String(c.id) === companyId)
         if (found) {
@@ -129,6 +129,16 @@ export default function CompanyDetailPage() {
           return
         }
       }
+      // Last-resort fallback: infer minimal company info from its jobs (public)
+      try {
+        const jobsResp = await apiService.getCompanyJobs(companyId)
+        const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
+        if (arr.length > 0) {
+          const name = arr[0]?.companyName || 'Company'
+          setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
+          return
+        }
+      } catch {}
       setCompany(null)
       setCompanyError('Company not found')
     } catch (error) {
@@ -477,7 +487,7 @@ export default function CompanyDetailPage() {
                   <Avatar className="w-32 h-32 ring-4 ring-white dark:ring-slate-800 shadow-xl">
                     <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
                     <AvatarFallback className={`text-4xl font-bold ${sectorColors.text}`}>
-                      {company.name[0]}
+                      {(company.name||'')[0]}
                     </AvatarFallback>
                   </Avatar>
 
@@ -506,7 +516,7 @@ export default function CompanyDetailPage() {
                           </div>
                           <div className="flex items-center">
                             <Users className="w-5 h-5 mr-2" />
-                            {company.employees} employees
+                            {company.employees || '—'} employees
                           </div>
                         </div>
                       </div>
