@@ -57,15 +57,45 @@ function GulfPostJobContent({ user }: { user: any }) {
     setLoading(true)
 
     try {
-      const response = await apiService.createJob({
-        ...formData,
-        status: 'active', // Set status to active for Gulf jobs
+      // Prepare data and validate required fields per backend rules for active jobs
+      const skillsArr = formData.skills.split(',').map(s => s.trim()).filter(Boolean)
+      const requirementsArr = formData.requirements.split('\n').map(r => r.trim()).filter(Boolean)
+      const benefitsArr = formData.benefits.split('\n').map(b => b.trim()).filter(Boolean)
+
+      // Basic client-side validation to mirror backend
+      if (!formData.title.trim()) throw new Error('Job title is required')
+      if (!formData.description.trim()) throw new Error('Job description is required')
+      if (!formData.location.trim()) throw new Error('Job location is required')
+      if (requirementsArr.length === 0) throw new Error('Please add at least one requirement')
+      if (!formData.jobType) throw new Error('Job type is required')
+      if (!formData.experienceLevel) throw new Error('Experience level is required')
+      if (!formData.salary && !formData.salaryMin && !formData.salaryMax) {
+        if (!formData.salaryMin && !formData.salaryMax) throw new Error('Please provide salary range')
+      }
+
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        location: formData.location.trim(),
+        jobType: formData.jobType,
+        experienceLevel: formData.experienceLevel,
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : null,
         salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : null,
-        skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
-        requirements: formData.requirements.split('\n').filter(r => r.trim()),
-        benefits: formData.benefits.split('\n').filter(b => b.trim()),
-      })
+        salaryCurrency: formData.currency || 'AED',
+        skills: skillsArr,
+        requirements: requirementsArr,
+        benefits: benefitsArr,
+        remoteWork: formData.remoteWork,
+        shiftTiming: formData.shiftTiming,
+        travelRequired: formData.travelRequired === 'no' ? false : true,
+        noticePeriod: formData.noticePeriod ? String(formData.noticePeriod) : undefined,
+        companyId: formData.companyId || user?.companyId || undefined,
+        region: 'gulf',
+        status: 'active',
+        department: 'General'
+      }
+
+      const response = await apiService.createJob(payload)
 
       if (response.success) {
         toast.success('Job posted successfully for Gulf region!')
@@ -75,7 +105,8 @@ function GulfPostJobContent({ user }: { user: any }) {
       }
     } catch (error: any) {
       console.error('Error posting job:', error)
-      toast.error(error.message || 'Failed to post job')
+      const msg = Array.isArray(error?.errors) ? error.errors.join(', ') : (error.message || 'Failed to post job')
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
