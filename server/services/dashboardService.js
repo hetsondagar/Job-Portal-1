@@ -455,6 +455,23 @@ class DashboardService {
    */
   static async recordActivity(userId, activityType, metadata = {}) {
     try {
+      // Normalize event types to avoid enum violations
+      const allowedEventTypes = new Set([
+        'page_view','job_view','job_apply','job_bookmark','company_view',
+        'search_performed','filter_applied','login','logout','registration',
+        'profile_update','resume_upload','application_submitted','interview_scheduled',
+        'message_sent','notification_clicked','subscription_purchased','payment_made','profile_like'
+      ])
+      let normalizedType = activityType
+      if (!allowedEventTypes.has(normalizedType)) {
+        // Map common extras to nearest allowed
+        const map = {
+          resume_update: 'profile_update',
+          resume_delete: 'profile_update',
+          resume_download: 'profile_update'
+        }
+        normalizedType = map[activityType] || 'profile_update'
+      }
       // Update dashboard activity
       await this.updateDashboardStats(userId, {
         lastActivityDate: new Date()
@@ -463,8 +480,8 @@ class DashboardService {
       // Record analytics event
       await Analytics.create({
         userId,
-        eventType: activityType,
-        eventCategory: this.getEventCategory(activityType),
+        eventType: normalizedType,
+        eventCategory: this.getEventCategory(normalizedType),
         metadata: {
           ...metadata,
           timestamp: new Date()
