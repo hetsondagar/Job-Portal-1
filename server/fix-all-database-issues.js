@@ -244,6 +244,48 @@ async function fixAllDatabaseIssues() {
     `);
     console.log('✅ Analytics event_type column fixed');
 
+    // Fix payments table - add payment_gateway column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'payments' AND column_name = 'payment_gateway'
+        ) THEN
+          ALTER TABLE payments ADD COLUMN payment_gateway VARCHAR(100);
+          -- Copy data from paymentGateway to payment_gateway if paymentGateway exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'payments' AND column_name = 'paymentGateway'
+          ) THEN
+            UPDATE payments SET payment_gateway = "paymentGateway" WHERE payment_gateway IS NULL AND "paymentGateway" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Payments payment_gateway column fixed');
+
+    // Fix user_sessions table - add refresh_token column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'user_sessions' AND column_name = 'refresh_token'
+        ) THEN
+          ALTER TABLE user_sessions ADD COLUMN refresh_token VARCHAR(500);
+          -- Copy data from refreshToken to refresh_token if refreshToken exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'user_sessions' AND column_name = 'refreshToken'
+          ) THEN
+            UPDATE user_sessions SET refresh_token = "refreshToken" WHERE refresh_token IS NULL AND "refreshToken" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ UserSessions refresh_token column fixed');
+
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
     await client.query(`

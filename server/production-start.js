@@ -66,7 +66,20 @@ async function startServer() {
     
     console.log('✅ Database connection successful');
     
-    // Setup database tables
+    // Fix ALL database issues FIRST (missing columns, tables, constraints)
+    console.log('🔧 Running comprehensive database fixes...');
+    try {
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      
+      await execAsync('node fix-all-database-issues.js', { cwd: __dirname });
+      console.log('✅ All database issues fixed successfully!');
+    } catch (fixError) {
+      console.warn('⚠️ Database fix failed, continuing with startup:', fixError?.message || fixError);
+    }
+    
+    // Setup database tables AFTER fixing issues
     console.log('🔄 Setting up database...');
     try {
       // Try robust setup first
@@ -84,19 +97,6 @@ async function startServer() {
         console.log('⚠️ Database setup warning:', dbSetupError.message);
         console.log('🔄 Continuing with server start...');
       }
-    }
-    
-    // Fix ALL database issues (missing columns, tables, constraints)
-    console.log('🔧 Running comprehensive database fixes...');
-    try {
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
-      const execAsync = promisify(exec);
-      
-      await execAsync('node fix-all-database-issues.js', { cwd: __dirname });
-      console.log('✅ All database issues fixed successfully!');
-    } catch (fixError) {
-      console.warn('⚠️ Database fix failed, continuing with startup:', fixError?.message || fixError);
     }
     
     console.log('🚀 Starting Express server...');
