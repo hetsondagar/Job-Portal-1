@@ -782,6 +782,37 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding search_type to candidate_analytics:', error.message);
     }
 
+    // Fix candidate_analytics table - add createdAt column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'candidate_analytics' AND column_name = 'createdAt'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE candidate_analytics ADD COLUMN "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()`);
+        console.log('✅ Added createdAt column to candidate_analytics table');
+        
+        // Copy data from created_at to createdAt if created_at exists
+        try {
+          const createdAtCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'candidate_analytics' AND column_name = 'created_at'
+          `);
+          if (createdAtCheck.rows.length > 0) {
+            await client.query(`UPDATE candidate_analytics SET "createdAt" = created_at WHERE "createdAt" IS NULL AND created_at IS NOT NULL`);
+            console.log('✅ Migrated data from created_at to createdAt in candidate_analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No created_at column to migrate in candidate_analytics');
+        }
+      } else {
+        console.log('ℹ️ createdAt column already exists in candidate_analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding createdAt to candidate_analytics:', error.message);
+    }
+
     // Fix conversation index issue - drop existing problematic index
     try {
       await client.query(`DROP INDEX IF EXISTS "conversations_participant1_id_participant2_id_job_application_i"`);

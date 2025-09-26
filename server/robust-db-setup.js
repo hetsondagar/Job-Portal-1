@@ -67,42 +67,24 @@ async function setupRobustDatabase() {
       'HotVacancyPhoto', 'JobPhoto', 'Requirement'
     ];
     
-    // Load all models first to ensure they're properly initialized
-    console.log('📦 Loading all models...');
+    // Use the existing sequelize instance and models from the main app
+    console.log('🔄 Syncing database with existing models...');
     
-    // Load all models in dependency order
-    const models = {};
+    // Import the main app to get all initialized models
+    const { sequelize: mainSequelize } = require('./config/sequelize');
+    
+    // Get all models from the main sequelize instance
+    const allModels = mainSequelize.models;
+    
+    // Sync all models in dependency order
     for (const modelName of modelOrder) {
       try {
-        const ModelFactory = require(`./models/${modelName}`);
-        
-        // Handle different model export types
-        let Model;
-        if (typeof ModelFactory === 'function') {
-          // Function-based models (like BulkJobImport, CandidateAnalytics)
-          Model = ModelFactory(sequelize);
-        } else if (ModelFactory && typeof ModelFactory.sync === 'function') {
-          // Direct model exports (like User, Company, Job, etc.)
-          Model = ModelFactory;
-        } else {
-          throw new Error(`Invalid model export for ${modelName}`);
-        }
-        
-        models[modelName] = Model;
-        console.log(`📦 ${modelName} model loaded`);
-      } catch (modelError) {
-        console.log(`⚠️ ${modelName} model loading failed:`, modelError.message);
-        // Continue with other models
-      }
-    }
-    
-    // Now sync all models
-    console.log('🔄 Syncing all models...');
-    for (const modelName of modelOrder) {
-      try {
-        if (models[modelName]) {
-          await models[modelName].sync({ force: false });
+        const Model = allModels[modelName];
+        if (Model) {
+          await Model.sync({ force: false });
           console.log(`✅ ${modelName} table synced`);
+        } else {
+          console.log(`⚠️ ${modelName} model not found in main sequelize instance`);
         }
       } catch (modelError) {
         console.log(`⚠️ ${modelName} sync failed:`, modelError.message);
