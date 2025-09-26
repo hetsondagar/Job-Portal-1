@@ -67,9 +67,11 @@ async function setupRobustDatabase() {
       'HotVacancyPhoto', 'JobPhoto', 'Requirement'
     ];
     
-    // Sync all models using the existing sequelize instance from models
-    const { sequelize: existingSequelize } = require('./config/sequelize');
+    // Load all models first to ensure they're properly initialized
+    console.log('📦 Loading all models...');
     
+    // Load all models in dependency order
+    const models = {};
     for (const modelName of modelOrder) {
       try {
         const ModelFactory = require(`./models/${modelName}`);
@@ -78,7 +80,7 @@ async function setupRobustDatabase() {
         let Model;
         if (typeof ModelFactory === 'function') {
           // Function-based models (like BulkJobImport, CandidateAnalytics)
-          Model = ModelFactory(existingSequelize);
+          Model = ModelFactory(sequelize);
         } else if (ModelFactory && typeof ModelFactory.sync === 'function') {
           // Direct model exports (like User, Company, Job, etc.)
           Model = ModelFactory;
@@ -86,8 +88,22 @@ async function setupRobustDatabase() {
           throw new Error(`Invalid model export for ${modelName}`);
         }
         
-        await Model.sync({ force: false });
-        console.log(`✅ ${modelName} table synced`);
+        models[modelName] = Model;
+        console.log(`📦 ${modelName} model loaded`);
+      } catch (modelError) {
+        console.log(`⚠️ ${modelName} model loading failed:`, modelError.message);
+        // Continue with other models
+      }
+    }
+    
+    // Now sync all models
+    console.log('🔄 Syncing all models...');
+    for (const modelName of modelOrder) {
+      try {
+        if (models[modelName]) {
+          await models[modelName].sync({ force: false });
+          console.log(`✅ ${modelName} table synced`);
+        }
       } catch (modelError) {
         console.log(`⚠️ ${modelName} sync failed:`, modelError.message);
         // Continue with other models

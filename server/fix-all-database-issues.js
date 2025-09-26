@@ -751,6 +751,37 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding company_id to candidate_analytics:', error.message);
     }
 
+    // Fix candidate_analytics table - add search_type column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'candidate_analytics' AND column_name = 'search_type'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE candidate_analytics ADD COLUMN search_type VARCHAR(50)`);
+        console.log('✅ Added search_type column to candidate_analytics table');
+        
+        // Copy data from searchType to search_type if searchType exists
+        try {
+          const searchTypeCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'candidate_analytics' AND column_name = 'searchType'
+          `);
+          if (searchTypeCheck.rows.length > 0) {
+            await client.query(`UPDATE candidate_analytics SET search_type = "searchType" WHERE search_type IS NULL AND "searchType" IS NOT NULL`);
+            console.log('✅ Migrated data from searchType to search_type in candidate_analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No searchType column to migrate in candidate_analytics');
+        }
+      } else {
+        console.log('ℹ️ search_type column already exists in candidate_analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding search_type to candidate_analytics:', error.message);
+    }
+
     // Fix conversation index issue - drop existing problematic index
     try {
       await client.query(`DROP INDEX IF EXISTS "conversations_participant1_id_participant2_id_job_application_i"`);
