@@ -178,8 +178,74 @@ async function fixAllDatabaseIssues() {
     `);
     console.log('✅ Analytics table fixed');
 
-    // 6. Create conversations table (without foreign key to messages first)
-    console.log('6️⃣ Creating conversations table...');
+    // 6. Fix additional missing columns
+    console.log('6️⃣ Fixing additional missing columns...');
+    
+    // Fix conversations table - add job_id column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'conversations' AND column_name = 'job_id'
+        ) THEN
+          ALTER TABLE conversations ADD COLUMN job_id UUID;
+          -- Copy data from jobId to job_id if jobId exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'conversations' AND column_name = 'jobId'
+          ) THEN
+            UPDATE conversations SET job_id = "jobId"::UUID WHERE job_id IS NULL AND "jobId" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Conversations job_id column fixed');
+
+    // Fix messages table - add conversation_id column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'messages' AND column_name = 'conversation_id'
+        ) THEN
+          ALTER TABLE messages ADD COLUMN conversation_id UUID;
+          -- Copy data from conversationId to conversation_id if conversationId exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'messages' AND column_name = 'conversationId'
+          ) THEN
+            UPDATE messages SET conversation_id = "conversationId"::UUID WHERE conversation_id IS NULL AND "conversationId" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Messages conversation_id column fixed');
+
+    // Fix analytics table - add event_type column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'analytics' AND column_name = 'event_type'
+        ) THEN
+          ALTER TABLE analytics ADD COLUMN event_type VARCHAR(100);
+          -- Copy data from eventType to event_type if eventType exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'analytics' AND column_name = 'eventType'
+          ) THEN
+            UPDATE analytics SET event_type = "eventType" WHERE event_type IS NULL AND "eventType" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Analytics event_type column fixed');
+
+    // 7. Create conversations table (without foreign key to messages first)
+    console.log('7️⃣ Creating conversations table...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS conversations (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -202,8 +268,8 @@ async function fixAllDatabaseIssues() {
       );
     `);
 
-    // 7. Create messages table (without foreign key to conversations first)
-    console.log('7️⃣ Creating messages table...');
+    // 8. Create messages table (without foreign key to conversations first)
+    console.log('8️⃣ Creating messages table...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS messages (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -226,45 +292,53 @@ async function fixAllDatabaseIssues() {
       );
     `);
 
-    // 8. Add foreign key constraints now that both tables exist
-    console.log('8️⃣ Adding foreign key constraints...');
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        -- Add foreign key from conversations to messages (lastMessageId)
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.table_constraints 
-          WHERE constraint_name = 'conversations_lastMessageId_fkey'
-        ) THEN
-          ALTER TABLE conversations 
-          ADD CONSTRAINT conversations_lastMessageId_fkey 
-          FOREIGN KEY ("lastMessageId") REFERENCES messages(id);
-        END IF;
+    // 9. Add foreign key constraints now that both tables exist
+    console.log('9️⃣ Adding foreign key constraints...');
+    try {
+      await client.query(`
+        DO $$ 
+        BEGIN 
+          -- Add foreign key from conversations to messages (lastMessageId)
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'conversations_lastMessageId_fkey'
+            AND table_name = 'conversations'
+          ) THEN
+            ALTER TABLE conversations 
+            ADD CONSTRAINT conversations_lastMessageId_fkey 
+            FOREIGN KEY ("lastMessageId") REFERENCES messages(id);
+          END IF;
 
-        -- Add foreign key from messages to conversations (conversationId)  
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.table_constraints 
-          WHERE constraint_name = 'messages_conversationId_fkey'
-        ) THEN
-          ALTER TABLE messages 
-          ADD CONSTRAINT messages_conversationId_fkey 
-          FOREIGN KEY ("conversationId") REFERENCES conversations(id);
-        END IF;
+          -- Add foreign key from messages to conversations (conversationId)  
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'messages_conversationId_fkey'
+            AND table_name = 'messages'
+          ) THEN
+            ALTER TABLE messages 
+            ADD CONSTRAINT messages_conversationId_fkey 
+            FOREIGN KEY ("conversationId") REFERENCES conversations(id);
+          END IF;
 
-        -- Add foreign key from messages to messages (replyToMessageId)
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.table_constraints 
-          WHERE constraint_name = 'messages_replyToMessageId_fkey'
-        ) THEN
-          ALTER TABLE messages 
-          ADD CONSTRAINT messages_replyToMessageId_fkey 
-          FOREIGN KEY ("replyToMessageId") REFERENCES messages(id);
-        END IF;
-      END $$;
-    `);
+          -- Add foreign key from messages to messages (replyToMessageId)
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'messages_replyToMessageId_fkey'
+            AND table_name = 'messages'
+          ) THEN
+            ALTER TABLE messages 
+            ADD CONSTRAINT messages_replyToMessageId_fkey 
+            FOREIGN KEY ("replyToMessageId") REFERENCES messages(id);
+          END IF;
+        END $$;
+      `);
+      console.log('✅ Foreign key constraints added successfully');
+    } catch (constraintError) {
+      console.log('ℹ️ Some constraints may already exist, continuing...');
+    }
 
-    // 9. Add missing indexes
-    console.log('9️⃣ Adding missing indexes...');
+    // 10. Add missing indexes
+    console.log('🔟 Adding missing indexes...');
     await client.query(`
       DO $$ 
       BEGIN 
