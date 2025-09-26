@@ -99,7 +99,7 @@ async function fixAllDatabaseIssues() {
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'payments' AND column_name = 'userId'
           ) THEN
-            UPDATE payments SET user_id = "userId" WHERE user_id IS NULL;
+            UPDATE payments SET user_id = "userId"::UUID WHERE user_id IS NULL AND "userId" IS NOT NULL;
           END IF;
         END IF;
       END $$;
@@ -121,7 +121,7 @@ async function fixAllDatabaseIssues() {
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'user_sessions' AND column_name = 'userId'
           ) THEN
-            UPDATE user_sessions SET user_id = "userId" WHERE user_id IS NULL;
+            UPDATE user_sessions SET user_id = "userId"::UUID WHERE user_id IS NULL AND "userId" IS NOT NULL;
           END IF;
         END IF;
       END $$;
@@ -143,7 +143,7 @@ async function fixAllDatabaseIssues() {
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'analytics' AND column_name = 'sessionId'
           ) THEN
-            UPDATE analytics SET session_id = "sessionId" WHERE session_id IS NULL;
+            UPDATE analytics SET session_id = "sessionId"::UUID WHERE session_id IS NULL AND "sessionId" IS NOT NULL;
           END IF;
         END IF;
       END $$;
