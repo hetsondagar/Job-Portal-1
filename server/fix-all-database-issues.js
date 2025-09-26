@@ -286,6 +286,111 @@ async function fixAllDatabaseIssues() {
     `);
     console.log('✅ UserSessions refresh_token column fixed');
 
+    // Fix conversations table - add is_active column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'conversations' AND column_name = 'is_active'
+        ) THEN
+          ALTER TABLE conversations ADD COLUMN is_active BOOLEAN DEFAULT true;
+          -- Copy data from isActive to is_active if isActive exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'conversations' AND column_name = 'isActive'
+          ) THEN
+            UPDATE conversations SET is_active = "isActive" WHERE is_active IS NULL AND "isActive" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Conversations is_active column fixed');
+
+    // Fix messages table - add sender_id column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'messages' AND column_name = 'sender_id'
+        ) THEN
+          ALTER TABLE messages ADD COLUMN sender_id UUID;
+          -- Copy data from senderId to sender_id if senderId exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'messages' AND column_name = 'senderId'
+          ) THEN
+            UPDATE messages SET sender_id = "senderId"::UUID WHERE sender_id IS NULL AND "senderId" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Messages sender_id column fixed');
+
+    // Fix payments table - add gateway_transaction_id column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'payments' AND column_name = 'gateway_transaction_id'
+        ) THEN
+          ALTER TABLE payments ADD COLUMN gateway_transaction_id VARCHAR(255);
+          -- Copy data from gatewayTransactionId to gateway_transaction_id if gatewayTransactionId exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'payments' AND column_name = 'gatewayTransactionId'
+          ) THEN
+            UPDATE payments SET gateway_transaction_id = "gatewayTransactionId" WHERE gateway_transaction_id IS NULL AND "gatewayTransactionId" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Payments gateway_transaction_id column fixed');
+
+    // Fix user_sessions table - add is_active column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'user_sessions' AND column_name = 'is_active'
+        ) THEN
+          ALTER TABLE user_sessions ADD COLUMN is_active BOOLEAN DEFAULT true;
+          -- Copy data from isActive to is_active if isActive exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'user_sessions' AND column_name = 'isActive'
+          ) THEN
+            UPDATE user_sessions SET is_active = "isActive" WHERE is_active IS NULL AND "isActive" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ UserSessions is_active column fixed');
+
+    // Fix analytics table - add event_category column
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'analytics' AND column_name = 'event_category'
+        ) THEN
+          ALTER TABLE analytics ADD COLUMN event_category VARCHAR(100);
+          -- Copy data from eventCategory to event_category if eventCategory exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'analytics' AND column_name = 'eventCategory'
+          ) THEN
+            UPDATE analytics SET event_category = "eventCategory" WHERE event_category IS NULL AND "eventCategory" IS NOT NULL;
+          END IF;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Analytics event_category column fixed');
+
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
     await client.query(`
