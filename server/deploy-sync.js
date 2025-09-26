@@ -20,17 +20,30 @@ async function deploySync() {
     console.log('📝 Running database migrations...');
     const { execSync } = require('child_process');
     
-    try {
-      // Run migrations with proper error handling
-      execSync('npx sequelize-cli db:migrate', { 
-        stdio: 'inherit',
-        env: { ...process.env, NODE_ENV: 'production' }
-      });
-      console.log('✅ Migrations completed successfully');
-    } catch (migrationError) {
-      console.log('⚠️ Migration failed, but continuing with database verification...');
-      console.log('Migration error:', migrationError.message);
-    }
+            try {
+              // Run migrations with proper error handling
+              execSync('npx sequelize-cli db:migrate', { 
+                stdio: 'inherit',
+                env: { ...process.env, NODE_ENV: 'production' }
+              });
+              console.log('✅ Migrations completed successfully');
+            } catch (migrationError) {
+              console.log('⚠️ Migration failed, but continuing with database verification...');
+              console.log('Migration error:', migrationError.message);
+            }
+            
+            // Force run the field mapping fix migration
+            try {
+              console.log('🔄 Running field mapping fix migration...');
+              execSync('npx sequelize-cli db:migrate --to 20250125000004-force-fix-field-mappings.js', { 
+                stdio: 'inherit',
+                env: { ...process.env, NODE_ENV: 'production' }
+              });
+              console.log('✅ Field mapping fix migration completed');
+            } catch (fieldMappingError) {
+              console.log('⚠️ Field mapping migration failed, but continuing...');
+              console.log('Field mapping error:', fieldMappingError.message);
+            }
     
     // Verify database state
     const result = await sequelize.query(`
