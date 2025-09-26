@@ -71,8 +71,19 @@ async function setupRobustDatabase() {
     for (const modelName of modelOrder) {
       try {
         const ModelFactory = require(`./models/${modelName}`);
-        // Some models are functions that return the model, others are direct model exports
-        const Model = typeof ModelFactory === 'function' ? ModelFactory(sequelize) : ModelFactory;
+        
+        // Handle different model export types
+        let Model;
+        if (typeof ModelFactory === 'function') {
+          // Function-based models (like BulkJobImport, CandidateAnalytics)
+          Model = ModelFactory(sequelize);
+        } else if (ModelFactory && typeof ModelFactory.sync === 'function') {
+          // Direct model exports (like User, Company, Job, etc.)
+          Model = ModelFactory;
+        } else {
+          throw new Error(`Invalid model export for ${modelName}`);
+        }
+        
         await Model.sync({ force: false });
         console.log(`✅ ${modelName} table synced`);
       } catch (modelError) {
