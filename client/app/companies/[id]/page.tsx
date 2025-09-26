@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
 import {
@@ -127,8 +127,8 @@ function CompanyDetailPage() {
 
   // Simple computed values without useMemo to avoid React error #310
   const getLocationDisplay = () => {
-    if (!company) return '—'
-    
+      if (!company) return '—'
+      
     try {
       const city = company.city ? String(company.city).trim() : ''
       const state = company.state ? String(company.state).trim() : ''
@@ -509,23 +509,26 @@ function CompanyDetailPage() {
     )
   }
 
-  const departments = useMemo(() => {
+  // Simple computed departments without useMemo to avoid React error #310
+  const getDepartments = () => {
     try {
-    const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
+      const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
       jobs.forEach((job) => {
-      const deptName = (job.department || job.category || 'Other').toString()
-      if (!groups[deptName]) {
-        groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
-      }
-      groups[deptName].openings += 1
-    })
-    return Object.values(groups).sort((a, b) => b.openings - a.openings)
+        const deptName = (job.department || job.category || 'Other').toString()
+        if (!groups[deptName]) {
+          groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
+        }
+        groups[deptName].openings += 1
+      })
+      return Object.values(groups).sort((a, b) => b.openings - a.openings)
     } catch (error) {
       console.error('Error computing departments:', error)
       return []
     }
-  }, [companyJobs?.length, companyJobs?.[0]?.department, companyJobs?.[0]?.category, companyJobs?.[1]?.department, companyJobs?.[1]?.category])
+  }
+
+  const departments = getDepartments()
 
   // Use companyJobs state from API
 
@@ -626,21 +629,24 @@ function CompanyDetailPage() {
 
   
 
-  const sectorKey = useMemo(() => {
+  // Simple computed sector key without useMemo to avoid React error #310
+  const getSectorKey = () => {
     try {
-    const ind = (company?.industry || '').toLowerCase()
-    if (ind.includes('tech')) return 'technology'
-    if (ind.includes('fin')) return 'finance'
-    if (ind.includes('health')) return 'healthcare'
-    if (ind.includes('auto')) return 'automotive'
-    if (ind.includes('energy')) return 'energy'
-    if (ind.includes('consult')) return 'fintech'
-    return 'technology'
+      const ind = (company?.industry || '').toLowerCase()
+      if (ind.includes('tech')) return 'technology'
+      if (ind.includes('fin')) return 'finance'
+      if (ind.includes('health')) return 'healthcare'
+      if (ind.includes('auto')) return 'automotive'
+      if (ind.includes('energy')) return 'energy'
+      if (ind.includes('consult')) return 'fintech'
+      return 'technology'
     } catch (error) {
       console.error('Error computing sector key:', error)
       return 'technology'
     }
-  }, [company?.industry])
+  }
+
+  const sectorKey = getSectorKey()
   const sectorColors = getSectorColor(sectorKey)
 
   const toDisplayText = (value: any): string => {

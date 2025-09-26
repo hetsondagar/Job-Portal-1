@@ -300,16 +300,16 @@ const startServer = async () => {
     // Test database connection
     await testConnection();
     
-    // Fix production database issues (add missing columns)
+    // Fix ALL database issues (missing columns, tables, constraints)
     if (process.env.NODE_ENV === 'production' || process.env.RUN_DB_FIXES === 'true') {
       try {
-        console.log('🔧 Running production database fixes...');
+        console.log('🔧 Running comprehensive database fixes...');
         const { exec } = require('child_process');
         const { promisify } = require('util');
         const execAsync = promisify(exec);
         
-        await execAsync('node fix-production-database.js', { cwd: __dirname });
-        console.log('✅ Production database fixes completed');
+        await execAsync('node fix-all-database-issues.js', { cwd: __dirname });
+        console.log('✅ All database issues fixed successfully!');
       } catch (fixError) {
         console.warn('⚠️ Database fix failed, continuing with startup:', fixError?.message || fixError);
       }
