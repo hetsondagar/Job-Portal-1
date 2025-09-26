@@ -596,6 +596,68 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding company_id to analytics:', error.message);
     }
 
+    // Fix messages table - add createdAt column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'messages' AND column_name = 'createdAt'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE messages ADD COLUMN "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
+        console.log('✅ Added createdAt column to messages table');
+        
+        // Copy data from created_at to createdAt if created_at exists
+        try {
+          const createdAtIndexCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'messages' AND column_name = 'created_at'
+          `);
+          if (createdAtIndexCheck.rows.length > 0) {
+            await client.query(`UPDATE messages SET "createdAt" = created_at WHERE "createdAt" IS NULL AND created_at IS NOT NULL`);
+            console.log('✅ Migrated data from created_at to createdAt in messages');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No created_at column to migrate in messages');
+        }
+      } else {
+        console.log('ℹ️ createdAt column already exists in messages table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding createdAt to messages:', error.message);
+    }
+
+    // Fix analytics table - add device_type column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'analytics' AND column_name = 'device_type'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE analytics ADD COLUMN device_type VARCHAR(50)`);
+        console.log('✅ Added device_type column to analytics table');
+        
+        // Copy data from deviceType to device_type if deviceType exists
+        try {
+          const deviceTypeCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'analytics' AND column_name = 'deviceType'
+          `);
+          if (deviceTypeCheck.rows.length > 0) {
+            await client.query(`UPDATE analytics SET device_type = "deviceType" WHERE device_type IS NULL AND "deviceType" IS NOT NULL`);
+            console.log('✅ Migrated data from deviceType to device_type in analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No deviceType column to migrate in analytics');
+        }
+      } else {
+        console.log('ℹ️ device_type column already exists in analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding device_type to analytics:', error.message);
+    }
+
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
     await client.query(`
