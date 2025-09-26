@@ -534,6 +534,68 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding job_id to analytics:', error.message);
     }
 
+    // Fix messages table - add is_read column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'messages' AND column_name = 'is_read'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE messages ADD COLUMN is_read BOOLEAN DEFAULT false`);
+        console.log('✅ Added is_read column to messages table');
+        
+        // Copy data from isRead to is_read if isRead exists
+        try {
+          const isReadCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'messages' AND column_name = 'isRead'
+          `);
+          if (isReadCheck.rows.length > 0) {
+            await client.query(`UPDATE messages SET is_read = "isRead" WHERE is_read IS NULL AND "isRead" IS NOT NULL`);
+            console.log('✅ Migrated data from isRead to is_read in messages');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No isRead column to migrate in messages');
+        }
+      } else {
+        console.log('ℹ️ is_read column already exists in messages table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding is_read to messages:', error.message);
+    }
+
+    // Fix analytics table - add company_id column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'analytics' AND column_name = 'company_id'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE analytics ADD COLUMN company_id UUID`);
+        console.log('✅ Added company_id column to analytics table');
+        
+        // Copy data from companyId to company_id if companyId exists
+        try {
+          const companyIdCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'analytics' AND column_name = 'companyId'
+          `);
+          if (companyIdCheck.rows.length > 0) {
+            await client.query(`UPDATE analytics SET company_id = "companyId"::UUID WHERE company_id IS NULL AND "companyId" IS NOT NULL`);
+            console.log('✅ Migrated data from companyId to company_id in analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No companyId column to migrate in analytics');
+        }
+      } else {
+        console.log('ℹ️ company_id column already exists in analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding company_id to analytics:', error.message);
+    }
+
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
     await client.query(`
