@@ -56,16 +56,8 @@ const JobBookmark = sequelize.define('JobBookmark', {
       fields: ['user_id', 'job_id'],
       unique: true,
       name: 'unique_user_job_bookmark'
-    },
-    {
-      fields: ['user_id', 'folder']
-    },
-    {
-      fields: ['user_id', 'priority']
-    },
-    {
-      fields: ['reminder_date']
     }
+    // Note: Additional indexes will be created after columns are added via migration
   ],
   hooks: {
     afterCreate: async (bookmark) => {

@@ -134,15 +134,15 @@ function CompanyDetailPage() {
       const state = (company.state || '').toString().trim()
       const country = (company.country || '').toString().trim()
       const addressFirst = (company.address ? String(company.address) : '')
-        .split(',')[0]
-        .trim()
+      .split(',')[0]
+      .trim()
       
       // Get location from first job if available
       const firstJob = Array.isArray(companyJobs) && companyJobs.length > 0 ? companyJobs[0] : null
       const fromJob = firstJob ? (firstJob.city || firstJob.location || '').toString().trim() : ''
       
-      const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
-      return pick || '—'
+    const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
+    return pick || '—'
     } catch (error) {
       console.error('Error computing location display:', error)
       return '—'
@@ -206,26 +206,26 @@ function CompanyDetailPage() {
       // Try direct company endpoint only if id looks valid
       if (isValidUuid) {
         try {
-          const response = await apiService.getCompany(companyId)
+        const response = await apiService.getCompany(companyId)
           if (response && response.success && response.data) {
-            setCompany(response.data)
-            return
-          }
+          setCompany(response.data)
+          return
+        }
         } catch (error: any) {
           console.log('Direct company endpoint failed, trying fallback methods:', error?.message || error)
-        }
+      }
       }
       
       // Fallback: fetch public companies list and find by id
       try {
-        const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
+      const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
         if (list && list.success && Array.isArray(list.data)) {
-          const found = list.data.find((c: any) => String(c.id) === companyId)
-          if (found) {
-            setCompany(found)
-            return
-          }
+        const found = list.data.find((c: any) => String(c.id) === companyId)
+        if (found) {
+          setCompany(found)
+          return
         }
+      }
       } catch (error) {
         console.log('Companies list fallback failed:', error)
       }
@@ -234,12 +234,12 @@ function CompanyDetailPage() {
       try {
         const jobsResp = await apiService.getCompanyJobs(companyId)
         if (jobsResp && jobsResp.success) {
-          const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
-          if (arr.length > 0) {
-            const name = arr[0]?.companyName || 'Company'
-            setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
-            return
-          }
+        const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
+        if (arr.length > 0) {
+          const name = arr[0]?.companyName || 'Company'
+          setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
+          return
+        }
         }
       } catch (error) {
         console.log('Jobs fallback failed:', error)
@@ -264,22 +264,22 @@ function CompanyDetailPage() {
         setJobsError('Invalid company id')
       } else {
         try {
-          const response = await apiService.getCompanyJobs(companyId)
+        const response = await apiService.getCompanyJobs(companyId)
           if (response && response.success) {
-            const d: any = response.data
-            const jobs = Array.isArray(d)
-              ? d
-              : Array.isArray(d?.jobs)
-                ? d.jobs
-                : Array.isArray(d?.rows)
-                  ? d.rows
-                  : []
-            setCompanyJobs(jobs)
-            if (!Array.isArray(jobs)) {
-              setJobsError('Failed to parse jobs list')
-            }
-          } else {
-            setCompanyJobs([])
+          const d: any = response.data
+          const jobs = Array.isArray(d)
+            ? d
+            : Array.isArray(d?.jobs)
+              ? d.jobs
+              : Array.isArray(d?.rows)
+                ? d.rows
+                : []
+          setCompanyJobs(jobs)
+          if (!Array.isArray(jobs)) {
+            setJobsError('Failed to parse jobs list')
+          }
+        } else {
+          setCompanyJobs([])
             setJobsError(response?.message || 'Failed to load company jobs')
           }
         } catch (error: any) {
@@ -472,16 +472,16 @@ function CompanyDetailPage() {
 
   const departments = useMemo(() => {
     try {
-      const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
+    const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
       jobs.forEach((job) => {
-        const deptName = (job.department || job.category || 'Other').toString()
-        if (!groups[deptName]) {
-          groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
-        }
-        groups[deptName].openings += 1
-      })
-      return Object.values(groups).sort((a, b) => b.openings - a.openings)
+      const deptName = (job.department || job.category || 'Other').toString()
+      if (!groups[deptName]) {
+        groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
+      }
+      groups[deptName].openings += 1
+    })
+    return Object.values(groups).sort((a, b) => b.openings - a.openings)
     } catch (error) {
       console.error('Error computing departments:', error)
       return []
@@ -589,14 +589,14 @@ function CompanyDetailPage() {
 
   const sectorKey = useMemo(() => {
     try {
-      const ind = (company?.industry || '').toLowerCase()
-      if (ind.includes('tech')) return 'technology'
-      if (ind.includes('fin')) return 'finance'
-      if (ind.includes('health')) return 'healthcare'
-      if (ind.includes('auto')) return 'automotive'
-      if (ind.includes('energy')) return 'energy'
-      if (ind.includes('consult')) return 'fintech'
-      return 'technology'
+    const ind = (company?.industry || '').toLowerCase()
+    if (ind.includes('tech')) return 'technology'
+    if (ind.includes('fin')) return 'finance'
+    if (ind.includes('health')) return 'healthcare'
+    if (ind.includes('auto')) return 'automotive'
+    if (ind.includes('energy')) return 'energy'
+    if (ind.includes('consult')) return 'fintech'
+    return 'technology'
     } catch (error) {
       console.error('Error computing sector key:', error)
       return 'technology'
