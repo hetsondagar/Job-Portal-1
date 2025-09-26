@@ -16,6 +16,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import Link from "next/link"
 import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
+import { toast } from "sonner"
 
 function DepartmentJobsPage() {
   const params = useParams()
@@ -41,11 +42,36 @@ function DepartmentJobsPage() {
       setLoading(true)
       setError("")
       try {
-        const companyResp = await apiService.getCompany(companyId)
-        if (companyResp.success) setCompany(companyResp.data)
-        const jobsResp = await apiService.getCompanyJobs(companyId)
-        const list = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
-        setJobs(list)
+        // Try to get company data
+        try {
+          const companyResp = await apiService.getCompany(companyId)
+          if (companyResp.success) setCompany(companyResp.data)
+        } catch (e) {
+          console.log('Company endpoint failed, trying fallback:', e)
+        }
+        
+        // Try to get jobs data
+        try {
+          const jobsResp = await apiService.getCompanyJobs(companyId)
+          const list = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
+          setJobs(list)
+        } catch (e) {
+          console.log('Company jobs endpoint failed, trying alternative:', e)
+          // Try alternative endpoint
+          try {
+            const altResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/jobs/company/${companyId}`)
+            if (altResponse.ok) {
+              const altData = await altResponse.json()
+              if (altData.success) {
+                const jobs = Array.isArray(altData.data) ? altData.data : []
+                setJobs(jobs)
+              }
+            }
+          } catch (altError) {
+            console.log('Alternative jobs endpoint also failed:', altError)
+            setError('Failed to load department jobs')
+          }
+        }
       } catch (e: any) {
         setError('Failed to load department jobs')
       } finally {
@@ -75,7 +101,12 @@ function DepartmentJobsPage() {
     try {
       console.log(`Applying for job ${jobId}...`)
       
-      const response = await apiService.applyJob(jobId.toString())
+      const response = await apiService.applyJob(jobId.toString(), {
+        coverLetter: '',
+        expectedSalary: undefined,
+        noticePeriod: undefined,
+        isWillingToRelocate: false
+      })
       
       if (response.success) {
         toast.success('Application submitted successfully!')
@@ -404,12 +435,16 @@ function DepartmentJobsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
-            <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              Register Now
-            </Button>
-            <Button variant="outline" className="w-full bg-transparent">
-              Login
-            </Button>
+            <Link href="/register">
+              <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                Register Now
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="outline" className="w-full bg-transparent">
+                Login
+              </Button>
+            </Link>
           </div>
         </DialogContent>
       </Dialog>
@@ -467,4 +502,18 @@ function DepartmentJobsPage() {
   )
 }
 
-export default dynamic(() => Promise.resolve(DepartmentJobsPage), { ssr: false })
+export default dynamic(() => Promise.resolve(DepartmentJobsPage), { 
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="pt-20 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">Loading department jobs...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})

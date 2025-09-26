@@ -121,21 +121,31 @@ function CompanyDetailPage() {
     try {
       // Try direct company endpoint only if id looks valid
       if (isValidUuid) {
-        const response = await apiService.getCompany(companyId)
-        if (response.success && response.data) {
-          setCompany(response.data)
-          return
+        try {
+          const response = await apiService.getCompany(companyId)
+          if (response.success && response.data) {
+            setCompany(response.data)
+            return
+          }
+        } catch (error: any) {
+          console.log('Direct company endpoint failed, trying fallback methods:', error.message)
         }
       }
+      
       // Fallback: fetch public companies list and find by id
-      const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
-      if (list.success && Array.isArray(list.data)) {
-        const found = list.data.find((c: any) => String(c.id) === companyId)
-        if (found) {
-          setCompany(found)
-          return
+      try {
+        const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
+        if (list.success && Array.isArray(list.data)) {
+          const found = list.data.find((c: any) => String(c.id) === companyId)
+          if (found) {
+            setCompany(found)
+            return
+          }
         }
+      } catch (error) {
+        console.log('Companies list fallback failed:', error)
       }
+      
       // Last-resort fallback: infer minimal company info from its jobs (public)
       try {
         const jobsResp = await apiService.getCompanyJobs(companyId)
@@ -145,7 +155,10 @@ function CompanyDetailPage() {
           setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
           return
         }
-      } catch {}
+      } catch (error) {
+        console.log('Jobs fallback failed:', error)
+      }
+      
       setCompany(null)
       setCompanyError('Company not found')
     } catch (error) {
@@ -164,23 +177,43 @@ function CompanyDetailPage() {
         setCompanyJobs([])
         setJobsError('Invalid company id')
       } else {
-        const response = await apiService.getCompanyJobs(companyId)
-        if (response.success) {
-          const d: any = response.data
-          const jobs = Array.isArray(d)
-            ? d
-            : Array.isArray(d?.jobs)
-              ? d.jobs
-              : Array.isArray(d?.rows)
-                ? d.rows
-                : []
-          setCompanyJobs(jobs)
-          if (!Array.isArray(jobs)) {
-            setJobsError('Failed to parse jobs list')
+        try {
+          const response = await apiService.getCompanyJobs(companyId)
+          if (response.success) {
+            const d: any = response.data
+            const jobs = Array.isArray(d)
+              ? d
+              : Array.isArray(d?.jobs)
+                ? d.jobs
+                : Array.isArray(d?.rows)
+                  ? d.rows
+                  : []
+            setCompanyJobs(jobs)
+            if (!Array.isArray(jobs)) {
+              setJobsError('Failed to parse jobs list')
+            }
+          } else {
+            setCompanyJobs([])
+            setJobsError(response.message || 'Failed to load company jobs')
           }
-        } else {
+        } catch (error: any) {
+          console.log('Company jobs endpoint failed:', error.message)
+          // Try alternative endpoint
+          try {
+            const altResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/jobs/company/${companyId}`)
+            if (altResponse.ok) {
+              const altData = await altResponse.json()
+              if (altData.success) {
+                const jobs = Array.isArray(altData.data) ? altData.data : []
+                setCompanyJobs(jobs)
+                return
+              }
+            }
+          } catch (altError) {
+            console.log('Alternative jobs endpoint also failed:', altError)
+          }
           setCompanyJobs([])
-          setJobsError(response.message || 'Failed to load company jobs')
+          setJobsError('Failed to load company jobs')
         }
       }
     } catch (error) {
@@ -1169,4 +1202,18 @@ function CompanyDetailPage() {
   )
 }
 
-export default dynamic(() => Promise.resolve(CompanyDetailPage), { ssr: false })
+export default dynamic(() => Promise.resolve(CompanyDetailPage), { 
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="pt-20 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">Loading company information...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})

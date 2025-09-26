@@ -325,15 +325,12 @@ class ApiService {
   }
   private getAuthHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    console.log('🔍 getAuthHeaders - Token present:', !!token);
-    console.log('🔍 getAuthHeaders - Token value:', token ? `${token.substring(0, 20)}...` : 'null');
     
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
     };
     
-    console.log('🔍 getAuthHeaders - Final headers:', headers);
     return headers;
   }
 
@@ -2366,32 +2363,6 @@ class ApiService {
     return response;
   }
 
-  // Employer endpoint to download cover letter from application
-  async downloadApplicationCoverLetter(applicationId: string): Promise<void> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const headers: HeadersInit = {};
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/user/employer/applications/${applicationId}/cover-letter/download`, {
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to download cover letter');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'cover-letter.pdf';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  }
 
   // Avatar upload endpoint
   async uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string; user: User }>> {

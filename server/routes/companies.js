@@ -233,13 +233,27 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Get company information by ID
-router.get('/:id', authenticateToken, async (req, res) => {
+// Get company information by ID (public access for job seekers, protected for employers)
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Check if the user has access to this company
-    if (req.user.user_type === 'employer' && req.user.company_id !== id) {
+    // Try to authenticate if token is provided
+    let user = null;
+    try {
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        user = await User.findByPk(decoded.id);
+      }
+    } catch (authError) {
+      // Continue without authentication for public access
+      console.log('No valid token provided, allowing public access to company info');
+    }
+    
+    // Check if the user has access to this company (only for employers)
+    if (user && user.user_type === 'employer' && user.company_id !== id) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -294,8 +308,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Get company jobs
-router.get('/:id/jobs', authenticateToken, async (req, res) => {
+// Get company jobs (public access)
+router.get('/:id/jobs', async (req, res) => {
   try {
     const { id } = req.params;
     const Job = require('../models/Job');
@@ -309,7 +323,9 @@ router.get('/:id/jobs', authenticateToken, async (req, res) => {
       attributes: [
         'id', 'title', 'location', 'jobType', 'experienceLevel', 
         'salaryMin', 'salaryMax', 'description', 'requirements',
-        'createdAt', 'is_urgent'
+        'createdAt', 'is_urgent', 'department', 'category', 'city', 
+        'state', 'country', 'salary', 'type', 'experience', 'skills', 
+        'benefits', 'updatedAt', 'applications'
       ]
     });
 
