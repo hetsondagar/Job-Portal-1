@@ -10,6 +10,7 @@ const UserSession = sequelize.define('UserSession', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -18,28 +19,34 @@ const UserSession = sequelize.define('UserSession', {
   sessionToken: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: true,
+    field: 'session_token'
   },
   refreshToken: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'refresh_token'
   },
   deviceType: {
     type: DataTypes.ENUM('web', 'mobile', 'tablet'),
     allowNull: false,
-    defaultValue: 'web'
+    defaultValue: 'web',
+    field: 'device_type'
   },
   deviceInfo: {
     type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'device_info'
   },
   ipAddress: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'ip_address'
   },
   userAgent: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'user_agent'
   },
   location: {
     type: DataTypes.JSONB,
@@ -47,21 +54,25 @@ const UserSession = sequelize.define('UserSession', {
   },
   isActive: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true
+    defaultValue: true,
+    field: 'is_active'
   },
   lastActivityAt: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    field: 'last_activity_at'
   },
   expiresAt: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    field: 'expires_at'
   },
   loginMethod: {
     type: DataTypes.ENUM('email', 'google', 'linkedin', 'facebook', 'apple'),
     allowNull: false,
-    defaultValue: 'email'
+    defaultValue: 'email',
+    field: 'login_method'
   },
   metadata: {
     type: DataTypes.JSONB,

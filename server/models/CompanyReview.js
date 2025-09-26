@@ -11,6 +11,7 @@ const CompanyReview = sequelize.define('CompanyReview', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -19,6 +20,7 @@ const CompanyReview = sequelize.define('CompanyReview', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -68,7 +70,8 @@ const CompanyReview = sequelize.define('CompanyReview', {
   reviewDate: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    allowNull: false
+    allowNull: false,
+    field: 'review_date'
   },
   isVerified: {
     type: DataTypes.BOOLEAN,

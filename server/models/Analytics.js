@@ -18,7 +18,8 @@ const Analytics = sequelize.define('Analytics', {
   },
   sessionId: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'session_id'
   },
   eventType: {
     type: DataTypes.ENUM(
@@ -28,31 +29,38 @@ const Analytics = sequelize.define('Analytics', {
       'message_sent', 'notification_clicked', 'subscription_purchased', 'payment_made',
       'profile_like'
     ),
-    allowNull: false
+    allowNull: false,
+    field: 'event_type'
   },
   eventCategory: {
     type: DataTypes.ENUM('user_engagement', 'job_interaction', 'company_interaction', 'application_process', 'payment', 'system'),
-    allowNull: false
+    allowNull: false,
+    field: 'event_category'
   },
   pageUrl: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'page_url'
   },
   referrerUrl: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'referrer_url'
   },
   userAgent: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'user_agent'
   },
   ipAddress: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'ip_address'
   },
   deviceType: {
     type: DataTypes.ENUM('desktop', 'mobile', 'tablet'),
-    allowNull: true
+    allowNull: true,
+    field: 'device_type'
   },
   browser: {
     type: DataTypes.STRING,
@@ -69,6 +77,7 @@ const Analytics = sequelize.define('Analytics', {
   jobId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'job_id',
     references: {
       model: 'jobs',
       key: 'id'
@@ -77,6 +86,7 @@ const Analytics = sequelize.define('Analytics', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -85,6 +95,7 @@ const Analytics = sequelize.define('Analytics', {
   applicationId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'application_id',
     references: {
       model: 'job_applications',
       key: 'id'

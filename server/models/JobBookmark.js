@@ -25,6 +25,25 @@ const JobBookmark = sequelize.define('JobBookmark', {
       model: 'jobs',
       key: 'id'
     }
+  },
+  folder: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'default'
+  },
+  priority: {
+    type: DataTypes.ENUM('low', 'medium', 'high'),
+    allowNull: true,
+    defaultValue: 'medium'
+  },
+  reminderDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'reminder_date'
+  },
+  notes: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   tableName: 'job_bookmarks',

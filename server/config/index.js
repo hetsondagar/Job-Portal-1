@@ -35,6 +35,9 @@ const FeaturedJob = require('../models/FeaturedJob');
 const ViewTracking = require('../models/ViewTracking');
 const UserDashboard = require('../models/UserDashboard');
 const SearchHistory = require('../models/SearchHistory');
+const BulkJobImport = require('../models/BulkJobImport')(sequelize);
+const CandidateAnalytics = require('../models/CandidateAnalytics')(sequelize);
+const JobTemplate = require('../models/JobTemplate');
 
 // Define associations
 
@@ -246,5 +249,8 @@ module.exports = {
   ViewTracking,
   UserDashboard,
   SearchHistory,
+  BulkJobImport,
+  CandidateAnalytics,
+  JobTemplate,
   syncDatabase
 }; 

@@ -11,6 +11,7 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -19,6 +20,7 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -34,16 +36,19 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
       push: true,
       sms: false
     },
+    field: 'notification_preferences',
     comment: 'Notification preferences for this company'
   },
   followedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    allowNull: false
+    allowNull: false,
+    field: 'followed_at'
   },
   lastNotificationAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'last_notification_at'
   },
   metadata: {
     type: DataTypes.JSONB,

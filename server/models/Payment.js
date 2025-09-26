@@ -10,6 +10,7 @@ const Payment = sequelize.define('Payment', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -18,6 +19,7 @@ const Payment = sequelize.define('Payment', {
   subscriptionId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'subscription_id',
     references: {
       model: 'subscriptions',
       key: 'id'
@@ -26,7 +28,8 @@ const Payment = sequelize.define('Payment', {
   paymentType: {
     type: DataTypes.ENUM('subscription', 'one_time', 'refund', 'credit', 'debit'),
     allowNull: false,
-    defaultValue: 'subscription'
+    defaultValue: 'subscription',
+    field: 'payment_type'
   },
   amount: {
     type: DataTypes.DECIMAL(10, 2),
@@ -44,10 +47,12 @@ const Payment = sequelize.define('Payment', {
   },
   paymentMethod: {
     type: DataTypes.ENUM('credit_card', 'debit_card', 'net_banking', 'upi', 'wallet', 'bank_transfer'),
-    allowNull: false
+    allowNull: false,
+    field: 'payment_method'
   },
   paymentGateway: {
     type: DataTypes.ENUM('razorpay', 'stripe', 'paypal', 'paytm', 'phonepe'),
+    field: 'payment_gateway',
     allowNull: false
   },
   gatewayTransactionId: {
