@@ -125,8 +125,8 @@ function CompanyDetailPage() {
     willingToRelocate: false
   })
 
-  // Safely computed values with proper null checks
-  const locationDisplay = useMemo(() => {
+  // Simple computed values without useMemo to avoid React error #310
+  const getLocationDisplay = () => {
     if (!company) return '—'
     
     try {
@@ -150,9 +150,9 @@ function CompanyDetailPage() {
       console.error('Error computing location display:', error)
       return '—'
     }
-  }, [company?.id, company?.city, company?.state, company?.country, company?.address, companyJobs?.length])
+  }
 
-  const safeBenefits = useMemo(() => {
+  const getSafeBenefits = () => {
     if (!company) return []
     
     try {
@@ -162,16 +162,21 @@ function CompanyDetailPage() {
       console.error('Error computing safe benefits:', error)
       return []
     }
-  }, [company?.id, company?.benefits])
+  }
   
-  const safeJobs = useMemo(() => {
+  const getSafeJobs = () => {
     try {
       return Array.isArray(companyJobs) ? companyJobs : []
     } catch (error) {
       console.error('Error computing safe jobs:', error)
       return []
     }
-  }, [companyJobs?.length])
+  }
+
+  // Use the computed values
+  const locationDisplay = getLocationDisplay()
+  const safeBenefits = getSafeBenefits()
+  const safeJobs = getSafeJobs()
 
   // Scroll to top when component mounts
   useEffect(() => {
