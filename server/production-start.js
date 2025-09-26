@@ -86,6 +86,19 @@ async function startServer() {
       }
     }
     
+    // Fix ALL database issues (missing columns, tables, constraints)
+    console.log('🔧 Running comprehensive database fixes...');
+    try {
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      
+      await execAsync('node fix-all-database-issues.js', { cwd: __dirname });
+      console.log('✅ All database issues fixed successfully!');
+    } catch (fixError) {
+      console.warn('⚠️ Database fix failed, continuing with startup:', fixError?.message || fixError);
+    }
+    
     console.log('🚀 Starting Express server...');
     
     // Import and start the main server

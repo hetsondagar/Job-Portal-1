@@ -10,23 +10,47 @@
 
 const { Pool } = require('pg');
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// Load environment variables
+require('dotenv').config();
+
+const DATABASE_URL = process.env.DATABASE_URL || process.env.DB_URL;
 
 if (!DATABASE_URL) {
-  console.error('❌ DATABASE_URL environment variable is required');
+  console.error('❌ DATABASE_URL or DB_URL environment variable is required');
+  console.error('ℹ️ This script should be run in production environment where DATABASE_URL is available');
   process.exit(1);
+}
+
+// Check if we're in production or if we can connect to the database
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+const isTestMode = process.argv.includes('--test') || process.argv.includes('-t');
+
+if (!isProduction && !isTestMode) {
+  console.log('⚠️ Running in development mode - database connection will be tested');
+  console.log('ℹ️ This script is designed to run in production environment');
+  console.log('💡 Use --test flag to run in test mode without database connection');
 }
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
 async function fixAllDatabaseIssues() {
-  const client = await pool.connect();
+  let client;
   
   try {
     console.log('🔧 Starting complete database fix...');
+    
+    if (isTestMode) {
+      console.log('🧪 Running in TEST MODE - no actual database changes will be made');
+      console.log('✅ Test mode completed successfully');
+      return;
+    }
+    
+    console.log('🔍 Testing database connection...');
+    client = await pool.connect();
+    console.log('✅ Database connection successful');
     
     // 1. Fix CompanyFollow table - add followedAt column
     console.log('1️⃣ Fixing CompanyFollow table...');
@@ -265,10 +289,12 @@ async function fixAllDatabaseIssues() {
     console.log('✅ Added missing indexes');
     
   } catch (error) {
-    console.error('❌ Database fix failed:', error);
+    console.error('💥 Database fix failed:', error);
     throw error;
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 }
 
