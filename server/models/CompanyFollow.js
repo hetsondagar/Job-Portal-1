@@ -60,7 +60,6 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  timestamps: true,
   underscored: true,
   indexes: [
     {
@@ -72,7 +71,7 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
       fields: ['company_id']
     },
     {
-      fields: ['followedAt']
+      fields: ['followed_at']
     }
   ],
   hooks: {

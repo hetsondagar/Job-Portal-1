@@ -134,43 +134,49 @@ function CompanyDetailPage() {
       const state = (company.state || '').toString().trim()
       const country = (company.country || '').toString().trim()
       const addressFirst = (company.address ? String(company.address) : '')
-        .split(',')[0]
-        .trim()
+      .split(',')[0]
+      .trim()
       
       // Get location from first job if available
       const firstJob = Array.isArray(companyJobs) && companyJobs.length > 0 ? companyJobs[0] : null
       const fromJob = firstJob ? (firstJob.city || firstJob.location || '').toString().trim() : ''
       
-      const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
-      return pick || '—'
+    const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
+    return pick || '—'
     } catch (error) {
       console.error('Error computing location display:', error)
+      setHasRenderError(true)
       return '—'
     }
-  }, [company?.id, company?.city, company?.state, company?.country, company?.address, companyJobs?.length, companyJobs?.[0]?.city, companyJobs?.[0]?.location])
+  }, [company, companyJobs])
 
   const safeBenefits: string[] = useMemo(() => {
     try {
       return Array.isArray((company as any)?.benefits) ? (company as any).benefits as string[] : []
     } catch (error) {
       console.error('Error computing safe benefits:', error)
+      setHasRenderError(true)
       return []
     }
-  }, [company?.id, company?.benefits])
+  }, [company])
   
   const safeJobs: any[] = useMemo(() => {
     try {
       return Array.isArray(companyJobs) ? companyJobs : []
     } catch (error) {
       console.error('Error computing safe jobs:', error)
+      setHasRenderError(true)
       return []
     }
-  }, [companyJobs?.length])
+  }, [companyJobs])
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+
+  // Add error boundary for the entire component
+  const [hasRenderError, setHasRenderError] = useState(false)
 
   // Initialize follow state from localStorage
   useEffect(() => {
@@ -420,6 +426,31 @@ function CompanyDetailPage() {
 
   // Removed mock company data
 
+  // Handle render errors first
+  if (hasRenderError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Navbar />
+        <div className="pt-20 pb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-16">
+              <p className="text-red-600 dark:text-red-400">Something went wrong loading this company page.</p>
+              <Button 
+                onClick={() => {
+                  setHasRenderError(false)
+                  window.location.reload()
+                }}
+                className="mt-4"
+              >
+                Reload Page
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Handle loading states early to avoid any render errors
   if (loadingCompany || loadingJobs) {
     return (
@@ -472,16 +503,16 @@ function CompanyDetailPage() {
 
   const departments = useMemo(() => {
     try {
-      const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
+    const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
       jobs.forEach((job) => {
-        const deptName = (job.department || job.category || 'Other').toString()
-        if (!groups[deptName]) {
-          groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
-        }
-        groups[deptName].openings += 1
-      })
-      return Object.values(groups).sort((a, b) => b.openings - a.openings)
+      const deptName = (job.department || job.category || 'Other').toString()
+      if (!groups[deptName]) {
+        groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
+      }
+      groups[deptName].openings += 1
+    })
+    return Object.values(groups).sort((a, b) => b.openings - a.openings)
     } catch (error) {
       console.error('Error computing departments:', error)
       return []
