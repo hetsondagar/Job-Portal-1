@@ -84,7 +84,7 @@ async function fixAllDatabaseIssues() {
     `);
     console.log('✅ CompanyReview table fixed');
 
-    // 3. Fix Payment table - add user_id column
+    // 3. Fix Payment table - add user_id and subscription_id columns
     console.log('3️⃣ Fixing Payment table...');
     await client.query(`
       DO $$ 
@@ -102,11 +102,25 @@ async function fixAllDatabaseIssues() {
             UPDATE payments SET user_id = "userId"::UUID WHERE user_id IS NULL AND "userId" IS NOT NULL;
           END IF;
         END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'payments' AND column_name = 'subscription_id'
+        ) THEN
+          ALTER TABLE payments ADD COLUMN subscription_id UUID;
+          -- Copy data from subscriptionId to subscription_id if subscriptionId exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'payments' AND column_name = 'subscriptionId'
+          ) THEN
+            UPDATE payments SET subscription_id = "subscriptionId"::UUID WHERE subscription_id IS NULL AND "subscriptionId" IS NOT NULL;
+          END IF;
+        END IF;
       END $$;
     `);
     console.log('✅ Payment table fixed');
 
-    // 4. Fix UserSession table - add user_id column
+    // 4. Fix UserSession table - add user_id and session_token columns
     console.log('4️⃣ Fixing UserSession table...');
     await client.query(`
       DO $$ 
@@ -122,6 +136,20 @@ async function fixAllDatabaseIssues() {
             WHERE table_name = 'user_sessions' AND column_name = 'userId'
           ) THEN
             UPDATE user_sessions SET user_id = "userId"::UUID WHERE user_id IS NULL AND "userId" IS NOT NULL;
+          END IF;
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'user_sessions' AND column_name = 'session_token'
+        ) THEN
+          ALTER TABLE user_sessions ADD COLUMN session_token VARCHAR(255);
+          -- Copy data from sessionToken to session_token if sessionToken exists
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'user_sessions' AND column_name = 'sessionToken'
+          ) THEN
+            UPDATE user_sessions SET session_token = "sessionToken" WHERE session_token IS NULL AND "sessionToken" IS NOT NULL;
           END IF;
         END IF;
       END $$;
