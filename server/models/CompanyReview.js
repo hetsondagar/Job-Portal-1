@@ -131,7 +131,7 @@ const CompanyReview = sequelize.define('CompanyReview', {
       fields: ['status']
     },
     {
-      fields: ['reviewDate']
+      fields: ['review_date']
     }
   ],
   hooks: {

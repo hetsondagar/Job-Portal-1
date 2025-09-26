@@ -125,50 +125,53 @@ function CompanyDetailPage() {
     willingToRelocate: false
   })
 
-  // locationDisplay will be computed after loading and company existence checks
+  // Safely computed values with proper null checks
   const locationDisplay = useMemo(() => {
+    if (!company) return '—'
+    
     try {
-      if (!company) return '—'
-      
-      const city = (company.city || '').toString().trim()
-      const state = (company.state || '').toString().trim()
-      const country = (company.country || '').toString().trim()
-      const addressFirst = (company.address ? String(company.address) : '')
-      .split(',')[0]
-      .trim()
+      const city = company.city ? String(company.city).trim() : ''
+      const state = company.state ? String(company.state).trim() : ''
+      const country = company.country ? String(company.country).trim() : ''
+      const address = company.address ? String(company.address).split(',')[0].trim() : ''
       
       // Get location from first job if available
-      const firstJob = Array.isArray(companyJobs) && companyJobs.length > 0 ? companyJobs[0] : null
-      const fromJob = firstJob ? (firstJob.city || firstJob.location || '').toString().trim() : ''
+      let jobLocation = ''
+      if (Array.isArray(companyJobs) && companyJobs.length > 0) {
+        const firstJob = companyJobs[0]
+        if (firstJob && (firstJob.city || firstJob.location)) {
+          jobLocation = String(firstJob.city || firstJob.location || '').trim()
+        }
+      }
       
-    const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
-    return pick || '—'
+      const location = city || address || jobLocation || state || (country && country.toLowerCase() !== 'india' ? country : '')
+      return location || '—'
     } catch (error) {
       console.error('Error computing location display:', error)
-      setHasRenderError(true)
       return '—'
     }
-  }, [company, companyJobs])
+  }, [company?.id, company?.city, company?.state, company?.country, company?.address, companyJobs?.length])
 
-  const safeBenefits: string[] = useMemo(() => {
+  const safeBenefits = useMemo(() => {
+    if (!company) return []
+    
     try {
-      return Array.isArray((company as any)?.benefits) ? (company as any).benefits as string[] : []
+      const benefits = company.benefits
+      return Array.isArray(benefits) ? benefits : []
     } catch (error) {
       console.error('Error computing safe benefits:', error)
-      setHasRenderError(true)
       return []
     }
-  }, [company])
+  }, [company?.id, company?.benefits])
   
-  const safeJobs: any[] = useMemo(() => {
+  const safeJobs = useMemo(() => {
     try {
       return Array.isArray(companyJobs) ? companyJobs : []
     } catch (error) {
       console.error('Error computing safe jobs:', error)
-      setHasRenderError(true)
       return []
     }
-  }, [companyJobs])
+  }, [companyJobs?.length])
 
   // Scroll to top when component mounts
   useEffect(() => {
