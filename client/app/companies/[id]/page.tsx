@@ -33,17 +33,77 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
-import ErrorBoundary from "@/components/ErrorBoundary"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { toast } from "sonner"
+import React from "react"
+
+// Simple error boundary component
+class CompanyErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Company page error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <div className="pt-20 pb-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center py-20">
+                <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                  Something went wrong
+                </h1>
+                <p className="text-slate-600 dark:text-slate-300 mb-8">
+                  We encountered an error while loading the company page.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Reload Page
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 function CompanyDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, loading } = useAuth()
+  
+  // Safely get user data without causing errors
+  let user = null
+  let loading = false
+  try {
+    const authContext = useAuth()
+    user = authContext.user
+    loading = authContext.loading
+  } catch (error) {
+    console.log('Auth context not available, proceeding without authentication')
+  }
+  
   const companyId = String((params as any)?.id || '')
   const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyId)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -123,19 +183,19 @@ function CompanyDetailPage() {
       if (isValidUuid) {
         try {
           const response = await apiService.getCompany(companyId)
-          if (response.success && response.data) {
+          if (response && response.success && response.data) {
             setCompany(response.data)
             return
           }
         } catch (error: any) {
-          console.log('Direct company endpoint failed, trying fallback methods:', error.message)
+          console.log('Direct company endpoint failed, trying fallback methods:', error?.message || error)
         }
       }
       
       // Fallback: fetch public companies list and find by id
       try {
         const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
-        if (list.success && Array.isArray(list.data)) {
+        if (list && list.success && Array.isArray(list.data)) {
           const found = list.data.find((c: any) => String(c.id) === companyId)
           if (found) {
             setCompany(found)
@@ -149,11 +209,13 @@ function CompanyDetailPage() {
       // Last-resort fallback: infer minimal company info from its jobs (public)
       try {
         const jobsResp = await apiService.getCompanyJobs(companyId)
-        const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
-        if (arr.length > 0) {
-          const name = arr[0]?.companyName || 'Company'
-          setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
-          return
+        if (jobsResp && jobsResp.success) {
+          const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
+          if (arr.length > 0) {
+            const name = arr[0]?.companyName || 'Company'
+            setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
+            return
+          }
         }
       } catch (error) {
         console.log('Jobs fallback failed:', error)
@@ -179,7 +241,7 @@ function CompanyDetailPage() {
       } else {
         try {
           const response = await apiService.getCompanyJobs(companyId)
-          if (response.success) {
+          if (response && response.success) {
             const d: any = response.data
             const jobs = Array.isArray(d)
               ? d
@@ -194,16 +256,16 @@ function CompanyDetailPage() {
             }
           } else {
             setCompanyJobs([])
-            setJobsError(response.message || 'Failed to load company jobs')
+            setJobsError(response?.message || 'Failed to load company jobs')
           }
         } catch (error: any) {
-          console.log('Company jobs endpoint failed:', error.message)
+          console.log('Company jobs endpoint failed:', error?.message || error)
           // Try alternative endpoint
           try {
             const altResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/jobs/company/${companyId}`)
             if (altResponse.ok) {
               const altData = await altResponse.json()
-              if (altData.success) {
+              if (altData && altData.success) {
                 const jobs = Array.isArray(altData.data) ? altData.data : []
                 setCompanyJobs(jobs)
                 return
@@ -518,7 +580,7 @@ function CompanyDetailPage() {
   }
 
   return (
-    <ErrorBoundary fallback={<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"><Navbar /><div className="pt-20 pb-8"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center py-20"><div className="w-24 h-24 mx-auto mb-6 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center"><Building2 className="w-12 h-12 text-red-500" /></div><h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Something went wrong</h1><p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">We couldn't load this company right now. Please try again.</p><Link href="/companies"><Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">Browse All Companies</Button></Link></div></div></div></div>}>
+    <CompanyErrorBoundary>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
@@ -1198,7 +1260,7 @@ function CompanyDetailPage() {
         </div>
       </footer>
     </div>
-    </ErrorBoundary>
+    </CompanyErrorBoundary>
   )
 }
 
