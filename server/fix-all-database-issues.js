@@ -287,109 +287,159 @@ async function fixAllDatabaseIssues() {
     console.log('✅ UserSessions refresh_token column fixed');
 
     // Fix conversations table - add is_active column
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'conversations' AND column_name = 'is_active'
-        ) THEN
-          ALTER TABLE conversations ADD COLUMN is_active BOOLEAN DEFAULT true;
-          -- Copy data from isActive to is_active if isActive exists
-          IF EXISTS (
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'conversations' AND column_name = 'is_active'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE conversations ADD COLUMN is_active BOOLEAN DEFAULT true`);
+        console.log('✅ Added is_active column to conversations table');
+        
+        // Copy data from isActive to is_active if isActive exists
+        try {
+          const isActiveCheck = await client.query(`
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'conversations' AND column_name = 'isActive'
-          ) THEN
-            UPDATE conversations SET is_active = "isActive" WHERE is_active IS NULL AND "isActive" IS NOT NULL;
-          END IF;
-        END IF;
-      END $$;
-    `);
-    console.log('✅ Conversations is_active column fixed');
+          `);
+          if (isActiveCheck.rows.length > 0) {
+            await client.query(`UPDATE conversations SET is_active = "isActive" WHERE is_active IS NULL AND "isActive" IS NOT NULL`);
+            console.log('✅ Migrated data from isActive to is_active in conversations');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No isActive column to migrate in conversations');
+        }
+      } else {
+        console.log('ℹ️ is_active column already exists in conversations table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding is_active to conversations:', error.message);
+    }
 
     // Fix messages table - add sender_id column
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'messages' AND column_name = 'sender_id'
-        ) THEN
-          ALTER TABLE messages ADD COLUMN sender_id UUID;
-          -- Copy data from senderId to sender_id if senderId exists
-          IF EXISTS (
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'messages' AND column_name = 'sender_id'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE messages ADD COLUMN sender_id UUID`);
+        console.log('✅ Added sender_id column to messages table');
+        
+        // Copy data from senderId to sender_id if senderId exists
+        try {
+          const senderIdCheck = await client.query(`
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'messages' AND column_name = 'senderId'
-          ) THEN
-            UPDATE messages SET sender_id = "senderId"::UUID WHERE sender_id IS NULL AND "senderId" IS NOT NULL;
-          END IF;
-        END IF;
-      END $$;
-    `);
-    console.log('✅ Messages sender_id column fixed');
+          `);
+          if (senderIdCheck.rows.length > 0) {
+            await client.query(`UPDATE messages SET sender_id = "senderId"::UUID WHERE sender_id IS NULL AND "senderId" IS NOT NULL`);
+            console.log('✅ Migrated data from senderId to sender_id in messages');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No senderId column to migrate in messages');
+        }
+      } else {
+        console.log('ℹ️ sender_id column already exists in messages table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding sender_id to messages:', error.message);
+    }
 
     // Fix payments table - add gateway_transaction_id column
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'payments' AND column_name = 'gateway_transaction_id'
-        ) THEN
-          ALTER TABLE payments ADD COLUMN gateway_transaction_id VARCHAR(255);
-          -- Copy data from gatewayTransactionId to gateway_transaction_id if gatewayTransactionId exists
-          IF EXISTS (
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'payments' AND column_name = 'gateway_transaction_id'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE payments ADD COLUMN gateway_transaction_id VARCHAR(255)`);
+        console.log('✅ Added gateway_transaction_id column to payments table');
+        
+        // Copy data from gatewayTransactionId to gateway_transaction_id if gatewayTransactionId exists
+        try {
+          const gatewayCheck = await client.query(`
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'payments' AND column_name = 'gatewayTransactionId'
-          ) THEN
-            UPDATE payments SET gateway_transaction_id = "gatewayTransactionId" WHERE gateway_transaction_id IS NULL AND "gatewayTransactionId" IS NOT NULL;
-          END IF;
-        END IF;
-      END $$;
-    `);
-    console.log('✅ Payments gateway_transaction_id column fixed');
+          `);
+          if (gatewayCheck.rows.length > 0) {
+            await client.query(`UPDATE payments SET gateway_transaction_id = "gatewayTransactionId" WHERE gateway_transaction_id IS NULL AND "gatewayTransactionId" IS NOT NULL`);
+            console.log('✅ Migrated data from gatewayTransactionId to gateway_transaction_id in payments');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No gatewayTransactionId column to migrate in payments');
+        }
+      } else {
+        console.log('ℹ️ gateway_transaction_id column already exists in payments table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding gateway_transaction_id to payments:', error.message);
+    }
 
     // Fix user_sessions table - add is_active column
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'user_sessions' AND column_name = 'is_active'
-        ) THEN
-          ALTER TABLE user_sessions ADD COLUMN is_active BOOLEAN DEFAULT true;
-          -- Copy data from isActive to is_active if isActive exists
-          IF EXISTS (
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'user_sessions' AND column_name = 'is_active'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE user_sessions ADD COLUMN is_active BOOLEAN DEFAULT true`);
+        console.log('✅ Added is_active column to user_sessions table');
+        
+        // Copy data from isActive to is_active if isActive exists
+        try {
+          const isActiveCheck = await client.query(`
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'user_sessions' AND column_name = 'isActive'
-          ) THEN
-            UPDATE user_sessions SET is_active = "isActive" WHERE is_active IS NULL AND "isActive" IS NOT NULL;
-          END IF;
-        END IF;
-      END $$;
-    `);
-    console.log('✅ UserSessions is_active column fixed');
+          `);
+          if (isActiveCheck.rows.length > 0) {
+            await client.query(`UPDATE user_sessions SET is_active = "isActive" WHERE is_active IS NULL AND "isActive" IS NOT NULL`);
+            console.log('✅ Migrated data from isActive to is_active in user_sessions');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No isActive column to migrate in user_sessions');
+        }
+      } else {
+        console.log('ℹ️ is_active column already exists in user_sessions table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding is_active to user_sessions:', error.message);
+    }
 
     // Fix analytics table - add event_category column
-    await client.query(`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'analytics' AND column_name = 'event_category'
-        ) THEN
-          ALTER TABLE analytics ADD COLUMN event_category VARCHAR(100);
-          -- Copy data from eventCategory to event_category if eventCategory exists
-          IF EXISTS (
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'analytics' AND column_name = 'event_category'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE analytics ADD COLUMN event_category VARCHAR(100)`);
+        console.log('✅ Added event_category column to analytics table');
+        
+        // Copy data from eventCategory to event_category if eventCategory exists
+        try {
+          const eventCategoryCheck = await client.query(`
             SELECT 1 FROM information_schema.columns 
             WHERE table_name = 'analytics' AND column_name = 'eventCategory'
-          ) THEN
-            UPDATE analytics SET event_category = "eventCategory" WHERE event_category IS NULL AND "eventCategory" IS NOT NULL;
-          END IF;
-        END IF;
-      END $$;
-    `);
-    console.log('✅ Analytics event_category column fixed');
+          `);
+          if (eventCategoryCheck.rows.length > 0) {
+            await client.query(`UPDATE analytics SET event_category = "eventCategory" WHERE event_category IS NULL AND "eventCategory" IS NOT NULL`);
+            console.log('✅ Migrated data from eventCategory to event_category in analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No eventCategory column to migrate in analytics');
+        }
+      } else {
+        console.log('ℹ️ event_category column already exists in analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding event_category to analytics:', error.message);
+    }
 
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
