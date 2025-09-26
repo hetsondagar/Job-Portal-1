@@ -127,21 +127,45 @@ function CompanyDetailPage() {
 
   // locationDisplay will be computed after loading and company existence checks
   const locationDisplay = useMemo(() => {
-    const city = (company?.city || '').toString().trim()
-    const state = (company?.state || '').toString().trim()
-    const country = (company?.country || '').toString().trim()
-    const addressFirst = (company?.address ? String(company.address) : '')
-      .split(',')[0]
-      .trim()
-    const fromJob = (companyJobs?.[0]?.city || companyJobs?.[0]?.location || '')
-      ? String(companyJobs?.[0]?.city || companyJobs?.[0]?.location).trim()
-      : ''
-    const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
-    return pick || '—'
-  }, [company?.city, company?.state, company?.country, company?.address, companyJobs])
+    try {
+      if (!company) return '—'
+      
+      const city = (company.city || '').toString().trim()
+      const state = (company.state || '').toString().trim()
+      const country = (company.country || '').toString().trim()
+      const addressFirst = (company.address ? String(company.address) : '')
+        .split(',')[0]
+        .trim()
+      
+      // Get location from first job if available
+      const firstJob = Array.isArray(companyJobs) && companyJobs.length > 0 ? companyJobs[0] : null
+      const fromJob = firstJob ? (firstJob.city || firstJob.location || '').toString().trim() : ''
+      
+      const pick = city || addressFirst || fromJob || state || (country && country.toLowerCase() !== 'india' ? country : '')
+      return pick || '—'
+    } catch (error) {
+      console.error('Error computing location display:', error)
+      return '—'
+    }
+  }, [company, companyJobs])
 
-  const safeBenefits: string[] = Array.isArray((company as any)?.benefits) ? (company as any).benefits as string[] : []
-  const safeJobs: any[] = Array.isArray(companyJobs) ? companyJobs : []
+  const safeBenefits: string[] = useMemo(() => {
+    try {
+      return Array.isArray((company as any)?.benefits) ? (company as any).benefits as string[] : []
+    } catch (error) {
+      console.error('Error computing safe benefits:', error)
+      return []
+    }
+  }, [company?.benefits])
+  
+  const safeJobs: any[] = useMemo(() => {
+    try {
+      return Array.isArray(companyJobs) ? companyJobs : []
+    } catch (error) {
+      console.error('Error computing safe jobs:', error)
+      return []
+    }
+  }, [companyJobs])
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -447,16 +471,22 @@ function CompanyDetailPage() {
   }
 
   const departments = useMemo(() => {
-    const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
-    safeJobs.forEach((job) => {
-      const deptName = (job.department || job.category || 'Other').toString()
-      if (!groups[deptName]) {
-        groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
-      }
-      groups[deptName].openings += 1
-    })
-    return Object.values(groups).sort((a, b) => b.openings - a.openings)
-  }, [safeJobs])
+    try {
+      const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
+      const jobs = Array.isArray(companyJobs) ? companyJobs : []
+      jobs.forEach((job) => {
+        const deptName = (job.department || job.category || 'Other').toString()
+        if (!groups[deptName]) {
+          groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
+        }
+        groups[deptName].openings += 1
+      })
+      return Object.values(groups).sort((a, b) => b.openings - a.openings)
+    } catch (error) {
+      console.error('Error computing departments:', error)
+      return []
+    }
+  }, [companyJobs])
 
   // Use companyJobs state from API
 
@@ -558,14 +588,19 @@ function CompanyDetailPage() {
   
 
   const sectorKey = useMemo(() => {
-    const ind = (company?.industry || '').toLowerCase()
-    if (ind.includes('tech')) return 'technology'
-    if (ind.includes('fin')) return 'finance'
-    if (ind.includes('health')) return 'healthcare'
-    if (ind.includes('auto')) return 'automotive'
-    if (ind.includes('energy')) return 'energy'
-    if (ind.includes('consult')) return 'fintech'
-    return 'technology'
+    try {
+      const ind = (company?.industry || '').toLowerCase()
+      if (ind.includes('tech')) return 'technology'
+      if (ind.includes('fin')) return 'finance'
+      if (ind.includes('health')) return 'healthcare'
+      if (ind.includes('auto')) return 'automotive'
+      if (ind.includes('energy')) return 'energy'
+      if (ind.includes('consult')) return 'fintech'
+      return 'technology'
+    } catch (error) {
+      console.error('Error computing sector key:', error)
+      return 'technology'
+    }
   }, [company?.industry])
   const sectorColors = getSectorColor(sectorKey)
 
