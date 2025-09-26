@@ -75,10 +75,23 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:3001',
       'https://job-portal-nine-rouge.vercel.app',
-      'https://job-portal-97q3.onrender.com'
+      'https://job-portal-dr834n32f-hetsondagar16-4175s-projects.vercel.app',
+      'https://job-portal-97q3.onrender.com',
+      // Allow all Vercel preview deployments
+      /^https:\/\/.*\.vercel\.app$/
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Check if origin matches any allowed origin (including regex patterns)
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
