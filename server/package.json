@@ -22,6 +22,7 @@
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
     "db:create": "sequelize-cli db:create",
     "db:drop": "sequelize-cli db:drop",
+    "db:sync": "node deploy-sync.js",
     "test:google": "node test-google-auth.js"
   },
   "keywords": [],
