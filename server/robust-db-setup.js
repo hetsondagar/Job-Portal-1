@@ -67,7 +67,9 @@ async function setupRobustDatabase() {
       'HotVacancyPhoto', 'JobPhoto', 'Requirement'
     ];
     
-    // Sync all models
+    // Sync all models using the existing sequelize instance from models
+    const { sequelize: existingSequelize } = require('./config/sequelize');
+    
     for (const modelName of modelOrder) {
       try {
         const ModelFactory = require(`./models/${modelName}`);
@@ -76,7 +78,7 @@ async function setupRobustDatabase() {
         let Model;
         if (typeof ModelFactory === 'function') {
           // Function-based models (like BulkJobImport, CandidateAnalytics)
-          Model = ModelFactory(sequelize);
+          Model = ModelFactory(existingSequelize);
         } else if (ModelFactory && typeof ModelFactory.sync === 'function') {
           // Direct model exports (like User, Company, Job, etc.)
           Model = ModelFactory;

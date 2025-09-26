@@ -720,6 +720,37 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding employer_id to candidate_analytics:', error.message);
     }
 
+    // Fix candidate_analytics table - add company_id column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'candidate_analytics' AND column_name = 'company_id'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE candidate_analytics ADD COLUMN company_id UUID`);
+        console.log('✅ Added company_id column to candidate_analytics table');
+        
+        // Copy data from companyId to company_id if companyId exists
+        try {
+          const companyIdCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'candidate_analytics' AND column_name = 'companyId'
+          `);
+          if (companyIdCheck.rows.length > 0) {
+            await client.query(`UPDATE candidate_analytics SET company_id = "companyId"::UUID WHERE company_id IS NULL AND "companyId" IS NOT NULL`);
+            console.log('✅ Migrated data from companyId to company_id in candidate_analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No companyId column to migrate in candidate_analytics');
+        }
+      } else {
+        console.log('ℹ️ company_id column already exists in candidate_analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding company_id to candidate_analytics:', error.message);
+    }
+
     // Fix conversation index issue - drop existing problematic index
     try {
       await client.query(`DROP INDEX IF EXISTS "conversations_participant1_id_participant2_id_job_application_i"`);

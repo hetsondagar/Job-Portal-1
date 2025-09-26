@@ -241,7 +241,8 @@ const SalaryCalculator = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/salary/calculate', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${API_BASE_URL}/salary/calculate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1481,8 +1482,8 @@ const SalaryCalculator = () => {
                     <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 p-4 rounded-lg border border-red-200 dark:border-red-800">
                       <h5 className="font-semibold text-red-800 dark:text-red-200 mb-2">💸 Highest Tax</h5>
                       {(() => {
-                        const highestTaxRegime = Object.entries(result.regimes).reduce((max, [key, regime]) => 
-                          (regime.incomeTax?.total || 0) > (max.incomeTax?.total || 0) ? {key, regime} : max, 
+                        const highestTaxRegime = Object.entries(result.regimes).reduce((max: {key: string, regime: any}, [key, regime]) => 
+                          (regime.incomeTax?.total || 0) > (max.regime.incomeTax?.total || 0) ? {key, regime} : max, 
                           {key: '', regime: {incomeTax: {total: 0}, regime: ''}}
                         );
                         return (
@@ -1501,8 +1502,8 @@ const SalaryCalculator = () => {
                     <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-4 rounded-lg border border-green-200 dark:border-green-800">
                       <h5 className="font-semibold text-green-800 dark:text-green-200 mb-2">💰 Lowest Tax</h5>
                       {(() => {
-                        const lowestTaxRegime = Object.entries(result.regimes).reduce((min, [key, regime]) => 
-                          (regime.incomeTax?.total || 0) < (min.incomeTax?.total || Infinity) ? {key, regime} : min, 
+                        const lowestTaxRegime = Object.entries(result.regimes).reduce((min: {key: string, regime: any}, [key, regime]) => 
+                          (regime.incomeTax?.total || 0) < (min.regime.incomeTax?.total || Infinity) ? {key, regime} : min, 
                           {key: '', regime: {incomeTax: {total: Infinity}, regime: ''}}
                         );
                         return (
@@ -1521,8 +1522,8 @@ const SalaryCalculator = () => {
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                       <h5 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">💎 Best Take Home</h5>
                       {(() => {
-                        const bestTakeHomeRegime = Object.entries(result.regimes).reduce((max, [key, regime]) => 
-                          (regime.takeHome?.monthly || 0) > (max.takeHome?.monthly || 0) ? {key, regime} : max, 
+                        const bestTakeHomeRegime = Object.entries(result.regimes).reduce((max: {key: string, regime: any}, [key, regime]) => 
+                          (regime.takeHome?.monthly || 0) > (max.regime.takeHome?.monthly || 0) ? {key, regime} : max, 
                           {key: '', regime: {takeHome: {monthly: 0}, regime: ''}}
                         );
                         return (

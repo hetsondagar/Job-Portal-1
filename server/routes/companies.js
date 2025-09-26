@@ -278,6 +278,13 @@ router.get('/:id', async (req, res) => {
       console.warn('Could not compute activeJobsCount for company', id, e?.message);
     }
 
+    // Set cache control headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     res.json({
       success: true,
       data: {
@@ -329,6 +336,13 @@ router.get('/:id/jobs', async (req, res) => {
       ]
     });
 
+    // Set cache control headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     res.json({
       success: true,
       data: jobs
