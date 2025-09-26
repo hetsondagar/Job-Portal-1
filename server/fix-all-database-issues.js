@@ -658,6 +658,14 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding device_type to analytics:', error.message);
     }
 
+    // Fix conversation index issue - drop existing problematic index
+    try {
+      await client.query(`DROP INDEX IF EXISTS "conversations_participant1_id_participant2_id_job_application_i"`);
+      console.log('✅ Dropped problematic conversation index');
+    } catch (error) {
+      console.log('ℹ️ No problematic conversation index to drop');
+    }
+
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
     await client.query(`
@@ -794,6 +802,15 @@ async function fixAllDatabaseIssues() {
           WHERE tablename = 'analytics' AND indexname = 'analytics_session_id'
         ) THEN
           CREATE INDEX analytics_session_id ON analytics (session_id);
+        END IF;
+
+        -- Unique index for conversations (with proper name)
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_indexes 
+          WHERE tablename = 'conversations' AND indexname = 'conversations_unique_participants_job'
+        ) THEN
+          CREATE UNIQUE INDEX conversations_unique_participants_job 
+          ON conversations ("participant1Id", "participant2Id", "jobApplicationId");
         END IF;
       END $$;
     `);

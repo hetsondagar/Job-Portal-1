@@ -114,6 +114,7 @@ const Conversation = sequelize.define('Conversation', {
     },
     {
       unique: true,
+      name: 'conversations_unique_participants_job',
       fields: ['participant1Id', 'participant2Id', 'jobApplicationId']
     }
   ],

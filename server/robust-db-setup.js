@@ -70,7 +70,9 @@ async function setupRobustDatabase() {
     // Sync all models
     for (const modelName of modelOrder) {
       try {
-        const Model = require(`./models/${modelName}`);
+        const ModelFactory = require(`./models/${modelName}`);
+        // Some models are functions that return the model, others are direct model exports
+        const Model = typeof ModelFactory === 'function' ? ModelFactory(sequelize) : ModelFactory;
         await Model.sync({ force: false });
         console.log(`✅ ${modelName} table synced`);
       } catch (modelError) {
