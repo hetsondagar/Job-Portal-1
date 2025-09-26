@@ -323,9 +323,9 @@ router.get('/:id/jobs', async (req, res) => {
       attributes: [
         'id', 'title', 'location', 'jobType', 'experienceLevel', 
         'salaryMin', 'salaryMax', 'description', 'requirements',
-        'createdAt', 'is_urgent', 'department', 'category', 'city', 
-        'state', 'country', 'salary', 'type', 'experience', 'skills', 
-        'benefits', 'updatedAt', 'applications'
+        'createdAt', 'isUrgent', 'department', 'category', 'city', 
+        'state', 'country', 'salary', 'skills', 'applications',
+        'updatedAt', 'status', 'remoteWork', 'experienceMin', 'experienceMax'
       ]
     });
 
