@@ -441,6 +441,99 @@ async function fixAllDatabaseIssues() {
       console.log('⚠️ Error adding event_category to analytics:', error.message);
     }
 
+    // Fix messages table - add receiver_id column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'messages' AND column_name = 'receiver_id'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE messages ADD COLUMN receiver_id UUID`);
+        console.log('✅ Added receiver_id column to messages table');
+        
+        // Copy data from receiverId to receiver_id if receiverId exists
+        try {
+          const receiverIdCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'messages' AND column_name = 'receiverId'
+          `);
+          if (receiverIdCheck.rows.length > 0) {
+            await client.query(`UPDATE messages SET receiver_id = "receiverId"::UUID WHERE receiver_id IS NULL AND "receiverId" IS NOT NULL`);
+            console.log('✅ Migrated data from receiverId to receiver_id in messages');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No receiverId column to migrate in messages');
+        }
+      } else {
+        console.log('ℹ️ receiver_id column already exists in messages table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding receiver_id to messages:', error.message);
+    }
+
+    // Fix user_sessions table - add expires_at column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'user_sessions' AND column_name = 'expires_at'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE user_sessions ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE`);
+        console.log('✅ Added expires_at column to user_sessions table');
+        
+        // Copy data from expiresAt to expires_at if expiresAt exists
+        try {
+          const expiresAtCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'user_sessions' AND column_name = 'expiresAt'
+          `);
+          if (expiresAtCheck.rows.length > 0) {
+            await client.query(`UPDATE user_sessions SET expires_at = "expiresAt" WHERE expires_at IS NULL AND "expiresAt" IS NOT NULL`);
+            console.log('✅ Migrated data from expiresAt to expires_at in user_sessions');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No expiresAt column to migrate in user_sessions');
+        }
+      } else {
+        console.log('ℹ️ expires_at column already exists in user_sessions table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding expires_at to user_sessions:', error.message);
+    }
+
+    // Fix analytics table - add job_id column
+    try {
+      const result = await client.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'analytics' AND column_name = 'job_id'
+      `);
+      
+      if (result.rows.length === 0) {
+        await client.query(`ALTER TABLE analytics ADD COLUMN job_id UUID`);
+        console.log('✅ Added job_id column to analytics table');
+        
+        // Copy data from jobId to job_id if jobId exists
+        try {
+          const jobIdCheck = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'analytics' AND column_name = 'jobId'
+          `);
+          if (jobIdCheck.rows.length > 0) {
+            await client.query(`UPDATE analytics SET job_id = "jobId"::UUID WHERE job_id IS NULL AND "jobId" IS NOT NULL`);
+            console.log('✅ Migrated data from jobId to job_id in analytics');
+          }
+        } catch (migrateError) {
+          console.log('ℹ️ No jobId column to migrate in analytics');
+        }
+      } else {
+        console.log('ℹ️ job_id column already exists in analytics table');
+      }
+    } catch (error) {
+      console.log('⚠️ Error adding job_id to analytics:', error.message);
+    }
+
     // 7. Create conversations table (without foreign key to messages first)
     console.log('7️⃣ Creating conversations table...');
     await client.query(`
