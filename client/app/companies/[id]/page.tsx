@@ -147,7 +147,7 @@ function CompanyDetailPage() {
       console.error('Error computing location display:', error)
       return '—'
     }
-  }, [company, companyJobs])
+  }, [company?.id, company?.city, company?.state, company?.country, company?.address, companyJobs?.length])
 
   const safeBenefits: string[] = useMemo(() => {
     try {
@@ -156,7 +156,7 @@ function CompanyDetailPage() {
       console.error('Error computing safe benefits:', error)
       return []
     }
-  }, [company?.benefits])
+  }, [company?.id, company?.benefits])
   
   const safeJobs: any[] = useMemo(() => {
     try {
@@ -165,7 +165,7 @@ function CompanyDetailPage() {
       console.error('Error computing safe jobs:', error)
       return []
     }
-  }, [companyJobs])
+  }, [companyJobs?.length])
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -486,7 +486,7 @@ function CompanyDetailPage() {
       console.error('Error computing departments:', error)
       return []
     }
-  }, [companyJobs])
+  }, [companyJobs?.length, companyJobs?.[0]?.department, companyJobs?.[0]?.category])
 
   // Use companyJobs state from API
 
