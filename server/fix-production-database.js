@@ -11,6 +11,7 @@ const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   console.error('❌ DATABASE_URL environment variable is required');
+  console.error('ℹ️ This script should be run at runtime, not during build');
   process.exit(1);
 }
 

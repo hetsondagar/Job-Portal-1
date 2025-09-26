@@ -300,6 +300,21 @@ const startServer = async () => {
     // Test database connection
     await testConnection();
     
+    // Fix production database issues (add missing columns)
+    if (process.env.NODE_ENV === 'production' || process.env.RUN_DB_FIXES === 'true') {
+      try {
+        console.log('🔧 Running production database fixes...');
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        
+        await execAsync('node fix-production-database.js', { cwd: __dirname });
+        console.log('✅ Production database fixes completed');
+      } catch (fixError) {
+        console.warn('⚠️ Database fix failed, continuing with startup:', fixError?.message || fixError);
+      }
+    }
+    
     // Avoid global sync to prevent duplicate index creation on existing tables.
     // Only ensure the new candidate_likes table exists.
     try {
