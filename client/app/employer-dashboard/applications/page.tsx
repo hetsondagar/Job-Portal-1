@@ -687,7 +687,6 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
       // First log the resume view activity
       try {
         await apiService.viewApplicationResume(application.id)
-        console.log('✅ Resume view activity logged')
       } catch (activityError) {
         console.error('Failed to log resume view activity:', activityError)
         // Don't fail the view if activity logging fails

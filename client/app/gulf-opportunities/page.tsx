@@ -152,6 +152,7 @@ export default function GulfOpportunitiesPage() {
             id: job.id,
             title: job.title,
             company: job.company?.name || 'Unknown Company',
+            companyId: job.company?.id || job.companyId,
             location: job.location,
             salary: job.salary || (job.salaryMin && job.salaryMax 
               ? `${job.salaryCurrency || 'AED'} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
@@ -538,7 +539,16 @@ export default function GulfOpportunitiesPage() {
                         <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-300">
                           <div className="flex items-center space-x-1">
                             <Building2 className="w-4 h-4" />
-                            <span>{job.company}</span>
+                            {job.companyId ? (
+                              <Link 
+                                href={`/gulf-companies/${job.companyId}`}
+                                className="hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                              >
+                                {job.company}
+                              </Link>
+                            ) : (
+                              <span>{job.company}</span>
+                            )}
                           </div>
                           <div className="flex items-center space-x-1">
                             <MapPin className="w-4 h-4" />
