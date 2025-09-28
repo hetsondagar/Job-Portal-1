@@ -1655,7 +1655,7 @@ export default function CompaniesPage() {
                   { name: "Career Advice", href: "/career-advice" },
                   { name: "Resume Builder", href: "/resume-builder" },
                   { name: "Salary Guide", href: "/salary-guide" },
-                  { name: "JobAtPace Premium", href: "/jobatpace" },
+                  { name: "Job at Pace Premium", href: "/job-at-pace" },
                 ],
               },
               {

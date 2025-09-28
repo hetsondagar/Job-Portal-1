@@ -95,8 +95,8 @@ export function EmployerFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/jobatpace" className="text-slate-600 hover:text-blue-600 transition-colors text-xs font-medium">
-                  JobAtPace Premium
+                <Link href="/job-at-pace" className="text-slate-600 hover:text-blue-600 transition-colors text-xs font-medium">
+                  Job at Pace Premium
                 </Link>
               </li>
               <li>

@@ -441,7 +441,7 @@ export default function HomePage() {
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <Link href="/jobatpace">
+            <Link href="/job-at-pace">
             <div className="flex flex-col sm:flex-row items-center justify-between text-white cursor-pointer group">
               <div className="flex items-center mb-4 sm:mb-0">
                 <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
@@ -887,8 +887,8 @@ export default function HomePage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/jobatpace" className="hover:text-white transition-colors font-medium">
-                    JobAtPace Premium
+                  <Link href="/job-at-pace" className="hover:text-white transition-colors font-medium">
+                    Job at Pace Premium
                   </Link>
                 </li>
                 <li>

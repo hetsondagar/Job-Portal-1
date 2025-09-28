@@ -672,8 +672,8 @@ export default function EmployerLoginPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/jobatpace" className="hover:text-white transition-colors font-medium">
-                    JobAtPace Premium
+                  <Link href="/job-at-pace" className="hover:text-white transition-colors font-medium">
+                    Job at Pace Premium
                   </Link>
                 </li>
                 <li>

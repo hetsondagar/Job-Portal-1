@@ -579,8 +579,8 @@ export default function RegisterPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/jobatpace" className="text-slate-400 hover:text-white transition-colors text-sm">
-                    JobAtPace Premium
+                  <Link href="/job-at-pace" className="text-slate-400 hover:text-white transition-colors text-sm">
+                    Job at Pace Premium
                   </Link>
                 </li>
               </ul>

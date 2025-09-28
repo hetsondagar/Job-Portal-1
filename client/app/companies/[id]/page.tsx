@@ -124,7 +124,7 @@ function CompanyDetailPage() {
     coverLetter: '',
     willingToRelocate: false
   })
-  
+
   // Filter states for job filtering functionality
   const [filters, setFilters] = useState({
     department: 'all',
@@ -411,13 +411,13 @@ function CompanyDetailPage() {
             const data = await response.json()
             if (data && data.success) {
               const jobs = Array.isArray(data.data) ? data.data : []
-              setCompanyJobs(jobs)
+          setCompanyJobs(jobs)
               setFilteredJobs(jobs)
-              if (!Array.isArray(jobs)) {
-                setJobsError('Failed to parse jobs list')
-              }
-            } else {
-              setCompanyJobs([])
+          if (!Array.isArray(jobs)) {
+            setJobsError('Failed to parse jobs list')
+          }
+        } else {
+          setCompanyJobs([])
               setFilteredJobs([])
               setJobsError(data?.message || 'Failed to load company jobs')
             }
@@ -1149,7 +1149,7 @@ function CompanyDetailPage() {
                     className={filters.department !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
                   >
                     Department ({filterOptions.departments.length})
-                  </Button>
+              </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleFilterChange('department', 'all')}>
@@ -1171,7 +1171,7 @@ function CompanyDetailPage() {
                     className={filters.location !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
                   >
                     Location ({filterOptions.locations.length})
-                  </Button>
+              </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleFilterChange('location', 'all')}>
@@ -1193,7 +1193,7 @@ function CompanyDetailPage() {
                     className={filters.experience !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
                   >
                     Experience ({filterOptions.experiences.length})
-                  </Button>
+              </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleFilterChange('experience', 'all')}>
@@ -1215,7 +1215,7 @@ function CompanyDetailPage() {
                     className={filters.salary !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
                   >
                     Salary (3)
-                  </Button>
+              </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleFilterChange('salary', 'all')}>
@@ -1455,9 +1455,9 @@ function CompanyDetailPage() {
                       Clear Filters
                     </Button>
                   ) : (
-                    <Button variant="outline" onClick={() => window.location.reload()}>
-                      Check Again
-                    </Button>
+                  <Button variant="outline" onClick={() => window.location.reload()}>
+                    Check Again
+                  </Button>
                   )}
                 </div>
               )}

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun, User, LogOut, Settings, Bell, Bookmark, FileText } from "lucide-react"
+import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun, User, LogOut, Settings, Bell, Bookmark, FileText, Zap, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -128,6 +128,19 @@ export function Navbar() {
               </AnimatePresence>
             </div>
 
+            {/* Job at Pace - Premium Link */}
+            <Link href="/job-at-pace">
+              <Button variant="ghost" className="text-slate-700 dark:text-slate-300 relative group">
+                <div className="flex items-center space-x-2">
+                  <Zap className="w-4 h-4" />
+                  <span>Job at Pace</span>
+                  <div className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full">
+                    Premium
+                  </div>
+                </div>
+              </Button>
+            </Link>
+
             {/* Tools Dropdown */}
             <div className="relative group">
               <Button variant="ghost" className="text-slate-700 dark:text-slate-300">
@@ -234,6 +247,13 @@ export function Navbar() {
                 </Link>
                 <Link href="/companies" className="text-lg font-medium text-slate-900 dark:text-white">
                   Companies
+                </Link>
+                <Link href="/job-at-pace" className="flex items-center space-x-2 text-lg font-medium text-slate-900 dark:text-white">
+                  <Zap className="w-5 h-5" />
+                  <span>Job at Pace</span>
+                  <div className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full">
+                    Premium
+                  </div>
                 </Link>
                 <Link href="/salary-calculator" className="text-lg font-medium text-slate-900 dark:text-white">
                   Salary Calculator
