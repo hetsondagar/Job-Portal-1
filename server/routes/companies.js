@@ -254,6 +254,49 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get user's followed companies (MUST be before /:id route)
+router.get('/followed', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Check if user is a jobseeker
+    if (req.user.user_type !== 'jobseeker') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only job seekers can view followed companies'
+      });
+    }
+
+    const CompanyFollow = require('../models/CompanyFollow');
+    const followedCompanies = await CompanyFollow.findAll({
+      where: { userId },
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'name', 'slug', 'industry', 'logo']
+      }],
+      order: [['followedAt', 'DESC']]
+    });
+
+    return res.json({
+      success: true,
+      data: followedCompanies.map(follow => ({
+        id: follow.id,
+        companyId: follow.companyId,
+        followedAt: follow.followedAt,
+        company: follow.company
+      }))
+    });
+
+  } catch (error) {
+    console.error('Get followed companies error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Get company information by ID (public access for job seekers, protected for employers)
 router.get('/:id', async (req, res) => {
   try {
@@ -555,48 +598,7 @@ router.delete('/:id/follow', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user's followed companies
-router.get('/followed', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    // Check if user is a jobseeker
-    if (req.user.user_type !== 'jobseeker') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only job seekers can view followed companies'
-      });
-    }
-
-    const CompanyFollow = require('../models/CompanyFollow');
-    const followedCompanies = await CompanyFollow.findAll({
-      where: { userId },
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['id', 'name', 'slug', 'industry', 'logo']
-      }],
-      order: [['followedAt', 'DESC']]
-    });
-
-    return res.json({
-      success: true,
-      data: followedCompanies.map(follow => ({
-        id: follow.id,
-        companyId: follow.companyId,
-        followedAt: follow.followedAt,
-        company: follow.company
-      }))
-    });
-
-  } catch (error) {
-    console.error('Get followed companies error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
+// Removed duplicate /followed route - moved to before /:id route
 
 // Check if user is following a specific company
 router.get('/:id/follow-status', authenticateToken, async (req, res) => {
