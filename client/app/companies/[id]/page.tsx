@@ -125,6 +125,10 @@ function CompanyDetailPage() {
     willingToRelocate: false
   })
   const [appliedJobs, setAppliedJobs] = useState<Set<number>>(new Set())
+  const [companyStats, setCompanyStats] = useState<{
+    profileViews: number;
+    activeJobs: number;
+  } | null>(null)
 
   // Function to check if user has applied to a job
   const hasAppliedToJob = (jobId: number): boolean => {
@@ -148,6 +152,33 @@ function CompanyDetailPage() {
       console.error('Error fetching applied jobs:', error)
     }
   }, [user])
+
+  // Function to fetch accurate company stats
+  const fetchCompanyStats = useCallback(async () => {
+    if (!companyId) return
+
+    try {
+      // Get the company's employer dashboard stats for accurate data
+      const statsResponse = await apiService.getEmployerDashboardStats()
+      if (statsResponse.success && statsResponse.data) {
+        setCompanyStats({
+          profileViews: statsResponse.data.profileViews || 0,
+          activeJobs: statsResponse.data.activeJobs || 0
+        })
+        console.log('✅ Company stats loaded:', {
+          profileViews: statsResponse.data.profileViews,
+          activeJobs: statsResponse.data.activeJobs
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching company stats:', error)
+      // Fallback to company data if API fails
+      setCompanyStats({
+        profileViews: company?.profileViews || 0,
+        activeJobs: company?.activeJobsCount || companyJobs.length
+      })
+    }
+  }, [companyId, company, companyJobs.length])
 
   // Simple computed values without useMemo to avoid React error #310
   const getLocationDisplay = () => {
@@ -354,8 +385,9 @@ function CompanyDetailPage() {
       fetchCompanyData()
       fetchCompanyJobs()
       fetchAppliedJobs()
+      fetchCompanyStats() // Fetch accurate company stats
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs, fetchCompanyStats])
 
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {
@@ -826,7 +858,9 @@ function CompanyDetailPage() {
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Open Positions</div>
-                          <div className="text-slate-600 dark:text-slate-400">{company.activeJobsCount ?? companyJobs.length}</div>
+                          <div className="text-slate-600 dark:text-slate-400">
+                            {companyStats?.activeJobs ?? company.activeJobsCount ?? companyJobs.length}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -847,7 +881,9 @@ function CompanyDetailPage() {
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Profile Views</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.profileViews) || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">
+                            {companyStats?.profileViews ?? (toDisplayText(company.profileViews) || '—')}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -1056,13 +1092,13 @@ function CompanyDetailPage() {
                                     handleApply(job.id)
                                   }}
                                   className={`h-10 px-6 ${
-                                    sampleJobManager.hasApplied(job.id.toString())
+                                    hasAppliedToJob(job.id)
                                       ? 'bg-green-600 hover:bg-green-700 cursor-default'
                                       : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
                                   }`}
-                                  disabled={sampleJobManager.hasApplied(job.id.toString())}
+                                  disabled={hasAppliedToJob(job.id)}
                                 >
-                                  {sampleJobManager.hasApplied(job.id.toString()) ? (
+                                  {hasAppliedToJob(job.id) ? (
                                     <>
                                       <CheckCircle className="w-4 h-4 mr-2" />
                                       Applied
