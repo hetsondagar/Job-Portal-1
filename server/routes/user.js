@@ -9,10 +9,82 @@ const Resume = require('../models/Resume');
 const CoverLetter = require('../models/CoverLetter');
 const { sequelize } = require('../config/sequelize');
 const { Op } = require('sequelize');
-const { findResumeFile, handleMissingFile } = require('../utils/fileUtils');
 
 const router = express.Router();
 
+// Utility function to find resume file
+function findResumeFile(filename, metadata) {
+  const possiblePaths = [
+    // Production paths (Render.com)
+    path.join('/opt/render/project/src/uploads/resumes', filename),
+    path.join('/opt/render/project/src/server/uploads/resumes', filename),
+    path.join('/tmp/uploads/resumes', filename),
+    // Development paths
+    path.join(__dirname, '../uploads/resumes', filename),
+    path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+    path.join(process.cwd(), 'uploads', 'resumes', filename),
+    path.join('/tmp', 'uploads', 'resumes', filename),
+    path.join('/var', 'tmp', 'uploads', 'resumes', filename),
+    // Metadata-based paths
+    metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
+    metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
+    // Direct metadata filePath
+    metadata?.filePath ? metadata.filePath : null
+  ].filter(Boolean);
+
+  console.log('🔍 Trying possible file paths:', possiblePaths);
+  
+  // Find the first existing file
+  let filePath = possiblePaths.find(p => fs.existsSync(p));
+  
+  if (!filePath) {
+    console.log('❌ File does not exist in any of the expected locations');
+    console.log('🔍 Checked paths:', possiblePaths);
+    
+    // Try to find the file by searching common directories
+    const searchDirs = [
+      path.join(__dirname, '../uploads'),
+      path.join(process.cwd(), 'uploads'),
+      path.join(process.cwd(), 'server', 'uploads'),
+      '/tmp/uploads',
+      '/var/tmp/uploads',
+      '/opt/render/project/src/uploads',
+      '/opt/render/project/src/server/uploads'
+    ];
+    
+    for (const searchDir of searchDirs) {
+      try {
+        if (fs.existsSync(searchDir)) {
+          console.log(`🔍 Searching in directory: ${searchDir}`);
+          const files = fs.readdirSync(searchDir, { recursive: true });
+          console.log(`🔍 Found ${files.length} items in ${searchDir}`);
+          
+          // Look for the specific filename
+          const found = files.find(f => f.includes(filename));
+          if (found) {
+            filePath = path.join(searchDir, found);
+            console.log(`✅ Found file at: ${filePath}`);
+            break;
+          }
+        }
+      } catch (error) {
+        console.log(`🔍 Could not search in ${searchDir}:`, error.message);
+      }
+    }
+    
+    // If still not found, check if this is a production environment issue
+    if (!filePath && process.env.NODE_ENV === 'production') {
+      console.log('⚠️ Production environment detected - files may have been lost during server restart');
+      console.log('💡 Consider implementing cloud storage (S3, Cloudinary) for production');
+    }
+  }
+  
+  if (filePath) {
+    console.log('✅ File found at:', filePath);
+  }
+  
+  return filePath;
+}
 
 // Utility function to find cover letter file
 function findCoverLetterFile(filename, metadata) {
@@ -3005,7 +3077,15 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      return handleMissingFile(res, filename, metadata);
+      // Fallback: try redirecting to the stored public path if present
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
+        code: 'FILE_NOT_FOUND'
+      });
     }
 
     // Increment download count
@@ -3856,7 +3936,11 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      return handleMissingFile(res, filename, metadata);
+      return res.status(404).json({
+        success: false,
+        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
+        code: 'FILE_NOT_FOUND'
+      });
     }
 
     console.log('✅ File exists, proceeding with download');

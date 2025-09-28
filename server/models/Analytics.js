@@ -40,27 +40,27 @@ const Analytics = sequelize.define('Analytics', {
   pageUrl: {
     type: DataTypes.TEXT,
     allowNull: true,
-    field: 'pageUrl'
+    field: 'page_url'
   },
   referrerUrl: {
     type: DataTypes.TEXT,
     allowNull: true,
-    field: 'referrerUrl'
+    field: 'referrer_url'
   },
   userAgent: {
     type: DataTypes.TEXT,
     allowNull: true,
-    field: 'userAgent'
+    field: 'user_agent'
   },
   ipAddress: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'ipAddress'
+    field: 'ip_address'
   },
   deviceType: {
     type: DataTypes.ENUM('desktop', 'mobile', 'tablet'),
     allowNull: true,
-    field: 'deviceType'
+    field: 'device_type'
   },
   browser: {
     type: DataTypes.STRING,
