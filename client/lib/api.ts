@@ -787,11 +787,12 @@ class ApiService {
   }
 
   // Companies list and join
-  async listCompanies(params?: { search?: string; limit?: number; offset?: number }): Promise<ApiResponse<any[]>> {
+  async listCompanies(params?: { search?: string; limit?: number; offset?: number; timestamp?: number }): Promise<ApiResponse<any[]>> {
     const sp = new URLSearchParams();
     if (params?.search) sp.append('search', params.search);
     if (params?.limit) sp.append('limit', String(params.limit));
     if (params?.offset) sp.append('offset', String(params.offset));
+    if (params?.timestamp) sp.append('timestamp', String(params.timestamp));
     const response = await fetch(`${API_BASE_URL}/companies${sp.toString() ? `?${sp.toString()}` : ''}`, {
       headers: this.getAuthHeaders(),
     });
@@ -805,6 +806,37 @@ class ApiService {
       body: JSON.stringify({ companyId })
     });
     return this.handleResponse<any>(response);
+  }
+
+  // Follow/Unfollow company methods
+  async followCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async unfollowCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getFollowedCompanies(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/companies/followed`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  async getCompanyFollowStatus(companyId: string): Promise<ApiResponse<{ isFollowing: boolean; followedAt: string | null }>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow-status`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ isFollowing: boolean; followedAt: string | null }>(response);
   }
 
   async updateCompany(companyId: string, data: any): Promise<ApiResponse<any>> {
@@ -1163,6 +1195,11 @@ class ApiService {
     });
 
     return this.handleResponse<any[]>(response);
+  }
+
+  // Get applied jobs (alias for getApplications)
+  async getAppliedJobs(): Promise<ApiResponse<any[]>> {
+    return this.getApplications();
   }
 
   // Debug endpoint to check all applications

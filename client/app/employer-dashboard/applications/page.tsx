@@ -636,10 +636,16 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
     }
 
     try {
+      console.log('🔍 Attempting to download resume:', { resumeId: resume.id, applicationId: application.id })
+      
       // For applications, we need to use the application-based download endpoint
       const response = await apiService.downloadApplicationResume(resume.id, application.id)
       
+      console.log('🔍 Download response:', { status: response.status, ok: response.ok })
+      
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Download failed:', { status: response.status, statusText: response.statusText, errorText })
         throw new Error(`Download failed: ${response.status} ${response.statusText}`)
       }
       
@@ -653,6 +659,8 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
           filename = filenameMatch[1]
         }
       }
+      
+      console.log('🔍 Downloading file:', filename)
       
       // Create blob and download
       const blob = await response.blob()
@@ -673,7 +681,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
       toast.success('Resume downloaded successfully')
     } catch (error) {
       console.error('Error downloading resume:', error)
-      toast.error('Failed to download resume')
+      toast.error(`Failed to download resume: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -684,10 +692,11 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
     }
 
     try {
+      console.log('🔍 Attempting to view resume:', { resumeId: resume.id, applicationId: application.id })
+      
       // First log the resume view activity
       try {
         await apiService.viewApplicationResume(application.id)
-        console.log('✅ Resume view activity logged')
       } catch (activityError) {
         console.error('Failed to log resume view activity:', activityError)
         // Don't fail the view if activity logging fails
@@ -695,6 +704,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
       // First try to use the metadata fileUrl if available
       if (resume.metadata?.fileUrl) {
+        console.log('🔍 Using direct file URL:', resume.metadata.fileUrl)
         window.open(resume.metadata.fileUrl, '_blank', 'noopener,noreferrer')
         return
       }
@@ -702,9 +712,13 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
       // If no direct URL, fetch the resume file and create a blob URL for viewing
       const response = await apiService.downloadApplicationResume(resume.id, application.id)
       
+      console.log('🔍 View response:', { status: response.status, ok: response.ok })
+      
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
+        
+        console.log('🔍 Opening resume in new tab')
         
         // Open the resume in a new tab
         const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
@@ -718,11 +732,13 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
           toast.error('Please allow popups to view the resume')
         }
       } else {
-        toast.error('Failed to load resume for viewing')
+        const errorText = await response.text()
+        console.error('❌ View failed:', { status: response.status, statusText: response.statusText, errorText })
+        toast.error(`Failed to load resume for viewing: ${response.status} ${response.statusText}`)
       }
     } catch (error) {
       console.error('Error viewing resume:', error)
-      toast.error('Failed to view resume')
+      toast.error(`Failed to view resume: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

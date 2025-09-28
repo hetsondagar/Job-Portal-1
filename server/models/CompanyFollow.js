@@ -74,24 +74,7 @@ const CompanyFollow = sequelize.define('CompanyFollow', {
       fields: ['followed_at']
     }
   ],
-  hooks: {
-    afterCreate: async (follow) => {
-      // Update company follower count
-      const { Company } = require('../config/index');
-      const company = await Company.findByPk(follow.companyId);
-      if (company) {
-        await company.increment('followerCount');
-      }
-    },
-    afterDestroy: async (follow) => {
-      // Update company follower count
-      const { Company } = require('../config/index');
-      const company = await Company.findByPk(follow.companyId);
-      if (company) {
-        await company.decrement('followerCount');
-      }
-    }
-  }
+  // Removed hooks that tried to update non-existent followerCount column
 });
 
 // Instance methods

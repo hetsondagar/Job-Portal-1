@@ -1654,7 +1654,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
     const application = await JobApplication.findOne({
       where: { 
         id: id,
-        employer_id: req.user.id 
+        employerId: req.user.id 
       },
       include: [
         {
@@ -1858,7 +1858,7 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
     const application = await JobApplication.findOne({
       where: { 
         id: id, 
-        employer_id: req.user.id 
+        employerId: req.user.id 
       }
     });
 
@@ -3597,7 +3597,7 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
     const application = await JobApplication.findOne({
       where: { 
         id: applicationId, 
-        employer_id: req.user.id 
+        employerId: req.user.id 
       },
       include: [
         {
@@ -3883,7 +3883,7 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const application = await JobApplication.findOne({
       where: { 
         id: applicationId, 
-        employer_id: req.user.id 
+        employerId: req.user.id 
       },
       include: [
         {

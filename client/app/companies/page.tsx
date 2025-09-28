@@ -32,7 +32,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 // Types for state management
 interface FilterState {
@@ -57,6 +60,8 @@ interface Company {
   rating: number
   reviews: number
   openings: number
+  activeJobsCount?: number
+  profileViews?: number
   description: string
   founded: string
   website: string
@@ -69,6 +74,9 @@ interface Company {
 }
 
 export default function CompaniesPage() {
+  const router = useRouter()
+  const { user } = useAuth()
+  
   // State management
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null)
@@ -76,6 +84,77 @@ export default function CompaniesPage() {
   const [companiesPerPage, setCompaniesPerPage] = useState(20)
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState("rating")
+  
+  // Follow status management - SIMPLIFIED AND FIXED
+  const [followedCompanies, setFollowedCompanies] = useState<Set<string>>(new Set())
+  const [loadingFollow, setLoadingFollow] = useState<Set<string>>(new Set())
+
+  // Fetch followed companies - SIMPLIFIED
+  const fetchFollowedCompanies = useCallback(async () => {
+    if (!user) return
+
+    try {
+      const response = await apiService.getFollowedCompanies()
+      if (response.success && response.data) {
+        const companyIds = response.data.map((follow: any) => follow.companyId).filter(Boolean)
+        setFollowedCompanies(new Set(companyIds))
+        console.log('✅ Loaded followed companies:', Array.from(companyIds))
+      }
+    } catch (error) {
+      console.error('❌ Error fetching followed companies:', error)
+    }
+  }, [user])
+
+  // Handle follow/unfollow toggle - COMPLETELY REWRITTEN
+  const handleFollowToggle = useCallback(async (companyId: string) => {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+
+    if (loadingFollow.has(companyId)) return
+
+    setLoadingFollow(prev => new Set([...prev, companyId]))
+
+    try {
+      const isCurrentlyFollowing = followedCompanies.has(companyId)
+      
+      if (isCurrentlyFollowing) {
+        // UNFOLLOW
+        const response = await apiService.unfollowCompany(companyId)
+        if (response.success) {
+          setFollowedCompanies(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(companyId)
+            return newSet
+          })
+          toast.success('Unfollowed company')
+          console.log('✅ Unfollowed company:', companyId)
+        } else {
+          toast.error('Failed to unfollow company')
+        }
+      } else {
+        // FOLLOW
+        const response = await apiService.followCompany(companyId)
+        if (response.success) {
+          setFollowedCompanies(prev => new Set([...prev, companyId]))
+          toast.success('Following company')
+          console.log('✅ Followed company:', companyId)
+        } else {
+          toast.error('Failed to follow company')
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error toggling follow:', error)
+      toast.error('Failed to update follow status')
+    } finally {
+      setLoadingFollow(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(companyId)
+        return newSet
+      })
+    }
+  }, [user, followedCompanies, loadingFollow, router])
   const [isFeaturedFilter, setIsFeaturedFilter] = useState(false)
   const [badgeDisplay, setBadgeDisplay] = useState<'featured' | 'urgent'>('featured')
   const [isStickyVisible, setIsStickyVisible] = useState(false)
@@ -140,9 +219,13 @@ export default function CompaniesPage() {
           search: filters.search || undefined,
           limit: 100,
           offset: 0,
+          timestamp: Date.now() // Cache busting parameter
         })
         if (resp.success && Array.isArray(resp.data)) {
+          console.log('🔍 Companies API response:', resp.data.slice(0, 2)) // Log first 2 companies
           setApiCompanies(resp.data.filter((c: any) => c?.region !== 'gulf'))
+          // Fetch followed companies after loading companies
+          fetchFollowedCompanies()
         } else {
           setApiCompanies([])
           setLoadError(resp.message || 'Failed to load companies')
@@ -158,6 +241,13 @@ export default function CompaniesPage() {
     return () => controller.abort()
   // Re-fetch on search change only; other filters are client-side
   }, [filters.search])
+
+  // Fetch followed companies when user changes
+  useEffect(() => {
+    if (user) {
+      fetchFollowedCompanies()
+    }
+  }, [user, fetchFollowedCompanies])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -1366,21 +1456,32 @@ export default function CompaniesPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full sm:w-auto bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-600 transition-all duration-300 text-xs sm:text-sm"
+                                    className={`w-full sm:w-auto backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm ${
+                                      followedCompanies.has(company.id) 
+                                        ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" 
+                                        : "bg-white/50 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-600"
+                                    }`}
                                     onClick={(e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
+                                      handleFollowToggle(company.id)
                                     }}
+                                    disabled={loadingFollow.has(company.id)}
                                   >
-                                    <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                    Follow
+                                    <Heart className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 ${followedCompanies.has(company.id) ? "fill-current" : ""}`} />
+                                    {loadingFollow.has(company.id) 
+                                      ? "..." 
+                                      : followedCompanies.has(company.id) 
+                                        ? "Following" 
+                                        : "Follow"
+                                    }
                                   </Button>
                                   <Link href={`/companies/${company.id}`}>
                                     <Button
                                       className={`w-full sm:w-auto bg-gradient-to-r ${sectorColors.bg} ${sectorColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm`}
                                     >
                                       <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                      View ({company.openings})
+                                      View ({company.activeJobsCount || company.openings || 0})
                                     </Button>
                                   </Link>
                                 </div>
@@ -1434,7 +1535,7 @@ export default function CompaniesPage() {
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    {company.openings} open positions
+                                    {company.activeJobsCount || company.openings || 0} open positions
                                   </span>
                                   <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                                 </div>
