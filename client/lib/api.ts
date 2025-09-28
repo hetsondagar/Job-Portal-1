@@ -808,6 +808,37 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  // Follow/Unfollow company methods
+  async followCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async unfollowCompany(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getFollowedCompanies(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/companies/followed`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  async getCompanyFollowStatus(companyId: string): Promise<ApiResponse<{ isFollowing: boolean; followedAt: string | null }>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow-status`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ isFollowing: boolean; followedAt: string | null }>(response);
+  }
+
   async updateCompany(companyId: string, data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
       method: 'PUT',

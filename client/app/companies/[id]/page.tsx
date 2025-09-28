@@ -259,6 +259,21 @@ function CompanyDetailPage() {
   const [hasRenderError, setHasRenderError] = useState(false)
 
   // Initialize follow state from localStorage
+  // Fetch follow status from API
+  const fetchFollowStatus = useCallback(async () => {
+    if (!isAuthenticated || !companyId) return
+
+    try {
+      const response = await apiService.getCompanyFollowStatus(companyId)
+      if (response.success && response.data) {
+        setIsFollowing(response.data.isFollowing)
+      }
+    } catch (error) {
+      console.error('Error fetching follow status:', error)
+    }
+  }, [companyId, isAuthenticated])
+
+  // Check follow status from localStorage on mount (fallback)
   useEffect(() => {
     try {
       const key = 'followedCompanies'
@@ -268,21 +283,39 @@ function CompanyDetailPage() {
     } catch {}
   }, [companyId])
 
-  const toggleFollow = useCallback(() => {
-    try {
-      const key = 'followedCompanies'
-      const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null
-      const set: Record<string, boolean> = raw ? JSON.parse(raw) : {}
-      const next = !isFollowing
-      if (companyId) {
-        if (next) set[companyId] = true; else delete set[companyId]
-        localStorage.setItem(key, JSON.stringify(set))
-      }
-      setIsFollowing(next)
-    } catch {
-      setIsFollowing((v) => !v)
+  const toggleFollow = useCallback(async () => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true)
+      return
     }
-  }, [companyId, isFollowing])
+
+    if (!companyId) return
+
+    try {
+      if (isFollowing) {
+        // Unfollow company
+        const response = await apiService.unfollowCompany(companyId)
+        if (response.success) {
+          setIsFollowing(false)
+          toast.success('Successfully unfollowed company')
+        } else {
+          toast.error(response.message || 'Failed to unfollow company')
+        }
+      } else {
+        // Follow company
+        const response = await apiService.followCompany(companyId)
+        if (response.success) {
+          setIsFollowing(true)
+          toast.success('Successfully followed company')
+        } else {
+          toast.error(response.message || 'Failed to follow company')
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error)
+      toast.error('Failed to update follow status')
+    }
+  }, [companyId, isFollowing, isAuthenticated])
 
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
@@ -402,8 +435,9 @@ function CompanyDetailPage() {
       fetchCompanyData()
       fetchCompanyJobs()
       fetchAppliedJobs()
+      fetchFollowStatus()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs, fetchFollowStatus])
 
   // Fetch company stats after company data and jobs are loaded
   useEffect(() => {

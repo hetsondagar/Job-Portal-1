@@ -32,7 +32,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 // Types for state management
 interface FilterState {
@@ -71,6 +74,9 @@ interface Company {
 }
 
 export default function CompaniesPage() {
+  const router = useRouter()
+  const { user } = useAuth()
+  
   // State management
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null)
@@ -1371,9 +1377,24 @@ export default function CompaniesPage() {
                                     variant="outline"
                                     size="sm"
                                     className="w-full sm:w-auto bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-600 transition-all duration-300 text-xs sm:text-sm"
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
+                                      if (!user) {
+                                        router.push('/login')
+                                        return
+                                      }
+                                      try {
+                                        const response = await apiService.followCompany(company.id)
+                                        if (response.success) {
+                                          toast.success('Successfully followed company')
+                                        } else {
+                                          toast.error(response.message || 'Failed to follow company')
+                                        }
+                                      } catch (error) {
+                                        console.error('Error following company:', error)
+                                        toast.error('Failed to follow company')
+                                      }
                                     }}
                                   >
                                     <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
