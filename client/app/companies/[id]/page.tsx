@@ -1109,10 +1109,22 @@ function CompanyDetailPage() {
                                 {user && user.userType === 'jobseeker' ? (
                                   <Button
                                     size="sm"
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                                    className={`${
+                                      sampleJobManager.hasApplied(job.id.toString())
+                                        ? 'bg-green-600 hover:bg-green-700 cursor-default'
+                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                    } text-white`}
                                     onClick={() => handleApply(job.id)}
+                                    disabled={sampleJobManager.hasApplied(job.id.toString())}
                                   >
-                                    Apply Now
+                                    {sampleJobManager.hasApplied(job.id.toString()) ? (
+                                      <>
+                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                        Applied
+                                      </>
+                                    ) : (
+                                      'Apply Now'
+                                    )}
                                   </Button>
                                 ) : !user ? (
                                   <Button
