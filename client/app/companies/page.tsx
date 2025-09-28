@@ -91,12 +91,15 @@ export default function CompaniesPage() {
 
   // Fetch followed companies on component mount
   const fetchFollowedCompanies = useCallback(async () => {
-    if (!user || user.userType !== 'jobseeker') return
+    if (!user) return
 
     try {
+      console.log('🔍 Fetching followed companies for user:', user.id, 'type:', user.userType)
       const response = await apiService.getFollowedCompanies()
+      console.log('🔍 Followed companies response:', response)
       if (response.success && response.data) {
         const companyIds = response.data.map((follow: any) => follow.companyId).filter(Boolean)
+        console.log('🔍 Company IDs being followed:', companyIds)
         setFollowedCompanies(new Set(companyIds))
       }
     } catch (error) {
@@ -113,6 +116,10 @@ export default function CompaniesPage() {
 
     if (loadingFollow.has(companyId)) return // Prevent multiple clicks
 
+    console.log('🔍 Toggling follow for company:', companyId)
+    console.log('🔍 Current followed companies:', Array.from(followedCompanies))
+    console.log('🔍 Is currently following:', followedCompanies.has(companyId))
+
     setLoadingFollow(prev => new Set([...prev, companyId]))
 
     try {
@@ -120,11 +127,14 @@ export default function CompaniesPage() {
       
       if (isFollowing) {
         // Unfollow company
+        console.log('🔍 Unfollowing company:', companyId)
         const response = await apiService.unfollowCompany(companyId)
+        console.log('🔍 Unfollow response:', response)
         if (response.success) {
           setFollowedCompanies(prev => {
             const newSet = new Set(prev)
             newSet.delete(companyId)
+            console.log('🔍 Updated followed companies after unfollow:', Array.from(newSet))
             return newSet
           })
           toast.success('Successfully unfollowed company')
@@ -133,9 +143,15 @@ export default function CompaniesPage() {
         }
       } else {
         // Follow company
+        console.log('🔍 Following company:', companyId)
         const response = await apiService.followCompany(companyId)
+        console.log('🔍 Follow response:', response)
         if (response.success) {
-          setFollowedCompanies(prev => new Set([...prev, companyId]))
+          setFollowedCompanies(prev => {
+            const newSet = new Set([...prev, companyId])
+            console.log('🔍 Updated followed companies after follow:', Array.from(newSet))
+            return newSet
+          })
           toast.success('Successfully followed company')
         } else {
           toast.error(response.message || 'Failed to follow company')
@@ -238,6 +254,13 @@ export default function CompaniesPage() {
     return () => controller.abort()
   // Re-fetch on search change only; other filters are client-side
   }, [filters.search])
+
+  // Fetch followed companies when user changes
+  useEffect(() => {
+    if (user) {
+      fetchFollowedCompanies()
+    }
+  }, [user, fetchFollowedCompanies])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -1465,6 +1488,12 @@ export default function CompaniesPage() {
                                         ? "Following" 
                                         : "Follow"
                                     }
+                                    {/* Debug info */}
+                                    {process.env.NODE_ENV === 'development' && (
+                                      <span className="text-xs text-gray-500 ml-1">
+                                        ({followedCompanies.has(company.id) ? 'F' : 'N'})
+                                      </span>
+                                    )}
                                   </Button>
                                   <Link href={`/companies/${company.id}`}>
                                     <Button
