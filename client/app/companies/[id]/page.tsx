@@ -258,6 +258,10 @@ function CompanyDetailPage() {
   // Add error boundary for the entire component
   const [hasRenderError, setHasRenderError] = useState(false)
 
+  // Filter state for jobs
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([])
+
   // Initialize follow state from localStorage
   // Fetch follow status from API
   const fetchFollowStatus = useCallback(async () => {
@@ -647,6 +651,70 @@ function CompanyDetailPage() {
   }
 
   const departments = getDepartments()
+
+  // Filter jobs based on active filter
+  const filterJobs = useCallback(() => {
+    if (!companyJobs || companyJobs.length === 0) {
+      setFilteredJobs([])
+      return
+    }
+
+    let filtered = [...companyJobs]
+
+    switch (activeFilter) {
+      case 'department':
+        // Group by department
+        const departmentGroups = filtered.reduce((acc, job) => {
+          const dept = job.department || job.category || 'Other'
+          if (!acc[dept]) acc[dept] = []
+          acc[dept].push(job)
+          return acc
+        }, {} as Record<string, Job[]>)
+        
+        // Flatten and sort by department
+        filtered = Object.values(departmentGroups).flat()
+        break
+      
+      case 'location':
+        // Group by location
+        const locationGroups = filtered.reduce((acc, job) => {
+          const location = job.location || (job as any).city || 'Remote'
+          if (!acc[location]) acc[location] = []
+          acc[location].push(job)
+          return acc
+        }, {} as Record<string, Job[]>)
+        
+        filtered = Object.values(locationGroups).flat()
+        break
+      
+      case 'experience':
+        // Sort by experience level
+        filtered = filtered.sort((a, b) => {
+          const getExperienceLevel = (job: Job) => {
+            const level = (job as any).experienceLevel || (job as any).experience || 'entry'
+            if (level === 'entry') return 1
+            if (level === 'mid') return 2
+            if (level === 'senior') return 3
+            if (level === 'executive') return 4
+            return 0
+          }
+          return getExperienceLevel(a) - getExperienceLevel(b)
+        })
+        break
+      
+      case 'all':
+      default:
+        // Show all jobs
+        break
+    }
+
+    setFilteredJobs(filtered)
+  }, [companyJobs, activeFilter])
+
+  // Update filtered jobs when companyJobs or activeFilter changes
+  useEffect(() => {
+    filterJobs()
+  }, [filterJobs])
 
   // Use companyJobs state from API
 
@@ -1061,30 +1129,50 @@ function CompanyDetailPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {safeJobs.length} job openings at {company.name}
+                  {activeFilter === 'all' ? safeJobs.length : filteredJobs.length} job openings at {company.name}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">Departments hiring at {company.name}</p>
               </div>
               <Badge
                 className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
               >
-                {safeJobs.length} Active Jobs
+                {activeFilter === 'all' ? safeJobs.length : filteredJobs.length} Active Jobs
               </Badge>
             </div>
 
-            {/* Department Filters */}
+            {/* Job Filters */}
             <div className="flex flex-wrap gap-2 mb-6">
-              <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-600">
-                Quantity category (4)
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={activeFilter === 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                onClick={() => setActiveFilter('all')}
+              >
+                All Jobs ({companyJobs.length})
               </Button>
-              <Button variant="outline" size="sm">
-                Department (1)
+              <Button 
+                variant="outline" 
+                size="sm"
+                className={activeFilter === 'department' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                onClick={() => setActiveFilter('department')}
+              >
+                Department ({new Set(companyJobs.map(job => job.department || job.category || 'Other')).size})
               </Button>
-              <Button variant="outline" size="sm">
-                Location (1)
+              <Button 
+                variant="outline" 
+                size="sm"
+                className={activeFilter === 'location' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                onClick={() => setActiveFilter('location')}
+              >
+                Location ({new Set(companyJobs.map(job => job.location || (job as any).city || 'Remote')).size})
               </Button>
-              <Button variant="outline" size="sm">
-                Experience (1)
+              <Button 
+                variant="outline" 
+                size="sm"
+                className={activeFilter === 'experience' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                onClick={() => setActiveFilter('experience')}
+              >
+                Experience ({new Set(companyJobs.map(job => (job as any).experienceLevel || (job as any).experience || 'entry')).size})
               </Button>
             </div>
 
@@ -1103,8 +1191,8 @@ function CompanyDetailPage() {
                     </div>
                   ))}
                 </div>
-              ) : safeJobs.length > 0 ? (
-                safeJobs.map((job, index) => (
+              ) : filteredJobs.length > 0 ? (
+                filteredJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -1127,19 +1215,19 @@ function CompanyDetailPage() {
                                 <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-400 mb-4">
                                   <div className="flex items-center">
                                     <MapPin className="w-4 h-4 mr-1" />
-                                    {job.location || job.city || job.state || job.country || '—'}
+                                    {job.location || (job as any).city || (job as any).state || (job as any).country || '—'}
                                   </div>
                                   <div className="flex items-center">
                                     <Briefcase className="w-4 h-4 mr-1" />
-                                    {job.experience || job.experienceLevel || '—'}
+                                    {(job as any).experience || (job as any).experienceLevel || '—'}
                                   </div>
                                   <div className="flex items-center">
                                     <IndianRupee className="w-4 h-4 mr-1" />
-                                    {job.salary || (job.salaryMin && job.salaryMax ? `${job.salaryMin}-${job.salaryMax}` : '—')}
+                                    {(job as any).salary || (job.salaryMin && job.salaryMax ? `${job.salaryMin}-${job.salaryMax}` : '—')}
                                   </div>
                                   <div className="flex items-center">
                                     <Clock className="w-4 h-4 mr-1" />
-                                    {job.type || job.jobType || '—'}
+                                    {(job as any).type || (job as any).jobType || '—'}
                                   </div>
                                 </div>
                               </div>
@@ -1148,16 +1236,16 @@ function CompanyDetailPage() {
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    handleApply(job.id)
+                                    handleApply(Number(job.id))
                                   }}
                                   className={`h-10 px-6 ${
-                                    hasAppliedToJob(job.id)
+                                    hasAppliedToJob(Number(job.id))
                                       ? 'bg-green-600 hover:bg-green-700 cursor-default'
                                       : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
                                   }`}
-                                  disabled={hasAppliedToJob(job.id)}
+                                  disabled={hasAppliedToJob(Number(job.id))}
                                 >
-                                  {hasAppliedToJob(job.id) ? (
+                                  {hasAppliedToJob(Number(job.id)) ? (
                                     <>
                                       <CheckCircle className="w-4 h-4 mr-2" />
                                       Applied
@@ -1201,10 +1289,10 @@ function CompanyDetailPage() {
 
                             <div className="flex flex-wrap gap-2 mb-4">
                               {(() => {
-                                const reqs = Array.isArray(job.requirements)
-                                  ? job.requirements
-                                  : typeof job.requirements === 'string'
-                                    ? job.requirements.split(/[,\n\r]+/).map((s: string) => s.trim()).filter(Boolean)
+                                const reqs = Array.isArray((job as any).requirements)
+                                  ? (job as any).requirements
+                                  : typeof (job as any).requirements === 'string'
+                                    ? (job as any).requirements.split(/[,\n\r]+/).map((s: string) => s.trim()).filter(Boolean)
                                     : []
                                 return reqs.map((requirement: any, reqIndex: number) => (
                                   <Badge key={reqIndex} variant="secondary" className="text-xs">
@@ -1218,10 +1306,10 @@ function CompanyDetailPage() {
                               <div className="flex items-center space-x-4 text-sm text-slate-500">
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
-                                  {job.postedDate || job.createdAt || ''}
+                                  {(job as any).postedDate || (job as any).createdAt || ''}
                                 </div>
                                 <Badge variant="outline" className="text-xs">
-                                  {job.urgent ? "Urgent" : "Regular"}
+                                  {(job as any).urgent ? "Urgent" : "Regular"}
                                 </Badge>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -1232,14 +1320,14 @@ function CompanyDetailPage() {
                                   <Button
                                     size="sm"
                                     className={`${
-                                      hasAppliedToJob(job.id)
+                                      hasAppliedToJob(Number(job.id))
                                         ? 'bg-green-600 hover:bg-green-700 cursor-default'
                                         : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                                     } text-white`}
-                                    onClick={() => handleApply(job.id)}
-                                    disabled={hasAppliedToJob(job.id)}
+                                    onClick={() => handleApply(Number(job.id))}
+                                    disabled={hasAppliedToJob(Number(job.id))}
                                   >
-                                    {hasAppliedToJob(job.id) ? (
+                                    {hasAppliedToJob(Number(job.id)) ? (
                                       <>
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                         Applied
@@ -1271,8 +1359,15 @@ function CompanyDetailPage() {
                   <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
                     <Briefcase className="w-8 h-8 text-slate-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Open Positions</h3>
-                  <p className="text-slate-600 dark:text-slate-300 mb-4">{jobsError || "This company doesn't have any open positions at the moment."}</p>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    {activeFilter === 'all' ? 'No Open Positions' : 'No jobs found'}
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300 mb-4">
+                    {jobsError || (activeFilter === 'all' 
+                      ? "This company doesn't have any open positions at the moment."
+                      : `No jobs found for the selected ${activeFilter} filter.`
+                    )}
+                  </p>
                   <Button variant="outline" onClick={() => window.location.reload()}>
                     Check Again
                   </Button>
