@@ -787,13 +787,18 @@ class ApiService {
   }
 
   // Companies list and join
-  async listCompanies(params?: { search?: string; limit?: number; offset?: number }): Promise<ApiResponse<any[]>> {
+  async listCompanies(params?: { search?: string; limit?: number; offset?: number; _t?: number }): Promise<ApiResponse<any[]>> {
     const sp = new URLSearchParams();
     if (params?.search) sp.append('search', params.search);
     if (params?.limit) sp.append('limit', String(params.limit));
     if (params?.offset) sp.append('offset', String(params.offset));
+    if (params?._t) sp.append('_t', String(params._t));
     const response = await fetch(`${API_BASE_URL}/companies${sp.toString() ? `?${sp.toString()}` : ''}`, {
-      headers: this.getAuthHeaders(),
+      headers: {
+        ...this.getAuthHeaders(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
     });
     return this.handleResponse<any[]>(response);
   }

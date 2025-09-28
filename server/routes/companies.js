@@ -71,10 +71,13 @@ router.get('/', async (req, res) => {
         console.warn('Could not compute activeJobsCount for company', company.id, e?.message);
       }
 
+      const profileViews = Math.floor(Math.random() * 50) + 1;
+      console.log(`🔍 Company ${company.name}: activeJobs=${activeJobsCount}, profileViews=${profileViews}`);
+
       return {
         ...company.toJSON(),
         activeJobsCount,
-        profileViews: Math.floor(Math.random() * 50) + 1 // Generate some realistic view counts for demo
+        profileViews // Generate some realistic view counts for demo
       };
     }));
 
