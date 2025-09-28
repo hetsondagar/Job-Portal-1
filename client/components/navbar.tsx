@@ -205,6 +205,11 @@ export function Navbar() {
                     Sign In
                   </Button>
                 </Link>
+                <Link href="/employer-login">
+                  <Button variant="ghost" size="sm" className="text-slate-700 dark:text-slate-300">
+                    Employer Login
+                  </Button>
+                </Link>
                 <Link href="/register">
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                     Sign Up
@@ -273,6 +278,11 @@ export function Navbar() {
                     <Link href="/login">
                       <Button variant="outline" className="w-full">
                         Sign In
+                      </Button>
+                    </Link>
+                    <Link href="/employer-login">
+                      <Button variant="outline" className="w-full">
+                        Employer Login
                       </Button>
                     </Link>
                     <Link href="/register">
