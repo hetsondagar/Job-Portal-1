@@ -85,80 +85,67 @@ export default function CompaniesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState("rating")
   
-  // Follow status management
+  // Follow status management - SIMPLIFIED AND FIXED
   const [followedCompanies, setFollowedCompanies] = useState<Set<string>>(new Set())
   const [loadingFollow, setLoadingFollow] = useState<Set<string>>(new Set())
 
-  // Fetch followed companies on component mount
+  // Fetch followed companies - SIMPLIFIED
   const fetchFollowedCompanies = useCallback(async () => {
     if (!user) return
 
     try {
-      console.log('🔍 Fetching followed companies for user:', user.id, 'type:', user.userType)
       const response = await apiService.getFollowedCompanies()
-      console.log('🔍 Followed companies response:', response)
       if (response.success && response.data) {
         const companyIds = response.data.map((follow: any) => follow.companyId).filter(Boolean)
-        console.log('🔍 Company IDs being followed:', companyIds)
         setFollowedCompanies(new Set(companyIds))
+        console.log('✅ Loaded followed companies:', Array.from(companyIds))
       }
     } catch (error) {
-      console.error('Error fetching followed companies:', error)
+      console.error('❌ Error fetching followed companies:', error)
     }
   }, [user])
 
-  // Handle follow/unfollow toggle
+  // Handle follow/unfollow toggle - COMPLETELY REWRITTEN
   const handleFollowToggle = useCallback(async (companyId: string) => {
     if (!user) {
       router.push('/login')
       return
     }
 
-    if (loadingFollow.has(companyId)) return // Prevent multiple clicks
-
-    console.log('🔍 Toggling follow for company:', companyId)
-    console.log('🔍 Current followed companies:', Array.from(followedCompanies))
-    console.log('🔍 Is currently following:', followedCompanies.has(companyId))
+    if (loadingFollow.has(companyId)) return
 
     setLoadingFollow(prev => new Set([...prev, companyId]))
 
     try {
-      const isFollowing = followedCompanies.has(companyId)
+      const isCurrentlyFollowing = followedCompanies.has(companyId)
       
-      if (isFollowing) {
-        // Unfollow company
-        console.log('🔍 Unfollowing company:', companyId)
+      if (isCurrentlyFollowing) {
+        // UNFOLLOW
         const response = await apiService.unfollowCompany(companyId)
-        console.log('🔍 Unfollow response:', response)
         if (response.success) {
           setFollowedCompanies(prev => {
             const newSet = new Set(prev)
             newSet.delete(companyId)
-            console.log('🔍 Updated followed companies after unfollow:', Array.from(newSet))
             return newSet
           })
-          toast.success('Successfully unfollowed company')
+          toast.success('Unfollowed company')
+          console.log('✅ Unfollowed company:', companyId)
         } else {
-          toast.error(response.message || 'Failed to unfollow company')
+          toast.error('Failed to unfollow company')
         }
       } else {
-        // Follow company
-        console.log('🔍 Following company:', companyId)
+        // FOLLOW
         const response = await apiService.followCompany(companyId)
-        console.log('🔍 Follow response:', response)
         if (response.success) {
-          setFollowedCompanies(prev => {
-            const newSet = new Set([...prev, companyId])
-            console.log('🔍 Updated followed companies after follow:', Array.from(newSet))
-            return newSet
-          })
-          toast.success('Successfully followed company')
+          setFollowedCompanies(prev => new Set([...prev, companyId]))
+          toast.success('Following company')
+          console.log('✅ Followed company:', companyId)
         } else {
-          toast.error(response.message || 'Failed to follow company')
+          toast.error('Failed to follow company')
         }
       }
     } catch (error) {
-      console.error('Error toggling follow:', error)
+      console.error('❌ Error toggling follow:', error)
       toast.error('Failed to update follow status')
     } finally {
       setLoadingFollow(prev => {
@@ -1488,12 +1475,6 @@ export default function CompaniesPage() {
                                         ? "Following" 
                                         : "Follow"
                                     }
-                                    {/* Debug info */}
-                                    {process.env.NODE_ENV === 'development' && (
-                                      <span className="text-xs text-gray-500 ml-1">
-                                        ({followedCompanies.has(company.id) ? 'F' : 'N'})
-                                      </span>
-                                    )}
                                   </Button>
                                   <Link href={`/companies/${company.id}`}>
                                     <Button

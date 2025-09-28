@@ -293,26 +293,28 @@ function CompanyDetailPage() {
 
     try {
       if (isFollowing) {
-        // Unfollow company
+        // UNFOLLOW
         const response = await apiService.unfollowCompany(companyId)
         if (response.success) {
           setIsFollowing(false)
-          toast.success('Successfully unfollowed company')
+          toast.success('Unfollowed company')
+          console.log('✅ Unfollowed company:', companyId)
         } else {
-          toast.error(response.message || 'Failed to unfollow company')
+          toast.error('Failed to unfollow company')
         }
       } else {
-        // Follow company
+        // FOLLOW
         const response = await apiService.followCompany(companyId)
         if (response.success) {
           setIsFollowing(true)
-          toast.success('Successfully followed company')
+          toast.success('Following company')
+          console.log('✅ Followed company:', companyId)
         } else {
-          toast.error(response.message || 'Failed to follow company')
+          toast.error('Failed to follow company')
         }
       }
     } catch (error) {
-      console.error('Error toggling follow:', error)
+      console.error('❌ Error toggling follow:', error)
       toast.error('Failed to update follow status')
     }
   }, [companyId, isFollowing, isAuthenticated])
