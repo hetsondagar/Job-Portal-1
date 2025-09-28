@@ -319,13 +319,63 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/jobs', async (req, res) => {
   try {
     const { id } = req.params;
+    const { department, location, experience, salary } = req.query;
     const Job = require('../models/Job');
+    const { Op } = require('sequelize');
+    
+    // Build where clause with filters
+    const where = { 
+      companyId: id,
+      status: 'active'
+    };
+
+    // Add department filter
+    if (department && department !== 'all') {
+      where[Op.or] = [
+        { department: { [Op.iLike]: `%${department}%` } },
+        { category: { [Op.iLike]: `%${department}%` } }
+      ];
+    }
+
+    // Add location filter
+    if (location && location !== 'all') {
+      where[Op.or] = [
+        ...(where[Op.or] || []),
+        { location: { [Op.iLike]: `%${location}%` } },
+        { city: { [Op.iLike]: `%${location}%` } },
+        { state: { [Op.iLike]: `%${location}%` } },
+        { country: { [Op.iLike]: `%${location}%` } }
+      ];
+    }
+
+    // Add experience filter
+    if (experience && experience !== 'all') {
+      const experienceMap = {
+        'entry': { experienceMin: { [Op.lte]: 1 } },
+        'mid': { experienceMin: { [Op.gte]: 2, [Op.lte]: 5 } },
+        'senior': { experienceMin: { [Op.gte]: 6 } }
+      };
+      
+      if (experienceMap[experience]) {
+        Object.assign(where, experienceMap[experience]);
+      }
+    }
+
+    // Add salary filter
+    if (salary && salary !== 'all') {
+      const salaryMap = {
+        'low': { salaryMin: { [Op.lte]: 500000 } },
+        'medium': { salaryMin: { [Op.gte]: 500001, [Op.lte]: 1500000 } },
+        'high': { salaryMin: { [Op.gte]: 1500001 } }
+      };
+      
+      if (salaryMap[salary]) {
+        Object.assign(where, salaryMap[salary]);
+      }
+    }
     
     const jobs = await Job.findAll({
-      where: { 
-        companyId: id,
-        status: 'active'
-      },
+      where,
       order: [['createdAt', 'DESC']],
       attributes: [
         'id', 'title', 'location', 'jobType', 'experienceLevel', 

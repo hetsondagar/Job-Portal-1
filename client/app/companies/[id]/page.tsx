@@ -124,6 +124,15 @@ function CompanyDetailPage() {
     coverLetter: '',
     willingToRelocate: false
   })
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    department: 'all',
+    location: 'all', 
+    experience: 'all',
+    salary: 'all'
+  })
+  const [filteredJobs, setFilteredJobs] = useState<any[]>([])
 
   // Simple computed values without useMemo to avoid React error #310
   const getLocationDisplay = () => {
@@ -269,7 +278,7 @@ function CompanyDetailPage() {
     }
   }, [companyId, isValidUuid])
 
-  const fetchCompanyJobs = useCallback(async () => {
+  const fetchCompanyJobs = useCallback(async (filterParams = {}) => {
     setLoadingJobs(true)
     setJobsError("")
     try {
@@ -278,27 +287,38 @@ function CompanyDetailPage() {
         setJobsError('Invalid company id')
       } else {
         try {
-        const response = await apiService.getCompanyJobs(companyId)
-          if (response && response.success) {
-          const d: any = response.data
-          const jobs = Array.isArray(d)
-            ? d
-            : Array.isArray(d?.jobs)
-              ? d.jobs
-              : Array.isArray(d?.rows)
-                ? d.rows
-                : []
-          setCompanyJobs(jobs)
-          if (!Array.isArray(jobs)) {
-            setJobsError('Failed to parse jobs list')
-          }
-        } else {
-          setCompanyJobs([])
-            setJobsError(response?.message || 'Failed to load company jobs')
+          // Build query parameters for filters
+          const queryParams = new URLSearchParams()
+          Object.entries(filterParams).forEach(([key, value]) => {
+            if (value && value !== 'all') {
+              queryParams.append(key, String(value))
+            }
+          })
+          
+          const queryString = queryParams.toString()
+          const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/companies/${companyId}/jobs${queryString ? `?${queryString}` : ''}`
+          
+          const response = await fetch(url)
+          if (response.ok) {
+            const data = await response.json()
+            if (data && data.success) {
+              const jobs = Array.isArray(data.data) ? data.data : []
+              setCompanyJobs(jobs)
+              setFilteredJobs(jobs)
+              if (!Array.isArray(jobs)) {
+                setJobsError('Failed to parse jobs list')
+              }
+            } else {
+              setCompanyJobs([])
+              setFilteredJobs([])
+              setJobsError(data?.message || 'Failed to load company jobs')
+            }
+          } else {
+            throw new Error(`HTTP ${response.status}`)
           }
         } catch (error: any) {
           console.log('Company jobs endpoint failed:', error?.message || error)
-          // Try alternative endpoint
+          // Try alternative endpoint without filters
           try {
             const altResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/jobs/company/${companyId}`)
             if (altResponse.ok) {
@@ -306,6 +326,7 @@ function CompanyDetailPage() {
               if (altData && altData.success) {
                 const jobs = Array.isArray(altData.data) ? altData.data : []
                 setCompanyJobs(jobs)
+                setFilteredJobs(jobs)
                 return
               }
             }
@@ -313,17 +334,26 @@ function CompanyDetailPage() {
             console.log('Alternative jobs endpoint also failed:', altError)
           }
           setCompanyJobs([])
+          setFilteredJobs([])
           setJobsError('Failed to load company jobs')
         }
       }
     } catch (error) {
       console.error('Error fetching company jobs:', error)
       setCompanyJobs([])
+      setFilteredJobs([])
       setJobsError('Failed to load company jobs')
     } finally {
       setLoadingJobs(false)
     }
   }, [companyId, isValidUuid])
+
+  // Handle filter changes
+  const handleFilterChange = useCallback((filterType: string, value: string) => {
+    const newFilters = { ...filters, [filterType]: value }
+    setFilters(newFilters)
+    fetchCompanyJobs(newFilters)
+  }, [filters, fetchCompanyJobs])
 
   useEffect(() => {
     if (companyId) {
@@ -331,6 +361,11 @@ function CompanyDetailPage() {
       fetchCompanyJobs()
     }
   }, [companyId, fetchCompanyData, fetchCompanyJobs])
+
+  // Initialize filteredJobs when companyJobs changes
+  useEffect(() => {
+    setFilteredJobs(companyJobs)
+  }, [companyJobs])
 
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {
@@ -529,6 +564,32 @@ function CompanyDetailPage() {
   }
 
   const departments = getDepartments()
+
+  // Get unique filter options from jobs
+  const getFilterOptions = () => {
+    try {
+      const jobs = Array.isArray(companyJobs) ? companyJobs : []
+      
+      const departments = [...new Set(jobs.map(job => job.department || job.category).filter(Boolean))]
+      const locations = [...new Set(jobs.map(job => job.location || job.city || job.state).filter(Boolean))]
+      const experiences = [...new Set(jobs.map(job => job.experienceLevel || job.experience).filter(Boolean))]
+      
+      return {
+        departments: departments.length > 0 ? departments : ['All Departments'],
+        locations: locations.length > 0 ? locations : ['All Locations'],
+        experiences: experiences.length > 0 ? experiences : ['All Experience Levels']
+      }
+    } catch (error) {
+      console.error('Error getting filter options:', error)
+      return {
+        departments: ['All Departments'],
+        locations: ['All Locations'], 
+        experiences: ['All Experience Levels']
+      }
+    }
+  }
+
+  const filterOptions = getFilterOptions()
 
   // Use companyJobs state from API
 
@@ -939,31 +1000,130 @@ function CompanyDetailPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {safeJobs.length} job openings at {company.name}
+                  {filteredJobs.length} job openings at {company.name}
+                  {(filters.department !== 'all' || filters.location !== 'all' || filters.experience !== 'all' || filters.salary !== 'all') && (
+                    <span className="text-lg font-normal text-slate-600 dark:text-slate-400 ml-2">
+                      (filtered from {companyJobs.length} total)
+                    </span>
+                  )}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">Departments hiring at {company.name}</p>
               </div>
               <Badge
                 className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
               >
-                {safeJobs.length} Active Jobs
+                {filteredJobs.length} Active Jobs
               </Badge>
             </div>
 
             {/* Department Filters */}
             <div className="flex flex-wrap gap-2 mb-6">
-              <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-600">
-                Quantity category (4)
-              </Button>
-              <Button variant="outline" size="sm">
-                Department (1)
-              </Button>
-              <Button variant="outline" size="sm">
-                Location (1)
-              </Button>
-              <Button variant="outline" size="sm">
-                Experience (1)
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={filters.department !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                  >
+                    Department ({filterOptions.departments.length})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleFilterChange('department', 'all')}>
+                    All Departments
+                  </DropdownMenuItem>
+                  {filterOptions.departments.map((dept, index) => (
+                    <DropdownMenuItem key={index} onClick={() => handleFilterChange('department', dept)}>
+                      {dept}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className={filters.location !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                  >
+                    Location ({filterOptions.locations.length})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleFilterChange('location', 'all')}>
+                    All Locations
+                  </DropdownMenuItem>
+                  {filterOptions.locations.map((location, index) => (
+                    <DropdownMenuItem key={index} onClick={() => handleFilterChange('location', location)}>
+                      {location}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className={filters.experience !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                  >
+                    Experience ({filterOptions.experiences.length})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleFilterChange('experience', 'all')}>
+                    All Experience Levels
+                  </DropdownMenuItem>
+                  {filterOptions.experiences.map((exp, index) => (
+                    <DropdownMenuItem key={index} onClick={() => handleFilterChange('experience', exp)}>
+                      {exp}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className={filters.salary !== 'all' ? "bg-blue-50 border-blue-200 text-blue-600" : ""}
+                  >
+                    Salary (3)
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleFilterChange('salary', 'all')}>
+                    All Salary Ranges
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterChange('salary', 'low')}>
+                    Low (≤5 LPA)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterChange('salary', 'medium')}>
+                    Medium (5-15 LPA)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterChange('salary', 'high')}>
+                    High (≥15 LPA)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Clear all filters button */}
+              {(filters.department !== 'all' || filters.location !== 'all' || filters.experience !== 'all' || filters.salary !== 'all') && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setFilters({ department: 'all', location: 'all', experience: 'all', salary: 'all' })
+                    fetchCompanyJobs({})
+                  }}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  Clear Filters
+                </Button>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -981,8 +1141,8 @@ function CompanyDetailPage() {
                     </div>
                   ))}
                 </div>
-              ) : safeJobs.length > 0 ? (
-                safeJobs.map((job, index) => (
+              ) : filteredJobs.length > 0 ? (
+                filteredJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -1137,11 +1297,33 @@ function CompanyDetailPage() {
                   <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
                     <Briefcase className="w-8 h-8 text-slate-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Open Positions</h3>
-                  <p className="text-slate-600 dark:text-slate-300 mb-4">{jobsError || "This company doesn't have any open positions at the moment."}</p>
-                  <Button variant="outline" onClick={() => window.location.reload()}>
-                    Check Again
-                  </Button>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    {(filters.department !== 'all' || filters.location !== 'all' || filters.experience !== 'all' || filters.salary !== 'all') 
+                      ? 'No Jobs Match Your Filters' 
+                      : 'No Open Positions'
+                    }
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300 mb-4">
+                    {(filters.department !== 'all' || filters.location !== 'all' || filters.experience !== 'all' || filters.salary !== 'all')
+                      ? "Try adjusting your filters to see more results."
+                      : (jobsError || "This company doesn't have any open positions at the moment.")
+                    }
+                  </p>
+                  {(filters.department !== 'all' || filters.location !== 'all' || filters.experience !== 'all' || filters.salary !== 'all') ? (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setFilters({ department: 'all', location: 'all', experience: 'all', salary: 'all' })
+                        fetchCompanyJobs({})
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => window.location.reload()}>
+                      Check Again
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
