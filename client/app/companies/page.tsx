@@ -84,6 +84,74 @@ export default function CompaniesPage() {
   const [companiesPerPage, setCompaniesPerPage] = useState(20)
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState("rating")
+  
+  // Follow status management
+  const [followedCompanies, setFollowedCompanies] = useState<Set<string>>(new Set())
+  const [loadingFollow, setLoadingFollow] = useState<Set<string>>(new Set())
+
+  // Fetch followed companies on component mount
+  const fetchFollowedCompanies = useCallback(async () => {
+    if (!user || user.userType !== 'jobseeker') return
+
+    try {
+      const response = await apiService.getFollowedCompanies()
+      if (response.success && response.data) {
+        const companyIds = response.data.map((follow: any) => follow.companyId).filter(Boolean)
+        setFollowedCompanies(new Set(companyIds))
+      }
+    } catch (error) {
+      console.error('Error fetching followed companies:', error)
+    }
+  }, [user])
+
+  // Handle follow/unfollow toggle
+  const handleFollowToggle = useCallback(async (companyId: string) => {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+
+    if (loadingFollow.has(companyId)) return // Prevent multiple clicks
+
+    setLoadingFollow(prev => new Set([...prev, companyId]))
+
+    try {
+      const isFollowing = followedCompanies.has(companyId)
+      
+      if (isFollowing) {
+        // Unfollow company
+        const response = await apiService.unfollowCompany(companyId)
+        if (response.success) {
+          setFollowedCompanies(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(companyId)
+            return newSet
+          })
+          toast.success('Successfully unfollowed company')
+        } else {
+          toast.error(response.message || 'Failed to unfollow company')
+        }
+      } else {
+        // Follow company
+        const response = await apiService.followCompany(companyId)
+        if (response.success) {
+          setFollowedCompanies(prev => new Set([...prev, companyId]))
+          toast.success('Successfully followed company')
+        } else {
+          toast.error(response.message || 'Failed to follow company')
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error)
+      toast.error('Failed to update follow status')
+    } finally {
+      setLoadingFollow(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(companyId)
+        return newSet
+      })
+    }
+  }, [user, followedCompanies, loadingFollow, router])
   const [isFeaturedFilter, setIsFeaturedFilter] = useState(false)
   const [badgeDisplay, setBadgeDisplay] = useState<'featured' | 'urgent'>('featured')
   const [isStickyVisible, setIsStickyVisible] = useState(false)
@@ -153,6 +221,8 @@ export default function CompaniesPage() {
         if (resp.success && Array.isArray(resp.data)) {
           console.log('🔍 Companies API response:', resp.data.slice(0, 2)) // Log first 2 companies
           setApiCompanies(resp.data.filter((c: any) => c?.region !== 'gulf'))
+          // Fetch followed companies after loading companies
+          fetchFollowedCompanies()
         } else {
           setApiCompanies([])
           setLoadError(resp.message || 'Failed to load companies')
@@ -1376,29 +1446,25 @@ export default function CompaniesPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full sm:w-auto bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-600 transition-all duration-300 text-xs sm:text-sm"
-                                    onClick={async (e) => {
+                                    className={`w-full sm:w-auto backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm ${
+                                      followedCompanies.has(company.id) 
+                                        ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" 
+                                        : "bg-white/50 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-600"
+                                    }`}
+                                    onClick={(e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
-                                      if (!user) {
-                                        router.push('/login')
-                                        return
-                                      }
-                                      try {
-                                        const response = await apiService.followCompany(company.id)
-                                        if (response.success) {
-                                          toast.success('Successfully followed company')
-                                        } else {
-                                          toast.error(response.message || 'Failed to follow company')
-                                        }
-                                      } catch (error) {
-                                        console.error('Error following company:', error)
-                                        toast.error('Failed to follow company')
-                                      }
+                                      handleFollowToggle(company.id)
                                     }}
+                                    disabled={loadingFollow.has(company.id)}
                                   >
-                                    <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                    Follow
+                                    <Heart className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 ${followedCompanies.has(company.id) ? "fill-current" : ""}`} />
+                                    {loadingFollow.has(company.id) 
+                                      ? "..." 
+                                      : followedCompanies.has(company.id) 
+                                        ? "Following" 
+                                        : "Follow"
+                                    }
                                   </Button>
                                   <Link href={`/companies/${company.id}`}>
                                     <Button
