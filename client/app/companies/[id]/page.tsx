@@ -158,18 +158,18 @@ function CompanyDetailPage() {
     if (!companyId) return
 
     try {
-      // Get the company's employer dashboard stats for accurate data
-      const statsResponse = await apiService.getEmployerDashboardStats()
-      if (statsResponse.success && statsResponse.data) {
-        setCompanyStats({
-          profileViews: statsResponse.data.profileViews || 0,
-          activeJobs: statsResponse.data.activeJobs || 0
-        })
-        console.log('✅ Company stats loaded:', {
-          profileViews: statsResponse.data.profileViews,
-          activeJobs: statsResponse.data.activeJobs
-        })
-      }
+      // For public company pages, we'll use the company data and count active jobs
+      // The company data should already have accurate profile views
+      const activeJobsCount = companyJobs.filter(job => job.status === 'active').length
+      
+      setCompanyStats({
+        profileViews: company?.profileViews || 0,
+        activeJobs: activeJobsCount
+      })
+      console.log('✅ Company stats loaded:', {
+        profileViews: company?.profileViews || 0,
+        activeJobs: activeJobsCount
+      })
     } catch (error) {
       console.error('Error fetching company stats:', error)
       // Fallback to company data if API fails
@@ -178,7 +178,7 @@ function CompanyDetailPage() {
         activeJobs: company?.activeJobsCount || companyJobs.length
       })
     }
-  }, [companyId, company, companyJobs.length])
+  }, [companyId, company, companyJobs])
 
   // Simple computed values without useMemo to avoid React error #310
   const getLocationDisplay = () => {
@@ -385,9 +385,15 @@ function CompanyDetailPage() {
       fetchCompanyData()
       fetchCompanyJobs()
       fetchAppliedJobs()
-      fetchCompanyStats() // Fetch accurate company stats
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs, fetchCompanyStats])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs])
+
+  // Fetch company stats after company data and jobs are loaded
+  useEffect(() => {
+    if (company && companyJobs.length >= 0) {
+      fetchCompanyStats()
+    }
+  }, [company, companyJobs, fetchCompanyStats])
 
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {
