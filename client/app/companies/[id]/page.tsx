@@ -124,6 +124,30 @@ function CompanyDetailPage() {
     coverLetter: '',
     willingToRelocate: false
   })
+  const [appliedJobs, setAppliedJobs] = useState<Set<number>>(new Set())
+
+  // Function to check if user has applied to a job
+  const hasAppliedToJob = (jobId: number): boolean => {
+    // Check both sample job manager and real applied jobs
+    return sampleJobManager.hasApplied(jobId.toString()) || appliedJobs.has(jobId)
+  }
+
+  // Function to fetch applied jobs from API
+  const fetchAppliedJobs = useCallback(async () => {
+    if (!user || user.userType !== 'jobseeker') {
+      return
+    }
+
+    try {
+      const response = await apiService.getAppliedJobs()
+      if (response.success && response.data) {
+        const jobIds = response.data.map((app: any) => app.jobId).filter(Boolean)
+        setAppliedJobs(new Set(jobIds))
+      }
+    } catch (error) {
+      console.error('Error fetching applied jobs:', error)
+    }
+  }, [user])
 
   // Simple computed values without useMemo to avoid React error #310
   const getLocationDisplay = () => {
@@ -329,8 +353,9 @@ function CompanyDetailPage() {
     if (companyId) {
       fetchCompanyData()
       fetchCompanyJobs()
+      fetchAppliedJobs()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs])
 
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {
@@ -375,6 +400,8 @@ function CompanyDetailPage() {
           coverLetter: '',
           willingToRelocate: false
         })
+        // Update applied jobs state
+        setAppliedJobs(prev => new Set([...prev, selectedJob.id]))
         // Refresh jobs to update application status
         fetchCompanyJobs()
       } else {
@@ -1110,14 +1137,14 @@ function CompanyDetailPage() {
                                   <Button
                                     size="sm"
                                     className={`${
-                                      sampleJobManager.hasApplied(job.id.toString())
+                                      hasAppliedToJob(job.id)
                                         ? 'bg-green-600 hover:bg-green-700 cursor-default'
                                         : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                                     } text-white`}
                                     onClick={() => handleApply(job.id)}
-                                    disabled={sampleJobManager.hasApplied(job.id.toString())}
+                                    disabled={hasAppliedToJob(job.id)}
                                   >
-                                    {sampleJobManager.hasApplied(job.id.toString()) ? (
+                                    {hasAppliedToJob(job.id) ? (
                                       <>
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                         Applied

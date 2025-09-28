@@ -1165,6 +1165,11 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  // Get applied jobs (alias for getApplications)
+  async getAppliedJobs(): Promise<ApiResponse<any[]>> {
+    return this.getApplications();
+  }
+
   // Debug endpoint to check all applications
   async debugApplications(): Promise<ApiResponse<any[]>> {
     try {
