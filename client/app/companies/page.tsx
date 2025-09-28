@@ -142,7 +142,7 @@ export default function CompaniesPage() {
           search: filters.search || undefined,
           limit: 100,
           offset: 0,
-          _t: Date.now() // Cache busting parameter
+          timestamp: Date.now() // Cache busting parameter
         })
         if (resp.success && Array.isArray(resp.data)) {
           console.log('🔍 Companies API response:', resp.data.slice(0, 2)) // Log first 2 companies
