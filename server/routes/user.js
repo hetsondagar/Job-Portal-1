@@ -9,6 +9,7 @@ const Resume = require('../models/Resume');
 const CoverLetter = require('../models/CoverLetter');
 const { sequelize } = require('../config/sequelize');
 const { Op } = require('sequelize');
+const { findResumeFile, handleMissingFile } = require('../utils/fileUtils');
 
 const router = express.Router();
 
@@ -3077,15 +3078,7 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      // Fallback: try redirecting to the stored public path if present
-      if (metadata.filePath) {
-        return res.redirect(metadata.filePath);
-      }
-      return res.status(404).json({
-        success: false,
-        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
-        code: 'FILE_NOT_FOUND'
-      });
+      return handleMissingFile(res, filename, metadata);
     }
 
     // Increment download count
@@ -3936,11 +3929,7 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      return res.status(404).json({
-        success: false,
-        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
-        code: 'FILE_NOT_FOUND'
-      });
+      return handleMissingFile(res, filename, metadata);
     }
 
     console.log('✅ File exists, proceeding with download');

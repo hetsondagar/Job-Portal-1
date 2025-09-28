@@ -15,6 +15,7 @@ const Company = require('../models/Company');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const { Resume } = require('../config/index');
+const { findResumeFile, handleMissingFile } = require('../utils/fileUtils');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -1926,67 +1927,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       });
     }
     
-    // Try multiple possible file paths
-    let filePath;
-    const possiblePaths = [
-      // Production paths (Render.com)
-      path.join('/opt/render/project/src/uploads/resumes', filename),
-      path.join('/opt/render/project/src/server/uploads/resumes', filename),
-      path.join('/tmp/uploads/resumes', filename),
-      // Development paths
-      path.join(__dirname, '../uploads/resumes', filename),
-      path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
-      path.join(process.cwd(), 'uploads', 'resumes', filename),
-      path.join('/tmp', 'uploads', 'resumes', filename),
-      path.join('/var', 'tmp', 'uploads', 'resumes', filename),
-      // Metadata-based paths
-      metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
-      metadata.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
-      // Direct metadata filePath
-      metadata.filePath ? metadata.filePath : null
-    ].filter(Boolean);
-
-    console.log('🔍 Trying possible file paths:', possiblePaths);
-    
-    // Find the first existing file
-    filePath = possiblePaths.find(p => fs.existsSync(p));
+    // Use utility function to find the file
+    const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
-      console.log('❌ File does not exist in any of the expected locations');
-      console.log('🔍 Checked paths:', possiblePaths);
-      // Fallback: redirect to stored public path if present
-      if (metadata.filePath) {
-        return res.redirect(metadata.filePath);
-      }
-      // Try to find the file by searching common directories
-      const searchDirs = [
-        path.join(__dirname, '../uploads'),
-        path.join(process.cwd(), 'uploads'),
-        path.join(process.cwd(), 'server', 'uploads'),
-        '/tmp/uploads',
-        '/var/tmp/uploads'
-      ];
-      for (const searchDir of searchDirs) {
-        try {
-          if (fs.existsSync(searchDir)) {
-            const files = fs.readdirSync(searchDir, { recursive: true });
-            const found = files.find(f => f.includes(filename));
-            if (found) {
-              filePath = path.join(searchDir, found);
-              break;
-            }
-          }
-        } catch (error) {
-          console.log(`🔍 Could not search in ${searchDir}:`, error.message);
-        }
-      }
-      if (!filePath) {
-        return res.status(404).json({
-          success: false,
-          message: 'Resume file not found on server. The file may have been lost during server restart. Please ask the candidate to re-upload their resume.',
-          code: 'FILE_NOT_FOUND'
-        });
-      }
+      return handleMissingFile(res, filename, metadata);
     }
     
     console.log('✅ File found at:', filePath);
