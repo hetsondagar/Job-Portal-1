@@ -108,6 +108,7 @@ function CompanyDetailPage() {
   const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyId)
   const [isFollowing, setIsFollowing] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [company, setCompany] = useState<any>(null)
   const [companyJobs, setCompanyJobs] = useState<any[]>([])
   const [loadingCompany, setLoadingCompany] = useState(true)
@@ -260,7 +261,7 @@ function CompanyDetailPage() {
   // Initialize follow state from localStorage
   // Fetch follow status from API
   const fetchFollowStatus = useCallback(async () => {
-    if (!user || !companyId) return
+    if (!isAuthenticated || !companyId) return
 
     try {
       const response = await apiService.getCompanyFollowStatus(companyId)
@@ -270,7 +271,7 @@ function CompanyDetailPage() {
     } catch (error) {
       console.error('Error fetching follow status:', error)
     }
-  }, [companyId, user])
+  }, [companyId, isAuthenticated])
 
   // Check follow status from localStorage on mount (fallback)
   useEffect(() => {
@@ -283,7 +284,7 @@ function CompanyDetailPage() {
   }, [companyId])
 
   const toggleFollow = useCallback(async () => {
-    if (!user) {
+    if (!isAuthenticated) {
       setShowAuthDialog(true)
       return
     }
@@ -316,7 +317,7 @@ function CompanyDetailPage() {
       console.error('❌ Error toggling follow:', error)
       toast.error('Failed to update follow status')
     }
-  }, [companyId, isFollowing, user])
+  }, [companyId, isFollowing, isAuthenticated])
 
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
@@ -1165,7 +1166,7 @@ function CompanyDetailPage() {
                                     'Apply now'
                                   )}
                                 </Button>
-                                {!user && (
+                                {!isAuthenticated && (
                                   <div className="flex space-x-2">
                                     <Button
                                       variant="outline"
