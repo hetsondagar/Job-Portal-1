@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
     }
     const companies = await Company.findAll({
       where,
-      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region', 'profileViews', 'views'],
+      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region'],
       order: [['name', 'ASC']],
       limit: Math.min(parseInt(limit, 10) || 20, 100),
       offset: parseInt(offset, 10) || 0
@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
       return {
         ...company.toJSON(),
         activeJobsCount,
-        profileViews: company.profileViews || company.views || 0
+        profileViews: 0 // Default value since profileViews column doesn't exist yet
       };
     }));
 
@@ -320,7 +320,7 @@ router.get('/:id', async (req, res) => {
         country: company.country,
         // Extras to improve frontend display
         activeJobsCount,
-        profileViews: company.profileViews || company.views || 0
+        profileViews: 0 // Default value since profileViews column doesn't exist yet
       }
     });
 
