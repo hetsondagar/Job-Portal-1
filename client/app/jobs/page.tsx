@@ -37,6 +37,7 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
+import { JobApplicationDialog } from "@/components/job-application-dialog"
 
 // Types for state management
 interface FilterState {
@@ -90,6 +91,8 @@ export default function JobsPage() {
   const [isStickyVisible, setIsStickyVisible] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [jobsLoading, setJobsLoading] = useState(true)
+  const [showApplicationDialog, setShowApplicationDialog] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -282,47 +285,24 @@ export default function JobsPage() {
       return
     }
 
-    try {
-      console.log(`Applying for job ${jobId}...`)
-      
-      // Find the job data
-      const job = jobs.find(j => j.id === jobId)
-      if (!job) {
-        toast.error('Job not found')
-        return
-      }
-      
-      // Submit application using the correct API endpoint
-      const response = await apiService.applyJob(jobId, {
-        coverLetter: `I am interested in the ${job.title} position at ${job.company.name}.`,
-        expectedSalary: undefined,
-        noticePeriod: 30,
-        availableFrom: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        isWillingToRelocate: false,
-        preferredLocations: [job.location],
-        resumeId: undefined
-      })
-      
-      if (response.success) {
-        toast.success(`Application submitted successfully for ${job.title} at ${job.company.name}!`, {
-          description: 'Your application has been saved and will appear in your dashboard.',
-          duration: 5000,
-        })
-        console.log('Job application submitted:', jobId)
-        // Update applied jobs state
-        setAppliedJobs(prev => new Set([...prev, jobId]))
-        // Track applicationId for undo
-        if ((response as any).data?.applicationId) {
-          setJobIdToApplicationId(prev => ({ ...prev, [jobId]: (response as any).data.applicationId }))
-        }
-        // Force re-render to update button state
-        setJobs([...jobs])
-      } else {
-        toast.error(response.message || 'Failed to submit application. Please try again.')
-      }
-    } catch (error) {
-      console.error('Error applying for job:', error)
-      toast.error('Failed to submit application. Please try again.')
+    // Find the job data
+    const job = jobs.find(j => j.id === jobId)
+    if (!job) {
+      toast.error('Job not found')
+      return
+    }
+
+    // Show application dialog
+    setSelectedJob(job)
+    setShowApplicationDialog(true)
+  }
+
+  const handleApplicationSuccess = () => {
+    if (selectedJob) {
+      // Update applied jobs state
+      setAppliedJobs(prev => new Set([...prev, selectedJob.id]))
+      // Force re-render to update button state
+      setJobs([...jobs])
     }
   }
 
@@ -1116,6 +1096,37 @@ export default function JobsPage() {
           </div>
         </div>
       </footer>
+
+      {/* Job Application Dialog */}
+      {selectedJob && (
+        <JobApplicationDialog
+          isOpen={showApplicationDialog}
+          onClose={() => setShowApplicationDialog(false)}
+          job={selectedJob}
+          onSuccess={handleApplicationSuccess}
+          isGulfJob={false}
+        />
+      )}
+
+      {/* Auth Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign In Required</DialogTitle>
+            <DialogDescription>
+              You need to sign in to apply for jobs and access all features.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-3">
+            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => window.location.href = '/login'}>
+              Sign In
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
