@@ -55,12 +55,30 @@ router.get('/', async (req, res) => {
     }
     const companies = await Company.findAll({
       where,
-      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region'],
+      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region', 'profileViews', 'views'],
       order: [['name', 'ASC']],
       limit: Math.min(parseInt(limit, 10) || 20, 100),
       offset: parseInt(offset, 10) || 0
     });
-    return res.json({ success: true, data: companies });
+
+    // Add active jobs count for each company
+    const companiesWithStats = await Promise.all(companies.map(async (company) => {
+      let activeJobsCount = 0;
+      try {
+        const Job = require('../models/Job');
+        activeJobsCount = await Job.count({ where: { companyId: company.id, status: 'active' } });
+      } catch (e) {
+        console.warn('Could not compute activeJobsCount for company', company.id, e?.message);
+      }
+
+      return {
+        ...company.toJSON(),
+        activeJobsCount,
+        profileViews: company.profileViews || company.views || 0
+      };
+    }));
+
+    return res.json({ success: true, data: companiesWithStats });
   } catch (error) {
     console.error('List companies error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

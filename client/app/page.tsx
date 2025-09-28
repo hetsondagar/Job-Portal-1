@@ -549,7 +549,7 @@ export default function HomePage() {
                         <div className="space-y-2 mb-6">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-white/80">Open Positions</span>
-                            <span className="font-semibold text-white">{company.openings}</span>
+                            <span className="font-semibold text-white">{company.activeJobsCount || company.openings || 0}</span>
                           </div>
                         </div>
                         
@@ -636,7 +636,7 @@ export default function HomePage() {
                           </div>
                         <div className="flex items-center justify-between text-sm mb-4">
                           <span className="text-slate-600 dark:text-slate-400">{company.employees}</span>
-                          <span className="font-semibold text-slate-900 dark:text-white">{company.openings} openings</span>
+                          <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0} openings</span>
                           </div>
                         <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${getSectorColor(company.sector)} transition-all duration-300 mx-auto rounded-full`} />
                       </div>

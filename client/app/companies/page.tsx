@@ -57,6 +57,8 @@ interface Company {
   rating: number
   reviews: number
   openings: number
+  activeJobsCount?: number
+  profileViews?: number
   description: string
   founded: string
   website: string
@@ -1380,7 +1382,7 @@ export default function CompaniesPage() {
                                       className={`w-full sm:w-auto bg-gradient-to-r ${sectorColors.bg} ${sectorColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm`}
                                     >
                                       <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                      View ({company.openings})
+                                      View ({company.activeJobsCount || company.openings || 0})
                                     </Button>
                                   </Link>
                                 </div>
@@ -1434,7 +1436,7 @@ export default function CompaniesPage() {
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    {company.openings} open positions
+                                    {company.activeJobsCount || company.openings || 0} open positions
                                   </span>
                                   <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                                 </div>
