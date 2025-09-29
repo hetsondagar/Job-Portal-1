@@ -33,14 +33,14 @@ export default function GulfBookmarksPage() {
   const fetchBookmarks = async () => {
     try {
       setBookmarksLoading(true)
-      const response = await apiService.getBookmarks()
+      const response = await apiService.getGulfJobBookmarks()
       if (response.success && response.data) {
-        setBookmarks(response.data)
+        setBookmarks(response.data.bookmarks || response.data)
       } else {
         setBookmarks([])
       }
     } catch (error) {
-      console.error('Error fetching bookmarks:', error)
+      console.error('Error fetching Gulf bookmarks:', error)
       setBookmarks([])
     } finally {
       setBookmarksLoading(false)
@@ -82,15 +82,23 @@ export default function GulfBookmarksPage() {
                       <div className="font-medium truncate">{(b as any).job?.title || (b as any).jobTitle || 'Saved Job'}</div>
                       <div className="text-xs text-slate-600 truncate">{(b as any).job?.company?.name || (b as any).companyName || ''}</div>
                     </div>
-                    { (b as any).job?.id ? (
-                      <Link href={`/jobs/${(b as any).job.id}`}>
-                        <Button size="sm" variant="outline" className="border-green-600 text-green-600">View Job</Button>
-                      </Link>
-                    ) : (
-                      <Link href="/jobs">
-                        <Button size="sm" variant="outline" className="border-green-600 text-green-600">Browse Jobs</Button>
-                      </Link>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {b.priority && (
+                        <Badge variant="secondary" className="text-xs capitalize">{b.priority}</Badge>
+                      )}
+                      {b.folder && (
+                        <Badge variant="outline" className="text-xs">{b.folder}</Badge>
+                      )}
+                      { (b as any).job?.id ? (
+                        <Link href={`/gulf-jobs`}>
+                          <Button size="sm" variant="outline" className="border-green-600 text-green-600">View Job</Button>
+                        </Link>
+                      ) : (
+                        <Link href="/gulf-jobs">
+                          <Button size="sm" variant="outline" className="border-green-600 text-green-600">Browse Jobs</Button>
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
