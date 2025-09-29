@@ -477,7 +477,7 @@ class DashboardService {
         lastActivityDate: new Date()
       });
 
-      // Record analytics event
+      // Record analytics event (avoid RETURNING to handle legacy schemas without certain columns)
       await Analytics.create({
         userId,
         eventType: normalizedType,
@@ -486,7 +486,7 @@ class DashboardService {
           ...metadata,
           timestamp: new Date()
         }
-      });
+      }, { returning: false });
 
       return true;
     } catch (error) {
