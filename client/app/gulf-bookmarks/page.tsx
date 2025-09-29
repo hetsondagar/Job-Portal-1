@@ -33,14 +33,14 @@ export default function GulfBookmarksPage() {
   const fetchBookmarks = async () => {
     try {
       setBookmarksLoading(true)
-      const response = await apiService.getGulfJobBookmarks()
+      const response = await apiService.getBookmarks()
       if (response.success && response.data) {
-        setBookmarks(response.data.bookmarks || [])
+        setBookmarks(response.data)
       } else {
         setBookmarks([])
       }
     } catch (error) {
-      console.error('Error fetching Gulf bookmarks:', error)
+      console.error('Error fetching bookmarks:', error)
       setBookmarks([])
     } finally {
       setBookmarksLoading(false)
@@ -79,12 +79,18 @@ export default function GulfBookmarksPage() {
                 {bookmarks.map(b => (
                   <div key={b.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded border border-green-200">
                     <div className="min-w-0">
-                      <div className="font-medium truncate">{(b as any).jobTitle || 'Saved Job'}</div>
-                      <div className="text-xs text-slate-600 truncate">{(b as any).companyName || ''}</div>
+                      <div className="font-medium truncate">{(b as any).job?.title || (b as any).jobTitle || 'Saved Job'}</div>
+                      <div className="text-xs text-slate-600 truncate">{(b as any).job?.company?.name || (b as any).companyName || ''}</div>
                     </div>
-                    <Link href="/gulf-opportunities">
-                      <Button size="sm" variant="outline" className="border-green-600 text-green-600">View Jobs</Button>
-                    </Link>
+                    { (b as any).job?.id ? (
+                      <Link href={`/jobs/${(b as any).job.id}`}>
+                        <Button size="sm" variant="outline" className="border-green-600 text-green-600">View Job</Button>
+                      </Link>
+                    ) : (
+                      <Link href="/jobs">
+                        <Button size="sm" variant="outline" className="border-green-600 text-green-600">Browse Jobs</Button>
+                      </Link>
+                    )}
                   </div>
                 ))}
               </div>

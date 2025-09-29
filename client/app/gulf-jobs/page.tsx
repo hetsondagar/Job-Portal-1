@@ -236,13 +236,13 @@ export default function GulfJobsPage() {
         console.log('🗂️ JobId to ApplicationId mapping:', jobIdToAppId)
       }
 
-      // Fetch bookmarks
-      const bookmarksResponse = await apiService.getGulfJobBookmarks()
+      // Fetch bookmarks (use generic bookmarks API)
+      const bookmarksResponse = await apiService.getBookmarks()
       if (bookmarksResponse.success && bookmarksResponse.data) {
-        const bookmarks = bookmarksResponse.data.bookmarks || bookmarksResponse.data
+        const bookmarks = bookmarksResponse.data
         const savedJobIds = new Set(bookmarks.map((bookmark: any) => bookmark.jobId))
         setSavedJobs(savedJobIds)
-        console.log('🔖 Saved Gulf jobs:', Array.from(savedJobIds))
+        console.log('🔖 Saved jobs (generic):', Array.from(savedJobIds))
       }
     } catch (error) {
       console.error('❌ Error fetching user data:', error)
@@ -263,12 +263,12 @@ export default function GulfJobsPage() {
         return
       }
 
-      // Save job to database
-      const response = await apiService.bookmarkGulfJob(jobId)
+      // Save job to database (use generic bookmarks API)
+      const response = await apiService.createBookmark({ jobId })
       if (response.success) {
         setSavedJobs(prev => new Set([...prev, jobId]))
         toast.success('Job saved successfully!')
-        console.log('Gulf job saved:', jobId)
+        console.log('Job saved (generic bookmark):', jobId)
       } else {
         toast.error(response.message || 'Failed to save job. Please try again.')
       }
