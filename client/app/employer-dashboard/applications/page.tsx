@@ -178,7 +178,21 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
 
   const handleDownloadCoverLetter = async (coverLetter: any) => {
     try {
-      // Prefer application-scoped download to enforce access checks and resilient file handling
+      // Try direct file URL first if available
+      const direct = (selectedApplication?.jobCoverLetter?.metadata?.fileUrl || selectedApplication?.jobCoverLetter?.fileUrl) as string | undefined
+      if (direct) {
+        const abs = direct.match(/^https?:\/\//i) ? direct : `${process.env.NEXT_PUBLIC_API_URL || ''}${direct}`
+        const a = document.createElement('a')
+        a.href = abs
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        return
+      }
+
+      // Fallback: application-scoped download to enforce access checks
       const response = await apiService.downloadApplicationCoverLetter(selectedApplication?.id || '')
       const contentDisposition = response.headers.get('content-disposition')
       let filename = coverLetter?.metadata?.filename || `${coverLetter?.title || 'CoverLetter'}.pdf`
@@ -637,8 +651,22 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
     try {
       console.log('🔍 Attempting to download resume:', { resumeId: resume.id, applicationId: application.id })
-      
-      // For applications, we need to use the application-based download endpoint
+
+      // Try direct URL first if present
+      const direct = (resume?.metadata?.fileUrl || resume?.fileUrl) as string | undefined
+      if (direct) {
+        const abs = direct.match(/^https?:\/\//i) ? direct : `${process.env.NEXT_PUBLIC_API_URL || ''}${direct}`
+        const a = document.createElement('a')
+        a.href = abs
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        return
+      }
+
+      // Fallback: application-based download
       const response = await apiService.downloadApplicationResume(resume.id, application.id)
       
       console.log('🔍 Download response:', { status: response.status, ok: response.ok })
