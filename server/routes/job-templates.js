@@ -57,8 +57,12 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const payload = req.body || {};
+    const name = payload.name || payload.title;
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Template name is required' });
+    }
     const template = await JobTemplate.create({
-      name: payload.name,
+      name,
       description: payload.description || '',
       category: payload.category || null,
       templateData: payload.templateData || {},
