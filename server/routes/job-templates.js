@@ -161,13 +161,39 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
       slug,
       description: description === '' ? 'To be updated' : description,
       location,
+      city: payload.city || null,
+      state: payload.state || null,
+      country: payload.country || 'India',
       jobType,
       experienceLevel,
+      experienceMin: payload.experienceMin ?? null,
+      experienceMax: payload.experienceMax ?? null,
+      salaryMin: payload.salaryMin ?? null,
+      salaryMax: payload.salaryMax ?? null,
+      salaryCurrency: payload.salaryCurrency || 'INR',
+      salaryPeriod: payload.salaryPeriod || 'yearly',
+      department: payload.department || null,
+      category: payload.category || null,
+      skills: payload.skills || [],
+      remoteWork: payload.remoteWork || (payload.workMode === 'remote' ? 'remote' : (payload.workMode === 'hybrid' ? 'hybrid' : 'on-site')),
+      shiftTiming: payload.shiftTiming || 'day',
+      noticePeriod: payload.noticePeriod ?? null,
+      education: payload.education || null,
+      certifications: payload.certifications || [],
+      languages: payload.languages || [],
+      isUrgent: !!payload.isUrgent,
+      isFeatured: !!payload.isFeatured,
       salary: payload.salary || null,
       employerId: req.user.id,
       companyId: req.user.company_id || req.user.companyId || null,
-      isDraft: true
-    }, { fields: ['title','slug','description','location','jobType','experienceLevel','salary','employerId','companyId','isDraft']});
+      status: 'draft',
+      region: req.user.region || 'india',
+      templateId: t.id
+    }, { fields: [
+      'title','slug','description','location','city','state','country','jobType','experienceLevel','experienceMin','experienceMax',
+      'salaryMin','salaryMax','salaryCurrency','salaryPeriod','department','category','skills','remoteWork','shiftTiming','noticePeriod',
+      'education','certifications','languages','isUrgent','isFeatured','salary','employerId','companyId','status','region','templateId'
+    ]});
     res.status(201).json({ success: true, data: draft });
   } catch (error) {
     console.error('Error creating job from template:', error);
