@@ -1943,7 +1943,9 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
       metadata.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
       // Direct metadata filePath
-      metadata.filePath ? metadata.filePath : null
+      metadata.filePath ? metadata.filePath : null,
+      // Public URL path
+      metadata.filename ? `/uploads/resumes/${metadata.filename}` : null
     ].filter(Boolean);
 
     console.log('🔍 Trying possible file paths:', possiblePaths);
@@ -1970,7 +1972,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
         try {
           if (fs.existsSync(searchDir)) {
             const files = fs.readdirSync(searchDir, { recursive: true });
-            const found = files.find(f => f.includes(filename));
+            const found = files.find(f => typeof f === 'string' && f.includes(filename));
             if (found) {
               filePath = path.join(searchDir, found);
               break;
