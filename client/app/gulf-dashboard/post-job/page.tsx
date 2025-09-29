@@ -52,6 +52,47 @@ function GulfPostJobContent({ user }: { user: any }) {
     region: "gulf"
   })
 
+  // Apply template prefill via URL
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const templateDataParam = params.get('templateData')
+      const templateName = params.get('templateName')
+      if (templateDataParam) {
+        const prefill = JSON.parse(decodeURIComponent(templateDataParam))
+        setFormData(prev => ({
+          ...prev,
+          title: prefill.title || prev.title,
+          description: prefill.description || prev.description,
+          location: prefill.location || prev.location,
+          jobType: prefill.jobType || prev.jobType,
+          experienceLevel: prefill.experienceLevel || prev.experienceLevel,
+          salaryMin: prefill.salaryMin ?? prev.salaryMin,
+          salaryMax: prefill.salaryMax ?? prev.salaryMax,
+          currency: prefill.salaryCurrency || prev.currency,
+          skills: Array.isArray(prefill.skills) ? prefill.skills.join(', ') : (prefill.skills || prev.skills),
+          requirements: prefill.requirements || prev.requirements,
+          benefits: prefill.benefits || prev.benefits,
+          remoteWork: prefill.remoteWork || prev.remoteWork,
+          shiftTiming: prefill.shiftTiming || prev.shiftTiming,
+          travelRequired: (prefill.travelRequired ? 'yes' : 'no') || prev.travelRequired,
+          noticePeriod: prefill.noticePeriod ?? prev.noticePeriod
+        }))
+        if (templateName) {
+          // @ts-ignore toast available in this file
+          toast.success(`Template "${decodeURIComponent(templateName)}" applied`) 
+        }
+        const newUrl = new URL(window.location.href)
+        newUrl.searchParams.delete('template')
+        newUrl.searchParams.delete('templateData')
+        newUrl.searchParams.delete('templateName')
+        window.history.replaceState({}, '', newUrl.toString())
+      }
+    } catch (e) {
+      console.error('Failed to apply template prefill:', e)
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
