@@ -110,11 +110,11 @@ router.post('/jobs/:id/bookmark', authenticateToken, async (req, res) => {
       });
     }
 
-    // Create bookmark
-    const bookmark = await JobBookmark.create({
-      userId,
-      jobId: id
-    });
+    // Create bookmark (restrict fields to handle older schemas without optional columns)
+    const bookmark = await JobBookmark.create(
+      { userId, jobId: id },
+      { fields: ['userId', 'jobId'] }
+    );
 
     res.status(201).json({
       success: true,

@@ -2197,7 +2197,10 @@ router.post('/bookmarks', authenticateToken, async (req, res) => {
       userId: req.user.id
     };
 
-    const bookmark = await JobBookmark.create(bookmarkData);
+    // Create bookmark while being tolerant to missing optional columns on older schemas
+    const bookmark = await JobBookmark.create(bookmarkData, {
+      fields: ['userId', 'jobId', 'folder', 'priority', 'reminderDate', 'notes'].filter((f) => f in bookmarkData)
+    });
 
     res.json({
       success: true,
