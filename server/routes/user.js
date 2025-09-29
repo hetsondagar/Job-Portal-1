@@ -29,7 +29,9 @@ function findResumeFile(filename, metadata) {
     metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
     metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
     // Direct metadata filePath
-    metadata?.filePath ? metadata.filePath : null
+    metadata?.filePath ? metadata.filePath : null,
+    // Public URL based on our static mount
+    metadata?.filename ? `/uploads/resumes/${metadata.filename}` : null
   ].filter(Boolean);
 
   console.log('🔍 Trying possible file paths:', possiblePaths);
@@ -42,14 +44,14 @@ function findResumeFile(filename, metadata) {
     console.log('🔍 Checked paths:', possiblePaths);
     
     // Try to find the file by searching common directories
-    const searchDirs = [
+  const searchDirs = [
       path.join(__dirname, '../uploads'),
       path.join(process.cwd(), 'uploads'),
       path.join(process.cwd(), 'server', 'uploads'),
       '/tmp/uploads',
       '/var/tmp/uploads',
       '/opt/render/project/src/uploads',
-      '/opt/render/project/src/server/uploads'
+    '/opt/render/project/src/server/uploads'
     ];
     
     for (const searchDir of searchDirs) {
@@ -60,7 +62,7 @@ function findResumeFile(filename, metadata) {
           console.log(`🔍 Found ${files.length} items in ${searchDir}`);
           
           // Look for the specific filename
-          const found = files.find(f => f.includes(filename));
+          const found = files.find(f => typeof f === 'string' && f.includes(filename));
           if (found) {
             filePath = path.join(searchDir, found);
             console.log(`✅ Found file at: ${filePath}`);
@@ -3939,6 +3941,10 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
+      // Fallback: try redirecting to stored public path if present
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
       return res.status(404).json({
         success: false,
         message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
