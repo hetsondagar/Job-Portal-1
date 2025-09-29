@@ -144,17 +144,30 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
     const t = await JobTemplate.findOne({ where: { id: req.params.id } });
     if (!t) return res.status(404).json({ success: false, message: 'Template not found' });
     const payload = t.templateData || {};
+    const title = payload.title || t.name || 'Untitled Job';
+    const description = (payload.description || t.description || '').toString();
+    const location = payload.location || payload.city || 'Remote';
+    const jobType = payload.jobType || payload.type || 'full-time';
+    const experienceLevel = payload.experienceLevel || payload.experience || null;
+    const slugBase = title
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+    const slug = `${slugBase}-${Math.random().toString(36).slice(2, 8)}`;
     const draft = await Job.create({
-      title: payload.title || t.name,
-      description: payload.description || t.description || '',
-      location: payload.location || null,
-      jobType: payload.type || null,
-      experienceLevel: payload.experience || null,
+      title,
+      slug,
+      description: description === '' ? 'To be updated' : description,
+      location,
+      jobType,
+      experienceLevel,
       salary: payload.salary || null,
       employerId: req.user.id,
       companyId: req.user.company_id || req.user.companyId || null,
       isDraft: true
-    }, { fields: ['title','description','location','jobType','experienceLevel','salary','employerId','companyId','isDraft']});
+    }, { fields: ['title','slug','description','location','jobType','experienceLevel','salary','employerId','companyId','isDraft']});
     res.status(201).json({ success: true, data: draft });
   } catch (error) {
     console.error('Error creating job from template:', error);
