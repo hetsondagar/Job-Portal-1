@@ -100,7 +100,8 @@ router.post('/jobs/:id/bookmark', authenticateToken, async (req, res) => {
 
     // Check if already bookmarked
     const existingBookmark = await JobBookmark.findOne({
-      where: { userId, jobId: id }
+      where: { userId, jobId: id },
+      attributes: ['id', 'userId', 'jobId']
     });
 
     if (existingBookmark) {
