@@ -799,6 +799,8 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  
+
   async joinCompany(companyId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/join`, {
       method: 'POST',
