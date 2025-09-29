@@ -61,9 +61,16 @@ export default function CandidateProfilePage() {
   const toAbsoluteApiUrl = (url?: string) => {
     if (!url) return "";
     if (/^https?:\/\//i.test(url)) return url;
-    // Use the same env var as the API client so links hit the backend, not Next.js origin
     const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return `${base}${url}`;
+    if (!base) return url;
+    const normalizedBase = base.replace(/\/$/, "");
+    let normalizedUrl = url.startsWith("/") ? url : `/${url}`;
+    // Avoid /api/api duplication
+    if (normalizedBase.endsWith('/api') && normalizedUrl.startsWith('/api')) {
+      normalizedUrl = normalizedUrl.replace(/^\/api/, '');
+      if (!normalizedUrl.startsWith('/')) normalizedUrl = `/${normalizedUrl}`;
+    }
+    return `${normalizedBase}${normalizedUrl}`;
   }
 
   useEffect(() => {
