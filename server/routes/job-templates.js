@@ -156,7 +156,8 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
       .trim()
       .replace(/\s+/g, '-');
     const slug = `${slugBase}-${Math.random().toString(36).slice(2, 8)}`;
-    const draft = await Job.create({
+    // Instead of creating a draft, return a prefill payload for the client form
+    const prefill = {
       title,
       slug,
       description: description === '' ? 'To be updated' : description,
@@ -189,12 +190,16 @@ router.post('/:id/create-job', authenticateToken, async (req, res) => {
       status: 'draft',
       region: req.user.region || 'india',
       templateId: t.id
-    }, { fields: [
-      'title','slug','description','location','city','state','country','jobType','experienceLevel','experienceMin','experienceMax',
-      'salaryMin','salaryMax','salaryCurrency','salaryPeriod','department','category','skills','remoteWork','shiftTiming','noticePeriod',
-      'education','certifications','languages','isUrgent','isFeatured','salary','employerId','companyId','status','region','templateId'
-    ]});
-    res.status(201).json({ success: true, data: draft });
+    };
+
+    // Record usage metadata for the template
+    try {
+      await t.update({ usageCount: (t.usageCount || 0) + 1, lastUsedAt: new Date() });
+    } catch (e) {
+      console.warn('⚠️ Failed to update template usage:', e?.message || e);
+    }
+
+    return res.status(200).json({ success: true, data: { prefill }, message: 'Template loaded for job creation' });
   } catch (error) {
     console.error('Error creating job from template:', error);
     res.status(500).json({ success: false, message: 'Failed to create job from template' });
