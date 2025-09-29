@@ -19,11 +19,14 @@ import {
   Clock,
   LinkIcon,
   Mail,
+  Phone,
   MessageCircle,
   ArrowLeft,
   CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -256,11 +259,11 @@ function GulfCompanyDetailPage() {
 
     try {
       setSubmitting(true)
-      const response = await apiService.applyToGulfJob(selectedJob.id, {
-        expectedSalary: applicationData.expectedSalary,
-        noticePeriod: applicationData.noticePeriod,
+      const response = await apiService.applyJob(selectedJob.id, {
+        expectedSalary: applicationData.expectedSalary ? Number(applicationData.expectedSalary) : undefined,
+        noticePeriod: applicationData.noticePeriod ? Number(applicationData.noticePeriod) : undefined,
         coverLetter: applicationData.coverLetter,
-        willingToRelocate: applicationData.willingToRelocate
+        isWillingToRelocate: applicationData.willingToRelocate
       })
 
       if (response.success) {
