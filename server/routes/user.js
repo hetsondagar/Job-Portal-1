@@ -3866,7 +3866,17 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
 });
 
 // Employer endpoint to download resume from application
-router.get('/employer/applications/:applicationId/resume/download', authenticateToken, async (req, res) => {
+function attachTokenFromQuery(req, _res, next) {
+  try {
+    const qToken = req.query && (req.query.token || req.query.access_token);
+    if (!req.headers?.authorization && qToken) {
+      req.headers.authorization = `Bearer ${qToken}`;
+    }
+  } catch (_) {}
+  next();
+}
+
+router.get('/employer/applications/:applicationId/resume/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Employer resume download request:', { applicationId: req.params.applicationId, userId: req.user?.id, userType: req.user?.user_type });
     

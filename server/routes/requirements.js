@@ -1870,8 +1870,19 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
   }
 });
 
+// Helper to attach token from query when Authorization header is missing
+function attachTokenFromQuery(req, _res, next) {
+  try {
+    const qToken = req.query && (req.query.token || req.query.access_token);
+    if (!req.headers?.authorization && qToken) {
+      req.headers.authorization = `Bearer ${qToken}`;
+    }
+  } catch (_) {}
+  next();
+}
+
 // Download candidate resume (for employers)
-router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', authenticateToken, async (req, res) => {
+router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId, resumeId } = req.params;
     

@@ -288,6 +288,20 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
 app.use('/api/salary', salaryRoutes);
 
+  // Compatibility redirect for cover-letter download legacy path
+  app.get('/api/cover-letters/:id/download', (req, res) => {
+    // Forward to user route if available
+    try {
+      const token = req.headers.authorization || req.query.token || req.query.access_token || '';
+      const url = `/api/user/cover-letters/${req.params.id}/download`;
+      // If running behind same server, rewrite path
+      req.url = url + (req.url.includes('?') ? `&` : `?`) + (token ? `token=${encodeURIComponent(token.replace(/^Bearer\s+/i, ''))}` : '');
+      return userRoutes.handle(req, res);
+    } catch (_) {
+      return res.status(404).json({ success: false, message: 'Route /api/cover-letters/:id/download not found' });
+    }
+  });
+
 // 404 handler
 app.use(notFoundHandler);
 
