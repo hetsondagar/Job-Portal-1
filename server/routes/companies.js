@@ -390,7 +390,7 @@ router.get('/:id/jobs', async (req, res) => {
     // Build where clause with filters
     const where = { 
       companyId: id,
-      status: 'active'
+      status: { [Op.in]: ['active', 'expired'] }
     };
 
     // Add department filter
