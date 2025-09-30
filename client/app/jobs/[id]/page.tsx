@@ -472,6 +472,11 @@ export default function JobDetailPage() {
                           <div className="text-sm text-slate-500">{job?.applicants || 0} applicants</div>
                         </div>
                       </div>
+                      {isExpired && (
+                        <div className="flex items-center">
+                          <Badge className="bg-red-100 text-red-800 border-red-200">Expired</Badge>
+                        </div>
+                      )}
                     </div>
 
                     {/* Internship-specific information */}
