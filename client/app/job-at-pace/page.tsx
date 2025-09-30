@@ -635,7 +635,7 @@ export default function JobAtPacePage() {
                         ))}
                       </ul>
 
-                      <Button className={`w-full ${
+                      <Button type="button" onClick={() => handleSubscribe('premium')} className={`w-full ${
                         plan.popular
                           ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white'
                           : 'bg-slate-900 hover:bg-slate-800 text-white'
@@ -754,7 +754,7 @@ export default function JobAtPacePage() {
                         ))}
                       </ul>
 
-                      <Button className={`w-full ${
+                      <Button type="button" onClick={() => handleSubscribe('premium')} className={`w-full ${
                         plan.popular
                           ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white'
                           : 'bg-slate-900 hover:bg-slate-800 text-white'
