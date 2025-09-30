@@ -1001,13 +1001,16 @@ exports.updateJobStatus = async (req, res, next) => {
     try {
       if (status === 'active' && prevStatus !== 'active') {
         const sequelize = Job.sequelize;
+        console.log('🔔 Reactivation for job', job.id, 'prevStatus=', prevStatus, '-> active');
         const [watchers] = await sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
+        console.log('🔔 Found watchers:', Array.isArray(watchers) ? watchers.length : 0);
         if (Array.isArray(watchers) && watchers.length > 0) {
           const EmailService = require('../services/simpleEmailService');
           for (const w of watchers) {
             try {
               // Send notification email (jsonTransport in dev)
               const watcher = await User.findByPk(w.user_id);
+              console.log('🔔 Notifying watcher user_id=', w.user_id, 'email=', watcher?.email || 'n/a');
               if (watcher?.email) {
                 await EmailService.sendPasswordResetEmail(
                   watcher.email,
@@ -1029,6 +1032,7 @@ exports.updateJobStatus = async (req, res, next) => {
                   icon: 'briefcase',
                   metadata: { jobId: job.id, companyId: job.companyId }
                 });
+                console.log('✅ In-app notification persisted for', w.user_id);
               } catch (notifErr) {
                 console.warn('Failed to create in-app notification', notifErr?.message || notifErr);
               }
@@ -1036,6 +1040,8 @@ exports.updateJobStatus = async (req, res, next) => {
               console.warn('Failed to notify watcher', w.userId, e?.message || e);
             }
           }
+        } else {
+          console.log('ℹ️ No watchers to notify for job', job.id);
         }
       }
     } catch (notifyErr) {

@@ -170,6 +170,52 @@ router.get('/:id/watch', authenticateToken, async (req, res) => {
   }
 });
 
+// Admin/Owner: Force notify all watchers that a job reopened (useful for backfills/testing)
+router.post('/:id/notify-watchers', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const job = await Job.findByPk(id);
+    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+
+    // Only job owner or admin
+    if (req.user.user_type !== 'admin' && job.employerId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const sequelize = Job.sequelize;
+    const [watchers] = await sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
+    if (!Array.isArray(watchers) || watchers.length === 0) {
+      return res.json({ success: true, message: 'No watchers to notify', data: { notified: 0 } });
+    }
+
+    const Notification = require('../models/Notification');
+    let count = 0;
+    for (const w of watchers) {
+      try {
+        await Notification.create({
+          userId: w.user_id,
+          type: 'system',
+          title: 'Tracked job reopened',
+          message: `${job.title} is open again. Apply now!`,
+          priority: 'medium',
+          actionUrl: `/jobs/${job.id}`,
+          actionText: 'View job',
+          icon: 'briefcase',
+          metadata: { jobId: job.id, companyId: job.companyId }
+        });
+        count++;
+      } catch (e) {
+        console.warn('Failed to create notification for watcher', w.user_id, e?.message || e);
+      }
+    }
+
+    return res.json({ success: true, message: 'Watchers notified', data: { notified: count } });
+  } catch (error) {
+    console.error('Error notifying watchers:', error);
+    return res.status(500).json({ success: false, message: 'Failed to notify watchers' });
+  }
+});
+
 // Expire job immediately (set status to expired and validTill = now)
 router.patch('/:id/expire', authenticateToken, async (req, res) => {
   try {
