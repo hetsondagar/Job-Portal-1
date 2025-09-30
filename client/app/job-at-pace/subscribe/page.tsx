@@ -31,6 +31,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import JobAtPaceNavbar from "@/components/job-at-pace/JobAtPaceNavbar"
+import { useAuth } from "@/hooks/useAuth"
+import { apiService } from "@/lib/api"
+import { toast } from "sonner"
 
 interface PaymentMethod {
   id: string
@@ -142,6 +145,7 @@ export default function SubscribePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const planId = searchParams.get('plan') || 'premium'
+  const { user, manualRefreshUser } = useAuth()
   
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -168,11 +172,28 @@ export default function SubscribePage() {
   const handlePayment = async () => {
     setIsProcessing(true)
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Simulate payment success, then activate premium features server-side
+      await new Promise((r) => setTimeout(r, 1500))
+      if (!user) {
+        toast.error('Please login to complete subscription')
+        setIsProcessing(false)
+        return
+      }
+      const resp = await apiService.activateJobAtPace(planId)
+      if (resp.success) {
+        toast.success('Premium activated. Visibility features enabled and premium badge applied.')
+        // Refresh local user state to reflect premium immediately
+        await manualRefreshUser()
+        router.push('/job-at-pace/success?plan=' + planId)
+      } else {
+        toast.error(resp.message || 'Failed to activate premium')
+      }
+    } catch (e) {
+      toast.error('Payment failed. Please try again.')
+    } finally {
       setIsProcessing(false)
-      router.push('/job-at-pace/success?plan=' + planId)
-    }, 3000)
+    }
   }
 
   const formatCardNumber = (value: string) => {
