@@ -1402,16 +1402,20 @@ function CompanyDetailPage() {
                                     className={`${
                                       hasAppliedToJob(job.id)
                                         ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                        : job.status === 'expired'
+                                          ? 'bg-slate-300 cursor-not-allowed'
+                                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                                     } text-white`}
                                     onClick={() => handleApply(job.id)}
-                                    disabled={hasAppliedToJob(job.id)}
+                                    disabled={hasAppliedToJob(job.id) || job.status === 'expired'}
                                   >
                                     {hasAppliedToJob(job.id) ? (
                                       <>
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                         Applied
                                       </>
+                                    ) : job.status === 'expired' ? (
+                                      'Applications closed'
                                     ) : (
                                       'Apply Now'
                                     )}
@@ -1419,10 +1423,11 @@ function CompanyDetailPage() {
                                 ) : !user ? (
                                   <Button
                                     size="sm"
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                                    onClick={() => setShowAuthDialog(true)}
+                                    className={`${job.status === 'expired' ? 'bg-slate-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'} text-white`}
+                                    onClick={() => (job.status === 'expired' ? null : setShowAuthDialog(true))}
+                                    disabled={job.status === 'expired'}
                                   >
-                                    Apply Now
+                                    {job.status === 'expired' ? 'Applications closed' : 'Apply Now'}
                                   </Button>
                                 ) : null}
                               </div>

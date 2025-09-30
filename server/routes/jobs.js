@@ -9,6 +9,8 @@ const JobApplication = require('../models/JobApplication');
 const Job = require('../models/Job');
 const Resume = require('../models/Resume');
 const EmployerActivityService = require('../services/employerActivityService');
+const JobBookmark = require('../models/JobBookmark');
+const EmailService = require('../services/simpleEmailService');
 
 const {
   createJob,
@@ -102,6 +104,73 @@ router.patch('/:id/expiry', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error updating job expiry:', error);
     return res.status(500).json({ success: false, message: 'Failed to update job expiry' });
+  }
+});
+
+// --- Job Watchlist (notify on reactivation) ---
+// Add watch (jobseeker only). Uses JobBookmark with folder='watchlist'
+router.post('/:id/watch', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Only jobseekers can watch
+    if (req.user.user_type !== 'jobseeker') {
+      return res.status(403).json({ success: false, message: 'Only jobseekers can watch jobs' });
+    }
+
+    const job = await Job.findByPk(id);
+    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    if (job.status === 'active') {
+      return res.status(400).json({ success: false, message: 'Job is active. Watching is only available for inactive jobs' });
+    }
+
+    const [bookmark, created] = await JobBookmark.findOrCreate({
+      where: { userId: req.user.id, jobId: id },
+      defaults: { userId: req.user.id, jobId: id, folder: 'watchlist', priority: 'medium' }
+    });
+    if (!created) {
+      // Ensure it is marked as watchlist
+      if (bookmark.folder !== 'watchlist') {
+        await bookmark.update({ folder: 'watchlist' });
+      }
+    }
+    return res.json({ success: true, message: 'You will be notified when this job reopens', data: { watching: true } });
+  } catch (error) {
+    console.error('Error adding job watch:', error);
+    return res.status(500).json({ success: false, message: 'Failed to add watch' });
+  }
+});
+
+// Remove watch
+router.delete('/:id/watch', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.user_type !== 'jobseeker') {
+      return res.status(403).json({ success: false, message: 'Only jobseekers can unwatch jobs' });
+    }
+    const bookmark = await JobBookmark.findOne({ where: { userId: req.user.id, jobId: id } });
+    if (!bookmark) {
+      return res.status(404).json({ success: false, message: 'Not watching this job' });
+    }
+    await bookmark.destroy();
+    return res.json({ success: true, message: 'Stopped watching this job', data: { watching: false } });
+  } catch (error) {
+    console.error('Error removing job watch:', error);
+    return res.status(500).json({ success: false, message: 'Failed to remove watch' });
+  }
+});
+
+// Watch status
+router.get('/:id/watch', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.user_type !== 'jobseeker') {
+      return res.status(403).json({ success: false, message: 'Only jobseekers can view watch status' });
+    }
+    const { id } = req.params;
+    const exists = await JobBookmark.findOne({ where: { userId: req.user.id, jobId: id, folder: 'watchlist' } });
+    return res.json({ success: true, data: { watching: !!exists } });
+  } catch (error) {
+    console.error('Error getting watch status:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get watch status' });
   }
 });
 

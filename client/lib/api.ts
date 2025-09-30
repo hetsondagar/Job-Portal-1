@@ -1069,6 +1069,30 @@ class ApiService {
 
     return this.handleResponse<{ applicationId: string; status: string; appliedAt: string }>(response);
   }
+
+  async watchJob(jobId: string): Promise<ApiResponse<{ watching: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/watch`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ watching: boolean }>(response);
+  }
+
+  async unwatchJob(jobId: string): Promise<ApiResponse<{ watching: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/watch`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ watching: boolean }>(response);
+  }
+
+  async getWatchStatus(jobId: string): Promise<ApiResponse<{ watching: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/watch`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ watching: boolean }>(response);
+  }
   // Utility methods
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;

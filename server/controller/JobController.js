@@ -994,7 +994,33 @@ exports.updateJobStatus = async (req, res, next) => {
         updates.validTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
       }
     }
+    const prevStatus = job.status;
     await job.update(updates);
+
+    // If moving from expired/paused/closed to active, notify watchers
+    try {
+      if (status === 'active' && prevStatus !== 'active') {
+        const { JobBookmark } = require('../config/index');
+        const watchers = await JobBookmark.findAll({ where: { jobId: job.id, folder: 'watchlist' } });
+        if (Array.isArray(watchers) && watchers.length > 0) {
+          const EmailService = require('../services/simpleEmailService');
+          for (const w of watchers) {
+            try {
+              // Send notification email (jsonTransport in dev)
+              await EmailService.sendPasswordResetEmail(
+                (await User.findByPk(w.userId))?.email,
+                'job-reopened',
+                'Job Seeker'
+              );
+            } catch (e) {
+              console.warn('Failed to notify watcher', w.userId, e?.message || e);
+            }
+          }
+        }
+      }
+    } catch (notifyErr) {
+      console.warn('Watcher notification failed:', notifyErr?.message || notifyErr);
+    }
 
     return res.status(200).json({
       success: true,
