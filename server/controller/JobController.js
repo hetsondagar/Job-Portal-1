@@ -1000,15 +1000,15 @@ exports.updateJobStatus = async (req, res, next) => {
     // If moving from expired/paused/closed to active, notify watchers
     try {
       if (status === 'active' && prevStatus !== 'active') {
-        const { JobBookmark } = require('../config/index');
-        const watchers = await JobBookmark.findAll({ where: { jobId: job.id, folder: 'watchlist' } });
+        const sequelize = Job.sequelize;
+        const [watchers] = await sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
         if (Array.isArray(watchers) && watchers.length > 0) {
           const EmailService = require('../services/simpleEmailService');
           for (const w of watchers) {
             try {
               // Send notification email (jsonTransport in dev)
               await EmailService.sendPasswordResetEmail(
-                (await User.findByPk(w.userId))?.email,
+                (await User.findByPk(w.user_id))?.email,
                 'job-reopened',
                 'Job Seeker'
               );
