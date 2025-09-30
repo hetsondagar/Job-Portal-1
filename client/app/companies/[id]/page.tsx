@@ -125,6 +125,11 @@ function CompanyDetailPage() {
     willingToRelocate: false
   })
 
+  // Watchlist state for expired jobs
+  const [watching, setWatching] = useState<Record<string, boolean>>({})
+  const getIsWatching = (jobId: string | number) => !!watching[String(jobId)]
+  const setIsWatching = (jobId: string | number, value: boolean) => setWatching(prev => ({ ...prev, [String(jobId)]: value }))
+
   // Filter states for job filtering functionality
   const [filters, setFilters] = useState({
     department: 'all',
@@ -471,6 +476,53 @@ function CompanyDetailPage() {
       fetchFollowStatus()
     }
   }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs, fetchFollowStatus])
+
+  // Load watch status for expired jobs when jobs or auth changes
+  useEffect(() => {
+    const loadWatchStatuses = async () => {
+      if (!user || user.userType !== 'jobseeker') return
+      const expiredJobs = (companyJobs || []).filter((j: any) => j.status === 'expired')
+      for (const j of expiredJobs) {
+        try {
+          const res = await apiService.getWatchStatus(String(j.id))
+          if (res.success) setIsWatching(j.id, !!res.data?.watching)
+        } catch {}
+      }
+    }
+    loadWatchStatuses()
+  }, [companyJobs, user])
+
+  const handleToggleWatch = useCallback(async (job: any) => {
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+    if (user.userType !== 'jobseeker') {
+      toast.error('Only jobseekers can watch jobs')
+      return
+    }
+    try {
+      if (getIsWatching(job.id)) {
+        const res = await apiService.unwatchJob(String(job.id))
+        if (res.success) {
+          setIsWatching(job.id, false)
+          toast.success('You will no longer receive notifications for this job')
+        } else {
+          toast.error(res.message || 'Failed to update notification preference')
+        }
+      } else {
+        const res = await apiService.watchJob(String(job.id))
+        if (res.success) {
+          setIsWatching(job.id, true)
+          toast.success('We will notify you when this job reopens')
+        } else {
+          toast.error(res.message || 'Failed to enable notifications')
+        }
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to update notification preference')
+    }
+  }, [user, watching])
 
   // Fetch company stats after company data and jobs are loaded
   useEffect(() => {
@@ -1430,6 +1482,17 @@ function CompanyDetailPage() {
                                     {job.status === 'expired' ? 'Applications closed' : 'Apply Now'}
                                   </Button>
                                 ) : null}
+
+                                {job.status === 'expired' && (
+                                  <Button
+                                    variant={getIsWatching(job.id) ? 'outline' : 'default'}
+                                    size="sm"
+                                    className={`${getIsWatching(job.id) ? '' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}
+                                    onClick={() => handleToggleWatch(job)}
+                                  >
+                                    {getIsWatching(job.id) ? 'Tracking' : 'Track this job'}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
