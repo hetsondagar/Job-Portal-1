@@ -850,10 +850,26 @@ router.get('/notifications', authenticateToken, async (req, res) => {
       limit: 50 // Limit to recent 50 notifications
     });
 
-    res.json({
-      success: true,
-      data: notifications
-    });
+    if (!notifications || notifications.length === 0) {
+      // Bootstrap a friendly welcome notification for first-time users
+      try {
+        const welcome = await Notification.create({
+          userId: req.user.id,
+          type: 'system',
+          title: 'Welcome to JobPortal',
+          message: 'You will see important updates here. Track jobs, get alerts when roles reopen, and manage all notifications on this page.',
+          priority: 'low',
+          actionUrl: '/jobs',
+          actionText: 'Find jobs',
+          icon: 'bell'
+        });
+        return res.json({ success: true, data: [welcome] });
+      } catch (seedErr) {
+        console.warn('Failed to seed welcome notification:', seedErr?.message || seedErr);
+      }
+    }
+
+    res.json({ success: true, data: notifications });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({
@@ -2178,7 +2194,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
     const { JobBookmark, Job, Company } = require('../config/index');
     
     const bookmarks = await JobBookmark.findAll({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
       include: [
         {
           model: Job,
