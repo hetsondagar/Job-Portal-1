@@ -1012,6 +1012,23 @@ exports.updateJobStatus = async (req, res, next) => {
                 'job-reopened',
                 'Job Seeker'
               );
+              // Create in-app notification
+              try {
+                const Notification = require('../models/Notification');
+                await Notification.create({
+                  userId: w.user_id,
+                  type: 'system',
+                  title: 'Tracked job reopened',
+                  message: `${job.title} is open again. Apply now!`,
+                  priority: 'medium',
+                  actionUrl: `/jobs/${job.id}`,
+                  actionText: 'View job',
+                  icon: 'briefcase',
+                  metadata: { jobId: job.id, companyId: job.companyId }
+                });
+              } catch (notifErr) {
+                console.warn('Failed to create in-app notification', notifErr?.message || notifErr);
+              }
             } catch (e) {
               console.warn('Failed to notify watcher', w.userId, e?.message || e);
             }
