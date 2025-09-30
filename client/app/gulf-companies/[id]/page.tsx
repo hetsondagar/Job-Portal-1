@@ -215,10 +215,21 @@ function GulfCompanyDetailPage() {
     setLoadingJobs(true)
     setJobsError("")
     try {
-      const response = await apiService.getCompanyJobs(companyId)
-      if (response && response.success) {
-        const jobs = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.rows) ? response.data.rows : [])
-        setCompanyJobs(jobs)
+      // Fetch active and expired jobs explicitly and combine
+      const [activeResp, expiredResp] = await Promise.all([
+        apiService.getCompanyJobs(companyId, { status: 'active' } as any),
+        apiService.getCompanyJobs(companyId, { status: 'expired' } as any)
+      ])
+
+      if ((activeResp && activeResp.success) || (expiredResp && expiredResp.success)) {
+        const toArray = (resp: any) => Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp?.data?.rows) ? resp.data.rows : [])
+        const active = toArray(activeResp)
+        const expired = toArray(expiredResp)
+        // Merge and sort by createdAt desc
+        const merged = [...active, ...expired]
+          .filter((j, idx, arr) => j && j.id && arr.findIndex(x => x.id === j.id) === idx)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        setCompanyJobs(merged)
       } else {
         setJobsError('Failed to load company jobs')
       }
@@ -598,8 +609,12 @@ function GulfCompanyDetailPage() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4 text-sm text-slate-500">
                                   <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
-                                  {job.deadline && (
-                                    <span>Deadline: {new Date(job.deadline).toLocaleDateString()}</span>
+                                  {job.validTill && (
+                                    <span>
+                                      {new Date() > new Date(job.validTill)
+                                        ? `Applications closed: ${new Date(job.validTill).toLocaleDateString()}`
+                                        : `Valid till: ${new Date(job.validTill).toLocaleDateString()}`}
+                                    </span>
                                   )}
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -613,9 +628,14 @@ function GulfCompanyDetailPage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleApplyNow(job)}
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                    disabled={job.validTill && new Date() > new Date(job.validTill)}
+                                    className={`$${' '}
+                                      ${job.validTill && new Date() > new Date(job.validTill)
+                                        ? 'bg-gray-300 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                      }`}
                                   >
-                                    Apply Now
+                                    {job.validTill && new Date() > new Date(job.validTill) ? 'Applications Closed' : 'Apply Now'}
                                   </Button>
                                 </div>
                               </div>
