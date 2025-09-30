@@ -221,7 +221,7 @@ export default function ManageJobsPage() {
     return `${Math.floor(diffDays / 30)} months ago`
   }
 
-  // Calculate expiry date
+  // Calculate expiry date (21 days default if active and no validTill)
   const getExpiryDate = (createdAt: string, validTill?: string) => {
     if (validTill) {
       const expiryDate = new Date(validTill)
@@ -234,9 +234,9 @@ export default function ManageJobsPage() {
       return `${diffDays} days left`
     }
     
-    // Default 30 days from creation
+    // Default 21 days from creation
     const createdDate = new Date(createdAt)
-    const expiryDate = new Date(createdDate.getTime() + (30 * 24 * 60 * 60 * 1000))
+    const expiryDate = new Date(createdDate.getTime() + (21 * 24 * 60 * 60 * 1000))
     const now = new Date()
     const diffTime = expiryDate.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -244,6 +244,44 @@ export default function ManageJobsPage() {
     if (diffDays < 0) return 'Expired'
     if (diffDays === 1) return '1 day left'
     return `${diffDays} days left`
+  }
+
+  const handleEditExpiry = async (job: any) => {
+    const current = job.validTill ? new Date(job.validTill) : new Date(new Date(job.createdAt).getTime() + (21 * 24 * 60 * 60 * 1000))
+    const iso = current.toISOString().slice(0, 10)
+    const input = prompt('Set application deadline (YYYY-MM-DD):', iso)
+    if (!input) return
+    const parsed = new Date(input)
+    if (isNaN(parsed.getTime())) {
+      toast.error('Invalid date')
+      return
+    }
+    try {
+      const res = await apiService.updateJobExpiry(job.id, parsed.toISOString())
+      if (res.success) {
+        toast.success('Expiry updated')
+        fetchJobs()
+      } else {
+        toast.error(res.message || 'Failed to update expiry')
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update expiry')
+    }
+  }
+
+  const handleExpireNow = async (jobId: string) => {
+    if (!confirm('Expire this job immediately? Jobseekers will no longer be able to apply.')) return
+    try {
+      const res = await apiService.expireJobNow(jobId)
+      if (res.success) {
+        toast.success('Job expired')
+        fetchJobs()
+      } else {
+        toast.error(res.message || 'Failed to expire job')
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to expire job')
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -256,6 +294,8 @@ export default function ManageJobsPage() {
         return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Paused</Badge>
       case "closed":
         return <Badge className="bg-red-100 text-red-800 border-red-200">Closed</Badge>
+      case "expired":
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Expired</Badge>
       default:
         return <Badge variant="secondary">Unknown</Badge>
     }
@@ -271,6 +311,8 @@ export default function ManageJobsPage() {
         return <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
       case "closed":
         return <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+      case "expired":
+        return <div className="w-2 h-2 bg-red-600 rounded-full"></div>
       default:
         return null
     }
@@ -465,22 +507,35 @@ export default function ManageJobsPage() {
                                    </Link>
                                  </DropdownMenuItem>
                                  <DropdownMenuSeparator />
-                                 {job.status === "draft" ? (
+                                {job.status === "draft" ? (
                                    <DropdownMenuItem onClick={() => handlePublishDraft(job.id)}>
                                      <Send className="w-4 h-4 mr-2" />
                                      Publish Draft
                                    </DropdownMenuItem>
-                                 ) : job.status === "active" ? (
+                                ) : job.status === "active" ? (
                                    <DropdownMenuItem onClick={() => handleJobStatusUpdate(job.id, 'paused')}>
                                      <Pause className="w-4 h-4 mr-2" />
                                      Pause Job
                                    </DropdownMenuItem>
-                                 ) : job.status === "paused" ? (
+                                ) : job.status === "paused" ? (
                                    <DropdownMenuItem onClick={() => handleJobStatusUpdate(job.id, 'active')}>
                                      <Play className="w-4 h-4 mr-2" />
                                      Resume Job
                                    </DropdownMenuItem>
+                                ) : job.status === "expired" ? (
+                                  <DropdownMenuItem onClick={() => handleJobStatusUpdate(job.id, 'active')}>
+                                    <Play className="w-4 h-4 mr-2" />
+                                    Make Active
+                                  </DropdownMenuItem>
                                  ) : null}
+                                <DropdownMenuItem onClick={() => handleEditExpiry(job)}>
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Edit Expiry
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExpireNow(job.id)}>
+                                  <AlertCircle className="w-4 h-4 mr-2" />
+                                  Expire Now
+                                </DropdownMenuItem>
                                  <DropdownMenuItem 
                                    className="text-red-600"
                                    onClick={() => handleJobDelete(job.id)}

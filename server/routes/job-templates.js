@@ -53,6 +53,26 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get single template by ID (own or public)
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const t = await JobTemplate.findOne({
+      where: {
+        id: req.params.id,
+        [Op.or]: [
+          { createdBy: req.user.id },
+          { isPublic: true }
+        ]
+      }
+    });
+    if (!t) return res.status(404).json({ success: false, message: 'Template not found' });
+    res.json({ success: true, data: t });
+  } catch (error) {
+    console.error('Error fetching job template by id:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch template' });
+  }
+});
+
 // Create template
 router.post('/', authenticateToken, async (req, res) => {
   try {

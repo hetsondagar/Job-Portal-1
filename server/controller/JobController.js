@@ -184,6 +184,12 @@ exports.createJob = async (req, res, next) => {
       .replace(/-+/g, '-')
       .trim('-') + '-' + Date.now();
     
+    // Determine default expiry: if job is being activated now and no validTill provided, default to 21 days from now
+    let resolvedValidTill = validTill;
+    if (status === 'active' && !resolvedValidTill) {
+      resolvedValidTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+    }
+
     // Create record
     const jobData = {
       slug,
@@ -217,7 +223,7 @@ exports.createJob = async (req, res, next) => {
       isUrgent: Boolean(isUrgent),
       isFeatured: Boolean(isFeatured),
       isPremium: Boolean(isPremium),
-      validTill,
+      validTill: resolvedValidTill,
       publishedAt,
       tags: Array.isArray(tags) ? tags : [],
       metadata,
@@ -961,8 +967,15 @@ exports.updateJobStatus = async (req, res, next) => {
       });
     }
 
-    // Update job status
-    await job.update({ status: status });
+    // If setting active while expired or without validTill, set default 21 days from now
+    const updates = { status };
+    if (status === 'active') {
+      const now = new Date();
+      if (!job.validTill || now > new Date(job.validTill)) {
+        updates.validTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+      }
+    }
+    await job.update(updates);
 
     return res.status(200).json({
       success: true,

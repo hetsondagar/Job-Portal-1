@@ -991,6 +991,23 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async updateJobExpiry(id: string, validTill: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}/expiry`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ validTill }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async expireJobNow(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}/expire`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
   async getEmployerJobs(params?: {
     page?: number;
     limit?: number;

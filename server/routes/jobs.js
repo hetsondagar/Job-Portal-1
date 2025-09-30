@@ -71,6 +71,61 @@ router.put('/:id', authenticateToken, updateJob);
 router.delete('/:id', authenticateToken, deleteJob);
 router.patch('/:id/status', authenticateToken, updateJobStatus);
 
+// Update job expiry (validTill)
+router.patch('/:id/expiry', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { validTill } = req.body || {};
+
+    if (!validTill) {
+      return res.status(400).json({ success: false, message: 'validTill date is required' });
+    }
+
+    const job = await Job.findByPk(id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    // Ensure only owner or admin can update
+    if (job.employerId !== req.user.id && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You can only update your own jobs' });
+    }
+
+    const newValidTill = new Date(validTill);
+    if (isNaN(newValidTill.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid date format for validTill' });
+    }
+
+    await job.update({ validTill: newValidTill });
+
+    return res.status(200).json({ success: true, message: 'Job expiry updated', data: job });
+  } catch (error) {
+    console.error('Error updating job expiry:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update job expiry' });
+  }
+});
+
+// Expire job immediately (set status to expired and validTill = now)
+router.patch('/:id/expire', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const job = await Job.findByPk(id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+    // Owner or admin only
+    if (job.employerId !== req.user.id && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You can only expire your own jobs' });
+    }
+    const now = new Date();
+    await job.update({ status: 'expired', validTill: now });
+    return res.status(200).json({ success: true, message: 'Job expired', data: job });
+  } catch (error) {
+    console.error('Error expiring job:', error);
+    return res.status(500).json({ success: false, message: 'Failed to expire job' });
+  }
+});
+
 // Job application endpoint
 router.post('/:id/apply', authenticateToken, async (req, res) => {
   try {
@@ -86,6 +141,14 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Job not found'
+      });
+    }
+    
+    // Block application if job is expired
+    if (job.validTill && new Date() > new Date(job.validTill)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Applications are closed for this job (expired)'
       });
     }
     
