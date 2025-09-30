@@ -930,18 +930,8 @@ exports.getJobsByCompany = async (req, res, next) => {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
-      // Public company page: show active (not past validTill) and expired
-      const now = new Date();
-      whereClause[Op.or] = [
-        { status: 'expired' },
-        {
-          status: 'active',
-          [Op.or]: [
-            { validTill: null },
-            { validTill: { [Op.gte]: now } }
-          ]
-        }
-      ];
+      // Public company page: include active (regardless of validTill) and expired
+      whereClause.status = { [Op.in]: ['active', 'expired'] };
     }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
