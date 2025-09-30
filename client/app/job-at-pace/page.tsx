@@ -366,13 +366,8 @@ export default function JobAtPacePage() {
       return
     }
     try {
-      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/user/job-at-pace/activate`, {
-        method: 'POST',
-        headers: apiService.getAuthHeaders(),
-        body: JSON.stringify({ planId })
-      })
-      const data = await resp.json()
-      if (resp.ok && data?.success) {
+      const data = await apiService.activateJobAtPace(planId)
+      if (data?.success) {
         toast.success('Premium activated. Visibility features enabled and premium tag added.')
       } else {
         toast.error(data?.message || 'Failed to activate premium')
@@ -635,7 +630,7 @@ export default function JobAtPacePage() {
                         ))}
                       </ul>
 
-                      <Button type="button" onClick={() => handleSubscribe('premium')} className={`w-full ${
+                      <Button type="button" onClick={() => handleSubscribe(plan.name.includes('Complete') ? 'premium' : 'premium')} className={`w-full ${
                         plan.popular
                           ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white'
                           : 'bg-slate-900 hover:bg-slate-800 text-white'
@@ -754,7 +749,7 @@ export default function JobAtPacePage() {
                         ))}
                       </ul>
 
-                      <Button type="button" onClick={() => handleSubscribe('premium')} className={`w-full ${
+                      <Button type="button" onClick={() => handleSubscribe(plan.name.includes('Professional') ? 'premium' : 'premium')} className={`w-full ${
                         plan.popular
                           ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white'
                           : 'bg-slate-900 hover:bg-slate-800 text-white'

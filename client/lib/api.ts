@@ -2602,6 +2602,16 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  // Job At Pace: activate premium visibility for jobseeker (no payment)
+  async activateJobAtPace(planId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-at-pace/activate`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ planId })
+    });
+    return this.handleResponse<any>(response);
+  }
+
   // Get employer notifications
   async getEmployerNotifications(page: number = 1, limit: number = 20): Promise<ApiResponse<any[]>> {
     try {
