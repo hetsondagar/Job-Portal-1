@@ -507,7 +507,12 @@ export default function CandidateProfilePage() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h1 className="text-3xl font-bold text-slate-900 mb-2">{candidate.name}</h1>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h1 className="text-3xl font-bold text-slate-900">{candidate.name}</h1>
+                        {(candidate?.verification_level === 'premium' || (candidate as any)?.verificationLevel === 'premium' || (candidate as any)?.preferences?.premium) && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                        )}
+                      </div>
                       <p className="text-xl text-slate-600 mb-2">{candidate.designation}</p>
                       <p className="text-slate-500">{candidate.about}</p>
                     </div>

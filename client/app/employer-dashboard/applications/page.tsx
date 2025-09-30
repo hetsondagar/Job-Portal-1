@@ -485,6 +485,10 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                             <h3 className="text-lg font-semibold text-gray-900 truncate">
                               {applicant?.fullName || 'Unknown Candidate'}
                             </h3>
+                            {/* Premium badge */}
+                            {applicant && (applicant.verification_level === 'premium' || (applicant as any).verificationLevel === 'premium' || (applicant as any)?.preferences?.premium) && (
+                              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                            )}
                             <Badge className={getStatusColor(application.status)}>
                               <StatusIcon className="w-3 h-3 mr-1" />
                               {application.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -774,38 +778,23 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
     <div className="space-y-6">
       {/* Candidate Overview */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start space-x-4">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">{job?.title || 'Job Application'}</h3>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600">Application ID: {application.id}</p>
+                {applicant && (applicant.verification_level === 'premium' || (applicant as any).verificationLevel === 'premium' || (applicant as any)?.preferences?.premium) && (
+                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                )}
+              </div>
+            </div>
             <Avatar className="w-16 h-16">
               <AvatarImage src={applicant?.avatar} />
               <AvatarFallback>
                 {applicant?.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{applicant?.fullName}</h2>
-              {applicant?.headline && (
-                <p className="text-gray-600 mt-1">{applicant.headline}</p>
-              )}
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 mr-1" />
-                  {applicant?.email}
-                </div>
-                {applicant?.phone && (
-                  <div className="flex items-center">
-                    <Phone className="w-4 h-4 mr-1" />
-                    {applicant.phone}
-                  </div>
-                )}
-                {applicant?.current_location && (
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    {applicant.current_location}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
