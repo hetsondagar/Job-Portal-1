@@ -369,6 +369,9 @@ exports.getAllJobs = async (req, res, next) => {
       } else if (status === 'inactive') {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
+    } else {
+      // Default public listing: only active jobs
+      whereClause.status = 'active';
     }
     if (companyId) whereClause.company_id = companyId;
     if (location) whereClause.location = { [Job.sequelize.Op.iLike]: `%${location}%` };
@@ -467,6 +470,12 @@ exports.getJobById = async (req, res, next) => {
         success: false,
         message: 'Job not found'
       });
+    }
+
+    // Visibility rules: paused jobs are not visible to jobseekers (non-owners)
+    const isOwner = req.user && job.employerId === req.user.id;
+    if (job.status === 'paused' && !isOwner) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
     }
 
     // Track the view (async, don't wait for it)
@@ -910,9 +919,14 @@ exports.getJobsByCompany = async (req, res, next) => {
     if (status) {
       if (status === 'active') {
         whereClause.status = 'active';
+      } else if (status === 'expired') {
+        whereClause.status = 'expired';
       } else if (status === 'inactive') {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
+    } else {
+      // Public company page: show active and expired, hide draft/paused/closed
+      whereClause.status = { [Op.in]: ['active', 'expired'] };
     }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
