@@ -1007,11 +1007,14 @@ exports.updateJobStatus = async (req, res, next) => {
           for (const w of watchers) {
             try {
               // Send notification email (jsonTransport in dev)
-              await EmailService.sendPasswordResetEmail(
-                (await User.findByPk(w.user_id))?.email,
-                'job-reopened',
-                'Job Seeker'
-              );
+              const watcher = await User.findByPk(w.user_id);
+              if (watcher?.email) {
+                await EmailService.sendPasswordResetEmail(
+                  watcher.email,
+                  'job-reopened',
+                  watcher.first_name || 'Job Seeker'
+                );
+              }
               // Create in-app notification
               try {
                 const Notification = require('../models/Notification');

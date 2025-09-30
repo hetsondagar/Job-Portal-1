@@ -843,8 +843,9 @@ router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
     
+    // Correct field mapping: model uses camelCase userId
     const notifications = await Notification.findAll({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
       order: [['createdAt', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
@@ -948,15 +949,9 @@ router.patch('/notifications/:id/read', authenticateToken, async (req, res) => {
 router.patch('/notifications/read-all', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
-    
     await Notification.update(
-      { isRead: true },
-      { 
-        where: { 
-          userId: req.user.id,
-          isRead: false
-        }
-      }
+      { isRead: true, readAt: new Date() },
+      { where: { userId: req.user.id, isRead: false } }
     );
 
     res.json({
@@ -1004,6 +999,28 @@ router.delete('/notifications/:id', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to delete notification'
     });
+  }
+});
+
+// Create a test notification for the authenticated user (secured)
+router.post('/notifications/test', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    const { title, message, priority } = req.body || {};
+    const data = await Notification.create({
+      userId: req.user.id,
+      type: 'system',
+      title: title || 'Test notification',
+      message: message || 'This is a test notification to verify delivery.',
+      priority: priority || 'medium',
+      actionUrl: '/notifications',
+      actionText: 'Open notifications',
+      icon: 'bell'
+    });
+    res.json({ success: true, message: 'Notification created', data });
+  } catch (error) {
+    console.error('Error creating test notification:', error);
+    res.status(500).json({ success: false, message: 'Failed to create test notification' });
   }
 });
 
