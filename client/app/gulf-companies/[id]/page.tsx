@@ -229,7 +229,14 @@ function GulfCompanyDetailPage() {
         const merged = [...active, ...expired]
           .filter((j, idx, arr) => j && j.id && arr.findIndex(x => x.id === j.id) === idx)
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        setCompanyJobs(merged)
+        if (merged.length > 0) {
+          setCompanyJobs(merged)
+        } else {
+          // Fallback: fetch without status to get any visible jobs from API
+          const anyResp = await apiService.getCompanyJobs(companyId)
+          const anyArr = toArray(anyResp)
+          setCompanyJobs(anyArr)
+        }
       } else {
         setJobsError('Failed to load company jobs')
       }

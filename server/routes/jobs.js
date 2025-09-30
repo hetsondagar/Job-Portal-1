@@ -57,11 +57,11 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Public routes
+// Public routes (order matters: specific routes before parameterized ':id')
 router.get('/', getAllJobs);
-router.get('/:id', getJobById);
-router.get('/:id/similar', getSimilarJobs);
 router.get('/company/:companyId', getJobsByCompany);
+router.get('/:id/similar', getSimilarJobs);
+router.get('/:id', getJobById);
 
 // Protected routes (require authentication)
 router.get('/employer/manage-jobs', authenticateToken, getJobsByEmployer);
