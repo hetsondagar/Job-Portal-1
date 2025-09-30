@@ -63,6 +63,9 @@ import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { motion } from "framer-motion"
+import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 import JobAtPaceNavbar from "@/components/job-at-pace/JobAtPaceNavbar"
 
 interface PricingPlan {
@@ -343,6 +346,7 @@ const mockApplications = [
 ]
 
 export default function JobAtPacePage() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("resumeai")
   const [selectedPlan, setSelectedPlan] = useState("premium")
   const [alerts, setAlerts] = useState(mockJobAlerts)
@@ -355,10 +359,27 @@ export default function JobAtPacePage() {
     experience: ""
   })
 
-  const handleSubscribe = (planId: string) => {
+  const handleSubscribe = async (planId: string) => {
     setSelectedPlan(planId)
-    // In real app, handle subscription logic
-    console.log(`Subscribing to ${planId} plan`)
+    if (!user) {
+      toast.error('Please login to activate premium')
+      return
+    }
+    try {
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/user/job-at-pace/activate`, {
+        method: 'POST',
+        headers: apiService.getAuthHeaders(),
+        body: JSON.stringify({ planId })
+      })
+      const data = await resp.json()
+      if (resp.ok && data?.success) {
+        toast.success('Premium activated. Visibility features enabled and premium tag added.')
+      } else {
+        toast.error(data?.message || 'Failed to activate premium')
+      }
+    } catch (e) {
+      toast.error('Failed to activate premium')
+    }
   }
 
   const handleCreateAlert = () => {

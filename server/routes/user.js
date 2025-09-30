@@ -2277,6 +2277,51 @@ router.delete('/bookmarks/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Job At Pace: activate premium visibility features without payment (logged-in users only)
+router.post('/job-at-pace/activate', authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+    // Only jobseekers can activate Job at Pace
+    if (user.user_type !== 'jobseeker') {
+      return res.status(403).json({ success: false, message: 'Only jobseekers can activate Job at Pace' });
+    }
+
+    // Merge preferences safely
+    const currentPrefs = user.preferences || {};
+    const tags = Array.isArray(currentPrefs.tags) ? currentPrefs.tags : [];
+    const mergedPrefs = {
+      ...currentPrefs,
+      premium: true,
+      visibility: {
+        ...(currentPrefs.visibility || {}),
+        profileBoost: true,
+        premiumBadge: true,
+        featuredPlacement: true
+      },
+      tags: Array.from(new Set([ ...tags, 'premium' ]))
+    };
+
+    // Update user record
+    await user.update({
+      preferences: mergedPrefs,
+      verification_level: 'premium'
+    });
+
+    // Optional: record activity (best-effort)
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      if (EmployerActivityService?.recordUserActivity) {
+        await EmployerActivityService.recordUserActivity(user.id, 'job_at_pace_activate', { planId: req.body?.planId || 'premium' });
+      }
+    } catch (_) {}
+
+    return res.json({ success: true, message: 'Job at Pace premium activated', data: { userId: user.id, preferences: mergedPrefs } });
+  } catch (error) {
+    console.error('Error activating Job at Pace:', error);
+    return res.status(500).json({ success: false, message: 'Failed to activate Job at Pace' });
+  }
+});
+
 // Search History endpoints
 router.get('/search-history', authenticateToken, async (req, res) => {
   try {
