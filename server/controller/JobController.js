@@ -370,8 +370,13 @@ exports.getAllJobs = async (req, res, next) => {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
-      // Default public listing: only active jobs
+      // Default public listing: only active jobs that are not expired by date
       whereClause.status = 'active';
+      const now = new Date();
+      whereClause[Op.or] = [
+        { validTill: null },
+        { validTill: { [Op.gte]: now } }
+      ];
     }
     if (companyId) whereClause.company_id = companyId;
     if (location) whereClause.location = { [Job.sequelize.Op.iLike]: `%${location}%` };
@@ -925,8 +930,18 @@ exports.getJobsByCompany = async (req, res, next) => {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
-      // Public company page: show active and expired, hide draft/paused/closed
-      whereClause.status = { [Op.in]: ['active', 'expired'] };
+      // Public company page: show active (not past validTill) and expired
+      const now = new Date();
+      whereClause[Op.or] = [
+        { status: 'expired' },
+        {
+          status: 'active',
+          [Op.or]: [
+            { validTill: null },
+            { validTill: { [Op.gte]: now } }
+          ]
+        }
+      ];
     }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
