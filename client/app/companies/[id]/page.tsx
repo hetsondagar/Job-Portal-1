@@ -1302,6 +1302,9 @@ function CompanyDetailPage() {
                                     <Clock className="w-4 h-4 mr-1" />
                                     {job.type || job.jobType || '—'}
                                   </div>
+                                  {job.status === 'expired' && (
+                                    <Badge className="bg-red-100 text-red-800 border-red-200">Expired</Badge>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex flex-col space-y-2">
@@ -1314,15 +1317,19 @@ function CompanyDetailPage() {
                                   className={`h-10 px-6 ${
                                     hasAppliedToJob(job.id)
                                       ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                                      : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
+                                      : job.status === 'expired'
+                                        ? 'bg-slate-300 cursor-not-allowed'
+                                        : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
                                   }`}
-                                  disabled={hasAppliedToJob(job.id)}
+                                  disabled={hasAppliedToJob(job.id) || job.status === 'expired'}
                                 >
                                   {hasAppliedToJob(job.id) ? (
                                     <>
                                       <CheckCircle className="w-4 h-4 mr-2" />
                                       Applied
                                     </>
+                                  ) : job.status === 'expired' ? (
+                                    'Applications closed'
                                   ) : (
                                     'Apply now'
                                   )}
