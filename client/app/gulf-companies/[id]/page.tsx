@@ -105,8 +105,9 @@ function GulfCompanyDetailPage() {
     console.log('Auth context not available, proceeding without authentication')
   }
   
-  const companyId = String((params as any)?.id || '')
-  const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyId)
+  const companyIdParam = String((params as any)?.id || '')
+  const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyIdParam)
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string>(companyIdParam)
   const [isFollowing, setIsFollowing] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -151,7 +152,7 @@ function GulfCompanyDetailPage() {
       console.error('Error toggling follow:', error)
       toast.error('Failed to update follow status')
     }
-  }, [companyId, isFollowing])
+  }, [companyIdParam, isFollowing])
 
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
@@ -161,9 +162,10 @@ function GulfCompanyDetailPage() {
       // Try direct company endpoint only if id looks valid
       if (isValidUuid) {
         try {
-          const response = await apiService.getCompany(companyId)
+          const response = await apiService.getCompany(companyIdParam)
           if (response && response.success && response.data) {
             setCompany(response.data)
+            setResolvedCompanyId(response.data.id)
             return
           }
         } catch (error: any) {
@@ -173,11 +175,15 @@ function GulfCompanyDetailPage() {
       
       // Fallback: fetch public companies list and find by id
       try {
-        const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
+        const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: companyIdParam } as any)
         if (list && list.success && Array.isArray(list.data)) {
-          const found = list.data.find((c: any) => String(c.id) === companyId)
+          const needle = companyIdParam.toLowerCase()
+          const found = list.data.find((c: any) => String(c.id) === companyIdParam
+            || String(c.slug || '').toLowerCase() === needle
+            || String(c.name || '').toLowerCase() === needle)
           if (found) {
             setCompany(found)
+            setResolvedCompanyId(found.id)
             return
           }
         }
@@ -187,12 +193,12 @@ function GulfCompanyDetailPage() {
       
       // Last-resort fallback: infer minimal company info from its jobs (public)
       try {
-        const jobsResp = await apiService.getCompanyJobs(companyId)
+        const jobsResp = await apiService.getCompanyJobs(companyIdParam)
         if (jobsResp && jobsResp.success) {
           const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
           if (arr.length > 0) {
             const name = arr[0]?.companyName || 'Company'
-            setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
+            setCompany({ id: companyIdParam, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
             return
           }
         }
@@ -208,7 +214,7 @@ function GulfCompanyDetailPage() {
     } finally {
       setLoadingCompany(false)
     }
-  }, [companyId, isValidUuid])
+  }, [companyIdParam, isValidUuid])
 
   // Fetch company jobs
   const fetchCompanyJobs = useCallback(async () => {
@@ -216,9 +222,10 @@ function GulfCompanyDetailPage() {
     setJobsError("")
     try {
       // Fetch active and expired jobs explicitly and combine
+      const companyKey = isValidUuid ? resolvedCompanyId : resolvedCompanyId
       const [activeResp, expiredResp] = await Promise.all([
-        apiService.getCompanyJobs(companyId, { status: 'active' } as any),
-        apiService.getCompanyJobs(companyId, { status: 'expired' } as any)
+        apiService.getCompanyJobs(companyKey, { status: 'active' } as any),
+        apiService.getCompanyJobs(companyKey, { status: 'expired' } as any)
       ])
 
       if ((activeResp && activeResp.success) || (expiredResp && expiredResp.success)) {
@@ -233,7 +240,7 @@ function GulfCompanyDetailPage() {
           setCompanyJobs(merged)
         } else {
           // Fallback: fetch without status to get any visible jobs from API
-          const anyResp = await apiService.getCompanyJobs(companyId)
+          const anyResp = await apiService.getCompanyJobs(companyKey)
           const anyArr = toArray(anyResp)
           setCompanyJobs(anyArr)
         }
@@ -246,14 +253,14 @@ function GulfCompanyDetailPage() {
     } finally {
       setLoadingJobs(false)
     }
-  }, [companyId])
+  }, [resolvedCompanyId, isValidUuid])
 
   useEffect(() => {
-    if (companyId) {
+    if (companyIdParam) {
       fetchCompanyData()
       fetchCompanyJobs()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs])
+  }, [companyIdParam, fetchCompanyData, fetchCompanyJobs])
 
   const handleJobClick = (job: any) => {
     if (!isAuthenticated) {
