@@ -20,8 +20,7 @@ const {
   updateJob,
   deleteJob,
   getJobsByCompany,
-  getJobsByEmployer,
-  updateJobStatus
+  getJobsByEmployer
 } = require('../controller/JobController');
 
 // Middleware to verify JWT token
@@ -70,7 +69,58 @@ router.get('/edit/:id', authenticateToken, getJobForEdit);
 router.post('/create', authenticateToken, createJob);
 router.put('/:id', authenticateToken, updateJob);
 router.delete('/:id', authenticateToken, deleteJob);
-router.patch('/:id/status', authenticateToken, updateJobStatus);
+// Hardened status update with inline watcher notifications and explicit logs
+router.patch('/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body || {};
+    const job = await Job.findByPk(id);
+    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+
+    const prevStatus = job.status;
+    await job.update({ status });
+
+    if (status === 'active') {
+      console.log('🔔 [route] Reactivation for job', job.id, 'prevStatus=', prevStatus, '-> active');
+      try {
+        const [watchers] = await Job.sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
+        console.log('🔔 [route] Found watchers:', Array.isArray(watchers) ? watchers.length : 0);
+        if (Array.isArray(watchers) && watchers.length > 0) {
+          const Notification = require('../models/Notification');
+          for (const w of watchers) {
+            try {
+              const watcher = await User.findByPk(w.user_id);
+              console.log('🔔 [route] Notifying watcher user_id=', w.user_id, 'email=', watcher?.email || 'n/a');
+              await Notification.create({
+                userId: w.user_id,
+                type: 'system',
+                title: 'Tracked job reopened',
+                message: `${job.title} is open again. Apply now!`,
+                priority: 'medium',
+                actionUrl: `/jobs/${job.id}`,
+                actionText: 'View job',
+                icon: 'briefcase',
+                metadata: { jobId: job.id, companyId: job.companyId }
+              });
+              if (watcher?.email) {
+                await EmailService.sendPasswordResetEmail(watcher.email, 'job-reopened', watcher.first_name || 'Job Seeker');
+              }
+            } catch (inner) {
+              console.warn('⚠️ [route] Failed notifying watcher', w.user_id, inner?.message || inner);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ [route] Watcher notification failed:', e?.message || e);
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'Job status updated successfully', data: job });
+  } catch (error) {
+    console.error('Update job status error (route):', error);
+    return res.status(500).json({ success: false, message: 'Failed to update job status' });
+  }
+});
 
 // Update job expiry (validTill)
 router.patch('/:id/expiry', authenticateToken, async (req, res) => {

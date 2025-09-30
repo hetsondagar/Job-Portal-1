@@ -997,9 +997,9 @@ exports.updateJobStatus = async (req, res, next) => {
     const prevStatus = job.status;
     await job.update(updates);
 
-    // If moving from expired/paused/closed to active, notify watchers
+    // If set to active (idempotent), notify watchers
     try {
-      if (status === 'active' && prevStatus !== 'active') {
+      if (status === 'active') {
         const sequelize = Job.sequelize;
         console.log('🔔 Reactivation for job', job.id, 'prevStatus=', prevStatus, '-> active');
         const [watchers] = await sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
