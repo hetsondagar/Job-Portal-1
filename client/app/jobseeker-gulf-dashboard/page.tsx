@@ -627,9 +627,9 @@ export default function JobseekerGulfDashboardPage() {
                     <div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">Account Type</p>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="capitalize bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          Gulf Jobseeker
-                        </Badge>
+                      <Badge variant="secondary" className="capitalize bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        Gulf Jobseeker
+                      </Badge>
                         {/* Premium Badge */}
                         {(user.verification_level === 'premium' || user.verificationLevel === 'premium' || user?.preferences?.premium) && (
                           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">

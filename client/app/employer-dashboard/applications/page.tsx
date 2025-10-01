@@ -246,16 +246,37 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
     return icons[status as keyof typeof icons] || Clock
   }
 
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = !searchQuery || 
-      app.applicant?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.job?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.applicant?.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = statusFilter === "all" || app.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const filteredApplications = applications
+    .filter(app => {
+      const matchesSearch = !searchQuery || 
+        app.applicant?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.job?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.applicant?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const matchesStatus = statusFilter === "all" || app.status === statusFilter
+      
+      return matchesSearch && matchesStatus
+    })
+    .sort((a, b) => {
+      // Sort premium users first
+      const aIsPremium = a.applicant && (
+        a.applicant.verification_level === 'premium' || 
+        a.applicant.verificationLevel === 'premium' || 
+        a.applicant?.preferences?.premium
+      )
+      const bIsPremium = b.applicant && (
+        b.applicant.verification_level === 'premium' || 
+        b.applicant.verificationLevel === 'premium' || 
+        b.applicant?.preferences?.premium
+      )
+      
+      // Premium users come first
+      if (aIsPremium && !bIsPremium) return -1
+      if (!aIsPremium && bIsPremium) return 1
+      
+      // Within same premium status, sort by application date (newest first)
+      return new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+    })
 
   const handleViewDetails = async (application: any) => {
     try {
@@ -447,6 +468,27 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
           </CardContent>
         </Card>
 
+        {/* Premium Priority Notice */}
+        {filteredApplications.some(app => {
+          const applicant = app.applicant
+          return applicant && (
+            applicant.verification_level === 'premium' || 
+            applicant.verificationLevel === 'premium' || 
+            applicant?.preferences?.premium
+          )
+        }) && (
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Star className="w-5 h-5 text-yellow-600" />
+                <p className="text-sm text-yellow-800">
+                  <strong>Premium Priority:</strong> Premium candidates are shown at the top of the list and highlighted with a golden border.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Applications List */}
         <div className="space-y-4">
           {filteredApplications.length === 0 ? (
@@ -468,8 +510,15 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
               const applicant = application.applicant
               const job = application.job
               
+              // Check if applicant is premium
+              const isPremium = applicant && (
+                applicant.verification_level === 'premium' || 
+                applicant.verificationLevel === 'premium' || 
+                applicant?.preferences?.premium
+              )
+              
               return (
-                <Card key={application.id} className="hover:shadow-md transition-shadow">
+                <Card key={application.id} className={`hover:shadow-md transition-shadow ${isPremium ? 'ring-2 ring-yellow-200 bg-yellow-50/30' : ''}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4 flex-1">

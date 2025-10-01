@@ -477,7 +477,16 @@ const getGulfEmployerApplications = async (req, res) => {
           required: false // Use LEFT JOIN for cover letter
         }
       ],
-      order: [['appliedAt', 'DESC']],
+      order: [
+        // Sort by premium status first (premium users on top)
+        [
+          { model: User, as: 'applicant' },
+          'verification_level',
+          'DESC'
+        ],
+        // Then by application date (newest first)
+        ['appliedAt', 'DESC']
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

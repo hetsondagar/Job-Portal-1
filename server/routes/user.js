@@ -1501,7 +1501,16 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
             ]
           }
         ],
-        order: [['appliedAt', 'DESC']]
+        order: [
+          // Sort by premium status first (premium users on top)
+          [
+            { model: User, as: 'applicant' },
+            'verification_level',
+            'DESC'
+          ],
+          // Then by application date (newest first)
+          ['appliedAt', 'DESC']
+        ]
       });
       console.log('✅ Sequelize query completed successfully');
     } catch (queryError) {
