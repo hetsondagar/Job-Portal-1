@@ -812,7 +812,21 @@ router.put('/change-password', authenticateToken, [
 
     const { currentPassword, newPassword } = req.body;
 
-    // Verify current password
+    // Prevent setting the same password
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // If the user registered via OAuth and has no password, allow setting one with only token auth
+    if (!req.user.password) {
+      await req.user.update({ password: newPassword });
+      return res.status(200).json({ success: true, message: 'Password set successfully' });
+    }
+
+    // Verify current password for regular accounts
     const isCurrentPasswordValid = await req.user.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
