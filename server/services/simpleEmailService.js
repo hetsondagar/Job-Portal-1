@@ -2,8 +2,8 @@ const nodemailer = require('nodemailer');
 
 class SimpleEmailService {
   constructor() {
-    this.fromEmail = 'noreply@jobportal.com';
-    this.fromName = 'Job Portal';
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@jobportal.com';
+    this.fromName = process.env.FROM_NAME || 'Job Portal';
     this.initializeTransporter();
   }
 
@@ -21,19 +21,18 @@ class SimpleEmailService {
         return;
       }
 
-      // Fallback to local JSON transport (no network). Emails are logged.
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
-      console.log('✅ Email service initialized with jsonTransport (no network)');
+      // No SMTP. We'll rely on API providers (Resend/SendGrid) if configured.
+      this.transporter = null;
+      console.log('ℹ️ No SMTP configured. Will use email API providers if available.');
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error.message);
-      // Last-resort fallback to prevent crashes
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      this.transporter = null;
     }
   }
 
   async sendPasswordResetEmail(toEmail, resetToken, userName = 'User') {
-    // Wait for transporter to be ready
-    if (!this.transporter) {
+    // Ensure init ran
+    if (typeof this.transporter === 'undefined') {
       await this.initializeTransporter();
     }
 
@@ -51,14 +50,99 @@ class SimpleEmailService {
       html: htmlContent
     };
 
-    try {
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Password reset email sent (or logged)');
-      return { success: true, method: 'nodemailer', messageId: info.messageId };
-    } catch (error) {
-      console.error('❌ Failed to send email:', error.message);
-      throw new Error('Failed to send password reset email');
+    // Strategy 1: SMTP via nodemailer
+    if (this.transporter) {
+      try {
+        const info = await this.transporter.sendMail(mailOptions);
+        console.log('✅ Password reset email sent via SMTP');
+        return { success: true, method: 'smtp', messageId: info.messageId };
+      } catch (error) {
+        console.error('❌ SMTP send failed:', error.message);
+      }
     }
+
+    // Strategy 2: Resend API
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const res = await this.sendViaResend({ toEmail, subject, htmlContent, textContent });
+        console.log('✅ Password reset email sent via Resend');
+        return { success: true, method: 'resend', id: res.id };
+      } catch (error) {
+        console.error('❌ Resend API send failed:', error.message);
+      }
+    }
+
+    // Strategy 3: SendGrid API
+    if (process.env.SENDGRID_API_KEY) {
+      try {
+        const res = await this.sendViaSendgrid({ toEmail, subject, htmlContent, textContent });
+        console.log('✅ Password reset email sent via SendGrid');
+        return { success: true, method: 'sendgrid', id: res.message };
+      } catch (error) {
+        console.error('❌ SendGrid API send failed:', error.message);
+      }
+    }
+
+    // Strategy 4: Final fallback to jsonTransport for local dev only
+    try {
+      const devTransporter = nodemailer.createTransport({ jsonTransport: true });
+      const info = await devTransporter.sendMail(mailOptions);
+      console.log('📝 Email not sent (no provider configured). Logged message for dev env.');
+      console.log(JSON.stringify(info.message, null, 2));
+      return { success: true, method: 'jsonTransport', message: 'Logged (no provider configured)' };
+    } catch (error) {
+      console.error('❌ All email strategies failed:', error.message);
+      throw new Error('Email provider not configured. Set SMTP_*, RESEND_API_KEY, or SENDGRID_API_KEY');
+    }
+  }
+
+  async sendViaResend({ toEmail, subject, htmlContent, textContent }) {
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = `${this.fromName} <${this.fromEmail}>`;
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: [toEmail],
+        subject,
+        html: htmlContent,
+        text: textContent
+      })
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Resend error ${resp.status}: ${txt}`);
+    }
+    return await resp.json();
+  }
+
+  async sendViaSendgrid({ toEmail, subject, htmlContent, textContent }) {
+    const apiKey = process.env.SENDGRID_API_KEY;
+    const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: toEmail }] }],
+        from: { email: this.fromEmail, name: this.fromName },
+        subject,
+        content: [
+          { type: 'text/plain', value: textContent },
+          { type: 'text/html', value: htmlContent }
+        ]
+      })
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`SendGrid error ${resp.status}: ${txt}`);
+    }
+    return { message: 'accepted' };
   }
 
   getPasswordResetEmailTemplate(userName, resetUrl) {
