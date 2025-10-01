@@ -122,7 +122,7 @@ class SimpleEmailService {
 
         console.log(`🔄 Trying Yahoo SMTP on port ${port} (secure: ${secure})`);
         
-        const testTransporter = nodemailer.createTransporter(transporterOptions);
+        const testTransporter = nodemailer.createTransport(transporterOptions);
         await testTransporter.verify();
         
         console.log(`✅ Yahoo SMTP verified on port ${port}`);
