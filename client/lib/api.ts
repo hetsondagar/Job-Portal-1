@@ -1093,6 +1093,18 @@ class ApiService {
     });
     return this.handleResponse<{ watching: boolean }>(response);
   }
+
+  // Secure job tap endpoint
+  async tapSecureJob(jobId: string): Promise<ApiResponse<{ tapCount: number; premiumAwarded: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/tap`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+    });
+    return this.handleResponse<{ tapCount: number; premiumAwarded: boolean }>(response);
+  }
   // Utility methods
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;

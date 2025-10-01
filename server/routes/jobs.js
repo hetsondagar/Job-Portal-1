@@ -287,6 +287,102 @@ router.patch('/:id/expire', authenticateToken, async (req, res) => {
   }
 });
 
+// Track secure job tap
+router.post('/:id/tap', authenticateToken, async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    const userId = req.user.id;
+    const { User, SecureJobTap } = require('../config/index');
+
+    console.log('🔍 Secure job tap request:', { jobId, userId });
+
+    // Check if job exists and is secure
+    const job = await Job.findByPk(jobId);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    if (!job.isSecure) {
+      return res.status(400).json({
+        success: false,
+        message: 'This job is not a secure job'
+      });
+    }
+
+    // Check if user already tapped this secure job
+    const existingTap = await SecureJobTap.findOne({
+      where: { userId, jobId }
+    });
+
+    if (existingTap) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already tapped this secure job'
+      });
+    }
+
+    // Record the secure job tap
+    await SecureJobTap.create({
+      userId,
+      jobId,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    // Update user's secure job taps count
+    const user = await User.findByPk(userId);
+    const newTapCount = (user.secureJobTaps || 0) + 1;
+    const updateData = {
+      secureJobTaps: newTapCount
+    };
+
+    // If this is the first secure job tap, set the timestamp and award premium badge
+    if (!user.secureJobTapsAt) {
+      updateData.secureJobTapsAt = new Date();
+      updateData.verification_level = 'premium';
+      
+      // Update preferences to include premium badge
+      const currentPrefs = user.preferences || {};
+      updateData.preferences = {
+        ...currentPrefs,
+        premium: true,
+        visibility: {
+          ...(currentPrefs.visibility || {}),
+          premiumBadge: true
+        }
+      };
+    }
+
+    await user.update(updateData);
+
+    console.log('✅ Secure job tap recorded:', { 
+      userId, 
+      jobId, 
+      newTapCount,
+      premiumAwarded: !user.secureJobTapsAt
+    });
+
+    res.json({
+      success: true,
+      message: 'Secure job tap recorded successfully',
+      data: {
+        tapCount: newTapCount,
+        premiumAwarded: !user.secureJobTapsAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error recording secure job tap:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record secure job tap: ' + error.message
+    });
+  }
+});
+
 // Job application endpoint
 router.post('/:id/apply', authenticateToken, async (req, res) => {
   try {
