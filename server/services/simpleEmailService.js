@@ -9,21 +9,68 @@ class SimpleEmailService {
 
   async initializeTransporter() {
     try {
-      // Prefer explicit SMTP settings if provided
-      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        this.transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      // Prefer explicit SMTP settings if provided (or URL)
+      const smtpUrl = process.env.SMTP_URL;
+      const hasHostCreds = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+      if (smtpUrl || hasHostCreds) {
+        const poolEnabled = String(process.env.SMTP_POOL || 'true') === 'true';
+        const port = Number(process.env.SMTP_PORT || 587);
+        const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
+        const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000);
+        const socketTimeout = Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 10000);
+
+        const baseOptions = smtpUrl
+          ? { url: smtpUrl }
+          : {
+              host: process.env.SMTP_HOST,
+              port,
+              secure,
+              auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+            };
+
+        // Build advanced SMTP options
+        const transporterOptions = {
+          ...baseOptions,
+          pool: poolEnabled,
+          maxConnections: Number(process.env.SMTP_MAX_CONNECTIONS || 5),
+          maxMessages: Number(process.env.SMTP_MAX_MESSAGES || 100),
+          connectionTimeout,
+          greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
+          socketTimeout,
+          // STARTTLS / TLS behaviors
+          requireTLS: String(process.env.SMTP_REQUIRE_TLS || 'false') === 'true',
+          ignoreTLS: String(process.env.SMTP_IGNORE_TLS || 'false') === 'true',
+          tls: {
+            // Sometimes providers need this off if they use self-signed or old certs
+            rejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || 'true') === 'true',
+            ciphers: process.env.SMTP_TLS_CIPHERS || undefined,
+            minVersion: process.env.SMTP_TLS_MIN_VERSION || undefined
+          },
+          debug: String(process.env.SMTP_DEBUG || 'false') === 'true',
+        };
+
+        this.transporter = nodemailer.createTransport(transporterOptions);
+
+        // Verify connection in background (non-blocking)
+        Promise.resolve()
+          .then(() => this.transporter.verify())
+          .then(() => console.log('✅ SMTP transporter verified successfully'))
+          .catch((err) => console.warn('⚠️ SMTP transporter verification failed:', err?.message || err));
+
+        console.log('✅ Email service initialized with configured SMTP', {
+          pool: transporterOptions.pool,
+          host: smtpUrl ? '(via URL)' : process.env.SMTP_HOST,
+          port,
+          secure,
+          connectionTimeout,
+          socketTimeout
         });
-        console.log('✅ Email service initialized with configured SMTP');
         return;
       }
 
-      // No SMTP. We'll rely on API providers (Resend/SendGrid) if configured.
+      // No SMTP configured
       this.transporter = null;
-      console.log('ℹ️ No SMTP configured. Will use email API providers if available.');
+      console.log('ℹ️ No SMTP configured. Set SMTP_URL or SMTP_HOST/USER/PASS to enable SMTP.');
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error.message);
       this.transporter = null;
@@ -50,50 +97,30 @@ class SimpleEmailService {
       html: htmlContent
     };
 
-    // Strategy 1: SMTP via nodemailer
-    if (this.transporter) {
+    // Strategy: SMTP only, with retries
+    if (!this.transporter) {
+      throw new Error('SMTP is not configured. Set SMTP_URL or SMTP_HOST/USER/PASS');
+    }
+
+    const maxAttempts = Number(process.env.SMTP_RETRY_ATTEMPTS || 3);
+    const baseDelayMs = Number(process.env.SMTP_RETRY_DELAY_MS || 1000);
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const info = await this.transporter.sendMail(mailOptions);
         console.log('✅ Password reset email sent via SMTP');
         return { success: true, method: 'smtp', messageId: info.messageId };
       } catch (error) {
-        console.error('❌ SMTP send failed:', error.message);
+        lastError = error;
+        console.error(`❌ SMTP send failed (attempt ${attempt}/${maxAttempts}):`, error?.message || error);
+        if (attempt < maxAttempts) {
+          const delay = baseDelayMs * Math.pow(2, attempt - 1);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
       }
     }
-
-    // Strategy 2: Resend API
-    if (process.env.RESEND_API_KEY) {
-      try {
-        const res = await this.sendViaResend({ toEmail, subject, htmlContent, textContent });
-        console.log('✅ Password reset email sent via Resend');
-        return { success: true, method: 'resend', id: res.id };
-      } catch (error) {
-        console.error('❌ Resend API send failed:', error.message);
-      }
-    }
-
-    // Strategy 3: SendGrid API
-    if (process.env.SENDGRID_API_KEY) {
-      try {
-        const res = await this.sendViaSendgrid({ toEmail, subject, htmlContent, textContent });
-        console.log('✅ Password reset email sent via SendGrid');
-        return { success: true, method: 'sendgrid', id: res.message };
-      } catch (error) {
-        console.error('❌ SendGrid API send failed:', error.message);
-      }
-    }
-
-    // Strategy 4: Final fallback to jsonTransport for local dev only
-    try {
-      const devTransporter = nodemailer.createTransport({ jsonTransport: true });
-      const info = await devTransporter.sendMail(mailOptions);
-      console.log('📝 Email not sent (no provider configured). Logged message for dev env.');
-      console.log(JSON.stringify(info.message, null, 2));
-      return { success: true, method: 'jsonTransport', message: 'Logged (no provider configured)' };
-    } catch (error) {
-      console.error('❌ All email strategies failed:', error.message);
-      throw new Error('Email provider not configured. Set SMTP_*, RESEND_API_KEY, or SENDGRID_API_KEY');
-    }
+    throw new Error(`SMTP send failed after ${maxAttempts} attempts: ${lastError?.message || lastError}`);
   }
 
   async sendViaResend({ toEmail, subject, htmlContent, textContent }) {
