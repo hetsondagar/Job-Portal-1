@@ -9,6 +9,13 @@ class SimpleEmailService {
 
   async initializeTransporter() {
     try {
+      // Yahoo-specific handling
+      if (process.env.SMTP_HOST === 'smtp.mail.yahoo.com' || process.env.SMTP_HOST?.includes('yahoo')) {
+        console.log('🔄 Detected Yahoo SMTP - using Yahoo-specific configuration');
+        this.transporter = await this.initializeYahooTransporter();
+        return;
+      }
+
       // Prefer explicit SMTP settings if provided (or URL)
       const smtpUrl = process.env.SMTP_URL;
       const hasHostCreds = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
@@ -75,6 +82,58 @@ class SimpleEmailService {
       console.error('❌ Failed to initialize email service:', error.message);
       this.transporter = null;
     }
+  }
+
+  // Yahoo-specific SMTP configuration
+  async initializeYahooTransporter() {
+    const yahooHost = 'smtp.mail.yahoo.com';
+    const yahooPorts = [465, 587]; // Try both ports
+    
+    for (const port of yahooPorts) {
+      try {
+        const secure = port === 465;
+        const transporterOptions = {
+          host: yahooHost,
+          port,
+          secure,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          },
+          // Yahoo-specific settings
+          connectionTimeout: 30000, // 30 seconds
+          greetingTimeout: 30000,
+          socketTimeout: 30000,
+          requireTLS: !secure, // Only for port 587
+          ignoreTLS: false,
+          tls: {
+            rejectUnauthorized: false, // Yahoo sometimes has cert issues
+            ciphers: 'SSLv3',
+            secureProtocol: 'TLSv1_2_method'
+          },
+          // Yahoo connection pooling
+          pool: false, // Disable pooling for Yahoo
+          maxConnections: 1,
+          maxMessages: 1,
+          // Yahoo-specific debug
+          debug: true,
+          logger: true
+        };
+
+        console.log(`🔄 Trying Yahoo SMTP on port ${port} (secure: ${secure})`);
+        
+        const testTransporter = nodemailer.createTransporter(transporterOptions);
+        await testTransporter.verify();
+        
+        console.log(`✅ Yahoo SMTP verified on port ${port}`);
+        return testTransporter;
+      } catch (error) {
+        console.warn(`❌ Yahoo SMTP failed on port ${port}:`, error?.message || error);
+        continue;
+      }
+    }
+    
+    throw new Error('Yahoo SMTP failed on all ports (465, 587)');
   }
 
   async sendPasswordResetEmail(toEmail, resetToken, userName = 'User') {
