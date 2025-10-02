@@ -120,7 +120,26 @@ export default function BulkImportPage() {
                 />
               </DialogContent>
             </Dialog>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const blob = await apiService.downloadBulkImportTemplate('csv');
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'job-import-template.csv';
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
+                  toast.success('Template downloaded successfully');
+                } catch (error) {
+                  console.error('Download error:', error);
+                  toast.error('Failed to download template');
+                }
+              }}
+            >
               <Download className="w-4 h-4 mr-2" />
               Download Template
             </Button>
@@ -391,12 +410,12 @@ function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
       </div>
 
       <div className="flex justify-end space-x-3">
-        <Button variant="outline">Cancel</Button>
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit" disabled={!selectedFile || uploading}>
           {uploading ? 'Starting Import...' : 'Start Import'}
         </Button>
       </div>
-    </div>
+    </form>
   )
 }
 
