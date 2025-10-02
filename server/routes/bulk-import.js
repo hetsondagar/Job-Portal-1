@@ -128,7 +128,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const imports = await BulkJobImport.findAndCountAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
       // Removed include to avoid association error
@@ -386,9 +386,8 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
     const workbook = xlsx.utils.book_new();
     const worksheet = xlsx.utils.json_to_sheet(template);
     xlsx.utils.book_append_sheet(workbook, worksheet, 'Jobs');
-    xlsx.write(workbook, { type: 'buffer' }).then(buffer => {
-      res.send(buffer);
-    });
+    const buffer = xlsx.write(workbook, { type: 'buffer' });
+    res.send(buffer);
   } catch (error) {
     console.error('Download template error:', error);
     res.status(500).json({

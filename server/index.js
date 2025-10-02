@@ -259,6 +259,23 @@ app.use('/api/gulf', express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/salary', express.json({ limit: '10mb' }));
 app.use('/api/salary', express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Add JSON parsing to remaining routes (excluding bulk-import)
+app.use('/api', (req, res, next) => {
+  // Skip JSON parsing for bulk-import routes
+  if (req.path.includes('bulk-import')) {
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, next);
+});
+
+app.use('/api', (req, res, next) => {
+  // Skip URL encoding for bulk-import routes
+  if (req.path.includes('bulk-import')) {
+    return next();
+  }
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, path) => {
