@@ -94,20 +94,20 @@ export default function BulkImportPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Bulk Job Import</h1>
-            <p className="text-slate-600">Import multiple job postings from CSV, Excel, or JSON files</p>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 sm:mb-8">
+          <div className="mb-4 lg:mb-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Bulk Job Import</h1>
+            <p className="text-sm sm:text-base text-slate-600">Import multiple job postings from CSV, Excel, or JSON files</p>
           </div>
-          <div className="flex space-x-3 mt-4 sm:mt-0">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full sm:w-auto">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload File
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl mx-4">
                 <DialogHeader>
                   <DialogTitle>Upload Job Import File</DialogTitle>
                   <DialogDescription>
@@ -122,6 +122,7 @@ export default function BulkImportPage() {
             </Dialog>
             <Button 
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={async () => {
                 try {
                   const blob = await apiService.downloadBulkImportTemplate('csv');
@@ -147,57 +148,57 @@ export default function BulkImportPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Total Imports</p>
-                  <p className="text-2xl font-bold text-slate-900">{imports.length}</p>
+                  <p className="text-xs sm:text-sm font-medium text-slate-600">Total Imports</p>
+                  <p className="text-lg sm:text-2xl font-bold text-slate-900">{imports.length}</p>
                 </div>
-                <BarChart3 className="w-8 h-8 text-blue-600" />
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Successful</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {imports.reduce((sum, imp) => sum + imp.successfulImports, 0)}
+                  <p className="text-xs sm:text-sm font-medium text-slate-600">Successful</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-600">
+                    {imports.reduce((sum, imp) => sum + (imp.successfulImports || 0), 0)}
                   </p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-600" />
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Failed</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {imports.reduce((sum, imp) => sum + imp.failedImports, 0)}
+                  <p className="text-xs sm:text-sm font-medium text-slate-600">Failed</p>
+                  <p className="text-lg sm:text-2xl font-bold text-red-600">
+                    {imports.reduce((sum, imp) => sum + (imp.failedImports || 0), 0)}
                   </p>
                 </div>
-                <XCircle className="w-8 h-8 text-red-600" />
+                <XCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Processing</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-xs sm:text-sm font-medium text-slate-600">Processing</p>
+                  <p className="text-lg sm:text-2xl font-bold text-blue-600">
                     {imports.filter(imp => imp.status === "processing").length}
                   </p>
                 </div>
-                <Clock className="w-8 h-8 text-blue-600" />
+                <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
@@ -210,60 +211,79 @@ export default function BulkImportPage() {
             <CardDescription>Track your bulk import jobs and their status</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {imports.map((importJob) => (
-                <div key={importJob.id} className="border border-slate-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(importJob.status)}
-                      <div>
-                        <h3 className="font-semibold text-slate-900">{importJob.importName}</h3>
-                        <p className="text-sm text-slate-600">
-                          {importJob.totalRecords} records • {importJob.importType.toUpperCase()} file
-                        </p>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : imports.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No imports yet</h3>
+                <p className="text-slate-600 mb-4">Upload your first job import file to get started</p>
+                <Button 
+                  onClick={() => setIsUploadDialogOpen(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload File
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {imports.map((importJob) => (
+                  <div key={importJob.id} className="border border-slate-200 rounded-lg p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                      <div className="flex items-center space-x-3 mb-3 sm:mb-0">
+                        {getStatusIcon(importJob.status)}
+                        <div>
+                          <h3 className="font-semibold text-slate-900 text-sm sm:text-base">{importJob.importName}</h3>
+                          <p className="text-xs sm:text-sm text-slate-600">
+                            {importJob.totalRecords || 0} records • {(importJob.importType || 'unknown').toUpperCase()} file
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className={`${getStatusColor(importJob.status)} text-xs`}>
+                          {importJob.status}
+                        </Badge>
+                        <Button size="sm" variant="outline" className="hidden sm:flex">
+                          <Settings className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(importJob.status)}>
-                        {importJob.status}
-                      </Badge>
-                      <Button size="sm" variant="outline">
-                        <Settings className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{importJob.progress}%</span>
-                    </div>
-                    <Progress value={importJob.progress} className="w-full" />
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-slate-600">Total Records:</span>
-                        <span className="font-medium ml-1">{importJob.totalRecords}</span>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span>Progress</span>
+                        <span>{importJob.progress || 0}%</span>
                       </div>
-                      <div>
-                        <span className="text-slate-600">Successful:</span>
-                        <span className="font-medium text-green-600 ml-1">{importJob.successfulImports}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-600">Failed:</span>
-                        <span className="font-medium text-red-600 ml-1">{importJob.failedImports}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-600">Started:</span>
-                        <span className="font-medium ml-1">
-                          {new Date(importJob.startedAt).toLocaleDateString()}
-                        </span>
+                      <Progress value={importJob.progress || 0} className="w-full" />
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
+                        <div className="flex justify-between sm:block">
+                          <span className="text-slate-600 sm:block">Total Records:</span>
+                          <span className="font-medium sm:ml-1">{importJob.totalRecords || 0}</span>
+                        </div>
+                        <div className="flex justify-between sm:block">
+                          <span className="text-slate-600 sm:block">Successful:</span>
+                          <span className="font-medium text-green-600 sm:ml-1">{importJob.successfulImports || 0}</span>
+                        </div>
+                        <div className="flex justify-between sm:block">
+                          <span className="text-slate-600 sm:block">Failed:</span>
+                          <span className="font-medium text-red-600 sm:ml-1">{importJob.failedImports || 0}</span>
+                        </div>
+                        <div className="flex justify-between sm:block">
+                          <span className="text-slate-600 sm:block">Started:</span>
+                          <span className="font-medium sm:ml-1">
+                            {importJob.startedAt ? new Date(importJob.startedAt).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -320,24 +340,30 @@ function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+      {/* Import Name */}
       <div>
-        <Label htmlFor="importName">Import Name</Label>
+        <Label htmlFor="importName" className="text-sm font-medium">Import Name</Label>
         <Input
           id="importName"
           value={importName}
           onChange={(e) => setImportName(e.target.value)}
           placeholder="Enter a name for this import"
+          className="mt-1"
           required
         />
       </div>
 
+      {/* File Upload */}
       <div>
-        <Label htmlFor="file">Select File</Label>
-        <div className="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
-          <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600 mb-2">
+        <Label htmlFor="file" className="text-sm font-medium">Select File</Label>
+        <div className="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-4 sm:p-6 text-center hover:border-slate-400 transition-colors">
+          <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400 mx-auto mb-2" />
+          <p className="text-xs sm:text-sm text-slate-600 mb-3">
             Drag and drop your file here, or click to browse
+          </p>
+          <p className="text-xs text-slate-500 mb-3">
+            Supported formats: CSV, Excel (.xlsx, .xls), JSON
           </p>
           <Input
             id="file"
@@ -347,22 +373,34 @@ function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
             className="hidden"
             required
           />
-          <Button type="button" variant="outline" onClick={() => document.getElementById('file')?.click()}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm"
+            className="text-xs sm:text-sm"
+            onClick={() => document.getElementById('file')?.click()}
+          >
             Choose File
           </Button>
           {selectedFile && (
-            <p className="text-sm text-green-600 mt-2">
-              Selected: {selectedFile.name}
-            </p>
+            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-xs sm:text-sm text-green-700 font-medium">
+                Selected: {selectedFile.name}
+              </p>
+              <p className="text-xs text-green-600">
+                Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* File Type and Template Selection */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="importType">File Type</Label>
+          <Label htmlFor="importType" className="text-sm font-medium">File Type</Label>
           <Select value={importType} onValueChange={setImportType}>
-            <SelectTrigger>
+            <SelectTrigger className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -373,9 +411,9 @@ function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           </Select>
         </div>
         <div>
-          <Label htmlFor="template">Use Template (Optional)</Label>
+          <Label htmlFor="template" className="text-sm font-medium">Use Template (Optional)</Label>
           <Select value={templateId} onValueChange={setTemplateId}>
-            <SelectTrigger>
+            <SelectTrigger className="mt-1">
               <SelectValue placeholder="Select template" />
             </SelectTrigger>
             <SelectContent>
@@ -387,32 +425,46 @@ function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
         </div>
       </div>
 
+      {/* Notes */}
       <div>
-        <Label htmlFor="importName">Import Name</Label>
-        <Input
-          id="importName"
-          placeholder="e.g., Tech Jobs Batch 1"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes (Optional)</Label>
+        <Label htmlFor="notes" className="text-sm font-medium">Notes (Optional)</Label>
         <Textarea
           id="notes"
           placeholder="Add any notes about this import..."
           rows={3}
+          className="mt-1"
         />
       </div>
 
+      {/* Schedule Option */}
       <div className="flex items-center space-x-2">
         <Checkbox id="schedule" />
-        <Label htmlFor="schedule">Schedule for later</Label>
+        <Label htmlFor="schedule" className="text-sm">Schedule for later</Label>
       </div>
 
-      <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={!selectedFile || uploading}>
-          {uploading ? 'Starting Import...' : 'Start Import'}
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onClose}
+          className="w-full sm:w-auto"
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          disabled={!selectedFile || uploading}
+          className="w-full sm:w-auto"
+        >
+          {uploading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Starting Import...
+            </>
+          ) : (
+            'Start Import'
+          )}
         </Button>
       </div>
     </form>

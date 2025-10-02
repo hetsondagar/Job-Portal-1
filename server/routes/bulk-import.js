@@ -218,10 +218,31 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       });
     }
 
-    // Parse default values and mapping config from JSON strings
-    const parsedDefaultValues = defaultValues ? JSON.parse(defaultValues) : {};
-    const parsedMappingConfig = mappingConfig ? JSON.parse(mappingConfig) : {};
-    const parsedValidationRules = validationRules ? JSON.parse(validationRules) : {};
+    // Parse default values and mapping config from JSON strings (with error handling)
+    let parsedDefaultValues = {};
+    let parsedMappingConfig = {};
+    let parsedValidationRules = {};
+    
+    try {
+      parsedDefaultValues = defaultValues ? JSON.parse(defaultValues) : {};
+    } catch (error) {
+      console.warn('Failed to parse defaultValues:', error.message);
+      parsedDefaultValues = {};
+    }
+    
+    try {
+      parsedMappingConfig = mappingConfig ? JSON.parse(mappingConfig) : {};
+    } catch (error) {
+      console.warn('Failed to parse mappingConfig:', error.message);
+      parsedMappingConfig = {};
+    }
+    
+    try {
+      parsedValidationRules = validationRules ? JSON.parse(validationRules) : {};
+    } catch (error) {
+      console.warn('Failed to parse validationRules:', error.message);
+      parsedValidationRules = {};
+    }
 
     // Create bulk import record
     const bulkImport = await BulkJobImport.create({
@@ -237,7 +258,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       scheduledAt: isScheduled === 'true' ? new Date(scheduledAt) : null,
       notificationEmail,
       createdBy: req.user.id,
-      companyId: req.user.companyId
+      companyId: req.user.companyId || req.user.company_id || null
     });
 
     // If not scheduled, start processing immediately
@@ -375,15 +396,25 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
     // Create template based on type
     const template = createJobTemplate(type);
     
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="job-import-template-${type}.xlsx"`);
-    
-    // Generate Excel file
-    const workbook = xlsx.utils.book_new();
-    const worksheet = xlsx.utils.json_to_sheet(template);
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Jobs');
-    const buffer = xlsx.write(workbook, { type: 'buffer' });
-    res.send(buffer);
+    if (type === 'csv') {
+      // Generate CSV file
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="job-import-template.csv"`);
+      
+      // Convert template to CSV
+      const csvContent = convertToCSV(template);
+      res.send(csvContent);
+    } else {
+      // Generate Excel file
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="job-import-template-${type}.xlsx"`);
+      
+      const workbook = xlsx.utils.book_new();
+      const worksheet = xlsx.utils.json_to_sheet(template);
+      xlsx.utils.book_append_sheet(workbook, worksheet, 'Jobs');
+      const buffer = xlsx.write(workbook, { type: 'buffer' });
+      res.send(buffer);
+    }
   } catch (error) {
     console.error('Download template error:', error);
     res.status(500).json({
@@ -590,12 +621,37 @@ function validateJobRecord(record, validationRules) {
   };
 }
 
+// Convert array of objects to CSV
+function convertToCSV(data) {
+  if (!data || data.length === 0) return '';
+  
+  // Get headers from the first object
+  const headers = Object.keys(data[0]);
+  
+  // Create CSV header row
+  const csvHeader = headers.join(',');
+  
+  // Create CSV data rows
+  const csvRows = data.map(row => {
+    return headers.map(header => {
+      const value = row[header];
+      // Escape commas and quotes in values
+      if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }).join(',');
+  });
+  
+  return [csvHeader, ...csvRows].join('\n');
+}
+
 // Create job template
 function createJobTemplate(type) {
   const baseTemplate = [
     {
       title: 'Software Engineer',
-      description: 'We are looking for a skilled software engineer...',
+      description: 'We are looking for a skilled software engineer to join our team. The ideal candidate will have experience with modern web technologies and a passion for building scalable applications.',
       location: 'New York, NY',
       jobType: 'full-time',
       experienceLevel: 'mid',
@@ -603,11 +659,41 @@ function createJobTemplate(type) {
       experienceMax: 5,
       salaryMin: 80000,
       salaryMax: 120000,
-      skills: 'JavaScript,React,Node.js',
-      benefits: 'Health Insurance,401k,Remote Work',
+      skills: 'JavaScript,React,Node.js,TypeScript',
+      benefits: 'Health Insurance,401k,Remote Work,Paid Time Off',
       remoteWork: 'hybrid',
       department: 'Engineering',
-      category: 'Technology'
+      category: 'Technology',
+      requirements: 'Bachelor degree in Computer Science or related field, 2+ years of experience',
+      responsibilities: 'Develop and maintain web applications,Collaborate with cross-functional teams,Write clean and maintainable code',
+      companyName: 'Tech Company Inc.',
+      applicationDeadline: '2024-12-31',
+      isActive: true,
+      isFeatured: false,
+      tags: 'javascript,react,nodejs,fullstack'
+    },
+    {
+      title: 'Marketing Manager',
+      description: 'We are seeking a creative and strategic Marketing Manager to lead our marketing initiatives and drive brand awareness.',
+      location: 'San Francisco, CA',
+      jobType: 'full-time',
+      experienceLevel: 'senior',
+      experienceMin: 5,
+      experienceMax: 8,
+      salaryMin: 70000,
+      salaryMax: 100000,
+      skills: 'Digital Marketing,SEO,SEM,Social Media,Analytics',
+      benefits: 'Health Insurance,401k,Remote Work,Professional Development',
+      remoteWork: 'remote',
+      department: 'Marketing',
+      category: 'Marketing',
+      requirements: 'Bachelor degree in Marketing or related field, 5+ years of marketing experience',
+      responsibilities: 'Develop marketing strategies,Manage digital campaigns,Analyze marketing metrics',
+      companyName: 'Marketing Solutions Ltd.',
+      applicationDeadline: '2024-12-31',
+      isActive: true,
+      isFeatured: true,
+      tags: 'marketing,digital,strategy,management'
     }
   ];
 
