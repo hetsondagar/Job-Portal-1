@@ -66,9 +66,9 @@ app.use((req, res, next) => {
   
   console.log('🔍 Request to:', path, 'Content-Type:', contentType);
   
-  // Skip JSON parsing for multipart/form-data requests and bulk import routes
-  if (contentType.includes('multipart/form-data') || path.includes('/bulk-import')) {
-    console.log('🚫 Skipping JSON parsing for multipart/bulk-import request to:', path);
+  // Skip JSON parsing ONLY for multipart/form-data requests (not all bulk-import routes)
+  if (contentType.includes('multipart/form-data')) {
+    console.log('🚫 Skipping JSON parsing for multipart request to:', path);
     return next();
   }
   
@@ -80,9 +80,9 @@ app.use((req, res, next) => {
   const contentType = req.get('Content-Type') || '';
   const path = req.path || '';
   
-  // Skip URL encoded parsing for multipart/form-data requests and bulk import routes
-  if (contentType.includes('multipart/form-data') || path.includes('/bulk-import')) {
-    console.log('🚫 Skipping URL encoded parsing for multipart/bulk-import request to:', path);
+  // Skip URL encoded parsing ONLY for multipart/form-data requests (not all bulk-import routes)
+  if (contentType.includes('multipart/form-data')) {
+    console.log('🚫 Skipping URL encoded parsing for multipart request to:', path);
     return next();
   }
   

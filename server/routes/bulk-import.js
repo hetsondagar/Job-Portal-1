@@ -254,18 +254,20 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     console.log('📊 User:', req.user ? req.user.id : 'No user');
     console.log('📊 Raw body type:', typeof req.body);
     console.log('📊 Raw body length:', req.body ? Object.keys(req.body).length : 0);
+    console.log('📊 Raw body content:', req.body);
+    console.log('📊 Request method:', req.method);
+    console.log('📊 Request URL:', req.url);
     
-    const {
-      importName,
-      importType,
-      templateId,
-      defaultValues,
-      mappingConfig,
-      validationRules,
-      isScheduled,
-      scheduledAt,
-      notificationEmail
-    } = req.body;
+    // Safely extract form data with fallbacks
+    const importName = req.body?.importName || '';
+    const importType = req.body?.importType || 'csv';
+    const templateId = req.body?.templateId || null;
+    const defaultValues = req.body?.defaultValues || '{}';
+    const mappingConfig = req.body?.mappingConfig || '{}';
+    const validationRules = req.body?.validationRules || '{}';
+    const isScheduled = req.body?.isScheduled || 'false';
+    const scheduledAt = req.body?.scheduledAt || null;
+    const notificationEmail = req.body?.notificationEmail || null;
 
     if (!req.file) {
       return res.status(400).json({
