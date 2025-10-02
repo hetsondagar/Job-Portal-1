@@ -11,16 +11,26 @@ const User = require('../models/User');
 const Company = require('../models/Company');
 const Job = require('../models/Job');
 const { sequelize } = require('../config/sequelize');
-const BulkJobImport = require('../models/BulkJobImport');
+const BulkJobImport = require('../models/BulkJobImport')(sequelize);
 const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
 // Middleware to handle multipart requests properly
 router.use((req, res, next) => {
-  if (req.is('multipart/form-data')) {
+  if (req.is('multipart/form-data') || req.method === 'POST') {
     console.log('📁 Multipart request detected, skipping JSON parsing');
     return next();
+  }
+  next();
+});
+
+// Ensure no JSON parsing happens for this router
+router.use((req, res, next) => {
+  // Clear any parsed body to prevent JSON parsing errors
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('🧹 Clearing parsed body for bulk import route');
+    req.body = {};
   }
   next();
 });
