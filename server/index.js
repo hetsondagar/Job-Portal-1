@@ -59,16 +59,18 @@ const PORT = process.env.PORT || 8000;
 // Trust proxy for rate limiting behind reverse proxy (Render, etc.)
 app.set('trust proxy', 1);
 
-// JSON parser - exclude bulk-import routes that use multipart form data
+// Body parsing middleware with proper multipart handling
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/bulk-import')) {
-    // Skip JSON parsing for bulk-import routes
-    next();
-  } else {
-    express.json()(req, res, next);
+  // Skip JSON parsing for multipart/form-data requests
+  if (req.is('multipart/form-data')) {
+    console.log('🚫 Skipping JSON parsing for multipart request to:', req.path);
+    return next();
   }
+  // Apply JSON parsing for other requests
+  express.json({ limit: '10mb' })(req, res, next);
 });
-app.use(express.urlencoded({ extended: true }));
+
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 
 // Security middleware
@@ -212,23 +214,8 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Body parsing middleware with proper multipart handling
-app.use((req, res, next) => {
-  // Skip JSON parsing for multipart/form-data requests
-  if (req.is('multipart/form-data')) {
-    console.log('🚫 Skipping JSON parsing for multipart request');
-    return next();
-  }
-  // Apply JSON parsing for other requests
-  express.json({ limit: '10mb' })(req, res, next);
-});
-
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Register bulk import routes after body parsing middleware
+// Register bulk import routes
 app.use('/api/bulk-import', require('./routes/bulk-import'));
-
-// NO MORE GLOBAL BODY PARSING - We'll handle it per route
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
