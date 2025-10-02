@@ -204,27 +204,60 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// ULTIMATE SOLUTION: Register bulk import routes FIRST before ANY body parsing
+// FINAL NUCLEAR SOLUTION: Register bulk import routes FIRST
 app.use('/api/bulk-import', require('./routes/bulk-import'));
 
-// Body parsing middleware - ONLY for non-bulk-import routes
-app.use((req, res, next) => {
-  // Skip ALL body parsing for bulk import routes
-  if (req.path.includes('bulk-import') || req.is('multipart/form-data') || req.headers['content-type']?.includes('multipart/form-data')) {
-    console.log('🚫 ULTIMATE: Skipping ALL body parsing for:', req.path);
-    return next();
-  }
-  // Apply JSON parsing for other routes
-  express.json({ limit: '10mb' })(req, res, next);
-});
+// NO BODY PARSING MIDDLEWARE AT ALL - We'll add it per route
 
-// URL encoding - skip for bulk import routes
-app.use((req, res, next) => {
-  if (req.path.includes('bulk-import') || req.is('multipart/form-data')) {
-    return next();
-  }
-  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
-});
+// Add JSON parsing ONLY to specific routes that need it
+app.use('/api/user', express.json({ limit: '10mb' }));
+app.use('/api/user', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/companies', express.json({ limit: '10mb' }));
+app.use('/api/companies', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/jobs', express.json({ limit: '10mb' }));
+app.use('/api/jobs', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/applications', express.json({ limit: '10mb' }));
+app.use('/api/applications', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/auth', express.json({ limit: '10mb' }));
+app.use('/api/auth', express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add JSON parsing to specific routes that need it (excluding bulk-import)
+app.use('/api/notifications', express.json({ limit: '10mb' }));
+app.use('/api/notifications', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/messages', express.json({ limit: '10mb' }));
+app.use('/api/messages', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/interviews', express.json({ limit: '10mb' }));
+app.use('/api/interviews', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/job-alerts', express.json({ limit: '10mb' }));
+app.use('/api/job-alerts', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/job-templates', express.json({ limit: '10mb' }));
+app.use('/api/job-templates', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/candidate-likes', express.json({ limit: '10mb' }));
+app.use('/api/candidate-likes', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/hot-vacancies', express.json({ limit: '10mb' }));
+app.use('/api/hot-vacancies', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/featured-jobs', express.json({ limit: '10mb' }));
+app.use('/api/featured-jobs', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/usage', express.json({ limit: '10mb' }));
+app.use('/api/usage', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/gulf', express.json({ limit: '10mb' }));
+app.use('/api/gulf', express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/salary', express.json({ limit: '10mb' }));
+app.use('/api/salary', express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
