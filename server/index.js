@@ -285,6 +285,7 @@ app.use('/api/job-templates', jobTemplatesRoutes);
 app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/hot-vacancies', require('./routes/hot-vacancies'));
+app.use('/api/bulk-import', require('./routes/bulk-import'));
 app.use('/api/featured-jobs', featuredJobsRoutes);
 app.use('/api/interviews', interviewsRoutes);
 app.use('/api/usage', usageRoutes);

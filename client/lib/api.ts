@@ -3250,6 +3250,83 @@ class ApiService {
     });
     return this.handleResponse(response);
   }
+
+  // Bulk Import Methods
+  async getBulkImports(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    importType?: string;
+  }): Promise<ApiResponse<{
+    imports: any[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+    };
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.importType) queryParams.append('importType', params.importType);
+
+    const response = await fetch(`${API_BASE_URL}/bulk-import?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getBulkImport(importId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/bulk-import/${importId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async createBulkImport(formData: FormData): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/bulk-import`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        // Don't set Content-Type for FormData, let browser set it with boundary
+      },
+      body: formData,
+    });
+    return this.handleResponse(response);
+  }
+
+  async cancelBulkImport(importId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/bulk-import/${importId}/cancel`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async retryBulkImport(importId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/bulk-import/${importId}/retry`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async downloadBulkImportTemplate(type: string): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/bulk-import/template/${type}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to download template');
+    }
+    
+    return response.blob();
+  }
 }
 
 export const apiService = new ApiService();

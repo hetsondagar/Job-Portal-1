@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Upload, Download, FileText, CheckCircle, XCircle, Clock, AlertCircle, BarChart3, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,48 +15,35 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 
 export default function BulkImportPage() {
-  const [imports, setImports] = useState([
-    {
-      id: 1,
-      importName: "Tech Jobs Batch 1",
-      importType: "csv",
-      status: "completed",
-      totalRecords: 25,
-      successfulImports: 23,
-      failedImports: 2,
-      progress: 100,
-      startedAt: "2024-01-20T10:30:00",
-      completedAt: "2024-01-20T10:35:00"
-    },
-    {
-      id: 2,
-      importName: "Marketing Positions",
-      importType: "excel",
-      status: "processing",
-      totalRecords: 15,
-      successfulImports: 8,
-      failedImports: 0,
-      progress: 53,
-      startedAt: "2024-01-20T11:00:00",
-      completedAt: null
-    },
-    {
-      id: 3,
-      importName: "Sales Team Expansion",
-      importType: "csv",
-      status: "failed",
-      totalRecords: 10,
-      successfulImports: 0,
-      failedImports: 10,
-      progress: 0,
-      startedAt: "2024-01-19T15:20:00",
-      completedAt: "2024-01-19T15:22:00"
-    }
-  ])
-
+  const { user } = useAuth()
+  const [imports, setImports] = useState([])
+  const [loading, setLoading] = useState(true)
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
+
+  // Fetch bulk imports on component mount
+  useEffect(() => {
+    fetchBulkImports()
+  }, [])
+
+  const fetchBulkImports = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getBulkImports()
+      if (response.success) {
+        setImports(response.data.imports)
+      }
+    } catch (error) {
+      console.error('Error fetching bulk imports:', error)
+      toast.error('Failed to fetch bulk imports')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -127,7 +114,10 @@ export default function BulkImportPage() {
                     Upload a CSV, Excel, or JSON file with job data
                   </DialogDescription>
                 </DialogHeader>
-                <UploadForm />
+                <UploadForm 
+                  onClose={() => setIsUploadDialogOpen(false)} 
+                  onSuccess={fetchBulkImports}
+                />
               </DialogContent>
             </Dialog>
             <Button variant="outline">
@@ -264,20 +254,65 @@ export default function BulkImportPage() {
   )
 }
 
-function UploadForm() {
+function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [importName, setImportName] = useState("")
   const [importType, setImportType] = useState("csv")
   const [templateId, setTemplateId] = useState("")
+  const [uploading, setUploading] = useState(false)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       setSelectedFile(file)
+      setImportName(file.name.replace(/\.[^/.]+$/, ""))
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedFile || !importName) {
+      toast.error('Please select a file and enter an import name')
+      return
+    }
+
+    try {
+      setUploading(true)
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('importName', importName)
+      formData.append('importType', importType)
+      if (templateId) formData.append('templateId', templateId)
+
+      const response = await apiService.createBulkImport(formData)
+      if (response.success) {
+        toast.success('Bulk import started successfully')
+        onSuccess()
+        onClose()
+      } else {
+        toast.error(response.message || 'Failed to start bulk import')
+      }
+    } catch (error) {
+      console.error('Error creating bulk import:', error)
+      toast.error('Failed to create bulk import')
+    } finally {
+      setUploading(false)
     }
   }
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <Label htmlFor="importName">Import Name</Label>
+        <Input
+          id="importName"
+          value={importName}
+          onChange={(e) => setImportName(e.target.value)}
+          placeholder="Enter a name for this import"
+          required
+        />
+      </div>
+
       <div>
         <Label htmlFor="file">Select File</Label>
         <div className="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
@@ -291,8 +326,9 @@ function UploadForm() {
             accept=".csv,.xlsx,.xls,.json"
             onChange={handleFileSelect}
             className="hidden"
+            required
           />
-          <Button variant="outline" onClick={() => document.getElementById('file')?.click()}>
+          <Button type="button" variant="outline" onClick={() => document.getElementById('file')?.click()}>
             Choose File
           </Button>
           {selectedFile && (
@@ -356,8 +392,8 @@ function UploadForm() {
 
       <div className="flex justify-end space-x-3">
         <Button variant="outline">Cancel</Button>
-        <Button disabled={!selectedFile}>
-          Start Import
+        <Button type="submit" disabled={!selectedFile || uploading}>
+          {uploading ? 'Starting Import...' : 'Start Import'}
         </Button>
       </div>
     </div>
