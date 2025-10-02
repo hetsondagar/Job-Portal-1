@@ -16,6 +16,15 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
+// Middleware to handle multipart requests properly
+router.use((req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    console.log('📁 Multipart request detected, skipping JSON parsing');
+    return next();
+  }
+  next();
+});
+
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
