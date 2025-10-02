@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const Job = require('../models/Job');
+const { sequelize } = require('../config/sequelize');
 const BulkJobImport = require('../models/BulkJobImport');
 const JobTemplate = require('../models/JobTemplate');
 
@@ -275,7 +276,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
 
     await importRecord.update({
       status: 'cancelled',
-      completedAt: new Date()
+      cancelledAt: new Date()
     });
 
     res.json({
