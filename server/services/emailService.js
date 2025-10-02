@@ -79,20 +79,14 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: 60000,
-      greetingTimeout: 60000,
-      socketTimeout: 60000,
+      connectionTimeout: 10000, // Reduced to 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
       requireTLS: !provider.secure,
-      ignoreTLS: false,
       tls: {
         rejectUnauthorized: false,
-        ciphers: 'TLSv1.2',
-        secureProtocol: 'TLSv1_2_method',
-        servername: provider.host,
-        checkServerIdentity: () => undefined
+        minVersion: 'TLSv1.2'
       },
-      keepAlive: true,
-      keepAliveMsecs: 30000,
       debug: process.env.NODE_ENV === 'development',
       logger: process.env.NODE_ENV === 'development'
     };
@@ -107,14 +101,25 @@ class EmailService {
     const transporter = nodemailer.createTransport(transporterOptions);
     
     try {
-      await transporter.verify();
+      // Use a shorter timeout for verification
+      const verifyPromise = transporter.verify();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Verification timeout')), 8000)
+      );
+      
+      await Promise.race([verifyPromise, timeoutPromise]);
       console.log(`✅ ${provider.name} connection verified successfully`);
       return transporter;
     } catch (verifyError) {
       console.error(`❌ ${provider.name} verification failed:`, verifyError.message);
-      console.log(`🔄 Attempting to create ${provider.name} transporter without verification...`);
       
-      // Return transporter even if verification fails - some providers have strict verification
+      // For timeout errors, throw to try next provider
+      if (verifyError.message.includes('timeout') || verifyError.code === 'ETIMEDOUT') {
+        throw verifyError;
+      }
+      
+      // For other errors, return transporter anyway (might still work)
+      console.log(`🔄 Returning ${provider.name} transporter without verification...`);
       return transporter;
     }
   }
