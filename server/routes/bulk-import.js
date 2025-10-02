@@ -16,6 +16,33 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
+// CORS middleware for bulk import routes
+router.use((req, res, next) => {
+  // Set CORS headers
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('🔍 Bulk import preflight request from:', req.headers.origin);
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Health check endpoint for bulk import
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    service: 'bulk-import',
+    timestamp: new Date().toISOString(),
+    cors: 'enabled'
+  });
+});
+
 // Multer middleware for handling file uploads
 
 // Configure multer for file uploads
