@@ -1371,7 +1371,7 @@ function CompanyDetailPage() {
                                       ? 'bg-green-600 hover:bg-green-700 cursor-default'
                                       : job.status === 'expired'
                                         ? 'bg-slate-300 cursor-not-allowed'
-                                        : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
+                                      : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
                                   }`}
                                   disabled={hasAppliedToJob(job.id) || job.status === 'expired'}
                                 >

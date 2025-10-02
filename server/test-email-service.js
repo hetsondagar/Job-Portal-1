@@ -4,13 +4,16 @@ require('dotenv').config();
 const emailService = require('./services/simpleEmailService');
 
 async function testEmailService() {
-  console.log('🧪 Testing Email Service Configuration...');
-  console.log('📧 SMTP Configuration:');
-  console.log('  Host:', process.env.SMTP_HOST);
-  console.log('  Port:', process.env.SMTP_PORT);
-  console.log('  User:', process.env.SMTP_USER);
-  console.log('  From:', process.env.EMAIL_FROM);
-  console.log('  Pass:', process.env.SMTP_PASS ? '***hidden***' : 'NOT SET');
+  console.log('🧪 Testing Email Service Configuration with Gmail/Yahoo Fallback...');
+  console.log('📧 Gmail Configuration:');
+  console.log('  Gmail User:', process.env.GMAIL_USER || 'NOT SET');
+  console.log('  Gmail Pass:', process.env.GMAIL_PASS ? '***hidden***' : 'NOT SET');
+  console.log('\n📧 Yahoo Configuration:');
+  console.log('  Yahoo User:', process.env.SMTP_USER || process.env.YAHOO_USER || 'NOT SET');
+  console.log('  Yahoo Pass:', (process.env.SMTP_PASS || process.env.YAHOO_PASS) ? '***hidden***' : 'NOT SET');
+  console.log('\n📧 General Configuration:');
+  console.log('  From Email:', process.env.EMAIL_FROM || process.env.FROM_EMAIL || 'NOT SET');
+  console.log('  Frontend URL:', process.env.FRONTEND_URL || 'NOT SET');
   
   try {
     // Test sending a password reset email
@@ -19,6 +22,7 @@ async function testEmailService() {
     
     console.log('\n🚀 Sending test password reset email...');
     console.log('  To:', testEmail);
+    console.log('  Fallback Strategy: Gmail → Yahoo → Custom SMTP');
     
     const result = await emailService.sendPasswordResetEmail(testEmail, testToken, 'Test User');
     

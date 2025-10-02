@@ -9,79 +9,175 @@ class SimpleEmailService {
 
   async initializeTransporter() {
     try {
-      // Yahoo-specific handling
-      if (process.env.SMTP_HOST === 'smtp.mail.yahoo.com' || process.env.SMTP_HOST?.includes('yahoo')) {
-        console.log('🔄 Detected Yahoo SMTP - using Yahoo-specific configuration');
-        this.transporter = await this.initializeYahooTransporter();
-        return;
+      // Try Gmail SMTP first (if Gmail credentials are provided)
+      if (this.hasGmailCredentials()) {
+        console.log('🔄 Attempting Gmail SMTP first...');
+        try {
+          this.transporter = await this.initializeGmailTransporter();
+          console.log('✅ Gmail SMTP initialized successfully');
+          return;
+        } catch (gmailError) {
+          console.warn('⚠️ Gmail SMTP failed, falling back to Yahoo:', gmailError?.message || gmailError);
+        }
       }
 
-      // Prefer explicit SMTP settings if provided (or URL)
+      // Try Yahoo SMTP as fallback
+      if (this.hasYahooCredentials()) {
+        console.log('🔄 Attempting Yahoo SMTP as fallback...');
+        try {
+          this.transporter = await this.initializeYahooTransporter();
+          console.log('✅ Yahoo SMTP initialized successfully');
+          return;
+        } catch (yahooError) {
+          console.warn('⚠️ Yahoo SMTP also failed:', yahooError?.message || yahooError);
+        }
+      }
+
+      // Try custom SMTP configuration if provided
       const smtpUrl = process.env.SMTP_URL;
       const hasHostCreds = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
       if (smtpUrl || hasHostCreds) {
-        const poolEnabled = String(process.env.SMTP_POOL || 'true') === 'true';
-        const port = Number(process.env.SMTP_PORT || 587);
-        const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
-        const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000);
-        const socketTimeout = Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 10000);
-
-        const baseOptions = smtpUrl
-          ? { url: smtpUrl }
-          : {
-              host: process.env.SMTP_HOST,
-              port,
-              secure,
-              auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-            };
-
-        // Build advanced SMTP options
-        const transporterOptions = {
-          ...baseOptions,
-          pool: poolEnabled,
-          maxConnections: Number(process.env.SMTP_MAX_CONNECTIONS || 5),
-          maxMessages: Number(process.env.SMTP_MAX_MESSAGES || 100),
-          connectionTimeout,
-          greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
-          socketTimeout,
-          // STARTTLS / TLS behaviors
-          requireTLS: String(process.env.SMTP_REQUIRE_TLS || 'false') === 'true',
-          ignoreTLS: String(process.env.SMTP_IGNORE_TLS || 'false') === 'true',
-          tls: {
-            // Sometimes providers need this off if they use self-signed or old certs
-            rejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || 'true') === 'true',
-            ciphers: process.env.SMTP_TLS_CIPHERS || undefined,
-            minVersion: process.env.SMTP_TLS_MIN_VERSION || undefined
-          },
-          debug: String(process.env.SMTP_DEBUG || 'false') === 'true',
-        };
-
-        this.transporter = nodemailer.createTransport(transporterOptions);
-
-        // Verify connection in background (non-blocking)
-        Promise.resolve()
-          .then(() => this.transporter.verify())
-          .then(() => console.log('✅ SMTP transporter verified successfully'))
-          .catch((err) => console.warn('⚠️ SMTP transporter verification failed:', err?.message || err));
-
-        console.log('✅ Email service initialized with configured SMTP', {
-          pool: transporterOptions.pool,
-          host: smtpUrl ? '(via URL)' : process.env.SMTP_HOST,
-          port,
-          secure,
-          connectionTimeout,
-          socketTimeout
-        });
-        return;
+        console.log('🔄 Attempting custom SMTP configuration...');
+        try {
+          this.transporter = await this.initializeCustomTransporter();
+          console.log('✅ Custom SMTP initialized successfully');
+          return;
+        } catch (customError) {
+          console.warn('⚠️ Custom SMTP failed:', customError?.message || customError);
+        }
       }
 
-      // No SMTP configured
+      // No SMTP configured or all failed
       this.transporter = null;
-      console.log('ℹ️ No SMTP configured. Set SMTP_URL or SMTP_HOST/USER/PASS to enable SMTP.');
+      console.log('❌ All SMTP configurations failed. Email service disabled.');
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error.message);
       this.transporter = null;
     }
+  }
+
+  // Check if Gmail credentials are available
+  hasGmailCredentials() {
+    return process.env.GMAIL_USER && process.env.GMAIL_PASS;
+  }
+
+  // Check if Yahoo credentials are available
+  hasYahooCredentials() {
+    return (process.env.SMTP_USER && process.env.SMTP_PASS && 
+            (process.env.SMTP_USER.includes('@yahoo.com') || process.env.SMTP_USER.includes('@ymail.com'))) ||
+           (process.env.YAHOO_USER && process.env.YAHOO_PASS);
+  }
+
+  // Gmail SMTP configuration
+  async initializeGmailTransporter() {
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_PASS;
+    const gmailPorts = [587, 465]; // Try both ports
+    
+    for (const port of gmailPorts) {
+      try {
+        const secure = port === 465;
+        const transporterOptions = {
+          host: 'smtp.gmail.com',
+          port,
+          secure,
+          auth: {
+            user: gmailUser,
+            pass: gmailPass
+          },
+          // Gmail-specific settings
+          connectionTimeout: 30000,
+          greetingTimeout: 30000,
+          socketTimeout: 30000,
+          requireTLS: !secure, // Only for port 587
+          ignoreTLS: false,
+          tls: {
+            rejectUnauthorized: true,
+            ciphers: 'SSLv3',
+            secureProtocol: 'TLSv1_2_method'
+          },
+          // Gmail connection pooling
+          pool: true,
+          maxConnections: 5,
+          maxMessages: 100,
+          debug: false,
+          logger: false
+        };
+
+        console.log(`🔄 Trying Gmail SMTP on port ${port} (secure: ${secure})`);
+        
+        const testTransporter = nodemailer.createTransport(transporterOptions);
+        await testTransporter.verify();
+        
+        console.log(`✅ Gmail SMTP verified on port ${port}`);
+        return testTransporter;
+      } catch (error) {
+        console.warn(`❌ Gmail SMTP failed on port ${port}:`, error?.message || error);
+        continue;
+      }
+    }
+    
+    throw new Error('Gmail SMTP failed on all ports (587, 465)');
+  }
+
+  // Custom SMTP configuration
+  async initializeCustomTransporter() {
+    const smtpUrl = process.env.SMTP_URL;
+    const hasHostCreds = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+    
+    if (!smtpUrl && !hasHostCreds) {
+      throw new Error('No custom SMTP configuration provided');
+    }
+
+    const poolEnabled = String(process.env.SMTP_POOL || 'true') === 'true';
+    const port = Number(process.env.SMTP_PORT || 587);
+    const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
+    const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000);
+    const socketTimeout = Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 10000);
+
+    const baseOptions = smtpUrl
+      ? { url: smtpUrl }
+      : {
+          host: process.env.SMTP_HOST,
+          port,
+          secure,
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        };
+
+    // Build advanced SMTP options
+    const transporterOptions = {
+      ...baseOptions,
+      pool: poolEnabled,
+      maxConnections: Number(process.env.SMTP_MAX_CONNECTIONS || 5),
+      maxMessages: Number(process.env.SMTP_MAX_MESSAGES || 100),
+      connectionTimeout,
+      greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
+      socketTimeout,
+      // STARTTLS / TLS behaviors
+      requireTLS: String(process.env.SMTP_REQUIRE_TLS || 'false') === 'true',
+      ignoreTLS: String(process.env.SMTP_IGNORE_TLS || 'false') === 'true',
+      tls: {
+        // Sometimes providers need this off if they use self-signed or old certs
+        rejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || 'true') === 'true',
+        ciphers: process.env.SMTP_TLS_CIPHERS || undefined,
+        minVersion: process.env.SMTP_TLS_MIN_VERSION || undefined
+      },
+      debug: String(process.env.SMTP_DEBUG || 'false') === 'true',
+    };
+
+    const transporter = nodemailer.createTransport(transporterOptions);
+    await transporter.verify();
+
+    console.log('✅ Custom SMTP transporter verified successfully', {
+      pool: transporterOptions.pool,
+      host: smtpUrl ? '(via URL)' : process.env.SMTP_HOST,
+      port,
+      secure,
+      connectionTimeout,
+      socketTimeout
+    });
+
+    return transporter;
   }
 
   // Yahoo-specific SMTP configuration
@@ -156,14 +252,15 @@ class SimpleEmailService {
       html: htmlContent
     };
 
-    // Strategy: SMTP only, with retries
+    // Strategy: Try current transporter, then fallback to other SMTP providers
     if (!this.transporter) {
-      throw new Error('SMTP is not configured. Set SMTP_URL or SMTP_HOST/USER/PASS');
+      throw new Error('No SMTP providers configured. Set GMAIL_USER/GMAIL_PASS or SMTP_USER/SMTP_PASS');
     }
 
     const maxAttempts = Number(process.env.SMTP_RETRY_ATTEMPTS || 3);
     const baseDelayMs = Number(process.env.SMTP_RETRY_DELAY_MS || 1000);
     let lastError = null;
+    
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const info = await this.transporter.sendMail(mailOptions);
@@ -172,6 +269,18 @@ class SimpleEmailService {
       } catch (error) {
         lastError = error;
         console.error(`❌ SMTP send failed (attempt ${attempt}/${maxAttempts}):`, error?.message || error);
+        
+        // If this is the first attempt and we have fallback options, try them
+        if (attempt === 1) {
+          try {
+            await this.tryFallbackTransporter(mailOptions);
+            console.log('✅ Password reset email sent via fallback SMTP');
+            return { success: true, method: 'smtp-fallback', messageId: 'fallback-sent' };
+          } catch (fallbackError) {
+            console.warn('⚠️ Fallback SMTP also failed:', fallbackError?.message || fallbackError);
+          }
+        }
+        
         if (attempt < maxAttempts) {
           const delay = baseDelayMs * Math.pow(2, attempt - 1);
           await new Promise((r) => setTimeout(r, delay));
@@ -180,6 +289,35 @@ class SimpleEmailService {
       }
     }
     throw new Error(`SMTP send failed after ${maxAttempts} attempts: ${lastError?.message || lastError}`);
+  }
+
+  // Try fallback SMTP providers
+  async tryFallbackTransporter(mailOptions) {
+    // If current transporter is Gmail, try Yahoo
+    if (this.hasYahooCredentials() && !this.isYahooTransporter()) {
+      console.log('🔄 Trying Yahoo SMTP as fallback...');
+      const yahooTransporter = await this.initializeYahooTransporter();
+      return await yahooTransporter.sendMail(mailOptions);
+    }
+    
+    // If current transporter is Yahoo, try Gmail
+    if (this.hasGmailCredentials() && !this.isGmailTransporter()) {
+      console.log('🔄 Trying Gmail SMTP as fallback...');
+      const gmailTransporter = await this.initializeGmailTransporter();
+      return await gmailTransporter.sendMail(mailOptions);
+    }
+    
+    throw new Error('No fallback SMTP providers available');
+  }
+
+  // Check if current transporter is Gmail
+  isGmailTransporter() {
+    return this.transporter && this.transporter.options && this.transporter.options.host === 'smtp.gmail.com';
+  }
+
+  // Check if current transporter is Yahoo
+  isYahooTransporter() {
+    return this.transporter && this.transporter.options && this.transporter.options.host === 'smtp.mail.yahoo.com';
   }
 
   async sendViaResend({ toEmail, subject, htmlContent, textContent }) {
