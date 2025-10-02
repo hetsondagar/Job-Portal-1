@@ -61,24 +61,31 @@ app.set('trust proxy', 1);
 
 // Body parsing middleware with proper multipart handling
 app.use((req, res, next) => {
-  // Skip JSON parsing for multipart/form-data requests
   const contentType = req.get('Content-Type') || '';
-  if (contentType.includes('multipart/form-data')) {
-    console.log('🚫 Skipping JSON parsing for multipart request to:', req.path);
-    console.log('📧 Content-Type:', contentType);
+  const path = req.path || '';
+  
+  console.log('🔍 Request to:', path, 'Content-Type:', contentType);
+  
+  // Skip JSON parsing for multipart/form-data requests and bulk import routes
+  if (contentType.includes('multipart/form-data') || path.includes('/bulk-import')) {
+    console.log('🚫 Skipping JSON parsing for multipart/bulk-import request to:', path);
     return next();
   }
+  
   // Apply JSON parsing for other requests
   express.json({ limit: '10mb' })(req, res, next);
 });
 
 app.use((req, res, next) => {
-  // Skip URL encoded parsing for multipart/form-data requests
   const contentType = req.get('Content-Type') || '';
-  if (contentType.includes('multipart/form-data')) {
-    console.log('🚫 Skipping URL encoded parsing for multipart request to:', req.path);
+  const path = req.path || '';
+  
+  // Skip URL encoded parsing for multipart/form-data requests and bulk import routes
+  if (contentType.includes('multipart/form-data') || path.includes('/bulk-import')) {
+    console.log('🚫 Skipping URL encoded parsing for multipart/bulk-import request to:', path);
     return next();
   }
+  
   // Apply URL encoded parsing for other requests
   express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
 });

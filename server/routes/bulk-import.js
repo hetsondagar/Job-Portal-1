@@ -248,9 +248,12 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     console.log('🔍 Bulk import POST request received');
     console.log('📊 Request headers:', req.headers);
+    console.log('📊 Content-Type:', req.get('Content-Type'));
     console.log('📊 Request body:', req.body);
     console.log('📊 Request file:', req.file);
     console.log('📊 User:', req.user ? req.user.id : 'No user');
+    console.log('📊 Raw body type:', typeof req.body);
+    console.log('📊 Raw body length:', req.body ? Object.keys(req.body).length : 0);
     
     const {
       importName,
