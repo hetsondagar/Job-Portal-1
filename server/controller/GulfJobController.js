@@ -477,7 +477,16 @@ const getGulfEmployerApplications = async (req, res) => {
           required: false // Use LEFT JOIN for cover letter
         }
       ],
-      order: [['appliedAt', 'DESC']],
+      order: [
+        // Sort by premium status first (premium users on top)
+        [
+          { model: User, as: 'applicant' },
+          'verification_level',
+          'DESC'
+        ],
+        // Then by application date (newest first)
+        ['appliedAt', 'DESC']
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -518,10 +527,12 @@ const getGulfJobBookmarks = async (req, res) => {
 
     const { count, rows: bookmarks } = await JobBookmark.findAndCountAll({
       where: { userId },
+      attributes: ['id', 'userId', 'jobId', 'created_at', 'updated_at'],
       include: [
         {
           model: Job,
           as: 'job',
+          attributes: ['id', 'title', 'location', 'salary', 'salaryMin', 'salaryMax', 'salaryCurrency', 'experienceLevel', 'createdAt'],
           where: {
             [Op.or]: [
               { region: 'gulf' },

@@ -29,7 +29,9 @@ function findResumeFile(filename, metadata) {
     metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
     metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
     // Direct metadata filePath
-    metadata?.filePath ? metadata.filePath : null
+    metadata?.filePath ? metadata.filePath : null,
+    // Public URL based on our static mount
+    metadata?.filename ? `/uploads/resumes/${metadata.filename}` : null
   ].filter(Boolean);
 
   console.log('🔍 Trying possible file paths:', possiblePaths);
@@ -42,14 +44,14 @@ function findResumeFile(filename, metadata) {
     console.log('🔍 Checked paths:', possiblePaths);
     
     // Try to find the file by searching common directories
-    const searchDirs = [
+  const searchDirs = [
       path.join(__dirname, '../uploads'),
       path.join(process.cwd(), 'uploads'),
       path.join(process.cwd(), 'server', 'uploads'),
       '/tmp/uploads',
       '/var/tmp/uploads',
       '/opt/render/project/src/uploads',
-      '/opt/render/project/src/server/uploads'
+    '/opt/render/project/src/server/uploads'
     ];
     
     for (const searchDir of searchDirs) {
@@ -60,7 +62,7 @@ function findResumeFile(filename, metadata) {
           console.log(`🔍 Found ${files.length} items in ${searchDir}`);
           
           // Look for the specific filename
-          const found = files.find(f => f.includes(filename));
+          const found = files.find(f => typeof f === 'string' && f.includes(filename));
           if (found) {
             filePath = path.join(searchDir, found);
             console.log(`✅ Found file at: ${filePath}`);
@@ -810,7 +812,21 @@ router.put('/change-password', authenticateToken, [
 
     const { currentPassword, newPassword } = req.body;
 
-    // Verify current password
+    // Prevent setting the same password
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // If the user registered via OAuth and has no password, allow setting one with only token auth
+    if (!req.user.password) {
+      await req.user.update({ password: newPassword });
+      return res.status(200).json({ success: true, message: 'Password set successfully' });
+    }
+
+    // Verify current password for regular accounts
     const isCurrentPasswordValid = await req.user.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
@@ -841,16 +857,33 @@ router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
     
+    // Correct field mapping: model uses camelCase userId
     const notifications = await Notification.findAll({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
       order: [['createdAt', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
 
-    res.json({
-      success: true,
-      data: notifications
-    });
+    if (!notifications || notifications.length === 0) {
+      // Bootstrap a friendly welcome notification for first-time users
+      try {
+        const welcome = await Notification.create({
+          userId: req.user.id,
+          type: 'system',
+          title: 'Welcome to JobPortal',
+          message: 'You will see important updates here. Track jobs, get alerts when roles reopen, and manage all notifications on this page.',
+          priority: 'low',
+          actionUrl: '/jobs',
+          actionText: 'Find jobs',
+          icon: 'bell'
+        });
+        return res.json({ success: true, data: [welcome] });
+      } catch (seedErr) {
+        console.warn('Failed to seed welcome notification:', seedErr?.message || seedErr);
+      }
+    }
+
+    res.json({ success: true, data: notifications });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({
@@ -946,15 +979,9 @@ router.patch('/notifications/:id/read', authenticateToken, async (req, res) => {
 router.patch('/notifications/read-all', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
-    
     await Notification.update(
-      { isRead: true },
-      { 
-        where: { 
-          userId: req.user.id,
-          isRead: false
-        }
-      }
+      { isRead: true, readAt: new Date() },
+      { where: { userId: req.user.id, isRead: false } }
     );
 
     res.json({
@@ -1002,6 +1029,28 @@ router.delete('/notifications/:id', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to delete notification'
     });
+  }
+});
+
+// Create a test notification for the authenticated user (secured)
+router.post('/notifications/test', authenticateToken, async (req, res) => {
+  try {
+    const { Notification } = require('../config/index');
+    const { title, message, priority } = req.body || {};
+    const data = await Notification.create({
+      userId: req.user.id,
+      type: 'system',
+      title: title || 'Test notification',
+      message: message || 'This is a test notification to verify delivery.',
+      priority: priority || 'medium',
+      actionUrl: '/notifications',
+      actionText: 'Open notifications',
+      icon: 'bell'
+    });
+    res.json({ success: true, message: 'Notification created', data });
+  } catch (error) {
+    console.error('Error creating test notification:', error);
+    res.status(500).json({ success: false, message: 'Failed to create test notification' });
   }
 });
 
@@ -1466,7 +1515,16 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
             ]
           }
         ],
-        order: [['appliedAt', 'DESC']]
+        order: [
+          // Sort by premium status first (premium users on top)
+          [
+            { model: User, as: 'applicant' },
+            'verification_level',
+            'DESC'
+          ],
+          // Then by application date (newest first)
+          ['appliedAt', 'DESC']
+        ]
       });
       console.log('✅ Sequelize query completed successfully');
     } catch (queryError) {
@@ -2159,7 +2217,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
     const { JobBookmark, Job, Company } = require('../config/index');
     
     const bookmarks = await JobBookmark.findAll({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
       include: [
         {
           model: Job,
@@ -2197,7 +2255,10 @@ router.post('/bookmarks', authenticateToken, async (req, res) => {
       userId: req.user.id
     };
 
-    const bookmark = await JobBookmark.create(bookmarkData);
+    // Create bookmark while being tolerant to missing optional columns on older schemas
+    const bookmark = await JobBookmark.create(bookmarkData, {
+      fields: ['userId', 'jobId', 'folder', 'priority', 'reminderDate', 'notes'].filter((f) => f in bookmarkData)
+    });
 
     res.json({
       success: true,
@@ -2269,6 +2330,51 @@ router.delete('/bookmarks/:id', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to delete bookmark'
     });
+  }
+});
+
+// Job At Pace: activate premium visibility features without payment (logged-in users only)
+router.post('/job-at-pace/activate', authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+    // Only jobseekers can activate Job at Pace
+    if (user.user_type !== 'jobseeker') {
+      return res.status(403).json({ success: false, message: 'Only jobseekers can activate Job at Pace' });
+    }
+
+    // Merge preferences safely
+    const currentPrefs = user.preferences || {};
+    const tags = Array.isArray(currentPrefs.tags) ? currentPrefs.tags : [];
+    const mergedPrefs = {
+      ...currentPrefs,
+      premium: true,
+      visibility: {
+        ...(currentPrefs.visibility || {}),
+        profileBoost: true,
+        premiumBadge: true,
+        featuredPlacement: true
+      },
+      tags: Array.from(new Set([ ...tags, 'premium' ]))
+    };
+
+    // Update user record
+    await user.update({
+      preferences: mergedPrefs,
+      verification_level: 'premium'
+    });
+
+    // Optional: record activity (best-effort)
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      if (EmployerActivityService?.recordUserActivity) {
+        await EmployerActivityService.recordUserActivity(user.id, 'job_at_pace_activate', { planId: req.body?.planId || 'premium' });
+      }
+    } catch (_) {}
+
+    return res.json({ success: true, message: 'Job at Pace premium activated', data: { userId: user.id, preferences: mergedPrefs } });
+  } catch (error) {
+    console.error('Error activating Job at Pace:', error);
+    return res.status(500).json({ success: false, message: 'Failed to activate Job at Pace' });
   }
 });
 
@@ -3861,7 +3967,17 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
 });
 
 // Employer endpoint to download resume from application
-router.get('/employer/applications/:applicationId/resume/download', authenticateToken, async (req, res) => {
+function attachTokenFromQuery(req, _res, next) {
+  try {
+    const qToken = req.query && (req.query.token || req.query.access_token);
+    if (!req.headers?.authorization && qToken) {
+      req.headers.authorization = `Bearer ${qToken}`;
+    }
+  } catch (_) {}
+  next();
+}
+
+router.get('/employer/applications/:applicationId/resume/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Employer resume download request:', { applicationId: req.params.applicationId, userId: req.user?.id, userType: req.user?.user_type });
     
@@ -3936,6 +4052,10 @@ router.get('/employer/applications/:applicationId/resume/download', authenticate
     const filePath = findResumeFile(filename, metadata);
     
     if (!filePath) {
+      // Fallback: try redirecting to stored public path if present
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
       return res.status(404).json({
         success: false,
         message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',

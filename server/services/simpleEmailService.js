@@ -2,38 +2,143 @@ const nodemailer = require('nodemailer');
 
 class SimpleEmailService {
   constructor() {
-    this.fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@jobportal.com';
-    this.fromName = 'Job Portal';
+    this.fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@jobportal.com';
+    this.fromName = process.env.FROM_NAME || 'Job Portal';
     this.initializeTransporter();
   }
 
   async initializeTransporter() {
     try {
-      // Prefer explicit SMTP settings if provided
-      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        this.transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        });
-        console.log('✅ Email service initialized with configured SMTP');
+      // Yahoo-specific handling
+      if (process.env.SMTP_HOST === 'smtp.mail.yahoo.com' || process.env.SMTP_HOST?.includes('yahoo')) {
+        console.log('🔄 Detected Yahoo SMTP - using Yahoo-specific configuration');
+        this.transporter = await this.initializeYahooTransporter();
         return;
       }
 
-      // Fallback to local JSON transport (no network). Emails are logged.
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
-      console.log('✅ Email service initialized with jsonTransport (no network)');
+      // Prefer explicit SMTP settings if provided (or URL)
+      const smtpUrl = process.env.SMTP_URL;
+      const hasHostCreds = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+      if (smtpUrl || hasHostCreds) {
+        const poolEnabled = String(process.env.SMTP_POOL || 'true') === 'true';
+        const port = Number(process.env.SMTP_PORT || 587);
+        const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
+        const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000);
+        const socketTimeout = Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 10000);
+
+        const baseOptions = smtpUrl
+          ? { url: smtpUrl }
+          : {
+              host: process.env.SMTP_HOST,
+              port,
+              secure,
+              auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+            };
+
+        // Build advanced SMTP options
+        const transporterOptions = {
+          ...baseOptions,
+          pool: poolEnabled,
+          maxConnections: Number(process.env.SMTP_MAX_CONNECTIONS || 5),
+          maxMessages: Number(process.env.SMTP_MAX_MESSAGES || 100),
+          connectionTimeout,
+          greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
+          socketTimeout,
+          // STARTTLS / TLS behaviors
+          requireTLS: String(process.env.SMTP_REQUIRE_TLS || 'false') === 'true',
+          ignoreTLS: String(process.env.SMTP_IGNORE_TLS || 'false') === 'true',
+          tls: {
+            // Sometimes providers need this off if they use self-signed or old certs
+            rejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || 'true') === 'true',
+            ciphers: process.env.SMTP_TLS_CIPHERS || undefined,
+            minVersion: process.env.SMTP_TLS_MIN_VERSION || undefined
+          },
+          debug: String(process.env.SMTP_DEBUG || 'false') === 'true',
+        };
+
+        this.transporter = nodemailer.createTransport(transporterOptions);
+
+        // Verify connection in background (non-blocking)
+        Promise.resolve()
+          .then(() => this.transporter.verify())
+          .then(() => console.log('✅ SMTP transporter verified successfully'))
+          .catch((err) => console.warn('⚠️ SMTP transporter verification failed:', err?.message || err));
+
+        console.log('✅ Email service initialized with configured SMTP', {
+          pool: transporterOptions.pool,
+          host: smtpUrl ? '(via URL)' : process.env.SMTP_HOST,
+          port,
+          secure,
+          connectionTimeout,
+          socketTimeout
+        });
+        return;
+      }
+
+      // No SMTP configured
+      this.transporter = null;
+      console.log('ℹ️ No SMTP configured. Set SMTP_URL or SMTP_HOST/USER/PASS to enable SMTP.');
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error.message);
-      // Last-resort fallback to prevent crashes
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      this.transporter = null;
     }
   }
 
+  // Yahoo-specific SMTP configuration
+  async initializeYahooTransporter() {
+    const yahooHost = 'smtp.mail.yahoo.com';
+    const yahooPorts = [465, 587]; // Try both ports
+    
+    for (const port of yahooPorts) {
+      try {
+        const secure = port === 465;
+        const transporterOptions = {
+          host: yahooHost,
+          port,
+          secure,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          },
+          // Yahoo-specific settings
+          connectionTimeout: 30000, // 30 seconds
+          greetingTimeout: 30000,
+          socketTimeout: 30000,
+          requireTLS: !secure, // Only for port 587
+          ignoreTLS: false,
+          tls: {
+            rejectUnauthorized: false, // Yahoo sometimes has cert issues
+            ciphers: 'SSLv3',
+            secureProtocol: 'TLSv1_2_method'
+          },
+          // Yahoo connection pooling
+          pool: false, // Disable pooling for Yahoo
+          maxConnections: 1,
+          maxMessages: 1,
+          // Yahoo-specific debug
+          debug: true,
+          logger: true
+        };
+
+        console.log(`🔄 Trying Yahoo SMTP on port ${port} (secure: ${secure})`);
+        
+        const testTransporter = nodemailer.createTransport(transporterOptions);
+        await testTransporter.verify();
+        
+        console.log(`✅ Yahoo SMTP verified on port ${port}`);
+        return testTransporter;
+      } catch (error) {
+        console.warn(`❌ Yahoo SMTP failed on port ${port}:`, error?.message || error);
+        continue;
+      }
+    }
+    
+    throw new Error('Yahoo SMTP failed on all ports (465, 587)');
+  }
+
   async sendPasswordResetEmail(toEmail, resetToken, userName = 'User') {
-    // Wait for transporter to be ready
-    if (!this.transporter) {
+    // Ensure init ran
+    if (typeof this.transporter === 'undefined') {
       await this.initializeTransporter();
     }
 
@@ -51,14 +156,79 @@ class SimpleEmailService {
       html: htmlContent
     };
 
-    try {
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Password reset email sent (or logged)');
-      return { success: true, method: 'nodemailer', messageId: info.messageId };
-    } catch (error) {
-      console.error('❌ Failed to send email:', error.message);
-      throw new Error('Failed to send password reset email');
+    // Strategy: SMTP only, with retries
+    if (!this.transporter) {
+      throw new Error('SMTP is not configured. Set SMTP_URL or SMTP_HOST/USER/PASS');
     }
+
+    const maxAttempts = Number(process.env.SMTP_RETRY_ATTEMPTS || 3);
+    const baseDelayMs = Number(process.env.SMTP_RETRY_DELAY_MS || 1000);
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const info = await this.transporter.sendMail(mailOptions);
+        console.log('✅ Password reset email sent via SMTP');
+        return { success: true, method: 'smtp', messageId: info.messageId };
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ SMTP send failed (attempt ${attempt}/${maxAttempts}):`, error?.message || error);
+        if (attempt < maxAttempts) {
+          const delay = baseDelayMs * Math.pow(2, attempt - 1);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+      }
+    }
+    throw new Error(`SMTP send failed after ${maxAttempts} attempts: ${lastError?.message || lastError}`);
+  }
+
+  async sendViaResend({ toEmail, subject, htmlContent, textContent }) {
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = `${this.fromName} <${this.fromEmail}>`;
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: [toEmail],
+        subject,
+        html: htmlContent,
+        text: textContent
+      })
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Resend error ${resp.status}: ${txt}`);
+    }
+    return await resp.json();
+  }
+
+  async sendViaSendgrid({ toEmail, subject, htmlContent, textContent }) {
+    const apiKey = process.env.SENDGRID_API_KEY;
+    const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: toEmail }] }],
+        from: { email: this.fromEmail, name: this.fromName },
+        subject,
+        content: [
+          { type: 'text/plain', value: textContent },
+          { type: 'text/html', value: htmlContent }
+        ]
+      })
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`SendGrid error ${resp.status}: ${txt}`);
+    }
+    return { message: 'accepted' };
   }
 
   getPasswordResetEmailTemplate(userName, resetUrl) {

@@ -19,11 +19,14 @@ import {
   Clock,
   LinkIcon,
   Mail,
+  Phone,
   MessageCircle,
   ArrowLeft,
   CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -102,8 +105,9 @@ function GulfCompanyDetailPage() {
     console.log('Auth context not available, proceeding without authentication')
   }
   
-  const companyId = String((params as any)?.id || '')
-  const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyId)
+  const companyIdParam = String((params as any)?.id || '')
+  const isValidUuid = /^[0-9a-fA-F-]{36}$/.test(companyIdParam)
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string>(companyIdParam)
   const [isFollowing, setIsFollowing] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -148,7 +152,7 @@ function GulfCompanyDetailPage() {
       console.error('Error toggling follow:', error)
       toast.error('Failed to update follow status')
     }
-  }, [companyId, isFollowing])
+  }, [companyIdParam, isFollowing])
 
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
@@ -158,9 +162,10 @@ function GulfCompanyDetailPage() {
       // Try direct company endpoint only if id looks valid
       if (isValidUuid) {
         try {
-          const response = await apiService.getCompany(companyId)
+          const response = await apiService.getCompany(companyIdParam)
           if (response && response.success && response.data) {
             setCompany(response.data)
+            setResolvedCompanyId(response.data.id)
             return
           }
         } catch (error: any) {
@@ -170,11 +175,15 @@ function GulfCompanyDetailPage() {
       
       // Fallback: fetch public companies list and find by id
       try {
-        const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
+        const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: companyIdParam } as any)
         if (list && list.success && Array.isArray(list.data)) {
-          const found = list.data.find((c: any) => String(c.id) === companyId)
+          const needle = companyIdParam.toLowerCase()
+          const found = list.data.find((c: any) => String(c.id) === companyIdParam
+            || String(c.slug || '').toLowerCase() === needle
+            || String(c.name || '').toLowerCase() === needle)
           if (found) {
             setCompany(found)
+            setResolvedCompanyId(found.id)
             return
           }
         }
@@ -184,12 +193,12 @@ function GulfCompanyDetailPage() {
       
       // Last-resort fallback: infer minimal company info from its jobs (public)
       try {
-        const jobsResp = await apiService.getCompanyJobs(companyId)
+        const jobsResp = await apiService.getCompanyJobs(companyIdParam)
         if (jobsResp && jobsResp.success) {
           const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
           if (arr.length > 0) {
             const name = arr[0]?.companyName || 'Company'
-            setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
+            setCompany({ id: companyIdParam, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
             return
           }
         }
@@ -205,17 +214,36 @@ function GulfCompanyDetailPage() {
     } finally {
       setLoadingCompany(false)
     }
-  }, [companyId, isValidUuid])
+  }, [companyIdParam, isValidUuid])
 
   // Fetch company jobs
   const fetchCompanyJobs = useCallback(async () => {
     setLoadingJobs(true)
     setJobsError("")
     try {
-      const response = await apiService.getCompanyJobs(companyId)
-      if (response && response.success) {
-        const jobs = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.rows) ? response.data.rows : [])
-        setCompanyJobs(jobs)
+      // Fetch active and expired jobs explicitly and combine
+      const companyKey = isValidUuid ? resolvedCompanyId : resolvedCompanyId
+      const [activeResp, expiredResp] = await Promise.all([
+        apiService.getCompanyJobs(companyKey, { status: 'active' } as any),
+        apiService.getCompanyJobs(companyKey, { status: 'expired' } as any)
+      ])
+
+      if ((activeResp && activeResp.success) || (expiredResp && expiredResp.success)) {
+        const toArray = (resp: any) => Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp?.data?.rows) ? resp.data.rows : [])
+        const active = toArray(activeResp)
+        const expired = toArray(expiredResp)
+        // Merge and sort by createdAt desc
+        const merged = [...active, ...expired]
+          .filter((j, idx, arr) => j && j.id && arr.findIndex(x => x.id === j.id) === idx)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        if (merged.length > 0) {
+          setCompanyJobs(merged)
+        } else {
+          // Fallback: fetch without status to get any visible jobs from API
+          const anyResp = await apiService.getCompanyJobs(companyKey)
+          const anyArr = toArray(anyResp)
+          setCompanyJobs(anyArr)
+        }
       } else {
         setJobsError('Failed to load company jobs')
       }
@@ -225,14 +253,14 @@ function GulfCompanyDetailPage() {
     } finally {
       setLoadingJobs(false)
     }
-  }, [companyId])
+  }, [resolvedCompanyId, isValidUuid])
 
   useEffect(() => {
-    if (companyId) {
+    if (companyIdParam) {
       fetchCompanyData()
       fetchCompanyJobs()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs])
+  }, [companyIdParam, fetchCompanyData, fetchCompanyJobs])
 
   const handleJobClick = (job: any) => {
     if (!isAuthenticated) {
@@ -256,11 +284,11 @@ function GulfCompanyDetailPage() {
 
     try {
       setSubmitting(true)
-      const response = await apiService.applyToGulfJob(selectedJob.id, {
-        expectedSalary: applicationData.expectedSalary,
-        noticePeriod: applicationData.noticePeriod,
+      const response = await apiService.applyJob(selectedJob.id, {
+        expectedSalary: applicationData.expectedSalary ? Number(applicationData.expectedSalary) : undefined,
+        noticePeriod: applicationData.noticePeriod ? Number(applicationData.noticePeriod) : undefined,
         coverLetter: applicationData.coverLetter,
-        willingToRelocate: applicationData.willingToRelocate
+        isWillingToRelocate: applicationData.willingToRelocate
       })
 
       if (response.success) {
@@ -595,8 +623,12 @@ function GulfCompanyDetailPage() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4 text-sm text-slate-500">
                                   <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
-                                  {job.deadline && (
-                                    <span>Deadline: {new Date(job.deadline).toLocaleDateString()}</span>
+                                  {job.validTill && (
+                                    <span>
+                                      {new Date() > new Date(job.validTill)
+                                        ? `Applications closed: ${new Date(job.validTill).toLocaleDateString()}`
+                                        : `Valid till: ${new Date(job.validTill).toLocaleDateString()}`}
+                                    </span>
                                   )}
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -610,9 +642,14 @@ function GulfCompanyDetailPage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleApplyNow(job)}
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                    disabled={job.validTill && new Date() > new Date(job.validTill)}
+                                    className={`$${' '}
+                                      ${job.validTill && new Date() > new Date(job.validTill)
+                                        ? 'bg-gray-300 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                      }`}
                                   >
-                                    Apply Now
+                                    {job.validTill && new Date() > new Date(job.validTill) ? 'Applications Closed' : 'Apply Now'}
                                   </Button>
                                 </div>
                               </div>

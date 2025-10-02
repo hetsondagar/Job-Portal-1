@@ -152,13 +152,13 @@ export default function PostJobPage() {
             title: templateData.title || '',
             department: templateData.department || '',
             location: templateData.location || '',
-            type: templateData.type || '',
-            experience: templateData.experience || '',
-            salary: templateData.salary || '',
+            type: templateData.jobType || templateData.type || '',
+            experience: templateData.experienceLevel || templateData.experience || '',
+            salary: templateData.salary || (templateData.salaryMin && templateData.salaryMax ? `${templateData.salaryMin}-${templateData.salaryMax}` : ''),
             description: templateData.description || '',
             requirements: templateData.requirements || '',
             benefits: templateData.benefits || '',
-            skills: templateData.skills || [],
+            skills: Array.isArray(templateData.skills) ? templateData.skills : (typeof templateData.skills === 'string' ? templateData.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
           });
           
           toast.success(`Template "${decodeURIComponent(templateName || '')}" applied successfully! Customize the fields as needed.`);

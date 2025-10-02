@@ -236,7 +236,7 @@ export default function GulfJobsPage() {
         console.log('🗂️ JobId to ApplicationId mapping:', jobIdToAppId)
       }
 
-      // Fetch bookmarks
+      // Fetch bookmarks (Gulf-specific)
       const bookmarksResponse = await apiService.getGulfJobBookmarks()
       if (bookmarksResponse.success && bookmarksResponse.data) {
         const bookmarks = bookmarksResponse.data.bookmarks || bookmarksResponse.data
@@ -263,7 +263,7 @@ export default function GulfJobsPage() {
         return
       }
 
-      // Save job to database
+      // Save job to database (Gulf-specific)
       const response = await apiService.bookmarkGulfJob(jobId)
       if (response.success) {
         setSavedJobs(prev => new Set([...prev, jobId]))

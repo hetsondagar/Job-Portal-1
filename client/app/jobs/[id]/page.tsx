@@ -144,7 +144,8 @@ export default function JobDetailPage() {
             
             console.log('✅ Transformed job data (fallback):', transformedJob)
             console.log('📸 Job photos for jobseeker (fallback):', res.data.photos)
-            setJob(transformedJob)
+            setJob({ ...transformedJob, validTill: res.data.validTill })
+            setJob({ ...transformedJob, validTill: (res.data as any).validTill })
             setJobLoading(false)
             return
           } else {
@@ -242,6 +243,16 @@ export default function JobDetailPage() {
       return
     }
 
+    // Prevent applying if job is expired by validTill
+    try {
+      const publicJob = await apiService.getJobByIdPublic(jobIdFromParams)
+      const vt = (publicJob?.data as any)?.validTill
+      if (vt && new Date() > new Date(vt)) {
+        toast.error('Applications are closed for this job (expired)')
+        return
+      }
+    } catch {}
+
     try {
       if (jobIdFromParams.startsWith('550e8400')) {
         sampleJobManager.addApplication({
@@ -269,6 +280,12 @@ export default function JobDetailPage() {
       toast.error('Failed to submit application. Please try again.')
     }
   }
+
+  const isExpired = (() => {
+    const vt = (job as any)?.validTill
+    if (!vt) return false
+    return new Date() > new Date(vt)
+  })()
 
   const handleShare = (platform: string) => {
     const jobUrl = `${window.location.origin}/jobs/${jobIdFromParams}`
@@ -455,6 +472,11 @@ export default function JobDetailPage() {
                           <div className="text-sm text-slate-500">{job?.applicants || 0} applicants</div>
                         </div>
                       </div>
+                      {isExpired && (
+                        <div className="flex items-center">
+                          <Badge className="bg-red-100 text-red-800 border-red-200">Expired</Badge>
+                        </div>
+                      )}
                     </div>
 
                     {/* Internship-specific information */}
@@ -525,14 +547,19 @@ export default function JobDetailPage() {
                       </div>
                     )}
 
+                    {isExpired && (
+                      <div className="w-full mb-3 text-center text-red-600 font-medium">Applications closed</div>
+                    )}
                     <Button
                       onClick={handleApply}
                       className={`w-full ${
                         hasApplied
                           ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                          : isExpired
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                       }`}
-                      disabled={hasApplied}
+                      disabled={hasApplied || isExpired}
                     >
                       {hasApplied ? (
                         <>

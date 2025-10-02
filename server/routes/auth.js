@@ -752,26 +752,23 @@ router.post('/forgot-password', validateForgotPassword, async (req, res) => {
       password_reset_expires: resetTokenExpiry
     });
 
-    // Send password reset email
+    // Send password reset email asynchronously to avoid blocking the response
     try {
       const userName = user.first_name || user.email.split('@')[0];
-      await emailService.sendPasswordResetEmail(user.email, resetToken, userName);
-      
-      console.log('✅ Password reset email sent successfully to:', user.email);
-      
-      res.status(200).json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.'
-      });
-    } catch (emailError) {
-      console.error('❌ Failed to send password reset email:', emailError);
-      
-      // Still return success to user for security (don't reveal if email exists)
-      res.status(200).json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.'
-      });
+      // Fire-and-forget: do not await to prevent UI hanging on slow SMTP
+      Promise.resolve()
+        .then(() => emailService.sendPasswordResetEmail(user.email, resetToken, userName))
+        .then(() => console.log('✅ Password reset email sent successfully to:', user.email))
+        .catch((emailError) => console.error('❌ Failed to send password reset email:', emailError));
+    } catch (emailScheduleError) {
+      console.error('❌ Failed to schedule password reset email:', emailScheduleError);
     }
+
+    // Always respond immediately for security and UX
+    return res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
 
   } catch (error) {
     console.error('Forgot password error:', error);

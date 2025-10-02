@@ -61,8 +61,16 @@ export default function CandidateProfilePage() {
   const toAbsoluteApiUrl = (url?: string) => {
     if (!url) return "";
     if (/^https?:\/\//i.test(url)) return url;
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-    return `${base}${url}`;
+    const base = process.env.NEXT_PUBLIC_API_URL || "";
+    if (!base) return url;
+    const normalizedBase = base.replace(/\/$/, "");
+    let normalizedUrl = url.startsWith("/") ? url : `/${url}`;
+    // Avoid /api/api duplication
+    if (normalizedBase.endsWith('/api') && normalizedUrl.startsWith('/api')) {
+      normalizedUrl = normalizedUrl.replace(/^\/api/, '');
+      if (!normalizedUrl.startsWith('/')) normalizedUrl = `/${normalizedUrl}`;
+    }
+    return `${normalizedBase}${normalizedUrl}`;
   }
 
   useEffect(() => {
@@ -499,7 +507,12 @@ export default function CandidateProfilePage() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h1 className="text-3xl font-bold text-slate-900 mb-2">{candidate.name}</h1>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h1 className="text-3xl font-bold text-slate-900">{candidate.name}</h1>
+                        {(candidate?.verification_level === 'premium' || (candidate as any)?.verificationLevel === 'premium' || (candidate as any)?.preferences?.premium) && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                        )}
+                      </div>
                       <p className="text-xl text-slate-600 mb-2">{candidate.designation}</p>
                       <p className="text-slate-500">{candidate.about}</p>
                     </div>

@@ -178,7 +178,21 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
 
   const handleDownloadCoverLetter = async (coverLetter: any) => {
     try {
-      // Prefer application-scoped download to enforce access checks and resilient file handling
+      // Try direct file URL first if available
+      const direct = (selectedApplication?.jobCoverLetter?.metadata?.fileUrl || selectedApplication?.jobCoverLetter?.fileUrl) as string | undefined
+      if (direct) {
+        const abs = direct.match(/^https?:\/\//i) ? direct : `${process.env.NEXT_PUBLIC_API_URL || ''}${direct}`
+        const a = document.createElement('a')
+        a.href = abs
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        return
+      }
+
+      // Fallback: application-scoped download to enforce access checks
       const response = await apiService.downloadApplicationCoverLetter(selectedApplication?.id || '')
       const contentDisposition = response.headers.get('content-disposition')
       let filename = coverLetter?.metadata?.filename || `${coverLetter?.title || 'CoverLetter'}.pdf`
@@ -232,16 +246,37 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
     return icons[status as keyof typeof icons] || Clock
   }
 
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = !searchQuery || 
-      app.applicant?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.job?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.applicant?.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = statusFilter === "all" || app.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const filteredApplications = applications
+    .filter(app => {
+      const matchesSearch = !searchQuery || 
+        app.applicant?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.job?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.applicant?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const matchesStatus = statusFilter === "all" || app.status === statusFilter
+      
+      return matchesSearch && matchesStatus
+    })
+    .sort((a, b) => {
+      // Sort premium users first
+      const aIsPremium = a.applicant && (
+        a.applicant.verification_level === 'premium' || 
+        a.applicant.verificationLevel === 'premium' || 
+        a.applicant?.preferences?.premium
+      )
+      const bIsPremium = b.applicant && (
+        b.applicant.verification_level === 'premium' || 
+        b.applicant.verificationLevel === 'premium' || 
+        b.applicant?.preferences?.premium
+      )
+      
+      // Premium users come first
+      if (aIsPremium && !bIsPremium) return -1
+      if (!aIsPremium && bIsPremium) return 1
+      
+      // Within same premium status, sort by application date (newest first)
+      return new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+    })
 
   const handleViewDetails = async (application: any) => {
     try {
@@ -433,6 +468,27 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
           </CardContent>
         </Card>
 
+        {/* Premium Priority Notice */}
+        {filteredApplications.some(app => {
+          const applicant = app.applicant
+          return applicant && (
+            applicant.verification_level === 'premium' || 
+            applicant.verificationLevel === 'premium' || 
+            applicant?.preferences?.premium
+          )
+        }) && (
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Star className="w-5 h-5 text-yellow-600" />
+                <p className="text-sm text-yellow-800">
+                  <strong>Premium Priority:</strong> Premium candidates are shown at the top of the list and highlighted with a golden border.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Applications List */}
         <div className="space-y-4">
           {filteredApplications.length === 0 ? (
@@ -454,8 +510,15 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
               const applicant = application.applicant
               const job = application.job
               
+              // Check if applicant is premium
+              const isPremium = applicant && (
+                applicant.verification_level === 'premium' || 
+                applicant.verificationLevel === 'premium' || 
+                applicant?.preferences?.premium
+              )
+              
               return (
-                <Card key={application.id} className="hover:shadow-md transition-shadow">
+                <Card key={application.id} className={`hover:shadow-md transition-shadow ${isPremium ? 'ring-2 ring-yellow-200 bg-yellow-50/30' : ''}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4 flex-1">
@@ -471,6 +534,10 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                             <h3 className="text-lg font-semibold text-gray-900 truncate">
                               {applicant?.fullName || 'Unknown Candidate'}
                             </h3>
+                            {/* Premium badge */}
+                            {applicant && (applicant.verification_level === 'premium' || (applicant as any).verificationLevel === 'premium' || (applicant as any)?.preferences?.premium) && (
+                              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                            )}
                             <Badge className={getStatusColor(application.status)}>
                               <StatusIcon className="w-3 h-3 mr-1" />
                               {application.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -637,8 +704,22 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
     try {
       console.log('🔍 Attempting to download resume:', { resumeId: resume.id, applicationId: application.id })
-      
-      // For applications, we need to use the application-based download endpoint
+
+      // Try direct URL first if present
+      const direct = (resume?.metadata?.fileUrl || resume?.fileUrl) as string | undefined
+      if (direct) {
+        const abs = direct.match(/^https?:\/\//i) ? direct : `${process.env.NEXT_PUBLIC_API_URL || ''}${direct}`
+        const a = document.createElement('a')
+        a.href = abs
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        return
+      }
+
+      // Fallback: application-based download
       const response = await apiService.downloadApplicationResume(resume.id, application.id)
       
       console.log('🔍 Download response:', { status: response.status, ok: response.ok })
@@ -746,38 +827,23 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
     <div className="space-y-6">
       {/* Candidate Overview */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start space-x-4">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">{job?.title || 'Job Application'}</h3>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600">Application ID: {application.id}</p>
+                {applicant && (applicant.verification_level === 'premium' || (applicant as any).verificationLevel === 'premium' || (applicant as any)?.preferences?.premium) && (
+                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                )}
+              </div>
+            </div>
             <Avatar className="w-16 h-16">
               <AvatarImage src={applicant?.avatar} />
               <AvatarFallback>
                 {applicant?.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{applicant?.fullName}</h2>
-              {applicant?.headline && (
-                <p className="text-gray-600 mt-1">{applicant.headline}</p>
-              )}
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 mr-1" />
-                  {applicant?.email}
-                </div>
-                {applicant?.phone && (
-                  <div className="flex items-center">
-                    <Phone className="w-4 h-4 mr-1" />
-                    {applicant.phone}
-                  </div>
-                )}
-                {applicant?.current_location && (
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    {applicant.current_location}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </CardHeader>
         <CardContent>

@@ -184,6 +184,12 @@ exports.createJob = async (req, res, next) => {
       .replace(/-+/g, '-')
       .trim('-') + '-' + Date.now();
     
+    // Determine default expiry: if job is being activated now and no validTill provided, default to 21 days from now
+    let resolvedValidTill = validTill;
+    if (status === 'active' && !resolvedValidTill) {
+      resolvedValidTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+    }
+
     // Create record
     const jobData = {
       slug,
@@ -217,7 +223,7 @@ exports.createJob = async (req, res, next) => {
       isUrgent: Boolean(isUrgent),
       isFeatured: Boolean(isFeatured),
       isPremium: Boolean(isPremium),
-      validTill,
+      validTill: resolvedValidTill,
       publishedAt,
       tags: Array.isArray(tags) ? tags : [],
       metadata,
@@ -363,6 +369,14 @@ exports.getAllJobs = async (req, res, next) => {
       } else if (status === 'inactive') {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
+    } else {
+      // Default public listing: only active jobs that are not expired by date
+      whereClause.status = 'active';
+      const now = new Date();
+      whereClause[Op.or] = [
+        { validTill: null },
+        { validTill: { [Op.gte]: now } }
+      ];
     }
     if (companyId) whereClause.company_id = companyId;
     if (location) whereClause.location = { [Job.sequelize.Op.iLike]: `%${location}%` };
@@ -461,6 +475,12 @@ exports.getJobById = async (req, res, next) => {
         success: false,
         message: 'Job not found'
       });
+    }
+
+    // Visibility rules: paused jobs are not visible to jobseekers (non-owners)
+    const isOwner = req.user && job.employerId === req.user.id;
+    if (job.status === 'paused' && !isOwner) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
     }
 
     // Track the view (async, don't wait for it)
@@ -904,9 +924,14 @@ exports.getJobsByCompany = async (req, res, next) => {
     if (status) {
       if (status === 'active') {
         whereClause.status = 'active';
+      } else if (status === 'expired') {
+        whereClause.status = 'expired';
       } else if (status === 'inactive') {
         whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
       }
+    } else {
+      // Public company page: include active (regardless of validTill) and expired
+      whereClause.status = { [Op.in]: ['active', 'expired'] };
     }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
@@ -961,8 +986,67 @@ exports.updateJobStatus = async (req, res, next) => {
       });
     }
 
-    // Update job status
-    await job.update({ status: status });
+    // If setting active while expired or without validTill, set default 21 days from now
+    const updates = { status };
+    if (status === 'active') {
+      const now = new Date();
+      if (!job.validTill || now > new Date(job.validTill)) {
+        updates.validTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+      }
+    }
+    const prevStatus = job.status;
+    await job.update(updates);
+
+    // If set to active (idempotent), notify watchers
+    try {
+      if (status === 'active') {
+        const sequelize = Job.sequelize;
+        console.log('🔔 Reactivation for job', job.id, 'prevStatus=', prevStatus, '-> active');
+        const [watchers] = await sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
+        console.log('🔔 Found watchers:', Array.isArray(watchers) ? watchers.length : 0);
+        if (Array.isArray(watchers) && watchers.length > 0) {
+          const EmailService = require('../services/simpleEmailService');
+          for (const w of watchers) {
+            try {
+              // Send notification email (jsonTransport in dev)
+              const watcher = await User.findByPk(w.user_id);
+              console.log('🔔 Notifying watcher user_id=', w.user_id, 'email=', watcher?.email || 'n/a');
+              if (watcher?.email) {
+                await EmailService.sendPasswordResetEmail(
+                  watcher.email,
+                  'job-reopened',
+                  watcher.first_name || 'Job Seeker'
+                );
+              }
+              // Create in-app notification
+              try {
+                const Notification = require('../models/Notification');
+                await Notification.create({
+                  userId: w.user_id,
+                  type: 'system',
+                  title: 'Tracked job reopened',
+                  message: `${job.title} is open again. Apply now!`,
+                  priority: 'medium',
+                  actionUrl: `/jobs/${job.id}`,
+                  actionText: 'View job',
+                  icon: 'briefcase',
+                  metadata: { jobId: job.id, companyId: job.companyId }
+                });
+                console.log('✅ In-app notification persisted for', w.user_id);
+              } catch (notifErr) {
+                console.warn('Failed to create in-app notification', notifErr?.message || notifErr);
+              }
+            } catch (e) {
+              console.warn('Failed to notify watcher', w.userId, e?.message || e);
+            }
+          }
+        } else {
+          console.log('ℹ️ No watchers to notify for job', job.id);
+        }
+      }
+    } catch (notifyErr) {
+      console.warn('Watcher notification failed:', notifyErr?.message || notifyErr);
+    }
 
     return res.status(200).json({
       success: true,

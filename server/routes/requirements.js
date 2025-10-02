@@ -1870,8 +1870,19 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
   }
 });
 
+// Helper to attach token from query when Authorization header is missing
+function attachTokenFromQuery(req, _res, next) {
+  try {
+    const qToken = req.query && (req.query.token || req.query.access_token);
+    if (!req.headers?.authorization && qToken) {
+      req.headers.authorization = `Bearer ${qToken}`;
+    }
+  } catch (_) {}
+  next();
+}
+
 // Download candidate resume (for employers)
-router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', authenticateToken, async (req, res) => {
+router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId, resumeId } = req.params;
     
@@ -1943,7 +1954,9 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       metadata.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
       metadata.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
       // Direct metadata filePath
-      metadata.filePath ? metadata.filePath : null
+      metadata.filePath ? metadata.filePath : null,
+      // Public URL path
+      metadata.filename ? `/uploads/resumes/${metadata.filename}` : null
     ].filter(Boolean);
 
     console.log('🔍 Trying possible file paths:', possiblePaths);
@@ -1970,7 +1983,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
         try {
           if (fs.existsSync(searchDir)) {
             const files = fs.readdirSync(searchDir, { recursive: true });
-            const found = files.find(f => f.includes(filename));
+            const found = files.find(f => typeof f === 'string' && f.includes(filename));
             if (found) {
               filePath = path.join(searchDir, found);
               break;

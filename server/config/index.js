@@ -35,6 +35,7 @@ const FeaturedJob = require('../models/FeaturedJob');
 const ViewTracking = require('../models/ViewTracking');
 const UserDashboard = require('../models/UserDashboard');
 const SearchHistory = require('../models/SearchHistory');
+const SecureJobTap = require('../models/SecureJobTap');
 const BulkJobImport = require('../models/BulkJobImport')(sequelize);
 const CandidateAnalytics = require('../models/CandidateAnalytics')(sequelize);
 const JobTemplate = require('../models/JobTemplate');
@@ -201,6 +202,12 @@ JobApplication.hasMany(Analytics, { foreignKey: 'applicationId', as: 'analytics'
 FeaturedJob.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 Job.hasMany(FeaturedJob, { foreignKey: 'jobId', as: 'featuredPromotions' });
 
+// SecureJobTap associations
+SecureJobTap.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+SecureJobTap.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+User.hasMany(SecureJobTap, { foreignKey: 'userId', as: 'secureJobTaps' });
+Job.hasMany(SecureJobTap, { foreignKey: 'jobId', as: 'secureJobTaps' });
+
 // Sync database function
 const syncDatabase = async (force = true) => {
   try {
@@ -249,6 +256,7 @@ module.exports = {
   ViewTracking,
   UserDashboard,
   SearchHistory,
+  SecureJobTap,
   BulkJobImport,
   CandidateAnalytics,
   JobTemplate,

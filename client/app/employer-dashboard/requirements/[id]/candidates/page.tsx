@@ -424,7 +424,12 @@ export default function CandidatesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-semibold text-slate-900 text-lg mb-1">{candidate.name}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-slate-900 text-lg">{candidate.name}</h3>
+                        {(candidate as any)?.verification_level === 'premium' || (candidate as any)?.verificationLevel === 'premium' || (candidate as any)?.preferences?.premium ? (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                        ) : null}
+                      </div>
                       <p className="text-slate-600 text-sm mb-2">{candidate.designation}</p>
                       {/* Relevance Score and Match Reasons */}
                       {candidate.relevanceScore !== undefined && (

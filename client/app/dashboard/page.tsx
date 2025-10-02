@@ -515,9 +515,17 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">Account Type</p>
+                      <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="capitalize">
                         {user.userType}
                       </Badge>
+                        {/* Premium Badge */}
+                        {(user.verification_level === 'premium' || user.verificationLevel === 'premium' || user?.preferences?.premium) && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                            Premium
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">Status</p>

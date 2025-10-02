@@ -390,7 +390,7 @@ router.get('/:id/jobs', async (req, res) => {
     // Build where clause with filters
     const where = { 
       companyId: id,
-      status: 'active'
+      status: { [Op.in]: ['active', 'expired'] }
     };
 
     // Add department filter
@@ -446,7 +446,7 @@ router.get('/:id/jobs', async (req, res) => {
         'salaryMin', 'salaryMax', 'description', 'requirements',
         'createdAt', 'isUrgent', 'department', 'category', 'city', 
         'state', 'country', 'salary', 'skills', 'applications',
-        'updatedAt', 'status', 'remoteWork', 'experienceMin', 'experienceMax'
+        'updatedAt', 'status', 'remoteWork', 'experienceMin', 'experienceMax', 'validTill'
       ]
     });
 

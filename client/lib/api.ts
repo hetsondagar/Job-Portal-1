@@ -799,6 +799,8 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  
+
   async joinCompany(companyId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/join`, {
       method: 'POST',
@@ -989,6 +991,23 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async updateJobExpiry(id: string, validTill: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}/expiry`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ validTill }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async expireJobNow(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${id}/expire`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
   async getEmployerJobs(params?: {
     page?: number;
     limit?: number;
@@ -1049,6 +1068,42 @@ class ApiService {
     });
 
     return this.handleResponse<{ applicationId: string; status: string; appliedAt: string }>(response);
+  }
+
+  async watchJob(jobId: string): Promise<ApiResponse<{ watching: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/watch`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ watching: boolean }>(response);
+  }
+
+  async unwatchJob(jobId: string): Promise<ApiResponse<{ watching: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/watch`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ watching: boolean }>(response);
+  }
+
+  async getWatchStatus(jobId: string): Promise<ApiResponse<{ watching: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/watch`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ watching: boolean }>(response);
+  }
+
+  // Secure job tap endpoint
+  async tapSecureJob(jobId: string): Promise<ApiResponse<{ tapCount: number; premiumAwarded: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/tap`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+    });
+    return this.handleResponse<{ tapCount: number; premiumAwarded: boolean }>(response);
   }
   // Utility methods
   isAuthenticated(): boolean {
@@ -2597,6 +2652,16 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
 
+    return this.handleResponse<any>(response);
+  }
+
+  // Job At Pace: activate premium visibility for jobseeker (no payment)
+  async activateJobAtPace(planId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/job-at-pace/activate`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ planId })
+    });
     return this.handleResponse<any>(response);
   }
 

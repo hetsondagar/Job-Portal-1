@@ -173,17 +173,15 @@ export default function JobTemplatesPage() {
 
   const handleCreateJobFromTemplate = async (templateId: string) => {
     try {
-      // Create job from template
       const response = await apiService.createJobFromTemplate(templateId)
-      
-      if (response.success) {
-        const job = response.data
-        toast.success('Job created from template successfully!')
-        
-        // Navigate to edit the newly created job
-        window.location.href = `/employer-dashboard/post-job?draft=${job.id}`
+      if (response.success && response.data?.prefill) {
+        const tmpl = templates.find(t => t.id === templateId)
+        const templateName = encodeURIComponent(tmpl?.name || 'Template')
+        const templateData = encodeURIComponent(JSON.stringify(response.data.prefill))
+        toast.success('Template applied. Prefilling job form...')
+        window.location.href = `/employer-dashboard/post-job?template=${templateId}&templateName=${templateName}&templateData=${templateData}`
       } else {
-        toast.error(response.message || 'Failed to create job from template')
+        toast.error(response.message || 'Failed to load template for job creation')
       }
     } catch (error) {
       console.error('Error creating job from template:', error)

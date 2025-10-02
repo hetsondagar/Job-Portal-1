@@ -85,6 +85,10 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
       case 'closed':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+      case 'expired':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+      case 'paused':
+        return 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
       case 'pending':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
       default:
@@ -199,8 +203,12 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                     
                     <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
                       <span>Posted: {formatDate(job.createdAt)}</span>
-                      {job.deadline && (
-                        <span>Deadline: {formatDate(job.deadline)}</span>
+                      {job.validTill && (
+                        <span>
+                          {new Date() > new Date(job.validTill)
+                            ? `Applications closed: ${formatDate(job.validTill)}`
+                            : `Valid till: ${formatDate(job.validTill)}`}
+                        </span>
                       )}
                       <span>Views: {job.views || 0}</span>
                     </div>

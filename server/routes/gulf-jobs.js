@@ -100,7 +100,8 @@ router.post('/jobs/:id/bookmark', authenticateToken, async (req, res) => {
 
     // Check if already bookmarked
     const existingBookmark = await JobBookmark.findOne({
-      where: { userId, jobId: id }
+      where: { userId, jobId: id },
+      attributes: ['id', 'userId', 'jobId']
     });
 
     if (existingBookmark) {
@@ -110,16 +111,17 @@ router.post('/jobs/:id/bookmark', authenticateToken, async (req, res) => {
       });
     }
 
-    // Create bookmark
-    const bookmark = await JobBookmark.create({
-      userId,
-      jobId: id
-    });
+    // Create bookmark (restrict fields + avoid returning non-existent columns)
+    await JobBookmark.create(
+      { userId, jobId: id },
+      { fields: ['userId', 'jobId'], returning: false }
+    );
 
+    // Return minimal payload to avoid selecting optional columns on legacy DB
     res.status(201).json({
       success: true,
       message: 'Job bookmarked successfully',
-      data: bookmark
+      data: { userId, jobId: id }
     });
   } catch (error) {
     console.error('Error bookmarking Gulf job:', error);
@@ -138,7 +140,8 @@ router.delete('/jobs/:id/bookmark', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     const bookmark = await JobBookmark.findOne({
-      where: { userId, jobId: id }
+      where: { userId, jobId: id },
+      attributes: ['id']
     });
 
     if (!bookmark) {

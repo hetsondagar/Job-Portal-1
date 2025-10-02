@@ -288,6 +288,20 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
 app.use('/api/salary', salaryRoutes);
 
+  // Compatibility redirect for cover-letter download legacy path
+  app.get('/api/cover-letters/:id/download', (req, res) => {
+    // Forward to user route if available
+    try {
+      const token = req.headers.authorization || req.query.token || req.query.access_token || '';
+      const url = `/api/user/cover-letters/${req.params.id}/download`;
+      // If running behind same server, rewrite path
+      req.url = url + (req.url.includes('?') ? `&` : `?`) + (token ? `token=${encodeURIComponent(token.replace(/^Bearer\s+/i, ''))}` : '');
+      return userRoutes.handle(req, res);
+    } catch (_) {
+      return res.status(404).json({ success: false, message: 'Route /api/cover-letters/:id/download not found' });
+    }
+  });
+
 // 404 handler
 app.use(notFoundHandler);
 
@@ -336,6 +350,70 @@ const startServer = async () => {
       }
     } catch (syncError) {
       console.warn('⚠️ Skipping conditional sync due to error:', syncError?.message || syncError);
+    }
+
+    // Seed default public job templates for India and Gulf
+    try {
+      const JobTemplate = require('./models/JobTemplate');
+      const defaults = [
+        {
+          name: 'Software Engineer (India) - Full-time',
+          description: 'Standard software engineer role with common fields prefilled for India region.',
+          category: 'technical',
+          isPublic: true,
+          isDefault: true,
+          templateData: {
+            title: 'Software Engineer',
+            description: 'We are looking for a Software Engineer to build and maintain applications.',
+            location: 'Bengaluru, India',
+            country: 'India',
+            jobType: 'full-time',
+            experienceLevel: 'mid',
+            skills: ['JavaScript', 'Node.js', 'React'],
+            salaryCurrency: 'INR',
+            salaryPeriod: 'yearly',
+            remoteWork: 'hybrid'
+          },
+          tags: ['india', 'engineering']
+        },
+        {
+          name: 'Sales Executive (Gulf) - Full-time',
+          description: 'Standard sales executive role with fields tailored for Gulf region.',
+          category: 'non-technical',
+          isPublic: true,
+          isDefault: true,
+          templateData: {
+            title: 'Sales Executive',
+            description: 'Seeking a Sales Executive to drive revenue and build client relationships.',
+            location: 'Dubai, UAE',
+            country: 'United Arab Emirates',
+            jobType: 'full-time',
+            experienceLevel: 'mid',
+            skills: ['Sales', 'Negotiation', 'CRM'],
+            salaryCurrency: 'AED',
+            salaryPeriod: 'yearly',
+            remoteWork: 'on-site'
+          },
+          tags: ['gulf', 'sales']
+        }
+      ];
+      for (const d of defaults) {
+        const existing = await JobTemplate.findOne({ where: { name: d.name, isDefault: true } });
+        if (!existing) {
+          await JobTemplate.create({
+            name: d.name,
+            description: d.description,
+            category: d.category,
+            isPublic: d.isPublic,
+            isDefault: d.isDefault,
+            templateData: d.templateData,
+            tags: d.tags
+          }, { fields: ['name','description','category','isPublic','isDefault','templateData','tags'] });
+          console.log(`✅ Seeded default template: ${d.name}`);
+        }
+      }
+    } catch (seedError) {
+      console.warn('⚠️ Skipping default template seeding:', seedError?.message || seedError);
     }
     
     app.listen(PORT, () => {

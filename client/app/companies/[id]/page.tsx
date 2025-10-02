@@ -125,6 +125,11 @@ function CompanyDetailPage() {
     willingToRelocate: false
   })
 
+  // Watchlist state for expired jobs
+  const [watching, setWatching] = useState<Record<string, boolean>>({})
+  const getIsWatching = (jobId: string | number) => !!watching[String(jobId)]
+  const setIsWatching = (jobId: string | number, value: boolean) => setWatching(prev => ({ ...prev, [String(jobId)]: value }))
+
   // Filter states for job filtering functionality
   const [filters, setFilters] = useState({
     department: 'all',
@@ -471,6 +476,53 @@ function CompanyDetailPage() {
       fetchFollowStatus()
     }
   }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs, fetchFollowStatus])
+
+  // Load watch status for expired jobs when jobs or auth changes
+  useEffect(() => {
+    const loadWatchStatuses = async () => {
+      if (!user || user.userType !== 'jobseeker') return
+      const expiredJobs = (companyJobs || []).filter((j: any) => j.status === 'expired')
+      for (const j of expiredJobs) {
+        try {
+          const res = await apiService.getWatchStatus(String(j.id))
+          if (res.success) setIsWatching(j.id, !!res.data?.watching)
+        } catch {}
+      }
+    }
+    loadWatchStatuses()
+  }, [companyJobs, user])
+
+  const handleToggleWatch = useCallback(async (job: any) => {
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+    if (user.userType !== 'jobseeker') {
+      toast.error('Only jobseekers can watch jobs')
+      return
+    }
+    try {
+      if (getIsWatching(job.id)) {
+        const res = await apiService.unwatchJob(String(job.id))
+        if (res.success) {
+          setIsWatching(job.id, false)
+          toast.success('You will no longer receive notifications for this job')
+        } else {
+          toast.error(res.message || 'Failed to update notification preference')
+        }
+      } else {
+        const res = await apiService.watchJob(String(job.id))
+        if (res.success) {
+          setIsWatching(job.id, true)
+          toast.success('We will notify you when this job reopens')
+        } else {
+          toast.error(res.message || 'Failed to enable notifications')
+        }
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to update notification preference')
+    }
+  }, [user, watching])
 
   // Fetch company stats after company data and jobs are loaded
   useEffect(() => {
@@ -1302,6 +1354,9 @@ function CompanyDetailPage() {
                                     <Clock className="w-4 h-4 mr-1" />
                                     {job.type || job.jobType || '—'}
                                   </div>
+                                  {job.status === 'expired' && (
+                                    <Badge className="bg-red-100 text-red-800 border-red-200">Expired</Badge>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex flex-col space-y-2">
@@ -1314,15 +1369,19 @@ function CompanyDetailPage() {
                                   className={`h-10 px-6 ${
                                     hasAppliedToJob(job.id)
                                       ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                                      : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
+                                      : job.status === 'expired'
+                                        ? 'bg-slate-300 cursor-not-allowed'
+                                        : `bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg transition-all duration-300`
                                   }`}
-                                  disabled={hasAppliedToJob(job.id)}
+                                  disabled={hasAppliedToJob(job.id) || job.status === 'expired'}
                                 >
                                   {hasAppliedToJob(job.id) ? (
                                     <>
                                       <CheckCircle className="w-4 h-4 mr-2" />
                                       Applied
                                     </>
+                                  ) : job.status === 'expired' ? (
+                                    'Applications closed'
                                   ) : (
                                     'Apply now'
                                   )}
@@ -1395,16 +1454,20 @@ function CompanyDetailPage() {
                                     className={`${
                                       hasAppliedToJob(job.id)
                                         ? 'bg-green-600 hover:bg-green-700 cursor-default'
-                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                        : job.status === 'expired'
+                                          ? 'bg-slate-300 cursor-not-allowed'
+                                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                                     } text-white`}
                                     onClick={() => handleApply(job.id)}
-                                    disabled={hasAppliedToJob(job.id)}
+                                    disabled={hasAppliedToJob(job.id) || job.status === 'expired'}
                                   >
                                     {hasAppliedToJob(job.id) ? (
                                       <>
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                         Applied
                                       </>
+                                    ) : job.status === 'expired' ? (
+                                      'Applications closed'
                                     ) : (
                                       'Apply Now'
                                     )}
@@ -1412,12 +1475,24 @@ function CompanyDetailPage() {
                                 ) : !user ? (
                                   <Button
                                     size="sm"
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                                    onClick={() => setShowAuthDialog(true)}
+                                    className={`${job.status === 'expired' ? 'bg-slate-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'} text-white`}
+                                    onClick={() => (job.status === 'expired' ? null : setShowAuthDialog(true))}
+                                    disabled={job.status === 'expired'}
                                   >
-                                    Apply Now
+                                    {job.status === 'expired' ? 'Applications closed' : 'Apply Now'}
                                   </Button>
                                 ) : null}
+
+                                {job.status === 'expired' && (
+                                  <Button
+                                    variant={getIsWatching(job.id) ? 'outline' : 'default'}
+                                    size="sm"
+                                    className={`${getIsWatching(job.id) ? '' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}
+                                    onClick={() => handleToggleWatch(job)}
+                                  >
+                                    {getIsWatching(job.id) ? 'Tracking' : 'Track this job'}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
