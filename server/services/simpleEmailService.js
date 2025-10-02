@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 
 class SimpleEmailService {
   constructor() {
-    this.fromEmail = 'noreply@jobportal.com';
+    this.fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@jobportal.com';
     this.fromName = 'Job Portal';
     this.initializeTransporter();
   }

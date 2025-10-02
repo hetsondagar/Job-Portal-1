@@ -23,7 +23,8 @@
     "db:create": "sequelize-cli db:create",
     "db:drop": "sequelize-cli db:drop",
     "db:sync": "node deploy-sync.js",
-    "test:google": "node test-google-auth.js"
+    "test:google": "node test-google-auth.js",
+    "test:email": "node test-email-service.js"
   },
   "keywords": [],
   "author": "",
