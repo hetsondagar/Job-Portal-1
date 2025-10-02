@@ -36,6 +36,9 @@ class EmailService {
     const port = Number(process.env.SMTP_PORT || 587);
     const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
 
+    // Yahoo SMTP specific configuration
+    const isYahoo = process.env.SMTP_HOST && process.env.SMTP_HOST.includes('yahoo');
+    
     const transporterOptions = {
       host: process.env.SMTP_HOST,
       port,
@@ -47,21 +50,29 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: isYahoo ? 30000 : 10000, // Yahoo needs more time
+      greetingTimeout: isYahoo ? 30000 : 10000,
+      socketTimeout: isYahoo ? 30000 : 10000,
       requireTLS: !secure,
       ignoreTLS: false,
       tls: {
         rejectUnauthorized: false,
-        ciphers: 'SSLv3',
-        secureProtocol: 'TLSv1_2_method'
+        ciphers: isYahoo ? 'TLSv1.2' : 'SSLv3',
+        secureProtocol: isYahoo ? 'TLSv1_2_method' : 'TLSv1_2_method'
       },
-      debug: false,
-      logger: false
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development'
     };
 
     console.log('🔄 Testing SMTP connection...');
+    console.log('📧 SMTP Config:', {
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      user: process.env.SMTP_USER,
+      isYahoo
+    });
+    
     const transporter = nodemailer.createTransport(transporterOptions);
     await transporter.verify();
     console.log('✅ SMTP connection verified successfully');
@@ -116,12 +127,27 @@ class EmailService {
         return await this.transporter.sendMail(mailOptions);
       } else {
         // Standard SMTP transporter
+        console.log('📧 Sending email via SMTP...');
+        console.log('📧 Email details:', {
+          to: mailOptions.to,
+          from: mailOptions.from,
+          subject: mailOptions.subject
+        });
+        
         const info = await this.transporter.sendMail(mailOptions);
         console.log('✅ Password reset email sent via SMTP');
+        console.log('📧 Message ID:', info.messageId);
+        console.log('📧 Response:', info.response);
         return { success: true, method: 'smtp', messageId: info.messageId };
       }
     } catch (error) {
       console.error('❌ Email send failed:', error?.message || error);
+      console.error('❌ Error details:', {
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode
+      });
       throw new Error(`Email send failed: ${error?.message || error}`);
     }
   }
