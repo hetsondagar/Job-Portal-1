@@ -204,29 +204,39 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Body parsing middleware - ONLY for non-bulk-import routes
+// NUCLEAR SOLUTION: Completely disable JSON parsing for bulk import routes
 app.use((req, res, next) => {
-  // Skip ALL body parsing for bulk import routes
-  if (req.path.includes('/bulk-import') || req.is('multipart/form-data')) {
-    console.log('🚫 Skipping ALL body parsing for bulk import route:', req.path);
+  // NUCLEAR: Skip ALL body parsing for ANY route containing 'bulk-import'
+  if (req.path.includes('bulk-import') || req.is('multipart/form-data') || req.headers['content-type']?.includes('multipart/form-data')) {
+    console.log('🚫 NUCLEAR: Skipping ALL body parsing for:', req.path);
+    // Clear any existing body
+    req.body = {};
     return next();
   }
-  // Apply JSON parsing for other routes
+  next();
+});
+
+// Apply JSON parsing ONLY for non-bulk-import routes
+app.use((req, res, next) => {
+  if (req.path.includes('bulk-import')) {
+    return next();
+  }
   express.json({ limit: '10mb' })(req, res, next);
 });
 
-// URL encoded parsing - skip for bulk import routes
+// Apply URL encoding ONLY for non-bulk-import routes  
 app.use((req, res, next) => {
-  if (req.path.includes('/bulk-import')) {
+  if (req.path.includes('bulk-import')) {
     return next();
   }
   express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
 });
 
-// Register bulk import routes AFTER body parsing middleware
+// Register bulk import routes with NUCLEAR protection
 app.use('/api/bulk-import', (req, res, next) => {
-  // Completely disable body parsing for bulk import routes
+  // NUCLEAR: Force clear body and skip all parsing
   req.body = {};
+  console.log('🚫 NUCLEAR: Bulk import route - body cleared');
   next();
 }, require('./routes/bulk-import'));
 

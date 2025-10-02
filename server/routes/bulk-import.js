@@ -16,20 +16,19 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
-// Middleware to handle multipart requests properly
+// NUCLEAR PROTECTION: Completely disable all body parsing for this router
 router.use((req, res, next) => {
-  if (req.is('multipart/form-data') || req.method === 'POST') {
-    console.log('📁 Multipart request detected, skipping JSON parsing');
-    return next();
-  }
+  // NUCLEAR: Force clear body and disable all parsing
+  req.body = {};
+  console.log('🚫 NUCLEAR: Bulk import router - body cleared');
   next();
 });
 
-// Ensure no JSON parsing happens for this router
+// NUCLEAR PROTECTION: Skip all middleware that might parse body
 router.use((req, res, next) => {
-  // Clear any parsed body to prevent JSON parsing errors
+  // NUCLEAR: Ensure no body parsing happens
   if (req.body && Object.keys(req.body).length > 0) {
-    console.log('🧹 Clearing parsed body for bulk import route');
+    console.log('🚫 NUCLEAR: Clearing parsed body for bulk import route');
     req.body = {};
   }
   next();
@@ -183,8 +182,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Create new bulk import
-router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
+// Create new bulk import with NUCLEAR protection
+router.post('/', authenticateToken, (req, res, next) => {
+  // NUCLEAR: Force clear body before multer
+  req.body = {};
+  console.log('🚫 NUCLEAR: Pre-multer body clear');
+  next();
+}, upload.single('file'), async (req, res) => {
   try {
     const {
       importName,
