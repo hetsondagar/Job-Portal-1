@@ -62,16 +62,29 @@ app.set('trust proxy', 1);
 // Body parsing middleware with proper multipart handling
 app.use((req, res, next) => {
   // Skip JSON parsing for multipart/form-data requests
-  if (req.is('multipart/form-data')) {
+  const contentType = req.get('Content-Type') || '';
+  if (contentType.includes('multipart/form-data')) {
     console.log('🚫 Skipping JSON parsing for multipart request to:', req.path);
+    console.log('📧 Content-Type:', contentType);
     return next();
   }
   // Apply JSON parsing for other requests
   express.json({ limit: '10mb' })(req, res, next);
 });
 
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use((req, res, next) => {
+  // Skip URL encoded parsing for multipart/form-data requests
+  const contentType = req.get('Content-Type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    console.log('🚫 Skipping URL encoded parsing for multipart request to:', req.path);
+    return next();
+  }
+  // Apply URL encoded parsing for other requests
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
 
+// Register bulk import routes IMMEDIATELY after body parsing
+app.use('/api/bulk-import', require('./routes/bulk-import'));
 
 // Security middleware
 app.use(helmet());
@@ -214,8 +227,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Register bulk import routes
-app.use('/api/bulk-import', require('./routes/bulk-import'));
+// Bulk import routes already registered above
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
