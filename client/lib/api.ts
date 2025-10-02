@@ -3288,12 +3288,17 @@ class ApiService {
   }
 
   async createBulkImport(formData: FormData): Promise<ApiResponse<any>> {
+    // Get auth token without Content-Type header for multipart/form-data
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Don't set Content-Type - let browser set it automatically with boundary
+    
     const response = await fetch(`${API_BASE_URL}/bulk-import`, {
       method: 'POST',
-      headers: {
-        ...this.getAuthHeaders(),
-        // Don't set Content-Type for FormData, let browser set it with boundary
-      },
+      headers: headers,
       body: formData,
     });
     return this.handleResponse(response);

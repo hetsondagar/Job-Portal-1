@@ -59,37 +59,6 @@ const PORT = process.env.PORT || 8000;
 // Trust proxy for rate limiting behind reverse proxy (Render, etc.)
 app.set('trust proxy', 1);
 
-// Body parsing middleware with proper multipart handling
-app.use((req, res, next) => {
-  const contentType = req.get('Content-Type') || '';
-  const path = req.path || '';
-  
-  console.log('🔍 Request to:', path, 'Content-Type:', contentType);
-  
-  // Skip JSON parsing ONLY for multipart/form-data requests (not all bulk-import routes)
-  if (contentType.includes('multipart/form-data')) {
-    console.log('🚫 Skipping JSON parsing for multipart request to:', path);
-    return next();
-  }
-  
-  // Apply JSON parsing for other requests
-  express.json({ limit: '10mb' })(req, res, next);
-});
-
-app.use((req, res, next) => {
-  const contentType = req.get('Content-Type') || '';
-  const path = req.path || '';
-  
-  // Skip URL encoded parsing ONLY for multipart/form-data requests (not all bulk-import routes)
-  if (contentType.includes('multipart/form-data')) {
-    console.log('🚫 Skipping URL encoded parsing for multipart request to:', path);
-    return next();
-  }
-  
-  // Apply URL encoded parsing for other requests
-  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
-});
-
 // Security middleware
 app.use(helmet());
 
@@ -148,8 +117,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Register bulk import routes AFTER CORS middleware
+// Logging middleware to track request content types
+app.use((req, res, next) => {
+  const contentType = req.get('Content-Type') || '';
+  const path = req.path || '';
+  console.log('🔍 Request to:', path, 'Content-Type:', contentType);
+  next();
+});
+
+// ⚠️ CRITICAL: Register bulk import routes BEFORE body parsers
+// This allows multer to handle multipart/form-data before express.json tries to parse it
 app.use('/api/bulk-import', require('./routes/bulk-import'));
+
+// Body parsing middleware for non-multipart requests
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Log CORS requests for debugging (no duplicate CORS headers)
 app.use((req, res, next) => {
