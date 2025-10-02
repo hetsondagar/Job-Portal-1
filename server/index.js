@@ -148,9 +148,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests globally
-app.options('*', cors(corsOptions));
-
 // Register bulk import routes AFTER CORS middleware
 app.use('/api/bulk-import', require('./routes/bulk-import'));
 
