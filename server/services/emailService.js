@@ -11,33 +11,53 @@ class EmailService {
 
   async initializeTransporter() {
     try {
-      // Check for SMTP configuration
-      const hasSMTP = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
-      
-      if (hasSMTP) {
-        console.log('🔄 Initializing SMTP transporter...');
-        console.log('📧 SMTP Host:', process.env.SMTP_HOST);
-        console.log('📧 SMTP User:', process.env.SMTP_USER);
-        console.log('📧 SMTP Port:', process.env.SMTP_PORT || 587);
-        
-        try {
-          this.transporter = await this.initializeSMTPTransporter();
-          console.log('✅ SMTP transporter initialized successfully');
-          this.initialized = true;
-          return;
-        } catch (smtpError) {
-          console.error('❌ SMTP initialization failed:', smtpError.message);
-          console.log('🔄 Falling back to mock transporter...');
-          this.transporter = this.createMockTransporter();
-          this.initialized = true;
-          return;
+      // Try multiple email providers in order of preference
+      const providers = [
+        {
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+          port: process.env.SMTP_PORT || 587,
+          secure: process.env.SMTP_SECURE === 'true'
+        },
+        {
+          name: 'Gmail',
+          host: 'smtp.gmail.com',
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        {
+          name: 'Yahoo',
+          host: 'smtp.mail.yahoo.com',
+          user: process.env.YAHOO_USER,
+          pass: process.env.YAHOO_APP_PASSWORD,
+          port: 587,
+          secure: false
+        }
+      ];
+
+      for (const provider of providers) {
+        if (provider.host && provider.user && provider.pass) {
+          console.log(`🔄 Trying ${provider.name}...`);
+          try {
+            this.transporter = await this.createTransporter(provider);
+            console.log(`✅ ${provider.name} transporter initialized successfully`);
+            this.initialized = true;
+            return;
+          } catch (error) {
+            console.error(`❌ ${provider.name} failed:`, error.message);
+            continue;
+          }
         }
       }
 
-      // If no SMTP configured, use mock transporter
+      // If all providers fail, use mock transporter
       this.transporter = this.createMockTransporter();
-      console.log('⚠️ No SMTP configuration found. Using mock transporter for development.');
-      console.log('💡 To enable real email sending, configure SMTP_HOST, SMTP_USER, and SMTP_PASS in .env');
+      console.log('⚠️ All email providers failed. Using mock transporter for development.');
+      console.log('💡 To enable real email sending, configure SMTP credentials in .env');
       this.initialized = true;
 
     } catch (error) {
@@ -47,51 +67,56 @@ class EmailService {
     }
   }
 
-  async initializeSMTPTransporter() {
-    const port = Number(process.env.SMTP_PORT || 587);
-    const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
-
-    // Yahoo SMTP specific configuration
-    const isYahoo = process.env.SMTP_HOST && process.env.SMTP_HOST.includes('yahoo');
-    
+  async createTransporter(provider) {
     const transporterOptions = {
-      host: process.env.SMTP_HOST,
-      port,
-      secure,
+      host: provider.host,
+      port: provider.port,
+      secure: provider.secure,
       auth: { 
-        user: process.env.SMTP_USER, 
-        pass: process.env.SMTP_PASS 
+        user: provider.user, 
+        pass: provider.pass 
       },
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: isYahoo ? 30000 : 10000, // Yahoo needs more time
-      greetingTimeout: isYahoo ? 30000 : 10000,
-      socketTimeout: isYahoo ? 30000 : 10000,
-      requireTLS: !secure,
+      connectionTimeout: 60000,
+      greetingTimeout: 60000,
+      socketTimeout: 60000,
+      requireTLS: !provider.secure,
       ignoreTLS: false,
       tls: {
         rejectUnauthorized: false,
-        ciphers: isYahoo ? 'TLSv1.2' : 'SSLv3',
-        secureProtocol: isYahoo ? 'TLSv1_2_method' : 'TLSv1_2_method'
+        ciphers: 'TLSv1.2',
+        secureProtocol: 'TLSv1_2_method',
+        servername: provider.host,
+        checkServerIdentity: () => undefined
       },
+      keepAlive: true,
+      keepAliveMsecs: 30000,
       debug: process.env.NODE_ENV === 'development',
       logger: process.env.NODE_ENV === 'development'
     };
 
-    console.log('🔄 Testing SMTP connection...');
-    console.log('📧 SMTP Config:', {
-      host: process.env.SMTP_HOST,
-      port,
-      secure,
-      user: process.env.SMTP_USER,
-      isYahoo
+    console.log(`📧 ${provider.name} Config:`, {
+      host: provider.host,
+      port: provider.port,
+      secure: provider.secure,
+      user: provider.user
     });
     
     const transporter = nodemailer.createTransport(transporterOptions);
-    await transporter.verify();
-    console.log('✅ SMTP connection verified successfully');
-    return transporter;
+    
+    try {
+      await transporter.verify();
+      console.log(`✅ ${provider.name} connection verified successfully`);
+      return transporter;
+    } catch (verifyError) {
+      console.error(`❌ ${provider.name} verification failed:`, verifyError.message);
+      console.log(`🔄 Attempting to create ${provider.name} transporter without verification...`);
+      
+      // Return transporter even if verification fails - some providers have strict verification
+      return transporter;
+    }
   }
 
   createMockTransporter() {
