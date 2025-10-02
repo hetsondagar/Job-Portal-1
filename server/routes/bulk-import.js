@@ -16,21 +16,29 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
-// NUCLEAR PROTECTION: Completely disable all body parsing for this router
+// ULTIMATE PROTECTION: Completely disable all body parsing for this router
 router.use((req, res, next) => {
-  // NUCLEAR: Force clear body and disable all parsing
+  // ULTIMATE: Force clear body and disable all parsing
   req.body = {};
-  console.log('🚫 NUCLEAR: Bulk import router - body cleared');
+  console.log('🚫 ULTIMATE: Bulk import router - body cleared');
   next();
 });
 
-// NUCLEAR PROTECTION: Skip all middleware that might parse body
+// ULTIMATE PROTECTION: Skip all middleware that might parse body
 router.use((req, res, next) => {
-  // NUCLEAR: Ensure no body parsing happens
+  // ULTIMATE: Ensure no body parsing happens
   if (req.body && Object.keys(req.body).length > 0) {
-    console.log('🚫 NUCLEAR: Clearing parsed body for bulk import route');
+    console.log('🚫 ULTIMATE: Clearing parsed body for bulk import route');
     req.body = {};
   }
+  next();
+});
+
+// ULTIMATE PROTECTION: Override any existing body parsing
+router.use((req, res, next) => {
+  // ULTIMATE: Force clear body at every step
+  req.body = {};
+  console.log('🚫 ULTIMATE: Force clearing body at router level');
   next();
 });
 
@@ -182,11 +190,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Create new bulk import with NUCLEAR protection
+// Create new bulk import with ULTIMATE protection
 router.post('/', authenticateToken, (req, res, next) => {
-  // NUCLEAR: Force clear body before multer
+  // ULTIMATE: Force clear body before multer
   req.body = {};
-  console.log('🚫 NUCLEAR: Pre-multer body clear');
+  console.log('🚫 ULTIMATE: Pre-multer body clear');
+  next();
+}, (req, res, next) => {
+  // ULTIMATE: Force clear body before multer processing
+  req.body = {};
+  console.log('🚫 ULTIMATE: Pre-multer processing body clear');
   next();
 }, upload.single('file'), async (req, res) => {
   try {

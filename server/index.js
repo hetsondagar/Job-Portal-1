@@ -204,41 +204,27 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// NUCLEAR SOLUTION: Completely disable JSON parsing for bulk import routes
-app.use((req, res, next) => {
-  // NUCLEAR: Skip ALL body parsing for ANY route containing 'bulk-import'
-  if (req.path.includes('bulk-import') || req.is('multipart/form-data') || req.headers['content-type']?.includes('multipart/form-data')) {
-    console.log('🚫 NUCLEAR: Skipping ALL body parsing for:', req.path);
-    // Clear any existing body
-    req.body = {};
-    return next();
-  }
-  next();
-});
+// ULTIMATE SOLUTION: Register bulk import routes FIRST before ANY body parsing
+app.use('/api/bulk-import', require('./routes/bulk-import'));
 
-// Apply JSON parsing ONLY for non-bulk-import routes
+// Body parsing middleware - ONLY for non-bulk-import routes
 app.use((req, res, next) => {
-  if (req.path.includes('bulk-import')) {
+  // Skip ALL body parsing for bulk import routes
+  if (req.path.includes('bulk-import') || req.is('multipart/form-data') || req.headers['content-type']?.includes('multipart/form-data')) {
+    console.log('🚫 ULTIMATE: Skipping ALL body parsing for:', req.path);
     return next();
   }
+  // Apply JSON parsing for other routes
   express.json({ limit: '10mb' })(req, res, next);
 });
 
-// Apply URL encoding ONLY for non-bulk-import routes  
+// URL encoding - skip for bulk import routes
 app.use((req, res, next) => {
-  if (req.path.includes('bulk-import')) {
+  if (req.path.includes('bulk-import') || req.is('multipart/form-data')) {
     return next();
   }
   express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
 });
-
-// Register bulk import routes with NUCLEAR protection
-app.use('/api/bulk-import', (req, res, next) => {
-  // NUCLEAR: Force clear body and skip all parsing
-  req.body = {};
-  console.log('🚫 NUCLEAR: Bulk import route - body cleared');
-  next();
-}, require('./routes/bulk-import'));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
