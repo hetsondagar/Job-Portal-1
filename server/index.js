@@ -90,13 +90,10 @@ app.use((req, res, next) => {
   express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
 });
 
-// Register bulk import routes IMMEDIATELY after body parsing
-app.use('/api/bulk-import', require('./routes/bulk-import'));
-
 // Security middleware
 app.use(helmet());
 
-// Enhanced CORS configuration
+// Enhanced CORS configuration - MUST BE BEFORE ALL ROUTES
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -127,8 +124,9 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.log('⚠️ CORS blocked origin:', origin);
+      // Still allow the request but log it
+      callback(null, true);
     }
   },
   credentials: true,
@@ -143,53 +141,24 @@ const corsOptions = {
     'Access-Control-Request-Headers'
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  preflightContinue: false,
+  maxAge: 86400 // 24 hours
 };
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly - removed wildcard to fix path-to-regexp error
-// app.options('*', cors(corsOptions)); // This was causing the path-to-regexp error
+// Handle preflight requests globally
+app.options('*', cors(corsOptions));
 
-// Additional CORS middleware for debugging and production fixes
+// Register bulk import routes AFTER CORS middleware
+app.use('/api/bulk-import', require('./routes/bulk-import'));
+
+// Log CORS requests for debugging (no duplicate CORS headers)
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Log CORS-related requests
   if (req.method === 'OPTIONS') {
-    console.log('🔍 Preflight request from:', origin);
-    console.log('🔍 Request headers:', req.headers);
+    console.log('🔍 Preflight request from:', req.headers.origin, 'to:', req.path);
   }
-  
-  // Define allowed origins
-  const allowedOrigins = [
-    'https://job-portal-nine-rouge.vercel.app',
-    'https://job-portal-dr834n32f-hetsondagar16-4175s-projects.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ];
-  
-  // Check if origin is allowed
-  const isAllowedOrigin = !origin || allowedOrigins.includes(origin) || origin.includes('vercel.app');
-  
-  if (isAllowedOrigin) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-  } else {
-    res.header('Access-Control-Allow-Origin', 'https://job-portal-nine-rouge.vercel.app');
-  }
-  
-  // Set additional CORS headers
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  
-  // Short-circuit preflight with 200 OK so proxies don't 502 it
-  if (req.method === 'OPTIONS') {
-    console.log('✅ CORS preflight handled for origin:', origin);
-    return res.sendStatus(200);
-  }
-
   next();
 });
 

@@ -16,43 +16,6 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
-// CORS middleware for bulk import routes
-router.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Define allowed origins for bulk import
-  const allowedOrigins = [
-    'https://job-portal-nine-rouge.vercel.app',
-    'https://job-portal-dr834n32f-hetsondagar16-4175s-projects.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ];
-  
-  // Check if origin is allowed
-  const isAllowedOrigin = !origin || allowedOrigins.includes(origin) || origin.includes('vercel.app');
-  
-  if (isAllowedOrigin) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-  } else {
-    res.header('Access-Control-Allow-Origin', 'https://job-portal-nine-rouge.vercel.app');
-  }
-  
-  // Set CORS headers
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log('🔍 Bulk import preflight request from:', origin);
-    console.log('✅ Bulk import CORS headers set for origin:', origin);
-    return res.status(200).end();
-  }
-  
-  next();
-});
-
 // Health check endpoint for bulk import
 router.get('/health', (req, res) => {
   res.json({ 
