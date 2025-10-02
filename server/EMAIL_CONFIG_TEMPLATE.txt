@@ -1,0 +1,62 @@
+# ==============================================================================
+# JOB PORTAL - EMAIL CONFIGURATION FOR .env FILE
+# ==============================================================================
+# Copy these lines to your .env file and fill in your credentials
+# ==============================================================================
+
+# OPTION 1: GMAIL (RECOMMENDED)
+# Get App Password: https://myaccount.google.com/apppasswords
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=abcdefghijklmnop
+EMAIL_FROM=your-email@gmail.com
+FROM_NAME=Job Portal
+
+# OPTION 2: YAHOO (if Gmail doesn't work)
+# YAHOO_USER=your-email@yahoo.com
+# YAHOO_APP_PASSWORD=your-yahoo-app-password
+# EMAIL_FROM=your-email@yahoo.com
+# FROM_NAME=Job Portal
+
+# REQUIRED: Frontend URL
+FRONTEND_URL=https://job-portal-nine-rouge.vercel.app
+
+# REQUIRED: JWT Secret
+JWT_SECRET=your-jwt-secret-key
+
+# ==============================================================================
+# QUICK START FOR YOU:
+# ==============================================================================
+#
+# Since your logs show: hempatel777@yahoo.com
+#
+# IF YOU HAVE hempatel777@gmail.com:
+# --------------------------------
+# 1. Go to: https://myaccount.google.com/apppasswords
+# 2. Generate password for "Job Portal"
+# 3. Copy 16-character password (remove spaces)
+# 4. Add to .env:
+#
+#    GMAIL_USER=hempatel777@gmail.com
+#    GMAIL_APP_PASSWORD=your16charpassword
+#    EMAIL_FROM=hempatel777@gmail.com
+#    FROM_NAME=Job Portal
+#
+# 5. Restart server: npm start
+# 6. Test: Visit /forgot-password
+#
+# ==============================================================================
+# TEST YOUR CONFIGURATION:
+# ==============================================================================
+#
+# Run this command to test email before starting server:
+#   cd server
+#   node test-email.js
+#
+# You should see:
+#   ✅ Gmail - Connection successful!
+#
+# NOT:
+#   ❌ Connection failed
+#
+# ==============================================================================
+

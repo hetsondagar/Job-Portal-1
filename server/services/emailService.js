@@ -14,14 +14,6 @@ class EmailService {
       // Try multiple email providers in order of preference
       const providers = [
         {
-          name: 'Custom SMTP',
-          host: process.env.SMTP_HOST,
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_SECURE === 'true'
-        },
-        {
           name: 'Gmail',
           host: 'smtp.gmail.com',
           user: process.env.GMAIL_USER,
@@ -30,25 +22,67 @@ class EmailService {
           secure: false
         },
         {
-          name: 'Yahoo',
+          name: 'Yahoo (Port 587)',
           host: 'smtp.mail.yahoo.com',
           user: process.env.YAHOO_USER,
           pass: process.env.YAHOO_APP_PASSWORD,
           port: 587,
           secure: false
+        },
+        {
+          name: 'Yahoo (Port 465)',
+          host: 'smtp.mail.yahoo.com',
+          user: process.env.YAHOO_USER,
+          pass: process.env.YAHOO_APP_PASSWORD,
+          port: 465,
+          secure: true
+        },
+        {
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+          port: process.env.SMTP_PORT || 587,
+          secure: process.env.SMTP_SECURE === 'true'
         }
       ];
 
+      console.log('\n📧 Email Service Configuration Check:');
+      console.log('=====================================');
+      if (process.env.GMAIL_USER) {
+        console.log('✓ Gmail credentials found');
+        console.log(`  User: ${process.env.GMAIL_USER}`);
+        console.log(`  Password: ${process.env.GMAIL_APP_PASSWORD ? '***' + process.env.GMAIL_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      }
+      if (process.env.YAHOO_USER) {
+        console.log('✓ Yahoo credentials found');
+        console.log(`  User: ${process.env.YAHOO_USER}`);
+        console.log(`  Password: ${process.env.YAHOO_APP_PASSWORD ? '***' + process.env.YAHOO_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      }
+      if (process.env.SMTP_HOST) {
+        console.log('✓ Custom SMTP credentials found');
+        console.log(`  Host: ${process.env.SMTP_HOST}`);
+        console.log(`  User: ${process.env.SMTP_USER}`);
+      }
+      console.log('=====================================\n');
+
       for (const provider of providers) {
         if (provider.host && provider.user && provider.pass) {
-          console.log(`🔄 Trying ${provider.name}...`);
+          console.log(`🔄 Attempting to connect to ${provider.name}...`);
+          console.log(`   Host: ${provider.host}:${provider.port}`);
+          console.log(`   User: ${provider.user}`);
+          
           try {
             this.transporter = await this.createTransporter(provider);
-            console.log(`✅ ${provider.name} transporter initialized successfully`);
+            console.log(`\n🎉 SUCCESS! ${provider.name} transporter initialized!`);
+            console.log(`✅ Emails will be sent from: ${this.fromEmail}`);
+            console.log(`✅ Ready to send password reset emails!\n`);
             this.initialized = true;
             return;
           } catch (error) {
-            console.error(`❌ ${provider.name} failed:`, error.message);
+            console.error(`❌ ${provider.name} connection failed:`);
+            console.error(`   Error: ${error.message}`);
+            console.error(`   Code: ${error.code || 'N/A'}`);
             continue;
           }
         }
@@ -56,12 +90,22 @@ class EmailService {
 
       // If all providers fail, use mock transporter
       this.transporter = this.createMockTransporter();
-      console.log('⚠️ All email providers failed. Using mock transporter for development.');
-      console.log('💡 To enable real email sending, configure SMTP credentials in .env');
+      console.log('\n⚠️  WARNING: All email providers failed!');
+      console.log('=====================================');
+      console.log('Using MOCK transporter - emails will NOT actually send!');
+      console.log('');
+      console.log('To fix this:');
+      console.log('1. Check your .env file has email credentials');
+      console.log('2. For Gmail: Use App Password (not regular password)');
+      console.log('3. For Yahoo: Generate app password in Yahoo settings');
+      console.log('4. Make sure password has NO SPACES');
+      console.log('');
+      console.log('See server/QUICK_EMAIL_SETUP.md for detailed instructions');
+      console.log('=====================================\n');
       this.initialized = true;
 
     } catch (error) {
-      console.error('❌ Failed to initialize email service:', error.message);
+      console.error('❌ Critical error initializing email service:', error.message);
       this.transporter = this.createMockTransporter();
       this.initialized = true;
     }
