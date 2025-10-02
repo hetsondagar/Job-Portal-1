@@ -16,46 +16,42 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
-// ABSOLUTE FINAL PROTECTION: Completely disable all body parsing for this router
-router.use((req, res, next) => {
-  // ABSOLUTE FINAL: Force clear body and disable all parsing
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Bulk import router - body cleared');
-  next();
-});
+// Multer middleware for handling file uploads
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-// ABSOLUTE FINAL PROTECTION: Skip all middleware that might parse body
-router.use((req, res, next) => {
-  // ABSOLUTE FINAL: Ensure no body parsing happens
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('🚫 ABSOLUTE FINAL: Clearing parsed body for bulk import route');
-    req.body = {};
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/bulk-imports');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    const filename = 'bulk-import-' + uniqueSuffix + extension;
+    cb(null, filename);
   }
-  next();
 });
 
-// ABSOLUTE FINAL PROTECTION: Override any existing body parsing
-router.use((req, res, next) => {
-  // ABSOLUTE FINAL: Force clear body at every step
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Force clearing body at router level');
-  next();
-});
-
-// ABSOLUTE FINAL PROTECTION: Disable all body parsing middleware
-router.use((req, res, next) => {
-  // ABSOLUTE FINAL: Override any body parsing that might have happened
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Override body parsing');
-  next();
-});
-
-// ABSOLUTE FINAL PROTECTION: Disable all body parsing middleware
-router.use((req, res, next) => {
-  // ABSOLUTE FINAL: Override any body parsing that might have happened
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Override body parsing');
-  next();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['.csv', '.xlsx', '.xls', '.json'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV, Excel, and JSON files are allowed'));
+    }
+  }
 });
 
 // Middleware to verify JWT token
@@ -90,39 +86,6 @@ const authenticateToken = async (req, res, next) => {
     });
   }
 };
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/bulk-imports');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    const filename = 'bulk-import-' + uniqueSuffix + extension;
-    cb(null, filename);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = ['.csv', '.xlsx', '.xls', '.json'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedTypes.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only CSV, Excel, and JSON files are allowed'));
-    }
-  }
-});
 
 // Get all bulk imports for a company
 router.get('/', authenticateToken, async (req, res) => {
@@ -206,23 +169,38 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Create new bulk import with ABSOLUTE FINAL protection
-router.post('/', authenticateToken, (req, res, next) => {
-  // ABSOLUTE FINAL: Force clear body before multer
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Pre-multer body clear');
-  next();
-}, (req, res, next) => {
-  // ABSOLUTE FINAL: Force clear body before multer processing
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Pre-multer processing body clear');
-  next();
-}, (req, res, next) => {
-  // ABSOLUTE FINAL: Force clear body before multer file processing
-  req.body = {};
-  console.log('🚫 ABSOLUTE FINAL: Pre-multer file processing body clear');
-  next();
-}, upload.single('file'), async (req, res) => {
+// Simple upload route for testing
+router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      file: {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        size: req.file.size,
+        path: req.file.path
+      }
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload file',
+      error: error.message
+    });
+  }
+});
+
+// Create new bulk import with proper multer handling
+router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     const {
       importName,

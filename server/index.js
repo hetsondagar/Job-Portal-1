@@ -204,62 +204,21 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// ABSOLUTE FINAL SOLUTION: Create separate app for bulk import with ZERO body parsing
-const bulkImportApp = express();
-bulkImportApp.use(require('./routes/bulk-import'));
-app.use('/api/bulk-import', bulkImportApp);
+// Body parsing middleware with proper multipart handling
+app.use((req, res, next) => {
+  // Skip JSON parsing for multipart/form-data requests
+  if (req.is('multipart/form-data')) {
+    console.log('🚫 Skipping JSON parsing for multipart request');
+    return next();
+  }
+  // Apply JSON parsing for other requests
+  express.json({ limit: '10mb' })(req, res, next);
+});
 
-// NO BODY PARSING MIDDLEWARE AT ALL - We'll add it per route
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Add JSON parsing ONLY to specific routes that need it
-app.use('/api/user', express.json({ limit: '10mb' }));
-app.use('/api/user', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/companies', express.json({ limit: '10mb' }));
-app.use('/api/companies', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/jobs', express.json({ limit: '10mb' }));
-app.use('/api/jobs', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/applications', express.json({ limit: '10mb' }));
-app.use('/api/applications', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/auth', express.json({ limit: '10mb' }));
-app.use('/api/auth', express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Add JSON parsing to specific routes that need it (excluding bulk-import)
-app.use('/api/notifications', express.json({ limit: '10mb' }));
-app.use('/api/notifications', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/messages', express.json({ limit: '10mb' }));
-app.use('/api/messages', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/interviews', express.json({ limit: '10mb' }));
-app.use('/api/interviews', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/job-alerts', express.json({ limit: '10mb' }));
-app.use('/api/job-alerts', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/job-templates', express.json({ limit: '10mb' }));
-app.use('/api/job-templates', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/candidate-likes', express.json({ limit: '10mb' }));
-app.use('/api/candidate-likes', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/hot-vacancies', express.json({ limit: '10mb' }));
-app.use('/api/hot-vacancies', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/featured-jobs', express.json({ limit: '10mb' }));
-app.use('/api/featured-jobs', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/usage', express.json({ limit: '10mb' }));
-app.use('/api/usage', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/gulf', express.json({ limit: '10mb' }));
-app.use('/api/gulf', express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use('/api/salary', express.json({ limit: '10mb' }));
-app.use('/api/salary', express.urlencoded({ extended: true, limit: '10mb' }));
+// Register bulk import routes after body parsing middleware
+app.use('/api/bulk-import', require('./routes/bulk-import'));
 
 // NO MORE GLOBAL BODY PARSING - We'll handle it per route
 
