@@ -26,9 +26,9 @@
 # YAHOO_APP_PASSWORD=...
 
 # Add Gmail settings
-GMAIL_USER=hempatel777@gmail.com
-GMAIL_APP_PASSWORD=abcdefghijklmnop
-EMAIL_FROM=hempatel777@gmail.com
+GMAIL_USER=het.sondagar.10a.29@gmail.com
+GMAIL_APP_PASSWORD=buwpcmtdpyorfjnl
+EMAIL_FROM=het.sondagar.10a.29@gmail.com
 FROM_NAME=Job Portal
 FRONTEND_URL=https://job-portal-nine-rouge.vercel.app
 ```
