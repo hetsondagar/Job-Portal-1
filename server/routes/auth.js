@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const { sequelize } = require('../config/sequelize');
+const { Op } = require('sequelize');
 const emailService = require('../services/emailService');
 
 const router = express.Router();
@@ -799,7 +800,7 @@ router.post('/reset-password', validateResetPassword, async (req, res) => {
     const user = await User.findOne({
       where: {
         password_reset_token: token,
-        password_reset_expires: { [sequelize.Op.gt]: new Date() }
+        password_reset_expires: { [Op.gt]: new Date() }
       }
     });
 
@@ -841,7 +842,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
     const user = await User.findOne({
       where: {
         password_reset_token: token,
-        password_reset_expires: { [sequelize.Op.gt]: new Date() }
+        password_reset_expires: { [Op.gt]: new Date() }
       }
     });
 
