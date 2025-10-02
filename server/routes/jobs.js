@@ -9,7 +9,7 @@ const JobApplication = require('../models/JobApplication');
 const Job = require('../models/Job');
 const Resume = require('../models/Resume');
 const EmployerActivityService = require('../services/employerActivityService');
-const EmailService = require('../services/simpleEmailService');
+const EmailService = require('../services/emailService');
 
 const {
   createJob,

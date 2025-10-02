@@ -1005,7 +1005,7 @@ exports.updateJobStatus = async (req, res, next) => {
         const [watchers] = await sequelize.query('SELECT user_id FROM job_bookmarks WHERE job_id = $1', { bind: [job.id] });
         console.log('🔔 Found watchers:', Array.isArray(watchers) ? watchers.length : 0);
         if (Array.isArray(watchers) && watchers.length > 0) {
-          const EmailService = require('../services/simpleEmailService');
+          const EmailService = require('../services/emailService');
           for (const w of watchers) {
             try {
               // Send notification email (jsonTransport in dev)

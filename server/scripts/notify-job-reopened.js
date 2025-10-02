@@ -18,7 +18,7 @@ async function main() {
     const { Job } = require('../config/index');
     const User = require('../models/User');
     const Notification = require('../models/Notification');
-    const EmailService = require('../services/simpleEmailService');
+    const EmailService = require('../services/emailService');
 
     console.log('🔗 Connecting to DB...');
     await sequelize.authenticate();

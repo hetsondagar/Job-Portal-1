@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const { sequelize } = require('../config/sequelize');
-const emailService = require('../services/simpleEmailService');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 

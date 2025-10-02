@@ -12,6 +12,9 @@ const path = require('path'); // Added for static file serving
 // Import database configuration
 const { sequelize, testConnection } = require('./config/sequelize');
 
+// Initialize email service
+const emailService = require('./services/emailService');
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');

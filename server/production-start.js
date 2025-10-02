@@ -13,6 +13,9 @@ try {
   console.log('ℹ️ No .env file found, using environment variables or defaults');
 }
 
+// Initialize email service early
+const emailService = require('./services/emailService');
+
 // Set default environment variables if not provided
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 process.env.PORT = process.env.PORT || '8000';
