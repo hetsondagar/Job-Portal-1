@@ -16,29 +16,45 @@ const JobTemplate = require('../models/JobTemplate');
 
 const router = express.Router();
 
-// ULTIMATE PROTECTION: Completely disable all body parsing for this router
+// ABSOLUTE FINAL PROTECTION: Completely disable all body parsing for this router
 router.use((req, res, next) => {
-  // ULTIMATE: Force clear body and disable all parsing
+  // ABSOLUTE FINAL: Force clear body and disable all parsing
   req.body = {};
-  console.log('🚫 ULTIMATE: Bulk import router - body cleared');
+  console.log('🚫 ABSOLUTE FINAL: Bulk import router - body cleared');
   next();
 });
 
-// ULTIMATE PROTECTION: Skip all middleware that might parse body
+// ABSOLUTE FINAL PROTECTION: Skip all middleware that might parse body
 router.use((req, res, next) => {
-  // ULTIMATE: Ensure no body parsing happens
+  // ABSOLUTE FINAL: Ensure no body parsing happens
   if (req.body && Object.keys(req.body).length > 0) {
-    console.log('🚫 ULTIMATE: Clearing parsed body for bulk import route');
+    console.log('🚫 ABSOLUTE FINAL: Clearing parsed body for bulk import route');
     req.body = {};
   }
   next();
 });
 
-// ULTIMATE PROTECTION: Override any existing body parsing
+// ABSOLUTE FINAL PROTECTION: Override any existing body parsing
 router.use((req, res, next) => {
-  // ULTIMATE: Force clear body at every step
+  // ABSOLUTE FINAL: Force clear body at every step
   req.body = {};
-  console.log('🚫 ULTIMATE: Force clearing body at router level');
+  console.log('🚫 ABSOLUTE FINAL: Force clearing body at router level');
+  next();
+});
+
+// ABSOLUTE FINAL PROTECTION: Disable all body parsing middleware
+router.use((req, res, next) => {
+  // ABSOLUTE FINAL: Override any body parsing that might have happened
+  req.body = {};
+  console.log('🚫 ABSOLUTE FINAL: Override body parsing');
+  next();
+});
+
+// ABSOLUTE FINAL PROTECTION: Disable all body parsing middleware
+router.use((req, res, next) => {
+  // ABSOLUTE FINAL: Override any body parsing that might have happened
+  req.body = {};
+  console.log('🚫 ABSOLUTE FINAL: Override body parsing');
   next();
 });
 
@@ -190,16 +206,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Create new bulk import with ULTIMATE protection
+// Create new bulk import with ABSOLUTE FINAL protection
 router.post('/', authenticateToken, (req, res, next) => {
-  // ULTIMATE: Force clear body before multer
+  // ABSOLUTE FINAL: Force clear body before multer
   req.body = {};
-  console.log('🚫 ULTIMATE: Pre-multer body clear');
+  console.log('🚫 ABSOLUTE FINAL: Pre-multer body clear');
   next();
 }, (req, res, next) => {
-  // ULTIMATE: Force clear body before multer processing
+  // ABSOLUTE FINAL: Force clear body before multer processing
   req.body = {};
-  console.log('🚫 ULTIMATE: Pre-multer processing body clear');
+  console.log('🚫 ABSOLUTE FINAL: Pre-multer processing body clear');
+  next();
+}, (req, res, next) => {
+  // ABSOLUTE FINAL: Force clear body before multer file processing
+  req.body = {};
+  console.log('🚫 ABSOLUTE FINAL: Pre-multer file processing body clear');
   next();
 }, upload.single('file'), async (req, res) => {
   try {

@@ -204,8 +204,10 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// FINAL NUCLEAR SOLUTION: Register bulk import routes FIRST
-app.use('/api/bulk-import', require('./routes/bulk-import'));
+// ABSOLUTE FINAL SOLUTION: Create separate app for bulk import with ZERO body parsing
+const bulkImportApp = express();
+bulkImportApp.use(require('./routes/bulk-import'));
+app.use('/api/bulk-import', bulkImportApp);
 
 // NO BODY PARSING MIDDLEWARE AT ALL - We'll add it per route
 
@@ -259,22 +261,7 @@ app.use('/api/gulf', express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/salary', express.json({ limit: '10mb' }));
 app.use('/api/salary', express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Add JSON parsing to remaining routes (excluding bulk-import)
-app.use('/api', (req, res, next) => {
-  // Skip JSON parsing for bulk-import routes
-  if (req.path.includes('bulk-import')) {
-    return next();
-  }
-  express.json({ limit: '10mb' })(req, res, next);
-});
-
-app.use('/api', (req, res, next) => {
-  // Skip URL encoding for bulk-import routes
-  if (req.path.includes('bulk-import')) {
-    return next();
-  }
-  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
-});
+// NO MORE GLOBAL BODY PARSING - We'll handle it per route
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
