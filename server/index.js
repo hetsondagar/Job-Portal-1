@@ -207,7 +207,7 @@ if (process.env.NODE_ENV === 'development') {
 // Body parsing middleware - ONLY for non-bulk-import routes
 app.use((req, res, next) => {
   // Skip ALL body parsing for bulk import routes
-  if (req.path.includes('/bulk-import')) {
+  if (req.path.includes('/bulk-import') || req.is('multipart/form-data')) {
     console.log('🚫 Skipping ALL body parsing for bulk import route:', req.path);
     return next();
   }
@@ -224,7 +224,11 @@ app.use((req, res, next) => {
 });
 
 // Register bulk import routes AFTER body parsing middleware
-app.use('/api/bulk-import', require('./routes/bulk-import'));
+app.use('/api/bulk-import', (req, res, next) => {
+  // Completely disable body parsing for bulk import routes
+  req.body = {};
+  next();
+}, require('./routes/bulk-import'));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {

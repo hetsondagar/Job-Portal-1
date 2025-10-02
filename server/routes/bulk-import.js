@@ -123,14 +123,8 @@ router.get('/', authenticateToken, async (req, res) => {
       where: whereClause,
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
-      offset: parseInt(offset),
-      include: [
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'firstName', 'lastName', 'email']
-        }
-      ]
+      offset: parseInt(offset)
+      // Removed include to avoid association error
     });
 
     res.json({
@@ -164,19 +158,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
       where: {
         id: id,
         companyId: req.user.companyId
-      },
-      include: [
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'firstName', 'lastName', 'email']
-        },
-        {
-          model: JobTemplate,
-          as: 'template',
-          attributes: ['id', 'name', 'description']
-        }
-      ]
+      }
+      // Removed include to avoid association error
     });
 
     if (!importRecord) {
