@@ -59,7 +59,15 @@ const PORT = process.env.PORT || 8000;
 // Trust proxy for rate limiting behind reverse proxy (Render, etc.)
 app.set('trust proxy', 1);
 
-app.use(express.json());
+// JSON parser - exclude bulk-import routes that use multipart form data
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/bulk-import')) {
+    // Skip JSON parsing for bulk-import routes
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true }));
 
 

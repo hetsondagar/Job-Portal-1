@@ -11,18 +11,33 @@ class EmailService {
 
   async initializeTransporter() {
     try {
-      // Only use SMTP from .env file
-      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      // Check for SMTP configuration
+      const hasSMTP = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+      
+      if (hasSMTP) {
         console.log('🔄 Initializing SMTP transporter...');
-        this.transporter = await this.initializeSMTPTransporter();
-        console.log('✅ SMTP transporter initialized successfully');
-        this.initialized = true;
-        return;
+        console.log('📧 SMTP Host:', process.env.SMTP_HOST);
+        console.log('📧 SMTP User:', process.env.SMTP_USER);
+        console.log('📧 SMTP Port:', process.env.SMTP_PORT || 587);
+        
+        try {
+          this.transporter = await this.initializeSMTPTransporter();
+          console.log('✅ SMTP transporter initialized successfully');
+          this.initialized = true;
+          return;
+        } catch (smtpError) {
+          console.error('❌ SMTP initialization failed:', smtpError.message);
+          console.log('🔄 Falling back to mock transporter...');
+          this.transporter = this.createMockTransporter();
+          this.initialized = true;
+          return;
+        }
       }
 
       // If no SMTP configured, use mock transporter
       this.transporter = this.createMockTransporter();
       console.log('⚠️ No SMTP configuration found. Using mock transporter for development.');
+      console.log('💡 To enable real email sending, configure SMTP_HOST, SMTP_USER, and SMTP_PASS in .env');
       this.initialized = true;
 
     } catch (error) {
@@ -83,12 +98,17 @@ class EmailService {
     return {
       type: 'mock',
       sendMail: async (mailOptions) => {
-        console.log('📧 Mock Email Sent:', {
-          to: mailOptions.to,
-          subject: mailOptions.subject,
-          from: mailOptions.from
-        });
-        return { messageId: 'mock-' + Date.now() };
+        console.log('📧 Mock Email Sent (Development Mode):');
+        console.log('   To:', mailOptions.to);
+        console.log('   From:', mailOptions.from);
+        console.log('   Subject:', mailOptions.subject);
+        console.log('   Reset URL would be:', mailOptions.html?.match(/href="([^"]+)"/)?.[1] || 'Not found');
+        console.log('💡 In production, configure SMTP settings to send real emails');
+        return { 
+          messageId: 'mock-' + Date.now(),
+          success: true,
+          method: 'mock'
+        };
       }
     };
   }
