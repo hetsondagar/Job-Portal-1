@@ -17,7 +17,6 @@ const JobTemplate = require('../models/JobTemplate');
 const router = express.Router();
 
 // Multer middleware for handling file uploads
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
