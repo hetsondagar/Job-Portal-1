@@ -204,12 +204,20 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Register bulk import routes before JSON parsing to handle multipart/form-data
-app.use('/api/bulk-import', require('./routes/bulk-import'));
+// Body parsing middleware with multipart handling
+app.use((req, res, next) => {
+  // Skip JSON parsing for multipart/form-data requests
+  if (req.is('multipart/form-data')) {
+    return next();
+  }
+  // Apply JSON parsing for other requests
+  express.json({ limit: '10mb' })(req, res, next);
+});
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Register bulk import routes after middleware setup
+app.use('/api/bulk-import', require('./routes/bulk-import'));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
