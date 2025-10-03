@@ -864,6 +864,18 @@ router.get('/notifications', authenticateToken, async (req, res) => {
       limit: 50 // Limit to recent 50 notifications
     });
 
+    console.log(`🔔 Fetching notifications for user ${req.user.id}:`, {
+      totalNotifications: notifications.length,
+      notificationTypes: notifications.map(n => n.type),
+      recentNotifications: notifications.slice(0, 3).map(n => ({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        isRead: n.isRead,
+        createdAt: n.createdAt
+      }))
+    });
+
     if (!notifications || notifications.length === 0) {
       // Bootstrap a friendly welcome notification for first-time users
       try {

@@ -59,7 +59,10 @@ export function RecentNotifications({
   const fetchNotifications = async () => {
     try {
       setLoading(true)
+      console.log('🔔 Fetching notifications...')
       const response = await apiService.getNotifications()
+      console.log('🔔 Notifications response:', response)
+      
       if (response.success && response.data) {
         // Sort by creation date (newest first) and limit
         const sortedNotifications = response.data
@@ -67,10 +70,20 @@ export function RecentNotifications({
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
           .slice(0, limit)
+        
+        console.log('🔔 Processed notifications:', {
+          total: response.data.length,
+          displayed: sortedNotifications.length,
+          types: sortedNotifications.map(n => n.type),
+          shortlisted: sortedNotifications.filter(n => n.type === 'application_shortlisted' || n.type === 'candidate_shortlisted')
+        })
+        
         setNotifications(sortedNotifications)
+      } else {
+        console.log('🔔 No notifications found or error:', response)
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      console.error('❌ Error fetching notifications:', error)
     } finally {
       setLoading(false)
     }

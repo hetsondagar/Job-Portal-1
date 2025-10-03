@@ -391,22 +391,38 @@ This is an automated notification. Please do not reply to this email.
       let notificationData = {};
       
       if (newStatus === 'shortlisted') {
+        // Get job title for better notification
+        let jobTitle = 'a position';
+        if (context.jobId) {
+          try {
+            const job = await Job.findByPk(context.jobId, {
+              attributes: ['title']
+            });
+            if (job) {
+              jobTitle = job.title;
+            }
+          } catch (jobError) {
+            console.error('Error fetching job title:', jobError);
+          }
+        }
+
         notificationData = {
           userId: candidateId,
           type: 'application_shortlisted',
-          title: `Application Status Update`,
-          message: `Your application status has been updated to "Shortlisted" for a position at ${companyName}. The employer is reviewing your profile.`,
-          shortMessage: `Application shortlisted at ${companyName}`,
+          title: `🎉 Congratulations! You've been shortlisted!`,
+          message: `Great news! You've been shortlisted for ${jobTitle} at ${companyName}. The employer is interested in your profile and may contact you soon.`,
+          shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
           priority: 'high',
           actionUrl: '/applications',
           actionText: 'View Applications',
-          icon: 'check-circle',
+          icon: 'user-check',
           metadata: {
             employerId,
             applicationId,
             oldStatus,
             newStatus,
             companyName,
+            jobTitle,
             updatedAt: new Date().toISOString(),
             ...context
           }
@@ -438,6 +454,47 @@ This is an automated notification. Please do not reply to this email.
       const notification = await Notification.create(notificationData);
 
       console.log(`✅ Application status notification created for candidate ${candidateId}`);
+      console.log(`📋 Notification details:`, {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        userId: notification.userId,
+        priority: notification.priority
+      });
+
+      // Send email notification for shortlisting
+      if (newStatus === 'shortlisted') {
+        try {
+          // Get job details for email
+          const job = await Job.findByPk(context.jobId, {
+            attributes: ['id', 'title', 'companyId'],
+            include: [{
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name']
+            }]
+          });
+
+          if (job) {
+            await this.sendShortlistingEmail(
+              candidate,
+              employer,
+              job.title,
+              companyName,
+              '/applications',
+              {
+                applicationId,
+                jobId: context.jobId,
+                ...context
+              }
+            );
+            console.log(`✅ Shortlisting email sent to ${candidate.email}`);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send shortlisting email:', emailError.message);
+          // Don't fail the notification if email fails
+        }
+      }
 
       return {
         success: true,
