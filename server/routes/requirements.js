@@ -1519,6 +1519,28 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       
       console.log(`✅ Candidate ${candidateId} ${newStatus === 'shortlisted' ? 'shortlisted' : 'unshortlisted'} by employer ${req.user.id} for requirement ${requirementId}`);
       
+      // Send notification only if candidate is being shortlisted (not unshortlisted)
+      if (newStatus === 'shortlisted') {
+        try {
+          const NotificationService = require('../services/notificationService');
+          await NotificationService.sendShortlistingNotification(
+            candidateId,
+            req.user.id,
+            null, // jobId (not applicable for requirements)
+            requirementId,
+            {
+              applicationId: existingShortlist.id,
+              requirementTitle: requirement.title,
+              companyName: req.user.company?.name || 'Unknown Company'
+            }
+          );
+          console.log(`✅ Shortlisting notification sent to candidate ${candidateId}`);
+        } catch (notificationError) {
+          console.error('Failed to send shortlisting notification:', notificationError);
+          // Don't fail the shortlisting if notification fails
+        }
+      }
+      
       return res.status(200).json({
         success: true,
         message: newStatus === 'shortlisted' ? 'Candidate shortlisted successfully' : 'Candidate removed from shortlist',
@@ -1606,6 +1628,26 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       } catch (activityError) {
         console.error('Failed to log candidate shortlisting activity:', activityError);
         // Don't fail the shortlisting if activity logging fails
+      }
+
+      // Send notification to candidate
+      try {
+        const NotificationService = require('../services/notificationService');
+        await NotificationService.sendShortlistingNotification(
+          candidateId,
+          req.user.id,
+          null, // jobId (not applicable for requirements)
+          requirementId,
+          {
+            applicationId: shortlistApplication.id,
+            requirementTitle: requirement.title,
+            companyName: req.user.company?.name || 'Unknown Company'
+          }
+        );
+        console.log(`✅ Shortlisting notification sent to candidate ${candidateId}`);
+      } catch (notificationError) {
+        console.error('Failed to send shortlisting notification:', notificationError);
+        // Don't fail the shortlisting if notification fails
       }
       
       return res.status(200).json({

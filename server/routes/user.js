@@ -1977,6 +1977,27 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
       // Don't fail the status update if activity logging fails
     }
 
+    // Send notification to candidate for status changes
+    try {
+      const NotificationService = require('../services/notificationService');
+      await NotificationService.sendApplicationStatusNotification(
+        application.userId,
+        req.user.id,
+        application.id,
+        oldStatus,
+        status,
+        {
+          jobId: application.jobId,
+          reason: req.body.reason || null,
+          notes: req.body.notes || null
+        }
+      );
+      console.log(`✅ Application status notification sent to candidate ${application.userId}`);
+    } catch (notificationError) {
+      console.error('Failed to send application status notification:', notificationError);
+      // Don't fail the status update if notification fails
+    }
+
     res.json({
       success: true,
       data: application,

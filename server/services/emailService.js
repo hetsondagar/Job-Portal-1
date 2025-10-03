@@ -387,6 +387,51 @@ The Job Portal Team
     `;
   }
 
+  async sendMail(mailOptions) {
+    // Wait for initialization if not ready
+    if (!this.initialized) {
+      console.log('⏳ Waiting for email service initialization...');
+      let attempts = 0;
+      while (!this.initialized && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+    }
+
+    if (!this.transporter) {
+      throw new Error('No email service configured');
+    }
+
+    try {
+      if (this.transporter.type === 'mock') {
+        return await this.transporter.sendMail(mailOptions);
+      } else {
+        // Standard SMTP transporter
+        console.log('📧 Sending email via SMTP...');
+        console.log('📧 Email details:', {
+          to: mailOptions.to,
+          from: mailOptions.from,
+          subject: mailOptions.subject
+        });
+        
+        const info = await this.transporter.sendMail(mailOptions);
+        console.log('✅ Email sent via SMTP');
+        console.log('📧 Message ID:', info.messageId);
+        console.log('📧 Response:', info.response);
+        return { success: true, method: 'smtp', messageId: info.messageId };
+      }
+    } catch (error) {
+      console.error('❌ Email send failed:', error?.message || error);
+      console.error('❌ Error details:', {
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode
+      });
+      throw new Error(`Email send failed: ${error?.message || error}`);
+    }
+  }
+
   async testEmailService() {
     try {
       // Wait for initialization if not ready
