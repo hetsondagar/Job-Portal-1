@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "sequelize-cli db:migrate && node production-start.js",
+    "start": "node production-start.js",
     "dev": "nodemon index.js",
     "dev:safe": "node start-server.js",
     "setup:production": "node setup-production.js",
