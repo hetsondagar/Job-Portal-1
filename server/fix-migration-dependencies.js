@@ -5,31 +5,14 @@
  * This script ensures proper table creation order and handles foreign key constraints
  */
 
-const { Sequelize } = require('sequelize');
-const config = require('./config/database');
+const dbConnection = require('./lib/database-connection');
 
 console.log('🔧 Fixing Migration Dependencies...');
 
 async function fixMigrationDependencies() {
-  let sequelize;
-  
   try {
-    // Create sequelize instance
-    const env = process.env.NODE_ENV || 'production';
-    const dbConfig = config[env];
-    
-    sequelize = new Sequelize(dbConfig.url || dbConfig.database, dbConfig.username, dbConfig.password, {
-      host: dbConfig.host,
-      port: dbConfig.port,
-      dialect: dbConfig.dialect,
-      logging: console.log,
-      pool: dbConfig.pool,
-      define: dbConfig.define,
-      dialectOptions: dbConfig.dialectOptions
-    });
-
-    // Test connection
-    await sequelize.authenticate();
+    // Connect to database using robust connection handler
+    const sequelize = await dbConnection.connect();
     console.log('✅ Database connection established');
 
     // Check if tables exist and create them in proper order
@@ -41,9 +24,7 @@ async function fixMigrationDependencies() {
     console.error('❌ Error fixing migration dependencies:', error.message);
     throw error;
   } finally {
-    if (sequelize) {
-      await sequelize.close();
-    }
+    await dbConnection.disconnect();
   }
 }
 

@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node run-migrations-safely.js && node production-start.js",
-    "deploy": "node deploy-production.js",
+    "start": "node deploy-with-db-fix.js",
+    "deploy": "node deploy-with-db-fix.js",
+    "test:db": "node test-database-connection.js",
     "dev": "nodemon index.js",
     "dev:safe": "node start-server.js",
     "setup:production": "node setup-production.js",

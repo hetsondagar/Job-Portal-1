@@ -5,8 +5,7 @@
  * This script runs migrations in the correct order with proper error handling
  */
 
-const { Sequelize } = require('sequelize');
-const config = require('./config/database');
+const dbConnection = require('./lib/database-connection');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 
@@ -15,25 +14,9 @@ const execAsync = promisify(exec);
 console.log('🔄 Running Migrations Safely...');
 
 async function runMigrationsSafely() {
-  let sequelize;
-  
   try {
-    // Create sequelize instance
-    const env = process.env.NODE_ENV || 'production';
-    const dbConfig = config[env];
-    
-    sequelize = new Sequelize(dbConfig.url || dbConfig.database, dbConfig.username, dbConfig.password, {
-      host: dbConfig.host,
-      port: dbConfig.port,
-      dialect: dbConfig.dialect,
-      logging: false, // Disable logging for cleaner output
-      pool: dbConfig.pool,
-      define: dbConfig.define,
-      dialectOptions: dbConfig.dialectOptions
-    });
-
-    // Test connection
-    await sequelize.authenticate();
+    // Connect to database using robust connection handler
+    const sequelize = await dbConnection.connect();
     console.log('✅ Database connection established');
 
     // First, ensure all required tables exist in correct order
@@ -56,9 +39,7 @@ async function runMigrationsSafely() {
     console.error('❌ Error running migrations:', error.message);
     throw error;
   } finally {
-    if (sequelize) {
-      await sequelize.close();
-    }
+    await dbConnection.disconnect();
   }
 }
 
