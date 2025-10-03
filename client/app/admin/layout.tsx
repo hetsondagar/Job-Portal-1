@@ -17,25 +17,33 @@ export default function AdminLayout({
   useEffect(() => {
     if (authLoading) return
 
-    // If not logged in, redirect to admin login
-    if (!user) {
-      router.push('/admin-login')
-      return
+    // Add a small delay to ensure auth context is fully initialized
+    const checkAuth = () => {
+      // If not logged in, redirect to admin login
+      if (!user) {
+        router.push('/admin-login')
+        return
+      }
+
+      // If logged in but not admin or superadmin, redirect to home
+      if (user.userType !== 'admin' && user.userType !== 'superadmin') {
+        router.push('/')
+        return
+      }
+
+      // If accessing admin-login while already logged in as admin or superadmin, redirect to dashboard
+      if (pathname === '/admin-login' && (user.userType === 'admin' || user.userType === 'superadmin')) {
+        router.push('/admin/dashboard')
+        return
+      }
+
+      setIsChecking(false)
     }
 
-    // If logged in but not admin or superadmin, redirect to home
-    if (user.userType !== 'admin' && user.userType !== 'superadmin') {
-      router.push('/')
-      return
-    }
-
-    // If accessing admin-login while already logged in as admin or superadmin, redirect to dashboard
-    if (pathname === '/admin-login' && (user.userType === 'admin' || user.userType === 'superadmin')) {
-      router.push('/admin/dashboard')
-      return
-    }
-
-    setIsChecking(false)
+    // Small delay to ensure auth context is fully initialized
+    const timeoutId = setTimeout(checkAuth, 100)
+    
+    return () => clearTimeout(timeoutId)
   }, [user, authLoading, router, pathname])
 
   // Show loading while checking authentication
