@@ -90,7 +90,9 @@ export default function AdminLoginPage() {
         
         // Use redirect URL from backend response, fallback to admin dashboard
         const redirectUrl = redirectTo || '/admin/dashboard'
-        router.push(redirectUrl)
+        
+        // Direct redirect - don't wait for auth context update
+        window.location.href = redirectUrl
       } else {
         toast.error(response.message || "Login failed")
       }
