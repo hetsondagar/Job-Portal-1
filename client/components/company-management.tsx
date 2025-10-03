@@ -82,7 +82,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   }
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       [field]: value
     }))
