@@ -20,11 +20,11 @@ export default function AdminLoginPage() {
   const router = useRouter()
   const { user, loading: authLoading, manualRefreshUser, updateUser } = useAuth()
 
-  // Redirect if already logged in as admin or superadmin
+  // Redirect if already logged in as superadmin (only superadmin can use this page)
   useEffect(() => {
     if (authLoading) return
     
-    if (user && (user.userType === 'admin' || user.userType === 'superadmin')) {
+    if (user && user.userType === 'superadmin') {
       router.push('/admin/dashboard')
     }
   }, [user, authLoading, router])
@@ -41,8 +41,8 @@ export default function AdminLoginPage() {
     )
   }
 
-  // Don't show login form if already logged in as admin or superadmin
-  if (user && (user.userType === 'admin' || user.userType === 'superadmin')) {
+  // Don't show login form if already logged in as superadmin
+  if (user && user.userType === 'superadmin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
         <div className="text-white text-center">
@@ -70,12 +70,6 @@ export default function AdminLoginPage() {
       if (response.success && response.data) {
         const { user, token, redirectTo } = response.data
         
-        // Check if user is admin or superadmin
-        if (user.userType !== 'admin' && user.userType !== 'superadmin') {
-          toast.error("Access denied. Admin privileges required.")
-          return
-        }
-        
         // Store token and user data
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
@@ -88,12 +82,9 @@ export default function AdminLoginPage() {
         
         toast.success("Login successful!")
         
-        // Use redirect URL from backend response, fallback to admin dashboard
-        const redirectUrl = redirectTo || '/admin/dashboard'
-        
-        
-        // Use router.push to maintain React state
-        router.push(redirectUrl)
+        // ALWAYS redirect to admin dashboard - no checks needed since backend validates superadmin
+        console.log('🔍 AdminLogin - Redirecting to /admin/dashboard, user type:', user.userType)
+        router.push('/admin/dashboard')
       } else {
         toast.error(response.message || "Login failed")
       }
