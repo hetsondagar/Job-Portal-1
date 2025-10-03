@@ -321,17 +321,17 @@ router.get('/users/:userId/details', async (req, res) => {
         },
         {
           model: Resume,
-          as: 'userResumes',
+          as: 'resumes',
           attributes: ['id', 'title', 'filePath', 'isDefault', 'createdAt']
         },
         {
           model: WorkExperience,
-          as: 'userWorkExperiences',
+          as: 'workExperiences',
           attributes: ['id', 'companyName', 'position', 'startDate', 'endDate', 'description', 'isCurrent']
         },
         {
           model: Education,
-          as: 'userEducations',
+          as: 'educations',
           attributes: ['id', 'institution', 'degree', 'fieldOfStudy', 'startDate', 'endDate', 'gpa', 'description']
         }
       ],
@@ -391,9 +391,9 @@ router.get('/users/:userId/details', async (req, res) => {
         totalApplications,
         totalBookmarks,
         totalJobsPosted,
-        totalResumes: user.userResumes?.length || 0,
-        totalWorkExperiences: user.userWorkExperiences?.length || 0,
-        totalEducations: user.userEducations?.length || 0
+        totalResumes: user.resumes?.length || 0,
+        totalWorkExperiences: user.workExperiences?.length || 0,
+        totalEducations: user.educations?.length || 0
       },
       subscription: subscription || null,
       payments: payments || [],
@@ -424,12 +424,12 @@ router.get('/companies/:companyId/details', async (req, res) => {
       include: [
         {
           model: User,
-          as: 'companyUsers',
+          as: 'employees',
           attributes: ['id', 'first_name', 'last_name', 'email', 'user_type', 'is_active', 'createdAt']
         },
         {
           model: Job,
-          as: 'companyJobs',
+          as: 'jobs',
           attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'applicationDeadline'],
           include: [{
             model: JobApplication,
@@ -445,12 +445,12 @@ router.get('/companies/:companyId/details', async (req, res) => {
         },
         {
           model: CompanyPhoto,
-          as: 'companyPhotos',
+          as: 'photos',
           attributes: ['id', 'filePath', 'isPrimary', 'createdAt']
         },
         {
           model: CompanyReview,
-          as: 'companyReviews',
+          as: 'reviews',
           attributes: ['id', 'rating', 'comment', 'createdAt'],
           include: [{
             model: User,
@@ -532,8 +532,8 @@ router.get('/companies/:companyId/details', async (req, res) => {
         totalApplications,
         totalReviews,
         averageRating: averageRating?.averageRating ? parseFloat(averageRating.averageRating).toFixed(1) : 0,
-        totalEmployees: company.companyUsers?.length || 0,
-        totalPhotos: company.companyPhotos?.length || 0
+        totalEmployees: company.employees?.length || 0,
+        totalPhotos: company.photos?.length || 0
       },
       subscription: subscription || null,
       payments: payments || [],
@@ -569,7 +569,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         },
         {
           model: User,
-          as: 'postedBy',
+          as: 'employer',
           attributes: ['id', 'first_name', 'last_name', 'email', 'user_type']
         },
         {
@@ -582,7 +582,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             attributes: ['id', 'first_name', 'last_name', 'email', 'phone_number', 'region'],
             include: [{
               model: Resume,
-              as: 'userResumes',
+              as: 'resumes',
               attributes: ['id', 'title', 'filePath', 'isDefault'],
               where: { isDefault: true },
               required: false
@@ -592,7 +592,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         },
         {
           model: JobBookmark,
-          as: 'jobBookmarks',
+          as: 'bookmarks',
           attributes: ['id', 'createdAt'],
           include: [{
             model: User,
@@ -601,16 +601,6 @@ router.get('/jobs/:jobId/details', async (req, res) => {
           }],
           order: [['createdAt', 'DESC']]
         },
-        {
-          model: JobCategory,
-          as: 'category',
-          attributes: ['id', 'name', 'description']
-        },
-        {
-          model: Requirement,
-          as: 'jobRequirements',
-          attributes: ['id', 'type', 'description', 'isRequired']
-        }
       ]
     });
 
