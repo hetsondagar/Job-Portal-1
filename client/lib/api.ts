@@ -86,7 +86,7 @@ export interface LoginData {
   email: string;
   password: string;
   rememberMe?: boolean;
-  loginType?: 'jobseeker' | 'employer';
+  loginType?: 'jobseeker' | 'employer' | 'admin';
 }
 
 export interface ForgotPasswordData {

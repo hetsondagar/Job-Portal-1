@@ -572,6 +572,16 @@ router.post('/login', validateLogin, async (req, res) => {
           redirectTo: '/admin-login'
         });
       }
+      
+      // Validate admin login - only allow admin and superadmin users
+      if (loginType === 'admin'  && user.user_type !== 'superadmin') {
+        console.log('❌ Non-admin user trying to login through admin login:', user.user_type);
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Admin privileges required.',
+          redirectTo: '/login'
+        });
+      }
     }
 
     // Update last login
