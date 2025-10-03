@@ -109,7 +109,7 @@ interface CompanyDetail {
     eventData: any
     createdAt: string
   }>
-  companyJobs: Array<{
+  jobs: Array<{
     id: string
     title: string
     location: string
@@ -118,7 +118,7 @@ interface CompanyDetail {
     status: string
     createdAt: string
     applicationDeadline?: string
-    applications: Array<{
+    jobApplications: Array<{
       id: string
       status: string
       createdAt: string
@@ -130,7 +130,7 @@ interface CompanyDetail {
       }
     }>
   }>
-  companyUsers: Array<{
+  employees: Array<{
     id: string
     first_name: string
     last_name: string
@@ -139,13 +139,13 @@ interface CompanyDetail {
     is_active: boolean
     createdAt: string
   }>
-  companyPhotos: Array<{
+  photos: Array<{
     id: string
     filePath: string
     isPrimary: boolean
     createdAt: string
   }>
-  companyReviews: Array<{
+  reviews: Array<{
     id: string
     rating: number
     comment: string
@@ -605,13 +605,13 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Briefcase className="w-5 h-5 mr-2" />
-                  Company Jobs ({company.companyJobs.length})
+                  Company Jobs ({company.jobs.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.companyJobs.length > 0 ? (
+                {company.jobs.length > 0 ? (
                   <div className="space-y-4">
-                    {company.companyJobs.map((job) => (
+                    {company.jobs.map((job) => (
                       <div key={job.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -620,7 +620,7 @@ export default function CompanyDetailPage() {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-400">
                               <span>{job.jobType}</span>
                               {job.salary && <span>${job.salary}</span>}
-                              <span>{job.applications.length} applications</span>
+                              <span>{job.jobApplications.length} applications</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -654,13 +654,13 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Users className="w-5 h-5 mr-2" />
-                  Company Employees ({company.companyUsers.length})
+                  Company Employees ({company.employees.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.companyUsers.length > 0 ? (
+                {company.employees.length > 0 ? (
                   <div className="space-y-4">
-                    {company.companyUsers.map((employee) => (
+                    {company.employees.map((employee) => (
                       <div key={employee.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
                         <div className="flex justify-between items-center">
                           <div>
@@ -697,13 +697,13 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Star className="w-5 h-5 mr-2" />
-                  Company Reviews ({company.companyReviews.length})
+                  Company Reviews ({company.reviews.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.companyReviews.length > 0 ? (
+                {company.reviews.length > 0 ? (
                   <div className="space-y-4">
-                    {company.companyReviews.map((review) => (
+                    {company.reviews.map((review) => (
                       <div key={review.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">

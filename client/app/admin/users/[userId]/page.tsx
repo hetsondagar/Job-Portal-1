@@ -141,14 +141,18 @@ interface UserDetail {
       }
     }
   }>
-  userResumes: Array<{
+  resumes: Array<{
     id: string
     title: string
-    filePath: string
+    summary?: string
     isDefault: boolean
+    isPublic: boolean
+    views: number
+    downloads: number
+    lastUpdated: string
     createdAt: string
   }>
-  userWorkExperiences: Array<{
+  workExperiences: Array<{
     id: string
     companyName: string
     position: string
@@ -157,7 +161,7 @@ interface UserDetail {
     description?: string
     isCurrent: boolean
   }>
-  userEducations: Array<{
+  educations: Array<{
     id: string
     institution: string
     degree: string
@@ -615,13 +619,13 @@ export default function UserDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
                     <Briefcase className="w-5 h-5 mr-2" />
-                    Work Experience ({user.userWorkExperiences.length})
+                    Work Experience ({user.workExperiences.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {user.userWorkExperiences.length > 0 ? (
+                  {user.workExperiences.length > 0 ? (
                     <div className="space-y-4">
-                      {user.userWorkExperiences.map((exp) => (
+                      {user.workExperiences.map((exp) => (
                         <div key={exp.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
                           <div className="flex justify-between items-start">
                             <div>
@@ -652,13 +656,13 @@ export default function UserDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
                     <GraduationCap className="w-5 h-5 mr-2" />
-                    Education ({user.userEducations.length})
+                    Education ({user.educations.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {user.userEducations.length > 0 ? (
+                  {user.educations.length > 0 ? (
                     <div className="space-y-4">
-                      {user.userEducations.map((edu) => (
+                      {user.educations.map((edu) => (
                         <div key={edu.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
                           <h4 className="text-white font-semibold">{edu.degree} in {edu.fieldOfStudy}</h4>
                           <p className="text-gray-400">{edu.institution}</p>

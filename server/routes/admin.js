@@ -21,10 +21,10 @@ const {
   Analytics,
   Requirement,
   Sequelize 
-} = require('../models');
+} = require('../config');
+const { Op } = require('sequelize');
 const { authenticateToken } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/adminAuth');
-const { Op } = Sequelize;
 
 // Test endpoint to verify admin authentication (before middleware)
 router.get('/test-auth', async (req, res) => {
@@ -301,7 +301,7 @@ router.get('/users/:userId/details', async (req, res) => {
             }]
           }],
           limit: 10,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
@@ -317,12 +317,12 @@ router.get('/users/:userId/details', async (req, res) => {
             }]
           }],
           limit: 10,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: Resume,
           as: 'resumes',
-          attributes: ['id', 'title', 'filePath', 'isDefault', 'createdAt']
+          attributes: ['id', 'title', 'summary', 'isDefault', 'isPublic', 'views', 'downloads', 'lastUpdated', 'createdAt']
         },
         {
           model: WorkExperience,
@@ -583,12 +583,12 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             include: [{
               model: Resume,
               as: 'resumes',
-              attributes: ['id', 'title', 'filePath', 'isDefault'],
+              attributes: ['id', 'title', 'summary', 'isDefault'],
               where: { isDefault: true },
               required: false
             }]
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
@@ -599,7 +599,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             as: 'user',
             attributes: ['id', 'first_name', 'last_name', 'email']
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
       ]
     });

@@ -57,13 +57,13 @@ interface JobDetail {
   title: string
   description: string
   location: string
-  salary?: number
+  salary?: string
   salaryCurrency?: string
   jobType: string
   status: string
-  applicationDeadline?: string
+  validTill?: string
   requirements?: string
-  benefits?: string
+  responsibilities?: string
   createdAt: string
   updatedAt: string
   statistics: {
@@ -99,7 +99,7 @@ interface JobDetail {
     isActive: boolean
     createdAt: string
   }
-  postedBy: {
+  employer: {
     id: string
     first_name: string
     last_name: string
@@ -127,7 +127,7 @@ interface JobDetail {
       }>
     }
   }>
-  jobBookmarks: Array<{
+  bookmarks: Array<{
     id: string
     createdAt: string
     user: {
@@ -137,12 +137,12 @@ interface JobDetail {
       email: string
     }
   }>
-  category: {
+  category?: {
     id: string
     name: string
     description: string
   }
-  jobRequirements: Array<{
+  jobRequirements?: Array<{
     id: string
     type: string
     description: string
@@ -353,7 +353,7 @@ export default function JobDetailPage() {
                   {job.salary && (
                     <div className="flex items-center">
                       <DollarSign className="w-4 h-4 mr-2" />
-                      ${job.salary} {job.salaryCurrency || 'USD'}
+                      {job.salary} {job.salaryCurrency || 'INR'}
                     </div>
                   )}
                   <div className="flex items-center">
@@ -464,13 +464,13 @@ export default function JobDetailPage() {
                   <div>
                     <label className="text-sm text-gray-400">Salary</label>
                     <p className="text-white">
-                      {job.salary ? `$${job.salary} ${job.salaryCurrency || 'USD'}` : 'Not specified'}
+                      {job.salary ? `${job.salary} ${job.salaryCurrency || 'INR'}` : 'Not specified'}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-400">Application Deadline</label>
+                    <label className="text-sm text-gray-400">Valid Till</label>
                     <p className="text-white">
-                      {job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : 'No deadline'}
+                      {job.validTill ? new Date(job.validTill).toLocaleDateString() : 'No expiry'}
                     </p>
                   </div>
                   <div>
@@ -561,16 +561,16 @@ export default function JobDetailPage() {
                 <div className="flex items-center space-x-4">
                   <Avatar>
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                      {job.postedBy.first_name.charAt(0)}{job.postedBy.last_name.charAt(0)}
+                      {job.employer.first_name.charAt(0)}{job.employer.last_name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <h4 className="text-white font-semibold">
-                      {job.postedBy.first_name} {job.postedBy.last_name}
+                      {job.employer.first_name} {job.employer.last_name}
                     </h4>
-                    <p className="text-gray-400">{job.postedBy.email}</p>
-                    <Badge className={job.postedBy.user_type === 'employer' ? 'bg-green-600' : 'bg-blue-600'}>
-                      {job.postedBy.user_type}
+                    <p className="text-gray-400">{job.employer.email}</p>
+                    <Badge className={job.employer.user_type === 'employer' ? 'bg-green-600' : 'bg-blue-600'}>
+                      {job.employer.user_type}
                     </Badge>
                   </div>
                 </div>
@@ -592,18 +592,18 @@ export default function JobDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Benefits */}
-            {job.benefits && (
+            {/* Responsibilities */}
+            {job.responsibilities && (
               <Card className="bg-white/5 border-white/10">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
                     <Award className="w-5 h-5 mr-2" />
-                    Benefits
+                    Responsibilities
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-invert max-w-none">
-                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{job.benefits}</p>
+                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{job.responsibilities}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -692,11 +692,11 @@ export default function JobDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Target className="w-5 h-5 mr-2" />
-                  Job Requirements ({job.jobRequirements.length})
+                  Job Requirements ({job.jobRequirements?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {job.jobRequirements.length > 0 ? (
+                {job.jobRequirements && job.jobRequirements.length > 0 ? (
                   <div className="space-y-4">
                     {job.jobRequirements.map((requirement) => (
                       <div key={requirement.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
@@ -738,15 +738,15 @@ export default function JobDetailPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-white">{job.requirementsAnalysis.totalRequirements}</p>
+                    <p className="text-3xl font-bold text-white">{job.requirementsAnalysis?.totalRequirements || 0}</p>
                     <p className="text-sm text-gray-400">Total Requirements</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-green-400">{job.requirementsAnalysis.requiredRequirements}</p>
+                    <p className="text-3xl font-bold text-green-400">{job.requirementsAnalysis?.requiredRequirements || 0}</p>
                     <p className="text-sm text-gray-400">Required</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-yellow-400">{job.requirementsAnalysis.optionalRequirements}</p>
+                    <p className="text-3xl font-bold text-yellow-400">{job.requirementsAnalysis?.optionalRequirements || 0}</p>
                     <p className="text-sm text-gray-400">Optional</p>
                   </div>
                 </div>
@@ -858,11 +858,11 @@ export default function JobDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Briefcase className="w-5 h-5 mr-2" />
-                  Similar Jobs ({job.similarJobs.length})
+                  Similar Jobs ({job.similarJobs?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {job.similarJobs.length > 0 ? (
+                {job.similarJobs && job.similarJobs.length > 0 ? (
                   <div className="space-y-4">
                     {job.similarJobs.map((similarJob) => (
                       <div key={similarJob.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
