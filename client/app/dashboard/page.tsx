@@ -32,6 +32,7 @@ import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { RecentNotifications } from '@/components/recent-notifications'
 
 export default function DashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -1065,6 +1066,11 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Recent Notifications */}
+          <div className="mb-8">
+            <RecentNotifications limit={3} showViewAll={true} />
+          </div>
 
           {/* Gulf Opportunities Banner */}
           <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800">

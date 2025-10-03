@@ -27,7 +27,10 @@ import {
   Calendar,
   Video,
   Phone,
-  MapPin
+  MapPin,
+  UserCheck,
+  Clock,
+  XCircle
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
@@ -108,6 +111,9 @@ export default function NotificationsPage() {
         case 'video': return <Video className="w-5 h-5" />
         case 'phone': return <Phone className="w-5 h-5" />
         case 'map-pin': return <MapPin className="w-5 h-5" />
+        case 'user-check': return <UserCheck className="w-5 h-5" />
+        case 'clock': return <Clock className="w-5 h-5" />
+        case 'x-circle': return <XCircle className="w-5 h-5" />
         default: return <Bell className="w-5 h-5" />
       }
     }
@@ -122,6 +128,8 @@ export default function NotificationsPage() {
       case 'interview_scheduled': return <Calendar className="w-5 h-5" />
       case 'interview_cancelled': return <Calendar className="w-5 h-5" />
       case 'interview_reminder': return <Calendar className="w-5 h-5" />
+      case 'candidate_shortlisted': return <UserCheck className="w-5 h-5" />
+      case 'application_shortlisted': return <CheckCircle className="w-5 h-5" />
       default: return <Bell className="w-5 h-5" />
     }
   }

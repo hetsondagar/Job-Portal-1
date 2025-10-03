@@ -36,6 +36,7 @@ import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { RecentNotifications } from '@/components/recent-notifications'
 
 export default function JobseekerGulfDashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -1264,6 +1265,11 @@ export default function JobseekerGulfDashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Recent Notifications */}
+          <div className="mb-8">
+            <RecentNotifications limit={3} showViewAll={true} />
+          </div>
 
           {/* Recent Gulf Applications */}
           <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-green-200 dark:border-green-800">
