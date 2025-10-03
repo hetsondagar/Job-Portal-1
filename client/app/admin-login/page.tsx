@@ -83,7 +83,6 @@ export default function AdminLoginPage() {
         toast.success("Login successful!")
         
         // ALWAYS redirect to admin dashboard - no checks needed since backend validates superadmin
-        console.log('🔍 AdminLogin - Redirecting to /admin/dashboard, user type:', user.userType)
         router.push('/admin/dashboard')
       } else {
         toast.error(response.message || "Login failed")

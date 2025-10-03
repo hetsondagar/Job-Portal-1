@@ -19,30 +19,24 @@ export default function AdminLayout({
 
     // Add a small delay to ensure auth context is fully initialized
     const checkAuth = () => {
-      console.log('🔍 AdminLayout - Checking auth, user:', user?.userType, 'pathname:', pathname)
-      
       // If not logged in, redirect to admin login
       if (!user) {
-        console.log('🔍 AdminLayout - No user, redirecting to admin-login')
         router.push('/admin-login')
         return
       }
 
       // If logged in but not admin or superadmin, redirect to home
       if (user.userType !== 'admin' && user.userType !== 'superadmin') {
-        console.log('🔍 AdminLayout - User not admin/superadmin:', user.userType, 'redirecting to home')
         router.push('/')
         return
       }
 
       // If accessing admin-login while already logged in as admin or superadmin, redirect to dashboard
       if (pathname === '/admin-login' && (user.userType === 'admin' || user.userType === 'superadmin')) {
-        console.log('🔍 AdminLayout - Already logged in, redirecting to dashboard')
         router.push('/admin/dashboard')
         return
       }
 
-      console.log('🔍 AdminLayout - Auth check passed, user:', user.userType)
       setIsChecking(false)
     }
 

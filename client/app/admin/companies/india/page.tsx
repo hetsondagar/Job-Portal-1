@@ -49,7 +49,7 @@ export default function IndiaCompaniesPage() {
   useEffect(() => {
     if (authLoading) return
 
-    if (!user || user.userType !== 'admin') {
+    if (!user || ((user.userType !== 'admin' && user.userType !== 'superadmin') && user.userType !== 'superadmin')) {
       router.push('/admin-login')
       return
     }
@@ -179,7 +179,7 @@ export default function IndiaCompaniesPage() {
     )
   }
 
-  if (!user || user.userType !== 'admin') {
+  if (!user || ((user.userType !== 'admin' && user.userType !== 'superadmin') && user.userType !== 'superadmin')) {
     return null
   }
 

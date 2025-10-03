@@ -44,7 +44,7 @@ export default function AdminDashboardPage() {
       return
     }
 
-    if (user.userType !== 'admin') {
+    if (user.userType !== 'admin' && user.userType !== 'superadmin') {
       toast.error('Access denied. Admin privileges required.')
       router.push('/')
       return
@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
     )
   }
 
-  if (!user || user.userType !== 'admin') {
+  if (!user || (user.userType !== 'admin' && user.userType !== 'superadmin')) {
     return null
   }
 

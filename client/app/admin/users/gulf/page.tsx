@@ -46,7 +46,7 @@ export default function GulfUsersPage() {
   useEffect(() => {
     if (authLoading) return
 
-    if (!user || user.userType !== 'admin') {
+    if (!user || ((user.userType !== 'admin' && user.userType !== 'superadmin') && user.userType !== 'superadmin')) {
       router.push('/admin-login')
       return
     }
@@ -160,7 +160,7 @@ export default function GulfUsersPage() {
     )
   }
 
-  if (!user || user.userType !== 'admin') {
+  if (!user || ((user.userType !== 'admin' && user.userType !== 'superadmin') && user.userType !== 'superadmin')) {
     return null
   }
 
