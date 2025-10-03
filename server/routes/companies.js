@@ -113,10 +113,10 @@ const companyLogoUpload = multer({
   storage: logoStorage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: function (req, file, cb) {
-    const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) return cb(null, true);
-    cb(new Error('Only JPG, PNG, and WebP files are allowed'));
+    cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed'));
   }
 });
 
@@ -322,60 +322,6 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('List companies error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-// Storage for company logo uploads
-const logoStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/company-logos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, 'company-logo-' + uniqueSuffix + extension);
-  }
-});
-
-const companyLogoUpload = multer({
-  storage: logoStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: function (req, file, cb) {
-    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) return cb(null, true);
-    cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed'));
-  }
-});
-
-// Storage for company gallery photos
-const companyPhotoStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/company-photos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, 'company-photo-' + uniqueSuffix + extension);
-  }
-});
-
-const companyPhotoUpload = multer({
-  storage: companyPhotoStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: function (req, file, cb) {
-    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) return cb(null, true);
-    cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed'));
   }
 });
 
