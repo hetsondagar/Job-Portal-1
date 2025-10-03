@@ -692,6 +692,8 @@ async function createJobsTable(queryInterface) {
 }
 
 async function createCompanyPhotosTable(queryInterface) {
+  const { Sequelize } = require('sequelize');
+  
   await queryInterface.createTable('company_photos', {
     id: {
       type: Sequelize.UUID,

@@ -82,6 +82,26 @@ async function fixDatabaseSchemaIssues() {
       console.log('⚠️ verification_status column error:', error.message);
     }
 
+    // Add company_status column
+    try {
+      const [columnExists] = await sequelize.query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'companies' AND column_name = 'company_status'
+      `);
+      
+      if (columnExists.length === 0) {
+        console.log('Adding company_status column...');
+        await sequelize.query(`
+          ALTER TABLE companies ADD COLUMN company_status VARCHAR DEFAULT 'active'
+        `);
+        console.log('✅ Added company_status column');
+      } else {
+        console.log('✅ company_status column already exists');
+      }
+    } catch (error) {
+      console.log('⚠️ company_status column error:', error.message);
+    }
+
     // Step 4: Create company_photos table if it doesn't exist
     console.log('🔧 Step 3: Ensuring company_photos table exists...');
     try {

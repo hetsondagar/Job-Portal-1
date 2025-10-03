@@ -12,6 +12,7 @@
     "fix:company-photos": "node fix-company-photo-model.js",
     "fix:admin-stats": "node fix-admin-stats-endpoint.js",
     "fix:schema": "node fix-database-schema-issues.js",
+    "fix:remaining": "node fix-all-remaining-issues.js",
     "test:admin-dashboard": "node test-admin-dashboard.js",
     "optimize": "node optimize-production.js",
     "dev": "nodemon index.js",

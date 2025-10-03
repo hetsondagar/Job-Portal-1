@@ -5,7 +5,7 @@
  * Comprehensive deployment script that handles database connection issues
  */
 
-const dbConnection = require('./lib/database-connection');
+const dbConnection = require('./lib/robust-database-connection');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 
@@ -64,6 +64,16 @@ async function deployWithDbFix() {
       console.log('✅ Database schema issues fixed');
     } catch (error) {
       console.log('⚠️ Database schema issues fix failed, continuing:', error.message);
+    }
+
+    // Step 5.5: Fix all remaining issues
+    console.log('🔧 Step 5.5: Fixing all remaining issues...');
+    try {
+      const { fixAllRemainingIssues } = require('./fix-all-remaining-issues');
+      await fixAllRemainingIssues();
+      console.log('✅ All remaining issues fixed');
+    } catch (error) {
+      console.log('⚠️ All remaining issues fix failed, continuing:', error.message);
     }
 
     // Step 6: Fix admin stats endpoint

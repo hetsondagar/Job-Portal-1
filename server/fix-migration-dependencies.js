@@ -786,6 +786,8 @@ async function createJobsTable(queryInterface) {
 
 async function createCompanyPhotosTable(queryInterface) {
   try {
+    const { Sequelize } = require('sequelize');
+    
     // Check if company_photos table exists
     const [results] = await queryInterface.sequelize.query(`
       SELECT table_name FROM information_schema.tables 
