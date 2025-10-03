@@ -196,7 +196,7 @@ router.post('/join', authenticateToken, async (req, res) => {
 // Create a new company
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region } = req.body;
+    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs } = req.body;
     
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
@@ -250,6 +250,7 @@ router.post('/', authenticateToken, async (req, res) => {
       email: email || req.user.email,
       phone: phone || req.user.phone,
       description,
+      whyJoinUs: typeof whyJoinUs === 'string' ? whyJoinUs : null,
       address,
       city,
       state,
@@ -284,6 +285,7 @@ router.post('/', authenticateToken, async (req, res) => {
           email: company.email,
           phone: company.phone,
           description: company.description,
+        whyJoinUs: company.whyJoinUs,
           address: company.address,
           city: company.city,
           state: company.state,
@@ -537,6 +539,7 @@ router.get('/:id', async (req, res) => {
         email: company.email,
         phone: company.phone,
         description: company.description,
+        whyJoinUs: company.whyJoinUs,
         address: company.address,
         city: company.city,
         state: company.state,
@@ -652,7 +655,7 @@ router.get('/:id/jobs', async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, industry, companySize, website, description, address, city, state, country } = req.body;
+    const { name, industry, companySize, website, description, address, city, state, country, whyJoinUs } = req.body;
     
     // Check if the user has access to this company
     if (req.user.user_type !== 'admin') {
@@ -680,6 +683,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       companySize: companySize || company.companySize,
       website: website || company.website,
       description: description || company.description,
+      whyJoinUs: typeof whyJoinUs === 'string' ? whyJoinUs : company.whyJoinUs,
       address: address || company.address,
       city: city || company.city,
       state: state || company.state,
@@ -698,6 +702,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         email: company.email,
         phone: company.phone,
         description: company.description,
+      whyJoinUs: company.whyJoinUs,
         address: company.address,
         city: company.city,
         state: company.state,

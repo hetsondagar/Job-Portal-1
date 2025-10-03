@@ -1000,12 +1000,15 @@ function CompanyDetailPage() {
       {/* Company Details Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <Tabs defaultValue="overview" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700">
+          <TabsList className="grid w-full grid-cols-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               Overview
             </TabsTrigger>
             <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               Jobs ({companyJobs.length})
+            </TabsTrigger>
+            <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Why Join Us
             </TabsTrigger>
           </TabsList>
 
@@ -1565,6 +1568,55 @@ function CompanyDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="why" className="space-y-8">
+            <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-2xl">Why join {company.name}?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {company.whyJoinUs ? (
+                  <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
+                    {company.whyJoinUs}
+                  </div>
+                ) : (
+                  <div className="text-slate-600 dark:text-slate-300">
+                    This employer hasn’t added their Why Join Us content yet. Check back soon or explore their open roles.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Highlights if no content yet: draw from available data */}
+            {!company.whyJoinUs && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Growth & Opportunities</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-slate-700 dark:text-slate-300">
+                    {companyJobs.length > 0 ? `${companyJobs.length} open roles across departments.` : 'Active hiring cycles across functions.'}
+                  </CardContent>
+                </Card>
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Culture</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-slate-700 dark:text-slate-300">
+                    Collaborative environment with a focus on learning and impact.
+                  </CardContent>
+                </Card>
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Benefits</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-slate-700 dark:text-slate-300">
+                    {safeBenefits.length > 0 ? safeBenefits.slice(0, 4).join(', ') : 'Competitive compensation and perks.'}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

@@ -163,6 +163,11 @@ const Company = sequelize.define('Company', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  whyJoinUs: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'why_join_us'
+  },
   workEnvironment: {
     type: DataTypes.JSONB,
     allowNull: true,
