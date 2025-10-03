@@ -17,6 +17,14 @@ const Education = require('../models/Education');
 const Notification = require('../models/Notification');
 const CompanyReview = require('../models/CompanyReview');
 const CompanyFollow = require('../models/CompanyFollow');
+let CompanyPhoto;
+try {
+  CompanyPhoto = require('../models/CompanyPhoto');
+} catch (e) {
+  try {
+    CompanyPhoto = sequelize?.models?.CompanyPhoto;
+  } catch (_) {}
+}
 const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const UserSession = require('../models/UserSession');
@@ -70,7 +78,9 @@ Company.hasMany(Job, { foreignKey: 'companyId', as: 'jobs' });
 Company.hasMany(CompanyReview, { foreignKey: 'companyId', as: 'reviews' });
 Company.hasMany(CompanyFollow, { foreignKey: 'companyId', as: 'followers' });
 Company.hasMany(User, { foreignKey: 'company_id', as: 'employees' });
-Company.hasMany(CompanyPhoto, { foreignKey: 'companyId', as: 'photos' });
+if (CompanyPhoto) {
+  Company.hasMany(CompanyPhoto, { foreignKey: 'companyId', as: 'photos' });
+}
 
 // Job associations
 Job.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
@@ -97,9 +107,11 @@ JobBookmark.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 JobPhoto.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 JobPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 
-// CompanyPhoto associations
-CompanyPhoto.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
-CompanyPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
+// CompanyPhoto associations (optional)
+if (CompanyPhoto) {
+  CompanyPhoto.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+  CompanyPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
+}
 
 // HotVacancy associations
 HotVacancy.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });

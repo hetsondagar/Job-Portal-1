@@ -9,8 +9,242 @@ const fs = require('fs');
 const router = express.Router();
 // (moved list and join company routes below middleware definition)
 
-// Middleware to verify JWT token
+// Helper to resolve CompanyPhoto model in all environments
+const getCompanyPhotoModel = () => {
+  try {
+    // Preferred: direct model import
+    return require('../models/CompanyPhoto');
+  } catch (_) {
+    try {
+      // Fallback: via sequelize registry
+      const { sequelize } = require('../config/sequelize');
+      return sequelize?.models?.CompanyPhoto;
+    } catch (__) {
+      try {
+        // Last resort: from aggregated config (if exported)
+        const cfg = require('../config');
+        return cfg?.CompanyPhoto;
+      } catch (___) {
+        return undefined;
+      }
+    }
+  }
+};
+
+// Middleware to verify JWT token (must be defined before use)
 const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access token required'
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findByPk(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid or expired token'
+    });
+  }
+};
+
+// Storage for company gallery photos
+const companyPhotoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/company-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname).toLowerCase();
+    cb(null, 'company-photo-' + uniqueSuffix + extension);
+  }
+});
+
+// Define upload middlewares BEFORE routes that use them
+const companyPhotoUpload = multer({
+  storage: companyPhotoStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: function (req, file, cb) {
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed'));
+  }
+});
+
+// Storage for company logo uploads
+const logoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/company-logos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname).toLowerCase();
+    cb(null, 'company-logo-' + uniqueSuffix + extension);
+  }
+});
+
+const companyLogoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: function (req, file, cb) {
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new Error('Only JPG, PNG, and WebP files are allowed'));
+  }
+});
+
+// Upload a company gallery photo
+router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { altText, caption, displayOrder, isPrimary } = req.body || {};
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No photo file provided' });
+    }
+
+    // Only company owner/admin can add photos
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(id)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const CompanyPhoto = getCompanyPhotoModel();
+    if (!CompanyPhoto) return res.status(500).json({ success: false, message: 'CompanyPhoto model unavailable' });
+
+    const filename = req.file.filename;
+    const filePath = `/uploads/company-photos/${filename}`;
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+
+    // If marking as primary, unset others for this company
+    if (isPrimary === 'true' || isPrimary === true) {
+      try {
+        await CompanyPhoto.update({ isPrimary: false }, { where: { companyId: id } });
+      } catch (_) {}
+    }
+
+    const photo = await CompanyPhoto.create({
+      companyId: id,
+      filename,
+      filePath,
+      fileUrl,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      altText: altText || null,
+      caption: caption || null,
+      displayOrder: parseInt(displayOrder) || 0,
+      isPrimary: isPrimary === 'true' || isPrimary === true || false,
+      uploadedBy: req.user.id
+    });
+
+    return res.status(201).json({ success: true, message: 'Company photo uploaded', data: photo });
+  } catch (error) {
+    console.error('Company photo upload error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload photo' });
+  }
+});
+
+// List company photos (public)
+router.get('/:id/photos', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const CompanyPhoto = getCompanyPhotoModel();
+    if (!CompanyPhoto) return res.status(500).json({ success: false, message: 'CompanyPhoto model unavailable' });
+    const photos = await CompanyPhoto.findAll({
+      where: { companyId: id, isActive: true },
+      order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
+    });
+    return res.status(200).json({ success: true, data: photos });
+  } catch (error) {
+    console.error('List company photos error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to list photos' });
+  }
+});
+
+// Delete a company photo
+router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
+  try {
+    const { photoId } = req.params;
+    const CompanyPhoto = getCompanyPhotoModel();
+    if (!CompanyPhoto) return res.status(500).json({ success: false, message: 'CompanyPhoto model unavailable' });
+    const photo = await CompanyPhoto.findByPk(photoId);
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    // Must be admin or owner of company
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(photo.companyId)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Delete file from disk (best-effort)
+    try {
+      const absPath = path.join(__dirname, '..', photo.filePath);
+      if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
+    } catch (_) {}
+
+    await photo.destroy();
+    return res.status(200).json({ success: true, message: 'Company photo deleted' });
+  } catch (error) {
+    console.error('Delete company photo error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete photo' });
+  }
+});
+
+// Upload/replace company logo
+router.post('/:id/logo', authenticateToken, companyLogoUpload.single('logo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No logo file provided' });
+    }
+
+    // Only company owner/admin can update
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(id)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const company = await Company.findByPk(id);
+    if (!company) return res.status(404).json({ success: false, message: 'Company not found' });
+
+    const filename = req.file.filename;
+    const filePath = `/uploads/company-logos/${filename}`;
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+
+    await company.update({ logo: fileUrl });
+
+    return res.status(200).json({ success: true, message: 'Company logo updated', data: { logo: fileUrl } });
+  } catch (error) {
+    console.error('Company logo upload error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload logo' });
+  }
+});
+
+// Middleware to verify JWT token
+const authenticateToken2 = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -58,7 +292,7 @@ router.get('/', async (req, res) => {
     }
     const companies = await Company.findAll({
       where,
-      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region'],
+      attributes: ['id', 'name', 'slug', 'logo', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region'],
       order: [['name', 'ASC']],
       limit: Math.min(parseInt(limit, 10) || 20, 100),
       offset: parseInt(offset, 10) || 0

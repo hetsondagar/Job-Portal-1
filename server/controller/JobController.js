@@ -464,8 +464,7 @@ exports.getJobById = async (req, res, next) => {
           as: 'photos',
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { isActive: true },
-          required: false,
-          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+          required: false
         }
       ]
     });

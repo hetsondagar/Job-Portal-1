@@ -209,14 +209,20 @@ if (process.env.NODE_ENV === 'development') {
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res, path) => {
-    // Ensure proper headers for image files
-    if (path.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+  setHeaders: (res, filePath) => {
+    // Allow cross-origin usage of uploaded files (for frontend domains)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    // Set accurate content-type based on extension
+    const lower = filePath.toLowerCase();
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
       res.setHeader('Content-Type', 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=31536000');
-      // Remove CSP headers that might block cross-origin image loading
-      res.removeHeader('Content-Security-Policy');
-      res.removeHeader('Cross-Origin-Resource-Policy');
+    } else if (lower.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (lower.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    } else if (lower.endsWith('.webp')) {
+      res.setHeader('Content-Type', 'image/webp');
     }
   }
 }));
