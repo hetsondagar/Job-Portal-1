@@ -77,8 +77,18 @@ async function deployWithDbFix() {
     
     await dbConnection.disconnect();
     
-    // Step 7: Start the production server
-    console.log('🚀 Step 7: Starting production server...');
+    // Step 7: Optimize for production
+    console.log('🚀 Step 7: Optimizing for production...');
+    try {
+      const { optimizeProduction } = require('./optimize-production');
+      await optimizeProduction();
+      console.log('✅ Production optimization completed');
+    } catch (error) {
+      console.log('⚠️ Production optimization failed, continuing:', error.message);
+    }
+    
+    // Step 8: Start the production server
+    console.log('🚀 Step 8: Starting production server...');
     
     const { spawn } = require('child_process');
     const serverProcess = spawn('node', ['production-start.js'], {
