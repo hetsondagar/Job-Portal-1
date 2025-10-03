@@ -22,12 +22,12 @@ const requireAdmin = async (req, res, next) => {
       user_type: req.user.user_type
     });
 
-    // Check if user is admin or superadmin
-    if (req.user.user_type !== 'admin' && req.user.user_type !== 'superadmin') {
-      console.log('❌ [ADMIN] User is not admin or superadmin, user_type:', req.user.user_type);
+    // Check if user is superadmin (only superadmin can access admin dashboard)
+    if (req.user.user_type !== 'superadmin') {
+      console.log('❌ [ADMIN] User is not superadmin, user_type:', req.user.user_type);
       return res.status(403).json({
         success: false,
-        message: 'Admin privileges required'
+        message: 'Superadmin privileges required. Only system administrators can access this area.'
       });
     }
 

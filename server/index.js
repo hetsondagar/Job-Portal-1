@@ -17,6 +17,7 @@ const emailService = require('./services/emailService');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const adminAuthRoutes = require('./routes/admin-auth');
 const userRoutes = require('./routes/user');
 const oauthRoutes = require('./routes/oauth');
 const companiesRoutes = require('./routes/companies');
@@ -256,6 +257,7 @@ app.get('/api/test', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/companies', companiesRoutes);

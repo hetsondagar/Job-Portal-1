@@ -13,6 +13,7 @@
     "fix:admin-stats": "node fix-admin-stats-endpoint.js",
     "fix:schema": "node fix-database-schema-issues.js",
     "fix:remaining": "node fix-all-remaining-issues.js",
+    "ensure:superadmin": "node ensure-superadmin.js",
     "test:admin-dashboard": "node test-admin-dashboard.js",
     "optimize": "node optimize-production.js",
     "dev": "nodemon index.js",
