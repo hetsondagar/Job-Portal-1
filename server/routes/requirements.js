@@ -1519,10 +1519,12 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
       
       console.log(`✅ Candidate ${candidateId} ${newStatus === 'shortlisted' ? 'shortlisted' : 'unshortlisted'} by employer ${req.user.id} for requirement ${requirementId}`);
       
-      // Send notification only if candidate is being shortlisted (not unshortlisted)
-      if (newStatus === 'shortlisted') {
-        try {
-          const NotificationService = require('../services/notificationService');
+      // Handle notifications based on status change
+      try {
+        const NotificationService = require('../services/notificationService');
+        
+        if (newStatus === 'shortlisted') {
+          // Send notification when shortlisting
           await NotificationService.sendShortlistingNotification(
             candidateId,
             req.user.id,
@@ -1535,10 +1537,24 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
             }
           );
           console.log(`✅ Shortlisting notification sent to candidate ${candidateId}`);
-        } catch (notificationError) {
-          console.error('Failed to send shortlisting notification:', notificationError);
-          // Don't fail the shortlisting if notification fails
+        } else if (newStatus === 'applied' && existingShortlist.status === 'shortlisted') {
+          // Remove notification when unshortlisting
+          await NotificationService.removeShortlistingNotification(
+            candidateId,
+            req.user.id,
+            null, // jobId (not applicable for requirements)
+            requirementId,
+            {
+              applicationId: existingShortlist.id,
+              requirementTitle: requirement.title,
+              companyName: req.user.company?.name || 'Unknown Company'
+            }
+          );
+          console.log(`✅ Shortlisting notification removed for candidate ${candidateId}`);
         }
+      } catch (notificationError) {
+        console.error('Failed to handle shortlisting notification:', notificationError);
+        // Don't fail the shortlisting if notification fails
       }
       
       return res.status(200).json({

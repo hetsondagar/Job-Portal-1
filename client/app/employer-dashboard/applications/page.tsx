@@ -640,7 +640,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
                               Mark as Reviewing
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'shortlisted')}>
-                              Shortlist
+                              {application.status === 'shortlisted' ? 'Remove from Shortlist' : 'Shortlist'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleScheduleInterview(application)}>
                               Schedule Interview

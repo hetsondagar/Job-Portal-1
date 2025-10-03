@@ -598,12 +598,13 @@ export default function CandidateProfilePage() {
               )}
               
               <Button 
-                variant={isShortlisted ? "default" : "outline"}
+                variant={isShortlisted ? "destructive" : "default"}
                 onClick={handleShortlistCandidate}
                 disabled={isContacting}
+                className={isShortlisted ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}
               >
                 <Star className={`w-4 h-4 mr-2 ${isShortlisted ? 'fill-current' : ''}`} />
-                {isContacting ? "Updating..." : (isShortlisted ? "Shortlisted" : "Add to Shortlist")}
+                {isContacting ? "Updating..." : (isShortlisted ? "Remove from Shortlist" : "Add to Shortlist")}
               </Button>
             </div>
           </div>

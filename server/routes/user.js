@@ -1977,24 +1977,57 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
       // Don't fail the status update if activity logging fails
     }
 
-    // Send notification to candidate for status changes
+    // Handle notifications based on status change
     try {
       const NotificationService = require('../services/notificationService');
-      await NotificationService.sendApplicationStatusNotification(
-        application.userId,
-        req.user.id,
-        application.id,
-        oldStatus,
-        status,
-        {
-          jobId: application.jobId,
-          reason: req.body.reason || null,
-          notes: req.body.notes || null
-        }
-      );
-      console.log(`✅ Application status notification sent to candidate ${application.userId}`);
+      
+      if (status === 'shortlisted' && oldStatus !== 'shortlisted') {
+        // Send notification when shortlisting
+        await NotificationService.sendApplicationStatusNotification(
+          application.userId,
+          req.user.id,
+          application.id,
+          oldStatus,
+          status,
+          {
+            jobId: application.jobId,
+            reason: req.body.reason || null,
+            notes: req.body.notes || null
+          }
+        );
+        console.log(`✅ Application status notification sent to candidate ${application.userId}`);
+      } else if (oldStatus === 'shortlisted' && status !== 'shortlisted') {
+        // Remove notification when unshortlisting
+        await NotificationService.removeShortlistingNotification(
+          application.userId,
+          req.user.id,
+          application.jobId,
+          null, // requirementId (not applicable for job applications)
+          {
+            applicationId: application.id,
+            reason: req.body.reason || null,
+            notes: req.body.notes || null
+          }
+        );
+        console.log(`✅ Shortlisting notification removed for candidate ${application.userId}`);
+      } else if (status !== 'shortlisted' && oldStatus !== 'shortlisted') {
+        // Send notification for other status changes
+        await NotificationService.sendApplicationStatusNotification(
+          application.userId,
+          req.user.id,
+          application.id,
+          oldStatus,
+          status,
+          {
+            jobId: application.jobId,
+            reason: req.body.reason || null,
+            notes: req.body.notes || null
+          }
+        );
+        console.log(`✅ Application status notification sent to candidate ${application.userId}`);
+      }
     } catch (notificationError) {
-      console.error('Failed to send application status notification:', notificationError);
+      console.error('Failed to handle application status notification:', notificationError);
       // Don't fail the status update if notification fails
     }
 

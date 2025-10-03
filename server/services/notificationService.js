@@ -303,6 +303,58 @@ This is an automated notification. Please do not reply to this email.
   }
 
   /**
+   * Remove shortlisting notification when candidate is unshortlisted
+   * @param {string} candidateId - ID of the candidate being unshortlisted
+   * @param {string} employerId - ID of the employer who unshortlisted
+   * @param {string} jobId - ID of the job (optional)
+   * @param {string} requirementId - ID of the requirement (optional)
+   * @param {object} context - Additional context data
+   */
+  static async removeShortlistingNotification(candidateId, employerId, jobId = null, requirementId = null, context = {}) {
+    try {
+      console.log(`🔔 Removing shortlisting notification for candidate ${candidateId} by employer ${employerId}`);
+      
+      // Find and remove shortlisting notifications
+      const notificationType = jobId ? 'application_shortlisted' : 'candidate_shortlisted';
+      
+      const notifications = await Notification.findAll({
+        where: {
+          userId: candidateId,
+          type: notificationType,
+          isRead: false // Only remove unread notifications
+        }
+      });
+
+      let removedCount = 0;
+      for (const notification of notifications) {
+        // Check if the notification is for the same employer and job/requirement
+        if (notification.metadata) {
+          const metadata = typeof notification.metadata === 'string' 
+            ? JSON.parse(notification.metadata) 
+            : notification.metadata;
+          
+          const isMatchingEmployer = metadata.employerId === employerId;
+          const isMatchingJob = jobId ? metadata.jobId === jobId : true;
+          const isMatchingRequirement = requirementId ? metadata.requirementId === requirementId : true;
+          
+          if (isMatchingEmployer && isMatchingJob && isMatchingRequirement) {
+            await notification.destroy();
+            removedCount++;
+            console.log(`✅ Removed shortlisting notification ${notification.id} for candidate ${candidateId}`);
+          }
+        }
+      }
+
+      console.log(`✅ Removed ${removedCount} shortlisting notifications for candidate ${candidateId}`);
+      return { success: true, removedCount };
+
+    } catch (error) {
+      console.error(`❌ Error removing shortlisting notification for candidate ${candidateId}:`, error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Send application status change notification
    */
   static async sendApplicationStatusNotification(candidateId, employerId, applicationId, oldStatus, newStatus, context = {}) {
