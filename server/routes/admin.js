@@ -327,7 +327,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: WorkExperience,
           as: 'workExperiences',
-          attributes: ['id', 'companyName', 'position', 'startDate', 'endDate', 'description', 'isCurrent']
+          attributes: ['id', 'companyName', 'jobTitle', 'startDate', 'endDate', 'description', 'isCurrent']
         },
         {
           model: Education,
@@ -437,7 +437,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
             attributes: ['id', 'status', 'createdAt'],
             include: [{
               model: User,
-              as: 'user',
+              as: 'applicant',
               attributes: ['id', 'first_name', 'last_name', 'email']
             }]
           }],
@@ -578,7 +578,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
           attributes: ['id', 'status', 'coverLetter', 'createdAt', 'updatedAt'],
           include: [{
             model: User,
-            as: 'user',
+            as: 'applicant',
             attributes: ['id', 'first_name', 'last_name', 'email', 'phone_number', 'region'],
             include: [{
               model: Resume,

@@ -112,7 +112,7 @@ interface JobDetail {
     coverLetter?: string
     createdAt: string
     updatedAt: string
-    user: {
+    applicant: {
       id: string
       first_name: string
       last_name: string
@@ -629,19 +629,19 @@ export default function JobDetailPage() {
                             <div className="flex items-center space-x-3 mb-2">
                               <Avatar>
                                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                                  {application.user.first_name.charAt(0)}{application.user.last_name.charAt(0)}
+                                  {application.applicant.first_name.charAt(0)}{application.applicant.last_name.charAt(0)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
                                 <h4 className="text-white font-semibold">
-                                  {application.user.first_name} {application.user.last_name}
+                                  {application.applicant.first_name} {application.applicant.last_name}
                                 </h4>
-                                <p className="text-gray-400">{application.user.email}</p>
-                                {application.user.phone_number && (
-                                  <p className="text-sm text-gray-400">{application.user.phone_number}</p>
+                                <p className="text-gray-400">{application.applicant.email}</p>
+                                {application.applicant.phone_number && (
+                                  <p className="text-sm text-gray-400">{application.applicant.phone_number}</p>
                                 )}
-                                {application.user.region && (
-                                  <p className="text-sm text-gray-400">{application.user.region}</p>
+                                {application.applicant.region && (
+                                  <p className="text-sm text-gray-400">{application.applicant.region}</p>
                                 )}
                               </div>
                             </div>
@@ -650,16 +650,16 @@ export default function JobDetailPage() {
                                 {application.coverLetter}
                               </p>
                             )}
-                            {application.user.resumes && application.user.resumes.length > 0 && (
+                            {application.applicant.resumes && application.applicant.resumes.length > 0 && (
                               <div className="mt-2">
                                 <p className="text-sm text-gray-400">Resume:</p>
                                 <a 
-                                  href={application.user.resumes[0].filePath} 
+                                  href={application.applicant.resumes[0].filePath} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="text-blue-400 hover:underline text-sm"
                                 >
-                                  {application.user.resumes[0].title}
+                                  {application.applicant.resumes[0].title}
                                 </a>
                               </div>
                             )}

@@ -155,7 +155,7 @@ interface UserDetail {
   workExperiences: Array<{
     id: string
     companyName: string
-    position: string
+    jobTitle: string
     startDate: string
     endDate?: string
     description?: string
@@ -629,7 +629,7 @@ export default function UserDetailPage() {
                         <div key={exp.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="text-white font-semibold">{exp.position}</h4>
+                              <h4 className="text-white font-semibold">{exp.jobTitle}</h4>
                               <p className="text-gray-400">{exp.companyName}</p>
                               <p className="text-sm text-gray-400">
                                 {new Date(exp.startDate).toLocaleDateString()} - {exp.isCurrent ? 'Present' : new Date(exp.endDate!).toLocaleDateString()}

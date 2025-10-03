@@ -122,7 +122,7 @@ interface CompanyDetail {
       id: string
       status: string
       createdAt: string
-      user: {
+      applicant: {
         id: string
         first_name: string
         last_name: string
