@@ -129,6 +129,9 @@ app.use((req, res, next) => {
 // This allows multer to handle multipart/form-data before express.json tries to parse it
 app.use('/api/bulk-import', require('./routes/bulk-import'));
 
+// Admin routes
+app.use('/api/admin', require('./routes/admin'));
+
 // Body parsing middleware for non-multipart requests
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -286,6 +289,8 @@ app.use('/api/interviews', interviewsRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
 app.use('/api/salary', salaryRoutes);
+// Admin routes (secure)
+app.use('/api/admin', require('./routes/admin'));
 
   // Compatibility redirect for cover-letter download legacy path
   app.get('/api/cover-letters/:id/download', (req, res) => {
@@ -413,6 +418,14 @@ const startServer = async () => {
       }
     } catch (seedError) {
       console.warn('⚠️ Skipping default template seeding:', seedError?.message || seedError);
+    }
+
+    // Seed admin user
+    try {
+      const { seedAdminUser } = require('./scripts/seedAdminUser');
+      await seedAdminUser();
+    } catch (adminSeedError) {
+      console.warn('⚠️ Skipping admin user seeding:', adminSeedError?.message || adminSeedError);
     }
     
     app.listen(PORT, () => {

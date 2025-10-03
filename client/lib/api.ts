@@ -334,6 +334,71 @@ class ApiService {
     return headers;
   }
 
+  private getHeaders(): HeadersInit {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+    
+    return headers;
+  }
+
+  // HTTP Methods
+  private async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<T>(response);
+    });
+  }
+
+  private async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: data ? JSON.stringify(data) : undefined,
+      });
+      return this.handleResponse<T>(response);
+    });
+  }
+
+  private async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: data ? JSON.stringify(data) : undefined,
+      });
+      return this.handleResponse<T>(response);
+    });
+  }
+
+  private async patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+        body: data ? JSON.stringify(data) : undefined,
+      });
+      return this.handleResponse<T>(response);
+    });
+  }
+
+  private async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest(endpoint, async () => {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<T>(response);
+    });
+  }
+
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const url = response.url;
     console.log('🔍 handleResponse - Starting with URL:', url, 'Status:', response.status);
@@ -3319,6 +3384,209 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Admin Methods
+  async getAdminStats(): Promise<ApiResponse<any>> {
+    return this.get('/admin/stats');
+  }
+
+  async getAllUsers(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    userType?: string;
+    status?: string;
+    region?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.userType) queryParams.append('userType', params.userType);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.region) queryParams.append('region', params.region);
+    
+    return this.get(`/admin/users?${queryParams.toString()}`);
+  }
+
+  async getUsersByRegion(region: string, params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    userType?: string;
+    status?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.userType) queryParams.append('userType', params.userType);
+    if (params?.status) queryParams.append('status', params.status);
+    
+    return this.get(`/admin/users/region/${region}?${queryParams.toString()}`);
+  }
+
+  async updateUserStatus(userId: string, isActive: boolean): Promise<ApiResponse<any>> {
+    return this.patch(`/admin/users/${userId}/status`, { isActive });
+  }
+
+  async deleteUser(userId: string): Promise<ApiResponse<any>> {
+    return this.delete(`/admin/users/${userId}`);
+  }
+
+  async exportUsers(params?: {
+    userType?: string;
+    status?: string;
+    region?: string;
+  }): Promise<ApiResponse<string>> {
+    const queryParams = new URLSearchParams();
+    if (params?.userType) queryParams.append('userType', params.userType);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.region) queryParams.append('region', params.region);
+    
+    const response = await fetch(`${API_BASE_URL}/admin/users/export?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to export users');
+    }
+    
+    const csvData = await response.text();
+    return { success: true, message: 'Export successful', data: csvData };
+  }
+
+  async getAllCompanies(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    region?: string;
+    verification?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.region) queryParams.append('region', params.region);
+    if (params?.verification) queryParams.append('verification', params.verification);
+    
+    return this.get(`/admin/companies?${queryParams.toString()}`);
+  }
+
+  async getCompaniesByRegion(region: string, params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    verification?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.verification) queryParams.append('verification', params.verification);
+    
+    return this.get(`/admin/companies/region/${region}?${queryParams.toString()}`);
+  }
+
+  async updateCompanyStatus(companyId: string, isActive: boolean): Promise<ApiResponse<any>> {
+    return this.patch(`/admin/companies/${companyId}/status`, { isActive });
+  }
+
+  async updateCompanyVerification(companyId: string, isVerified: boolean): Promise<ApiResponse<any>> {
+    return this.patch(`/admin/companies/${companyId}/verification`, { isVerified });
+  }
+
+  async deleteCompany(companyId: string): Promise<ApiResponse<any>> {
+    return this.delete(`/admin/companies/${companyId}`);
+  }
+
+  async exportCompanies(params?: {
+    status?: string;
+    region?: string;
+    verification?: string;
+  }): Promise<ApiResponse<string>> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.region) queryParams.append('region', params.region);
+    if (params?.verification) queryParams.append('verification', params.verification);
+    
+    const response = await fetch(`${API_BASE_URL}/admin/companies/export?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to export companies');
+    }
+    
+    const csvData = await response.text();
+    return { success: true, message: 'Export successful', data: csvData };
+  }
+
+  async getAllJobs(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    region?: string;
+    jobType?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.region) queryParams.append('region', params.region);
+    if (params?.jobType) queryParams.append('jobType', params.jobType);
+    
+    return this.get(`/admin/jobs?${queryParams.toString()}`);
+  }
+
+  async getJobsByRegion(region: string, params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    jobType?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.jobType) queryParams.append('jobType', params.jobType);
+    
+    return this.get(`/admin/jobs/region/${region}?${queryParams.toString()}`);
+  }
+
+
+  async exportJobs(params?: {
+    status?: string;
+    region?: string;
+    jobType?: string;
+  }): Promise<ApiResponse<string>> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.region) queryParams.append('region', params.region);
+    if (params?.jobType) queryParams.append('jobType', params.jobType);
+    
+    const response = await fetch(`${API_BASE_URL}/admin/jobs/export?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to export jobs');
+    }
+    
+    const csvData = await response.text();
+    return { success: true, message: 'Export successful', data: csvData };
+  }
+
   async retryBulkImport(importId: string): Promise<ApiResponse> {
     const response = await fetch(`${API_BASE_URL}/bulk-import/${importId}/retry`, {
       method: 'POST',
@@ -3339,6 +3607,9 @@ class ApiService {
     
     return response.blob();
   }
+
+  // ============================================================================
+  // ADMIN METHODS
 }
 
 export const apiService = new ApiService();

@@ -1,0 +1,908 @@
+const express = require('express');
+const router = express.Router();
+const { User, Company, Job, JobApplication, Sequelize } = require('../models');
+const { authenticateToken } = require('../middlewares/auth');
+const { requireAdmin } = require('../middlewares/adminAuth');
+const { Op } = Sequelize;
+
+// Apply admin authentication to all routes
+router.use(authenticateToken);
+router.use(requireAdmin);
+
+// Get admin dashboard statistics
+router.get('/stats', async (req, res) => {
+  try {
+    const [
+      userStats,
+      companyStats,
+      jobStats,
+      applicationStats
+    ] = await Promise.all([
+      // User statistics
+      Promise.all([
+        User.count(),
+        User.count({ where: { user_type: 'jobseeker' } }),
+        User.count({ where: { user_type: 'employer' } }),
+        User.count({ where: { user_type: 'admin' } }),
+        User.count({ where: { is_active: true } }),
+        User.count({
+          where: {
+            createdAt: {
+              [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            }
+          }
+        })
+      ]),
+      // Company statistics
+      Promise.all([
+        Company.count(),
+        Company.count({ where: { isVerified: true } }),
+        Company.count({ where: { isVerified: false } }),
+        Company.count({ where: { isActive: true } }),
+        Company.count({
+          where: {
+            createdAt: {
+              [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            }
+          }
+        })
+      ]),
+      // Job statistics
+      Promise.all([
+        Job.count(),
+        Job.count({ where: { status: 'active' } }),
+        Job.count({ where: { status: 'inactive' } }),
+        Job.count({ where: { region: 'india' } }),
+        Job.count({ where: { region: 'gulf' } }),
+        Job.count({
+          where: {
+            createdAt: {
+              [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            }
+          }
+        })
+      ]),
+      // Application statistics
+      JobApplication.count()
+    ]);
+
+    const stats = {
+      users: {
+        total: userStats[0],
+        jobseekers: userStats[1],
+        employers: userStats[2],
+        admins: userStats[3],
+        active: userStats[4],
+        newLast30Days: userStats[5]
+      },
+      companies: {
+        total: companyStats[0],
+        verified: companyStats[1],
+        unverified: companyStats[2],
+        active: companyStats[3],
+        newLast30Days: companyStats[4]
+      },
+      jobs: {
+        total: jobStats[0],
+        active: jobStats[1],
+        inactive: jobStats[2],
+        india: jobStats[3],
+        gulf: jobStats[4],
+        newLast30Days: jobStats[5]
+      },
+      applications: {
+        total: applicationStats
+      }
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: error.message
+    });
+  }
+});
+
+// Get all users with filters
+router.get('/users', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      userType,
+      status,
+      region
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereClause = {};
+
+    // Add filters
+    if (userType && userType !== 'all') {
+      whereClause.user_type = userType;
+    }
+
+    if (status && status !== 'all') {
+      whereClause.is_active = status === 'active';
+    }
+
+    if (region && region !== 'all') {
+      whereClause.region = region;
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { first_name: { [Op.iLike]: `%${search}%` } },
+        { last_name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      attributes: { exclude: ['password'] }
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+      error: error.message
+    });
+  }
+});
+
+// Get users by region
+router.get('/users/region/:region', async (req, res) => {
+  try {
+    const { region } = req.params;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      userType,
+      status
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereClause = { region };
+
+    // Add filters
+    if (userType && userType !== 'all') {
+      whereClause.user_type = userType;
+    }
+
+    if (status && status !== 'all') {
+      whereClause.is_active = status === 'active';
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { first_name: { [Op.iLike]: `%${search}%` } },
+        { last_name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      attributes: { exclude: ['password'] }
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users by region:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+      error: error.message
+    });
+  }
+});
+
+// Update user status
+router.patch('/users/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    await user.update({ is_active: isActive });
+
+    res.json({
+      success: true,
+      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
+      data: { user: { id: user.id, is_active: user.is_active } }
+    });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user status',
+      error: error.message
+    });
+  }
+});
+
+// Delete user
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Don't allow deleting admin users
+    if (user.user_type === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete admin users'
+      });
+    }
+
+    await user.destroy();
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
+      error: error.message
+    });
+  }
+});
+
+// Export users
+router.get('/users/export', async (req, res) => {
+  try {
+    const { userType, status, region } = req.query;
+
+    const whereClause = {};
+
+    if (userType && userType !== 'all') {
+      whereClause.user_type = userType;
+    }
+
+    if (status && status !== 'all') {
+      whereClause.is_active = status === 'active';
+    }
+
+    if (region && region !== 'all') {
+      whereClause.region = region;
+    }
+
+    const users = await User.findAll({
+      where: whereClause,
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Convert to CSV
+    const csvHeader = 'ID,First Name,Last Name,Email,Phone,User Type,Region,Status,Email Verified,Phone Verified,Last Login,Created At\n';
+    const csvRows = users.map(user => {
+      return [
+        user.id,
+        user.first_name || '',
+        user.last_name || '',
+        user.email || '',
+        user.phone || '',
+        user.user_type || '',
+        user.region || '',
+        user.is_active ? 'Active' : 'Inactive',
+        user.is_email_verified ? 'Yes' : 'No',
+        user.is_phone_verified ? 'Yes' : 'No',
+        user.last_login_at ? new Date(user.last_login_at).toISOString() : '',
+        new Date(user.createdAt).toISOString()
+      ].map(field => `"${field}"`).join(',');
+    }).join('\n');
+
+    const csv = csvHeader + csvRows;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=users-export.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export users',
+      error: error.message
+    });
+  }
+});
+
+// Get all companies with filters
+router.get('/companies', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      region,
+      verification
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereClause = {};
+
+    // Add filters
+    if (status && status !== 'all') {
+      whereClause.isActive = status === 'active';
+    }
+
+    if (region && region !== 'all') {
+      whereClause.region = region;
+    }
+
+    if (verification && verification !== 'all') {
+      whereClause.isVerified = verification === 'verified';
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+        { industry: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const { count, rows: companies } = await Company.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']]
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        companies,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching companies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch companies',
+      error: error.message
+    });
+  }
+});
+
+// Get companies by region
+router.get('/companies/region/:region', async (req, res) => {
+  try {
+    const { region } = req.params;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      verification
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereClause = { region };
+
+    // Add filters
+    if (status && status !== 'all') {
+      whereClause.isActive = status === 'active';
+    }
+
+    if (verification && verification !== 'all') {
+      whereClause.isVerified = verification === 'verified';
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+        { industry: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const { count, rows: companies } = await Company.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']]
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        companies,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching companies by region:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch companies',
+      error: error.message
+    });
+  }
+});
+
+// Update company status
+router.patch('/companies/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const company = await Company.findByPk(id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    await company.update({ isActive });
+
+    res.json({
+      success: true,
+      message: `Company ${isActive ? 'activated' : 'deactivated'} successfully`,
+      data: { company: { id: company.id, isActive: company.isActive } }
+    });
+  } catch (error) {
+    console.error('Error updating company status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update company status',
+      error: error.message
+    });
+  }
+});
+
+// Update company verification
+router.patch('/companies/:id/verification', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isVerified } = req.body;
+
+    const company = await Company.findByPk(id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    await company.update({ isVerified });
+
+    res.json({
+      success: true,
+      message: `Company ${isVerified ? 'verified' : 'unverified'} successfully`,
+      data: { company: { id: company.id, isVerified: company.isVerified } }
+    });
+  } catch (error) {
+    console.error('Error updating company verification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update company verification',
+      error: error.message
+    });
+  }
+});
+
+// Delete company
+router.delete('/companies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const company = await Company.findByPk(id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    await company.destroy();
+
+    res.json({
+      success: true,
+      message: 'Company deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting company:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete company',
+      error: error.message
+    });
+  }
+});
+
+// Export companies
+router.get('/companies/export', async (req, res) => {
+  try {
+    const { status, region, verification } = req.query;
+
+    const whereClause = {};
+
+    if (status && status !== 'all') {
+      whereClause.isActive = status === 'active';
+    }
+
+    if (region && region !== 'all') {
+      whereClause.region = region;
+    }
+
+    if (verification && verification !== 'all') {
+      whereClause.isVerified = verification === 'verified';
+    }
+
+    const companies = await Company.findAll({
+      where: whereClause,
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Convert to CSV
+    const csvHeader = 'ID,Name,Email,Phone,Industry,Sector,Region,Status,Verified,Website,Address,City,State,Country,Total Jobs,Total Applications,Rating,Created At\n';
+    const csvRows = companies.map(company => {
+      return [
+        company.id,
+        company.name || '',
+        company.email || '',
+        company.phone || '',
+        company.industry || '',
+        company.sector || '',
+        company.region || '',
+        company.isActive ? 'Active' : 'Inactive',
+        company.isVerified ? 'Yes' : 'No',
+        company.website || '',
+        company.address || '',
+        company.city || '',
+        company.state || '',
+        company.country || '',
+        company.totalJobsPosted || 0,
+        company.totalApplications || 0,
+        company.rating || 0,
+        new Date(company.createdAt).toISOString()
+      ].map(field => `"${field}"`).join(',');
+    }).join('\n');
+
+    const csv = csvHeader + csvRows;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=companies-export.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting companies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export companies',
+      error: error.message
+    });
+  }
+});
+
+// Get all jobs with filters
+router.get('/jobs', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      region,
+      jobType
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereClause = {};
+
+    // Add filters
+    if (status && status !== 'all') {
+      whereClause.status = status;
+    }
+
+    if (region && region !== 'all') {
+      whereClause.region = region;
+    }
+
+    if (jobType && jobType !== 'all') {
+      whereClause.jobType = jobType;
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+        { location: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const { count, rows: jobs } = await Job.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'logo']
+        }
+      ]
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        jobs,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch jobs',
+      error: error.message
+    });
+  }
+});
+
+// Get jobs by region
+router.get('/jobs/region/:region', async (req, res) => {
+  try {
+    const { region } = req.params;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      jobType
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereClause = { region };
+
+    // Add filters
+    if (status && status !== 'all') {
+      whereClause.status = status;
+    }
+
+    if (jobType && jobType !== 'all') {
+      whereClause.jobType = jobType;
+    }
+
+    if (search) {
+      whereClause[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+        { location: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const { count, rows: jobs } = await Job.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'logo']
+        }
+      ]
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        jobs,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching jobs by region:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch jobs',
+      error: error.message
+    });
+  }
+});
+
+// Update job status
+router.patch('/jobs/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const job = await Job.findByPk(id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    await job.update({ status });
+
+    res.json({
+      success: true,
+      message: `Job ${status} successfully`,
+      data: { job: { id: job.id, status: job.status } }
+    });
+  } catch (error) {
+    console.error('Error updating job status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update job status',
+      error: error.message
+    });
+  }
+});
+
+// Delete job
+router.delete('/jobs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const job = await Job.findByPk(id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    await job.destroy();
+
+    res.json({
+      success: true,
+      message: 'Job deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting job:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete job',
+      error: error.message
+    });
+  }
+});
+
+// Export jobs
+router.get('/jobs/export', async (req, res) => {
+  try {
+    const { status, region, jobType } = req.query;
+
+    const whereClause = {};
+
+    if (status && status !== 'all') {
+      whereClause.status = status;
+    }
+
+    if (region && region !== 'all') {
+      whereClause.region = region;
+    }
+
+    if (jobType && jobType !== 'all') {
+      whereClause.jobType = jobType;
+    }
+
+    const jobs = await Job.findAll({
+      where: whereClause,
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['name']
+        }
+      ]
+    });
+
+    // Convert to CSV
+    const csvHeader = 'ID,Title,Company,Location,Region,Job Type,Status,Experience Level,Salary Min,Salary Max,Currency,Description,Created At\n';
+    const csvRows = jobs.map(job => {
+      return [
+        job.id,
+        job.title || '',
+        job.company?.name || '',
+        job.location || '',
+        job.region || '',
+        job.jobType || '',
+        job.status || '',
+        job.experienceLevel || '',
+        job.salaryMin || 0,
+        job.salaryMax || 0,
+        job.salaryCurrency || '',
+        (job.description || '').replace(/"/g, '""'),
+        new Date(job.createdAt).toISOString()
+      ].map(field => `"${field}"`).join(',');
+    }).join('\n');
+
+    const csv = csvHeader + csvRows;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=jobs-export.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting jobs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export jobs',
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;
