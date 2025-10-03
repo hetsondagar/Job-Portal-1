@@ -96,6 +96,16 @@ async function deployWithDbFix() {
       console.log('⚠️ Superadmin redirect fix failed, continuing:', error.message);
     }
 
+    // Step 5.8: Fix CORS and server issues
+    console.log('🔧 Step 5.8: Fixing CORS and server issues...');
+    try {
+      const { fixCorsAndServer } = require('./fix-cors-and-server');
+      await fixCorsAndServer();
+      console.log('✅ CORS and server issues fixed');
+    } catch (error) {
+      console.log('⚠️ CORS and server fix failed, continuing:', error.message);
+    }
+
     // Step 6: Fix admin stats endpoint
     console.log('🔧 Step 6: Fixing admin stats endpoint...');
     try {

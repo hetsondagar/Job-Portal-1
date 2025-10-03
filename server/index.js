@@ -65,40 +65,15 @@ app.use(helmet());
 
 // Enhanced CORS configuration - MUST BE BEFORE ALL ROUTES
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
+  origin: [
     process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app',
     process.env.CORS_ORIGIN || 'https://job-portal-nine-rouge.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://job-portal-nine-rouge.vercel.app',
-      'https://job-portal-dr834n32f-hetsondagar16-4175s-projects.vercel.app',
-      'https://job-portal-97q3.onrender.com',
-      // Allow all Vercel preview deployments
-      /^https:\/\/.*\.vercel\.app$/
-    ];
-    
-    // Check if origin matches any allowed origin (including regex patterns)
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-      if (typeof allowedOrigin === 'string') {
-        return allowedOrigin === origin;
-      } else if (allowedOrigin instanceof RegExp) {
-        return allowedOrigin.test(origin);
-      }
-      return false;
-    });
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.log('⚠️ CORS blocked origin:', origin);
-      // Still allow the request but log it
-      callback(null, true);
-    }
-  },
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://job-portal-nine-rouge.vercel.app',
+    'https://job-portal-dr834n32f-hetsondagar16-4175s-projects.vercel.app',
+    'https://job-portal-97q3.onrender.com'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -111,18 +86,21 @@ const corsOptions = {
     'Access-Control-Request-Headers'
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200,
   preflightContinue: false,
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
+
+// CORS is handled by the cors middleware above
 
 // Logging middleware to track request content types
 app.use((req, res, next) => {
   const contentType = req.get('Content-Type') || '';
   const path = req.path || '';
-  console.log('🔍 Request to:', path, 'Content-Type:', contentType);
+  const origin = req.headers.origin || 'no-origin';
+  console.log('🔍 Request to:', path, 'Content-Type:', contentType, 'Origin:', origin);
   next();
 });
 
@@ -251,6 +229,22 @@ app.get('/api/test', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'API routes are working',
+    timestamp: new Date().toISOString(),
+    cors: 'enabled',
+    origin: req.headers.origin || 'no-origin'
+  });
+});
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CORS test successful',
+    origin: req.headers.origin || 'no-origin',
+    headers: {
+      'Access-Control-Allow-Origin': req.headers.origin || '*',
+      'Access-Control-Allow-Credentials': 'true'
+    },
     timestamp: new Date().toISOString()
   });
 });
