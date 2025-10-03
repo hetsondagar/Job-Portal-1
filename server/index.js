@@ -129,9 +129,6 @@ app.use((req, res, next) => {
 // This allows multer to handle multipart/form-data before express.json tries to parse it
 app.use('/api/bulk-import', require('./routes/bulk-import'));
 
-// Admin routes
-app.use('/api/admin', require('./routes/admin'));
-
 // Admin setup routes (no auth required)
 app.use('/api/setup', require('./routes/admin-setup'));
 

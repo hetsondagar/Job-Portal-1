@@ -5,6 +5,25 @@ const { authenticateToken } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/adminAuth');
 const { Op } = Sequelize;
 
+// Test endpoint to verify admin authentication (before middleware)
+router.get('/test-auth', async (req, res) => {
+  try {
+    console.log('🔍 [ADMIN-TEST] Testing admin authentication endpoint');
+    res.json({
+      success: true,
+      message: 'Admin test endpoint accessible',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ [ADMIN-TEST] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test endpoint error',
+      error: error.message
+    });
+  }
+});
+
 // Apply admin authentication to all routes
 router.use(authenticateToken);
 router.use(requireAdmin);

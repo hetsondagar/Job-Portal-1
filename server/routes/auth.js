@@ -148,7 +148,10 @@ const validateResetPassword = [
 
 // Helper function to generate JWT token
 const generateToken = (user) => {
-  return jwt.sign(
+  console.log('🔍 [LOGIN] Generating JWT token for user:', user.email);
+  console.log('🔍 [LOGIN] Using JWT secret:', process.env.JWT_SECRET ? 'Present' : 'Using default');
+  
+  const token = jwt.sign(
     { 
       id: user.id, 
       email: user.email, 
@@ -157,6 +160,9 @@ const generateToken = (user) => {
     process.env.JWT_SECRET || 'your-secret-key',
     { expiresIn: '7d' }
   );
+  
+  console.log('✅ [LOGIN] JWT token generated successfully');
+  return token;
 };
 
 // Helper function to determine redirect URL based on user type and region
