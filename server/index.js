@@ -132,6 +132,9 @@ app.use('/api/bulk-import', require('./routes/bulk-import'));
 // Admin routes
 app.use('/api/admin', require('./routes/admin'));
 
+// Admin setup routes (no auth required)
+app.use('/api/setup', require('./routes/admin-setup'));
+
 // Body parsing middleware for non-multipart requests
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

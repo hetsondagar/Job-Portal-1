@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
@@ -18,7 +18,40 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { login } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (authLoading) return
+    
+    if (user && user.userType === 'admin') {
+      router.push('/admin/dashboard')
+    }
+  }, [user, authLoading, router])
+
+  // Show loading if checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show login form if already logged in as admin
+  if (user && user.userType === 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Redirecting to admin dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,7 +64,24 @@ export default function AdminLoginPage() {
     setLoading(true)
     
     try {
-      const response = await apiService.login(email, password)
+      // First, ensure admin user exists
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/setup/ensure-admin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (setupError) {
+        console.warn('Admin setup check failed:', setupError);
+        // Continue with login attempt even if setup check fails
+      }
+
+      const response = await apiService.login({
+        email,
+        password,
+        loginType: 'admin'
+      })
       
       if (response.success) {
         const { user, token } = response.data
