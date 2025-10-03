@@ -601,7 +601,7 @@ class ApiService {
 
     // Only set auth data if login was successful
     if (result.success && result.data?.token) {
-      localStorage.setItem('token', result.data.token);
+      this.setToken(result.data.token);
       localStorage.setItem('user', JSON.stringify(result.data.user));
       if (result.data.company) {
         localStorage.setItem('company', JSON.stringify(result.data.company));
@@ -620,9 +620,7 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
 
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('company');
+    this.clearAuth();
 
     return this.handleResponse(response);
   }
@@ -759,10 +757,7 @@ class ApiService {
       body: JSON.stringify({ password }),
     });
 
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-
-    localStorage.removeItem('company');
+    this.clearAuth();
 
     return this.handleResponse(response);
   }
@@ -1128,11 +1123,18 @@ class ApiService {
     return localStorage.getItem('token');
   }
 
+  setToken(token: string): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('token', token);
+    this.authToken = token;
+  }
+
   clearAuth(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('company');
+    this.authToken = null;
   }
 
   // OAuth methods
