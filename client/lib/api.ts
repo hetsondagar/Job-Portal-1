@@ -282,6 +282,13 @@ class ApiService {
 
   constructor() {
     this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+    // Initialize token from localStorage if available
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token')
+      if (token) {
+        this.authToken = token
+      }
+    }
   }
 
   // Rate limiting helper
@@ -324,7 +331,8 @@ class ApiService {
     }
   }
   private getAuthHeaders(): HeadersInit {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    // Use internal authToken first, fallback to localStorage
+    const token = this.authToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     
     const headers = {
       'Content-Type': 'application/json',
@@ -335,7 +343,8 @@ class ApiService {
   }
 
   private getHeaders(): HeadersInit {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    // Use internal authToken first, fallback to localStorage
+    const token = this.authToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -1191,6 +1200,12 @@ class ApiService {
   setToken(token: string): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem('token', token);
+    this.authToken = token;
+  }
+
+  refreshToken(): void {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('token');
     this.authToken = token;
   }
 

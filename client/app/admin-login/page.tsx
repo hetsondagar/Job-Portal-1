@@ -83,6 +83,9 @@ export default function AdminLoginPage() {
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
         
+        // Update the API service with the token
+        apiService.setToken(token)
+        
         // Update the auth context immediately
         updateUser(user)
         

@@ -56,6 +56,10 @@ export default function AdminDashboardPage() {
   const loadStats = async () => {
     try {
       setLoading(true)
+      
+      // Ensure API service has the latest token
+      apiService.refreshToken()
+      
       const response = await apiService.getAdminStats()
       
       if (response.success) {
