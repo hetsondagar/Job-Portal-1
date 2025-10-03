@@ -112,24 +112,15 @@ export default function EmployerLoginPage() {
       console.log('🎯 User type:', result?.user?.userType)
       
       // Check if user is an employer or admin and redirect accordingly
-      if (result?.user?.userType === 'employer') {
-        console.log('✅ User is employer, checking region for dashboard redirect')
+      if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {
+        console.log('✅ User is employer/admin, using redirectTo from server')
         
-        // Check if user has region preference (from user profile or company data)
-        const userRegion = (result?.user as any)?.region
-        const companyRegion = result?.company?.region
-        const requestedRegion = searchParams.get('region') || undefined
-        const regionToUse = userRegion || companyRegion || requestedRegion
-
-        const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-        console.log('🔄 Redirecting employer to:', target, 'based on region:', regionToUse || 'default')
+        // Use the redirectTo URL from the server response
+        const redirectTo = result?.redirectTo || '/employer-dashboard'
+        console.log('✅ Redirecting to:', redirectTo)
+        
         toast.success('Successfully signed in! Redirecting to your dashboard...')
-        router.replace(target)
-      } else if (result?.user?.userType === 'admin') {
-        // Admin: show employer dashboard as requested
-        console.log('✅ Admin user, redirecting to employer dashboard')
-        toast.success('Signed in as admin! Redirecting to dashboard...')
-        router.replace('/employer-dashboard')
+        router.replace(redirectTo)
       } else {
         console.log('❌ User is not employer or admin, userType:', result?.user?.userType)
         toast.error('This account is not registered as an employer. Please use the regular login.')

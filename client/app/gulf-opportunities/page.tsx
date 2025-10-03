@@ -235,10 +235,15 @@ export default function GulfOpportunitiesPage() {
           window.location.href = '/employer-login'
         }, 2000)
       } else {
-        console.log('✅ Gulf jobseeker login successful, redirecting to Gulf dashboard')
+        console.log('✅ Gulf jobseeker login successful, using redirectTo from server')
+        
+        // Use the redirectTo URL from the server response
+        const redirectTo = result?.redirectTo || '/jobseeker-gulf-dashboard'
+        console.log('✅ Redirecting to:', redirectTo)
+        
         toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
         setTimeout(() => {
-          router.push('/jobseeker-gulf-dashboard')
+          router.push(redirectTo)
         }, 1000)
       }
     } catch (error: any) {

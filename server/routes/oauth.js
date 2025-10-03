@@ -243,6 +243,12 @@ router.get('/google', (req, res, next) => {
     console.log('📝 Stored OAuth state in session:', req.query.state);
   }
   
+  // Also store userType if provided
+  if (req.query.userType) {
+    req.session.oauthUserType = req.query.userType;
+    console.log('📝 Stored OAuth userType in session:', req.query.userType);
+  }
+  
   passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
@@ -427,9 +433,18 @@ router.get('/facebook', (req, res, next) => {
     });
   }
   
+  console.log('🔍 Facebook OAuth Initiation - Query params:', req.query);
+  
   // Store the state parameter in session for later use
   if (req.query.state) {
     req.session.oauthState = req.query.state;
+    console.log('📝 Stored OAuth state in session:', req.query.state);
+  }
+  
+  // Also store userType if provided
+  if (req.query.userType) {
+    req.session.oauthUserType = req.query.userType;
+    console.log('📝 Stored OAuth userType in session:', req.query.userType);
   }
   
   passport.authenticate('facebook', { scope: ['email'] })(req, res, next);
@@ -806,7 +821,13 @@ router.get('/urls', (req, res) => {
       stateParam = 'state=gulf';
     }
     
-    urls.google = stateParam ? `${googleUrl}?${stateParam}` : googleUrl;
+    // Also add userType parameter for better tracking
+    let userTypeParam = `userType=${userType}`;
+    if (stateParam) {
+      userTypeParam += `&${stateParam}`;
+    }
+    
+    urls.google = `${googleUrl}?${userTypeParam}`;
     console.log('🔍 Generated Google OAuth URL:', urls.google);
   }
   
@@ -821,7 +842,13 @@ router.get('/urls', (req, res) => {
       stateParam = 'state=gulf';
     }
     
-    urls.facebook = stateParam ? `${facebookUrl}?${stateParam}` : facebookUrl;
+    // Also add userType parameter for better tracking
+    let userTypeParam = `userType=${userType}`;
+    if (stateParam) {
+      userTypeParam += `&${stateParam}`;
+    }
+    
+    urls.facebook = `${facebookUrl}?${userTypeParam}`;
     console.log('🔍 Generated Facebook OAuth URL:', urls.facebook);
   }
   

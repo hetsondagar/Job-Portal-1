@@ -80,24 +80,16 @@ export default function LoginPage() {
           window.location.href = '/employer-login'
         }, 2000)
       } else {
-        console.log('✅ Jobseeker login successful, checking region for dashboard redirect')
+        console.log('✅ Jobseeker login successful, using redirectTo from server')
         
-        // Check if user has region preference for routing
-        const userRegion = (result?.user as any)?.region
+        // Use the redirectTo URL from the server response
+        const redirectTo = result?.redirectTo || '/dashboard'
+        console.log('✅ Redirecting to:', redirectTo)
         
-        if (userRegion === 'gulf') {
-          console.log('✅ Gulf region jobseeker, redirecting to Gulf dashboard')
-          toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
-          setTimeout(() => {
-            window.location.href = '/jobseeker-gulf-dashboard'
-          }, 1000)
-        } else {
-          console.log('✅ India/Other region jobseeker, redirecting to regular dashboard')
-          toast.success('Successfully signed in! Redirecting to dashboard...')
-          setTimeout(() => {
-            window.location.href = '/dashboard'
-          }, 1000)
-        }
+        toast.success('Successfully signed in! Redirecting...')
+        setTimeout(() => {
+          window.location.href = redirectTo
+        }, 1000)
       }
     } catch (error: any) {
       console.error('❌ Login error:', error)

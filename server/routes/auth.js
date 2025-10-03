@@ -159,6 +159,20 @@ const generateToken = (user) => {
   );
 };
 
+// Helper function to determine redirect URL based on user type and region
+const getRedirectUrl = (userType, region) => {
+  if (userType === 'employer' || userType === 'admin') {
+    return '/employer-dashboard';
+  } else if (userType === 'jobseeker') {
+    if (region === 'gulf') {
+      return '/jobseeker-gulf-dashboard';
+    } else {
+      return '/dashboard';
+    }
+  }
+  return '/dashboard'; // Default fallback
+};
+
 // Signup endpoint
 router.post('/signup', validateSignup, async (req, res) => {
   try {
@@ -560,9 +574,13 @@ router.post('/login', validateLogin, async (req, res) => {
         isEmailVerified: user.is_email_verified,
         accountStatus: user.account_status,
         lastLoginAt: user.last_login_at,
-        companyId: user.company_id
+        companyId: user.company_id,
+        region: user.region,
+        currentLocation: user.current_location,
+        profileCompletion: user.profile_completion
       },
-      token
+      token,
+      redirectTo: getRedirectUrl(user.user_type, user.region)
     };
 
     // If user is an employer, include company information

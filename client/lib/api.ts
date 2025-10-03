@@ -1243,6 +1243,11 @@ class ApiService {
     return result as any;
   }
 
+  // Alias for setupOAuthPassword for consistency
+  async setupPassword(password: string): Promise<ApiResponse> {
+    return this.setupOAuthPassword(password);
+  }
+
   // Applications endpoints
   async getApplications(): Promise<ApiResponse<any[]>> {
     const response = await fetch(`${API_BASE_URL}/user/applications`, {

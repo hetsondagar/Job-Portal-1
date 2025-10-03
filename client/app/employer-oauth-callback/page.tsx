@@ -2,322 +2,236 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Building2, CheckCircle, Loader2, Shield, Users, Lock, Eye, EyeOff } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertCircle, Building2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { apiService } from '@/lib/api'
-import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
 
 export default function EmployerOAuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login } = useAuth()
-  
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'password-setup' | 'profile-setup'>('loading')
-  const [message, setMessage] = useState('Processing authentication...')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [settingPassword, setSettingPassword] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [companyName, setCompanyName] = useState('')
-  const [companyId, setCompanyId] = useState<string | null>(null)
-  const [region, setRegion] = useState<'india' | 'gulf' | 'other' | ''>('')
-  const [companyType, setCompanyType] = useState<'new' | 'existing'>('new')
-  const [savingProfile, setSavingProfile] = useState(false)
-  const [companies, setCompanies] = useState<any[]>([])
-  const [loadingCompanies, setLoadingCompanies] = useState(false)
-
-  const loadCompanies = async () => {
-    try {
-      setLoadingCompanies(true)
-      const response = await apiService.getCompanies()
-      if (response.success) {
-        setCompanies(response.data || [])
-      }
-    } catch (error) {
-      console.error('Failed to load companies:', error)
-    } finally {
-      setLoadingCompanies(false)
-    }
-  }
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'setup' | 'profile'>('loading')
+  const [message, setMessage] = useState('')
+  const [user, setUser] = useState<any>(null)
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false)
+  const [provider, setProvider] = useState('')
+  const [userType, setUserType] = useState('')
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
         const token = searchParams.get('token')
-        const provider = searchParams.get('provider')
-        // Ignore URL flag; rely on backend profile flag instead
-        const userType = searchParams.get('userType') || 'employer'
+        const providerParam = searchParams.get('provider')
+        const needsPasswordSetupParam = searchParams.get('needsPasswordSetup')
+        const userTypeParam = searchParams.get('userType')
+        const error = searchParams.get('error')
 
-        console.log('🔍 Employer OAuth callback - Params:', {
-          token: token ? 'present' : 'missing',
-          provider,
-          userType
-        });
+        console.log('🔍 Employer OAuth Callback - Parameters:', {
+          token: token ? 'Present' : 'Missing',
+          provider: providerParam,
+          needsPasswordSetup: needsPasswordSetupParam,
+          userType: userTypeParam,
+          error
+        })
 
-        // Log all search params for debugging
-        console.log('🔍 All search params:', Object.fromEntries(searchParams.entries()));
+        if (error) {
+          setStatus('error')
+          setMessage(decodeURIComponent(error))
+          return
+        }
 
         if (!token) {
-          throw new Error('No authentication token received')
+          setStatus('error')
+          setMessage('No authentication token received')
+          return
         }
 
-        // Store the token and get user data
-        console.log('🔄 Storing token and getting user data...')
-        await apiService.handleOAuthCallback(token)
+        // Store the token
+        apiService.setToken(token)
+        setProvider(providerParam || '')
+        setUserType(userTypeParam || '')
+        setNeedsPasswordSetup(needsPasswordSetupParam === 'true')
+
+        // Get user data
+        const userResponse = await apiService.getCurrentUser()
         
-        // Get user data using the token
-        console.log('🔄 Getting current user data...')
-        const response = await apiService.getCurrentUser()
-        
-        console.log('🔍 Employer OAuth callback - User response:', {
-          success: response.success,
-          userType: response.data?.user?.userType,
-          email: response.data?.user?.email,
-          companyId: response.data?.user?.companyId
-        });
-        
-        if (response.success && response.data?.user) {
-          // Store user data
-          localStorage.setItem('user', JSON.stringify(response.data.user))
-          console.log('✅ User data stored in localStorage')
+        if (userResponse.success && userResponse.data?.user) {
+          setUser(userResponse.data.user)
           
-          // Store user data as received from backend
-          console.log('✅ User type from backend:', response.data.user.userType)
-          
-          // Check if this is a jobseeker user - if so, redirect to jobseeker callback
-          if (response.data.user.userType === 'jobseeker') {
-            console.log('❌ Jobseeker user detected in employer OAuth callback - redirecting to jobseeker callback')
-            toast.error('This account is registered as a jobseeker. Redirecting to jobseeker login.')
-            setTimeout(() => {
-              router.push('/login')
-            }, 2000)
-            return
-          }
-          
-          // Check if user has previously skipped password setup (from API or localStorage)
-          const apiPasswordSkipped = Boolean((response.data.user as any).passwordSkipped)
-          const localStorageSkipped = localStorage.getItem(`oauth:pwdSkipped:${response.data.user.id}`) === 'true' || 
-                                     localStorage.getItem(`oauth:pwdSkipped:${response.data.user.email}`) === 'true'
-          const hasSkippedPassword = apiPasswordSkipped || localStorageSkipped
-          
-          // For employers, ALWAYS require profile setup for OAuth users (they need to create company)
-          // OAuth users are detected by the presence of provider parameter in URL or missing company
-          const isOAuthUser = Boolean(provider) // If we have a provider, this is an OAuth user
-          const hasCompany = Boolean((response.data.user as any)?.company?.name || (response.data.user as any)?.companyId)
-          // Force profile setup for OAuth users without company OR if user type is employer/admin but no company
-          const needsProfileSetup = (isOAuthUser && !hasCompany) || 
-                                   ((response.data.user.userType === 'employer' || response.data.user.userType === 'admin') && !hasCompany)
-          
-          console.log('🔍 PROFILE SETUP DEBUG:', {
-            isOAuthUser,
-            hasCompany,
-            needsProfileSetup,
-            provider: provider,
-            oauthProvider: (response.data.user as any)?.oauthProvider,
-            companyName: (response.data.user as any)?.company?.name,
-            companyId: (response.data.user as any)?.companyId,
-            userType: response.data.user.userType,
-            fullUserData: response.data.user
-          })
-          const hasPassword = Boolean((response.data.user as any).hasPassword)
-          // Use the backend-calculated requiresPasswordSetup field
-          const mustSetupPassword = Boolean((response.data.user as any).requiresPasswordSetup)
-          const profileCompleted = Boolean((response.data.user as any).profileCompleted)
-          setFirstName(response.data.user.firstName || '')
-          setLastName(response.data.user.lastName || '')
-          setPhone(response.data.user.phone || '')
-          setCompanyName((response.data.user as any)?.company?.name || '')
-          setCompanyId((response.data.user as any)?.companyId || null)
-
-          // Set region from user profile or fetch from company
-          const userRegion = (response.data.user as any)?.region
-          if (userRegion) {
-            setRegion(userRegion)
+          if (needsPasswordSetupParam === 'true') {
+            setStatus('setup')
+            setMessage('Please set up a password for your account')
+          } else if (!userResponse.data.user.companyId) {
+            setStatus('profile')
+            setMessage('Please complete your employer profile setup')
           } else {
-            // Fetch company to get region if user doesn't have one
-          try {
-            const cid = (response.data.user as any)?.companyId
-            if (cid) {
-              const companyResp = await apiService.getCompany(cid)
-              if (companyResp.success && companyResp.data) {
-                localStorage.setItem('company', JSON.stringify(companyResp.data))
-                setRegion((companyResp.data.region as any) || '')
-              }
-            }
-          } catch (err) {
-            console.warn('Failed to fetch company for employer OAuth:', err)
-          }
-          }
-
-          // Check if user has already completed initial setup
-          // For employers, a user who has completed setup has either:
-          // 1. Set a password OR skipped password setup
-          // 2. AND has basic profile info (phone number OR company info)
-          const hasCompletedInitialSetup = (hasPassword || hasSkippedPassword) && 
-                                          (Boolean(response.data.user.phone) || Boolean((response.data.user as any)?.companyId))
-          
-          // For debugging: log the exact values
-          console.log('🔍 EMPLOYER SETUP CHECK:', {
-            hasPassword,
-            hasSkippedPassword,
-            phone: response.data.user.phone,
-            companyId: (response.data.user as any)?.companyId,
-            hasCompletedInitialSetup,
-            willShowDialogs: !hasCompletedInitialSetup
-          })
-          
-          // Also check profile completion for returning users  
-          const hasCompletedProfileBefore = response.data.user.profileCompletion && response.data.user.profileCompletion >= 60
-
-          // DEBUG: Log all the key values
-          console.log('🔍 DEBUG - Employer OAuth Callback Values:', {
-            userType: response.data.user.userType,
-            oauthProvider: (response.data.user as any).oauthProvider,
-            lastLoginAt: response.data.user.lastLoginAt,
-            hasPassword: hasPassword,
-            passwordValue: (response.data.user as any).password || 'null',
-            passwordSkipped: (response.data.user as any).passwordSkipped,
-            hasSkippedPassword: hasSkippedPassword,
-            hasCompletedInitialSetup: hasCompletedInitialSetup,
-            profileCompletion: response.data.user.profileCompletion,
-            hasCompletedProfileBefore: hasCompletedProfileBefore,
-            requiresPasswordSetup: (response.data.user as any).requiresPasswordSetup,
-            mustSetupPassword: mustSetupPassword,
-            needsProfileSetup: needsProfileSetup,
-            profileCompleted: profileCompleted,
-            firstName: response.data.user.firstName,
-            lastName: response.data.user.lastName,
-            phone: response.data.user.phone
-          })
-
-          console.log('🚨 EMPLOYER PASSWORD DIALOG CONDITION:', {
-            'isFirstTime': !hasCompletedInitialSetup,
-            'requiresPasswordSetup': (response.data.user as any).requiresPasswordSetup,
-            'mustSetupPassword': mustSetupPassword,
-            'willShowPasswordDialog': !hasCompletedInitialSetup && mustSetupPassword
-          })
-
-          console.log('🔍 EMPLOYER DETAILED CONDITION BREAKDOWN:', {
-            'hasPassword': hasPassword,
-            'hasSkippedPassword': hasSkippedPassword,
-            'phone': response.data.user.phone,
-            'hasCompletedInitialSetup': hasCompletedInitialSetup,
-            'profileCompletion': response.data.user.profileCompletion,
-            'hasCompletedProfileBefore': hasCompletedProfileBefore,
-            'isFirstTime': !hasCompletedInitialSetup,
-            'requiresPasswordSetup': (response.data.user as any).requiresPasswordSetup,
-            'FINAL_RESULT': !hasCompletedInitialSetup && mustSetupPassword
-          })
-
-          // For first-time users, show both dialogs in sequence
-          // Fallback: If user has no password and no phone/company, they need setup
-          const needsSetup = !hasPassword && !response.data.user.phone && !(response.data.user as any)?.companyId
-          console.log('🔍 EMPLOYER FALLBACK CHECK:', { needsSetup, hasPassword, phone: response.data.user.phone, companyId: (response.data.user as any)?.companyId })
-          
-          if (!hasCompletedInitialSetup || needsSetup) {
-            console.log('🔍 SETUP DECISION:', { 
-              mustSetupPassword, 
-              needsProfileSetup, 
-              hasCompletedInitialSetup, 
-              needsSetup 
-            })
-            if (mustSetupPassword) {
-              // First: Show password setup dialog
-              console.log('🔄 New user needs password setup')
-            setStatus('password-setup')
-            setMessage(`Welcome! Please set up a password for your ${provider} account`)
-            toast.success(`Welcome! Please set up a password for your ${provider} account`)
-            setDialogOpen(true)
-          } else if (needsProfileSetup) {
-              // Second: Show profile setup dialog (after password or if no password needed)
-              console.log('🔄 OAuth user needs profile setup - no company found')
-            setStatus('profile-setup')
-            setMessage('Complete your company details to continue')
-            setDialogOpen(true)
-          } else {
-              // Check if this is an OAuth user without company - force profile setup
-              if (isOAuthUser && !hasCompany) {
-                console.log('🔄 FORCING profile setup for OAuth user without company')
-                setStatus('profile-setup')
-                setMessage('Complete your company details to continue')
-                setDialogOpen(true)
-              } else {
-                // User has completed both, proceed to dashboard
-                console.log('✅ New user completed setup, proceeding to employer dashboard')
-                setStatus('success')
-                setMessage(`Successfully signed in with ${provider}`)
-                toast.success(`Welcome to your employer dashboard!`)
-                
-                setTimeout(() => {
-                  const userRegion = (response.data?.user as any)?.region
-                  const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-                  const regionToUse = userRegion || region || storedCompany?.region
-                  const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-                  console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
-                  router.replace(target)
-                }, 500)
-              }
-            }
-          } else {
-            // User already has a password or is returning, proceed to employer dashboard
-            console.log('✅ User is ready, proceeding to employer dashboard')
             setStatus('success')
-            setMessage(`Successfully signed in with ${provider}`)
-            toast.success(`Welcome to your employer dashboard!`)
+            setMessage(`Successfully signed in with ${providerParam || 'OAuth'}`)
             
-            console.log('✅ Redirecting employer to employer dashboard')
-            // Redirect based on region
+            // Redirect to employer dashboard
             setTimeout(() => {
-              const userRegion = (response.data?.user as any)?.region
-              const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-              const regionToUse = userRegion || region || storedCompany?.region
-              const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-              console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
-              router.replace(target)
-            }, 500)
+              router.push('/employer-dashboard')
+            }, 2000)
           }
         } else {
-          console.error('❌ Failed to get user data:', response)
-          throw new Error('Failed to get user data')
+          setStatus('error')
+          setMessage('Failed to get user information')
         }
+
       } catch (error: any) {
         console.error('❌ Employer OAuth callback error:', error)
         setStatus('error')
-        setMessage(`Authentication failed: ${error.message}`)
-        toast.error('Authentication failed. Please try again.')
-        
-        // Clear any stored data
-        apiService.clearAuth()
-        const token = searchParams.get('token')
-        if (token) {
-          console.log('🔄 Attempting to redirect to employer dashboard despite error')
-          setTimeout(() => {
-            router.push('/employer-dashboard')
-          }, 3000)
-        } else {
-          setTimeout(() => {
-            console.log('🔄 Redirecting to employer-login due to error')
-            router.push('/employer-login')
-          }, 3000)
-        }
+        setMessage(error.message || 'Authentication failed')
       }
     }
 
     handleOAuthCallback()
-  }, [searchParams, router, login])
+  }, [router, searchParams])
 
-  const handlePasswordSetup = async (e: React.FormEvent) => {
+  const handlePasswordSetup = async (password: string) => {
+    try {
+      const response = await apiService.setupPassword(password)
+      
+      if (response.success) {
+        setStatus('profile')
+        setMessage('Password set successfully! Now complete your profile.')
+        
+        // Update user data
+        if (response.data?.user) {
+          setUser(response.data.user)
+        }
+      } else {
+        toast.error(response.message || 'Failed to set password')
+      }
+    } catch (error: any) {
+      console.error('❌ Password setup error:', error)
+      toast.error(error.message || 'Failed to set password')
+    }
+  }
+
+  const handleProfileSetup = async (profileData: any) => {
+    try {
+      const response = await apiService.completeEmployerProfile(profileData)
+      
+      if (response.success) {
+        setStatus('success')
+        setMessage('Profile setup completed successfully!')
+        
+        // Update user data
+        if (response.data?.user) {
+          setUser(response.data.user)
+        }
+        
+        // Redirect to employer dashboard
+        setTimeout(() => {
+          router.push('/employer-dashboard')
+        }, 2000)
+      } else {
+        toast.error(response.message || 'Failed to complete profile setup')
+      }
+    } catch (error: any) {
+      console.error('❌ Profile setup error:', error)
+      toast.error(error.message || 'Failed to complete profile setup')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-0 shadow-xl">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+              {status === 'loading' && 'Signing you in...'}
+              {status === 'success' && 'Welcome to your employer dashboard!'}
+              {status === 'error' && 'Authentication Error'}
+              {status === 'setup' && 'Complete your account setup'}
+              {status === 'profile' && 'Complete your employer profile'}
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            {status === 'loading' && (
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                </div>
+                <p className="text-slate-600 dark:text-slate-300">
+                  Please wait while we sign you in...
+                </p>
+              </div>
+            )}
+
+            {status === 'success' && (
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <CheckCircle className="w-12 h-12 text-green-600" />
+                </div>
+                <p className="text-slate-600 dark:text-slate-300">
+                  {message}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Redirecting you to your employer dashboard...
+                </p>
+              </div>
+            )}
+
+            {status === 'error' && (
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <XCircle className="w-12 h-12 text-red-600" />
+                </div>
+                <p className="text-slate-600 dark:text-slate-300">
+                  {message}
+                </p>
+                <Button 
+                  onClick={() => router.push('/employer-login')}
+                  className="w-full"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {status === 'setup' && (
+              <PasswordSetupForm 
+                onSubmit={handlePasswordSetup}
+                provider={provider}
+                userType={userType}
+              />
+            )}
+
+            {status === 'profile' && (
+              <EmployerProfileSetupForm 
+                onSubmit={handleProfileSetup}
+                user={user}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  )
+}
+
+// Password setup form component
+function PasswordSetupForm({ onSubmit, provider, userType }: { 
+  onSubmit: (password: string) => void
+  provider: string
+  userType: string 
+}) {
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (password !== confirmPassword) {
@@ -330,418 +244,212 @@ export default function EmployerOAuthCallbackPage() {
       return
     }
     
-    try {
-      setSettingPassword(true)
-      console.log('🔄 Setting up password for OAuth user')
-      
-      const response = await apiService.setupOAuthPassword(password)
-      
-      if (response.success) {
-        console.log('✅ Password setup successful')
-        toast.success('Password set successfully!')
-        
-        // Clear the skip flag since password was set
-        try {
-          const me = await apiService.getCurrentUser()
-          if (me.success && me.data?.user) {
-            localStorage.removeItem(`oauth:pwdSkipped:${me.data.user.id}`)
-            localStorage.removeItem(`oauth:pwdSkipped:${me.data.user.email}`)
-          }
-        } catch (error) {
-          console.warn('Failed to clear skip flag:', error)
-        }
-        
-        const me = await apiService.getCurrentUser()
-        const needsProfileSetup = me.success && me.data?.user && (!me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone)
-        if (needsProfileSetup) {
-          // After password setup, show profile setup dialog
-          setStatus('profile-setup')
-          setMessage('Complete your basic details to continue')
-          setDialogOpen(true)
-        } else {
-          // User has completed both password and profile setup
-          setStatus('success')
-          setMessage('Password set successfully! Redirecting to your dashboard...')
-          setTimeout(() => {
-            const userRegion = (response.data.user as any)?.region
-            const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-            const regionToUse = userRegion || region || storedCompany?.region
-            const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-            console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
-            router.replace(target)
-          }, 500)
-        }
-      } else {
-        console.error('❌ Password setup failed:', response)
-        toast.error(response.message || 'Failed to set password')
-      }
-    } catch (error: any) {
-      console.error('❌ Password setup error:', error)
-      toast.error(error.message || 'Failed to set password')
-    } finally {
-      setSettingPassword(false)
-    }
+    setLoading(true)
+    await onSubmit(password)
+    setLoading(false)
   }
-
-  const handleProfileSetup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Validate required fields based on company type and region
-    const needsCompanyName = companyType === 'new' && region !== 'gulf'
-    const needsCompanyId = companyType === 'existing'
-    
-    if (!firstName || !lastName || !phone || !region) {
-      toast.error('Please fill in all required fields: first name, last name, phone, and region')
-      return
-    }
-    
-    if (needsCompanyName && !companyName) {
-      toast.error('Please enter a company name')
-      return
-    }
-    
-    if (needsCompanyId && !companyId) {
-      toast.error('Please select a company to join')
-      return
-    }
-    try {
-      setSavingProfile(true)
-      
-      // Use the new completeEmployerProfile API method
-      const resp = await apiService.completeEmployerProfile({
-        firstName,
-        lastName,
-        phone,
-        companyName: companyType === 'new' ? companyName : undefined,
-        companyId: companyType === 'existing' ? companyId || undefined : undefined,
-        region
-      })
-      
-      if (resp.success) {
-        console.log('✅ Employer profile setup completed successfully')
-        
-        // Store updated user and company data
-        if (resp.data?.user) {
-          localStorage.setItem('user', JSON.stringify(resp.data.user))
-        }
-        if (resp.data?.company) {
-          localStorage.setItem('company', JSON.stringify(resp.data.company))
-        }
-
-        // Store user region in localStorage for future logins
-        try {
-          const me = await apiService.getCurrentUser()
-          if (me.success && me.data?.user) {
-            const userData = { ...me.data.user, region }
-            localStorage.setItem('user', JSON.stringify(userData))
-          }
-        } catch (err) {
-          console.warn('Failed to update user region in localStorage:', err)
-        }
-
-        toast.success('Profile updated')
-        setStatus('success')
-        setMessage('Profile completed! Redirecting...')
-        setTimeout(() => {
-          // Use the region from the form since that's what was just submitted
-          const tgtRegion = region // This is the region from the profile setup form
-          const tgt = (tgtRegion === 'gulf') ? '/gulf-dashboard' : '/employer-dashboard'
-          console.log('✅ Redirecting employer to dashboard based on region:', tgtRegion, '→', tgt)
-          router.replace(tgt)
-        }, 500)
-      } else {
-        throw new Error(resp.message || 'Failed to update profile')
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update profile')
-    } finally {
-      setSavingProfile(false)
-    }
-  }
-
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">
-            {status === 'loading' && 'Signing you in...'}
-            {status === 'success' && 'Welcome!'}
-            {status === 'error' && 'Authentication Failed'}
-            {status === 'password-setup' && 'Set Up Your Password'}
-            {status === 'profile-setup' && 'Complete Your Details'}
-          </CardTitle>
-        </CardHeader>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="text-center mb-4">
+        <AlertCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Set up a password for your {provider} account to enable local login
+        </p>
+      </div>
+      
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+              placeholder="Enter your password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
         
-        <CardContent className="text-center space-y-4">
-          {status === 'loading' && (
-            <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-              <p className="text-slate-600 dark:text-slate-300">
-                Completing your sign-in...
-              </p>
-            </div>
-          )}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+            placeholder="Confirm your password"
+            required
+          />
+        </div>
+      </div>
+      
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={loading || !password || !confirmPassword}
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Setting up...
+          </>
+        ) : (
+          'Complete Setup'
+        )}
+      </Button>
+    </form>
+  )
+}
+
+// Employer profile setup form component
+function EmployerProfileSetupForm({ onSubmit, user }: { 
+  onSubmit: (profileData: any) => void
+  user: any
+}) {
+  const [formData, setFormData] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    phone: '',
+    companyName: '',
+    companyId: '',
+    region: 'india'
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.region) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
+    if (!formData.companyName && !formData.companyId) {
+      toast.error('Please provide either a company name or select an existing company')
+      return
+    }
+    
+    setLoading(true)
+    await onSubmit(formData)
+    setLoading(false)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="text-center mb-4">
+        <Building2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Complete your employer profile to get started
+        </p>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              First Name *
+            </label>
+            <input
+              type="text"
+              value={formData.firstName}
+              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+              placeholder="First name"
+              required
+            />
+          </div>
           
-          {status === 'success' && (
-            <div className="flex flex-col items-center space-y-4">
-              <CheckCircle className="w-12 h-12 text-green-600" />
-              <p className="text-slate-600 dark:text-slate-300">
-                {message}
-              </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Redirecting to dashboard...
-              </p>
-            </div>
-          )}
-          
-          {status === 'error' && (
-            <div className="flex flex-col items-center space-y-4">
-              <Shield className="w-12 h-12 text-red-600" />
-              <p className="text-slate-600 dark:text-slate-300">
-                {message}
-              </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Redirecting to login page...
-              </p>
-            </div>
-          )}
-
-          {status === 'password-setup' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <p className="text-slate-600 dark:text-slate-300 mb-2">{message}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Please use the dialog to complete this step.</p>
-              </div>
-            </div>
-          )}
-
-          {status === 'profile-setup' && (
-            <div className="space-y-6 text-left">
-              <div className="text-center">
-                <p className="text-slate-600 dark:text-slate-300 mb-2">{message}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Please use the dialog to complete this step.</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Blocking dialog for required steps */}
-      <Dialog open={dialogOpen} onOpenChange={(o) => setDialogOpen(o)}>
-        <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle>
-              {status === 'password-setup' ? 'Set Up Your Password' : 'Complete Your Details'}
-            </DialogTitle>
-            <DialogDescription>
-              {status === 'password-setup' ? 'Create a password to sign in with email next time.' : 'Fill the required details to continue.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          {status === 'password-setup' && (
-            <form onSubmit={handlePasswordSetup} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">Password (optional)</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input 
-                    id="password" 
-                    type={showPassword ? 'text' : 'password'} 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    className="pl-10 pr-10 h-12" 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-300">Confirm Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input 
-                    id="confirmPassword" 
-                    type={showConfirmPassword ? 'text' : 'password'} 
-                    value={confirmPassword} 
-                    onChange={(e) => setConfirmPassword(e.target.value)} 
-                    className="pl-10 pr-10 h-12" 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button type="submit" disabled={settingPassword} className="h-12">
-                  {settingPassword ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : 'Save password'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  className="h-12" 
-                  onClick={() => {
-                    (async () => {
-                      try {
-                        const me = await apiService.getCurrentUser();
-                        if (me.success && me.data?.user) {
-                          try { localStorage.setItem(`oauth:pwdSkipped:${me.data.user.id}`, 'true') } catch {}
-                          try { 
-                            localStorage.setItem(`oauth:pwdSkipped:${me.data.user.email}`, 'true') 
-                            // Also set the password_skipped flag in the database
-                            await apiService.updateProfile({ passwordSkipped: true } as any)
-                          } catch {}
-                          const needsProfileSetup = !me.data.user.firstName || !me.data.user.lastName || !me.data.user.phone
-                          const profileCompleted = Boolean((me.data.user as any).profileCompleted)
-                          if (!profileCompleted && needsProfileSetup) {
-                          // After skipping password, show profile setup dialog
-                            setStatus('profile-setup'); 
-                            setMessage('Complete your basic details to continue'); 
-                            setDialogOpen(true); 
-                            return;
-                          }
-                        }
-                      } catch {}
-                      setStatus('success'); 
-                      setMessage('Continuing without password...'); 
-                      await new Promise(r => setTimeout(r, 150)); 
-                      
-                      // Redirect based on region
-                      const storedUser = JSON.parse(localStorage.getItem('user') || 'null')
-                      const userRegion = storedUser?.region
-                      const storedCompany = JSON.parse(localStorage.getItem('company') || 'null')
-                      const regionToUse = userRegion || region || storedCompany?.region
-                      const target = regionToUse === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
-                      console.log('🔄 Executing redirect to', target, 'based on region:', regionToUse)
-                      router.replace(target)
-                      router.refresh?.();
-                    })();
-                  }}
-                >
-                  Skip for now
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {status === 'profile-setup' && (
-            <form onSubmit={handleProfileSetup} className="space-y-4 text-left">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First name</Label>
-                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-12" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last name</Label>
-                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-12" required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" required />
-              </div>
-              {/* Company type selection */}
-              <div className="space-y-2">
-                <Label>Company Type</Label>
-                <div className="flex gap-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      value="new"
-                      checked={companyType === 'new'}
-                      onChange={(e) => setCompanyType(e.target.value as 'new' | 'existing')}
-                      className="w-4 h-4"
-                    />
-                    <span>Create New Company</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      value="existing"
-                      checked={companyType === 'existing'}
-                      onChange={(e) => setCompanyType(e.target.value as 'new' | 'existing')}
-                      className="w-4 h-4"
-                    />
-                    <span>Join Existing Company</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Company name - only show for new companies and non-Gulf regions */}
-              {companyType === 'new' && region !== 'gulf' && (
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="h-12" required />
-                </div>
-              )}
-
-              {/* Company selection for existing companies */}
-              {companyType === 'existing' && (
-                <div className="space-y-2">
-                  <Label htmlFor="companyId">Select Company</Label>
-                  <select 
-                    id="companyId" 
-                    value={companyId || ''} 
-                    onChange={(e) => setCompanyId(e.target.value || null)} 
-                    className="h-12 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3"
-                    required
-                    onFocus={loadCompanies}
-                  >
-                    <option value="">Select a company</option>
-                    {loadingCompanies ? (
-                      <option value="">Loading companies...</option>
-                    ) : (
-                      companies.map((company) => (
-                        <option key={company.id} value={company.id}>
-                          {company.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="region">Region of Operation</Label>
-                <select 
-                  id="region" 
-                  value={region} 
-                  onChange={(e) => setRegion(e.target.value as any)} 
-                  className="h-12 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3"
-                  required
-                >
-                  <option value="">Select region</option>
-                  <option value="india">India</option>
-                  <option value="gulf">Gulf</option>
-                  <option value="other">Other</option>
-                </select>
-                <p className="text-xs text-slate-500">This decides your dashboard after setup.</p>
-              </div>
-              <Button type="submit" disabled={savingProfile} className="w-full h-12">
-                {savingProfile ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : 'Save & Continue'}
-              </Button>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Last Name *
+            </label>
+            <input
+              type="text"
+              value={formData.lastName}
+              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+              placeholder="Last name"
+              required
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Phone Number *
+          </label>
+          <input
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+            placeholder="Phone number"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Region *
+          </label>
+          <select
+            value={formData.region}
+            onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+            required
+          >
+            <option value="india">India</option>
+            <option value="gulf">Gulf</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Company Name *
+          </label>
+          <input
+            type="text"
+            value={formData.companyName}
+            onChange={(e) => setFormData({ ...formData, companyName: e.target.value, companyId: '' })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+            placeholder="Enter your company name"
+            required
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            We'll create a new company profile for you
+          </p>
+        </div>
+      </div>
+      
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={loading}
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Setting up profile...
+          </>
+        ) : (
+          'Complete Profile Setup'
+        )}
+      </Button>
+    </form>
   )
 }
