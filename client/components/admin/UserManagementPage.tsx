@@ -309,9 +309,22 @@ export default function UserManagementPage({ portal, title, description, icon }:
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setSelectedUser(user)
-                          setShowUserDialog(true)
+                        onClick={async () => {
+                          try {
+                            setLoading(true)
+                            const response = await apiService.get(`/admin/users/${user.id}/details`)
+                            if (response.success) {
+                              setSelectedUser(response.data)
+                              setShowUserDialog(true)
+                            } else {
+                              toast.error('Failed to load user details')
+                            }
+                          } catch (error) {
+                            console.error('Error loading user details:', error)
+                            toast.error('Failed to load user details')
+                          } finally {
+                            setLoading(false)
+                          }
                         }}
                         className="text-white hover:bg-white/10"
                       >

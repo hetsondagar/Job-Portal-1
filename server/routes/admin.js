@@ -1,6 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const { User, Company, Job, JobApplication, Sequelize } = require('../models');
+const { 
+  User, 
+  Company, 
+  Job, 
+  JobApplication, 
+  JobBookmark,
+  JobCategory,
+  Resume,
+  WorkExperience,
+  Education,
+  CompanyPhoto,
+  CompanyReview,
+  Subscription,
+  SubscriptionPlan,
+  Payment,
+  UserActivityLog,
+  CompanyActivityLog,
+  UserSession,
+  Analytics,
+  Requirement,
+  Sequelize 
+} = require('../models');
 const { authenticateToken } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/adminAuth');
 const { Op } = Sequelize;
@@ -249,6 +270,452 @@ router.get('/users/region/:region', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch users',
+      error: error.message
+    });
+  }
+});
+
+// Get comprehensive user details for superadmin
+router.get('/users/:userId/details', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
+        },
+        {
+          model: JobApplication,
+          as: 'applications',
+          include: [{
+            model: Job,
+            as: 'job',
+            attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status', 'createdAt'],
+            include: [{
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name', 'industry']
+            }]
+          }],
+          limit: 10,
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: JobBookmark,
+          as: 'bookmarks',
+          include: [{
+            model: Job,
+            as: 'job',
+            attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status'],
+            include: [{
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name', 'industry']
+            }]
+          }],
+          limit: 10,
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: Resume,
+          as: 'resumes',
+          attributes: ['id', 'title', 'filePath', 'isDefault', 'createdAt']
+        },
+        {
+          model: WorkExperience,
+          as: 'workExperiences',
+          attributes: ['id', 'companyName', 'position', 'startDate', 'endDate', 'description', 'isCurrent']
+        },
+        {
+          model: Education,
+          as: 'educations',
+          attributes: ['id', 'institution', 'degree', 'fieldOfStudy', 'startDate', 'endDate', 'gpa', 'description']
+        }
+      ],
+      attributes: { exclude: ['password'] }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Get additional statistics
+    const totalApplications = await JobApplication.count({ where: { userId } });
+    const totalBookmarks = await JobBookmark.count({ where: { userId } });
+    const totalJobsPosted = user.user_type === 'employer' ? await Job.count({ where: { companyId: user.company?.id } }) : 0;
+    
+    // Get pricing/subscription information if available
+    const subscription = await Subscription.findOne({
+      where: { userId },
+      include: [{
+        model: SubscriptionPlan,
+        as: 'plan',
+        attributes: ['id', 'name', 'price', 'duration', 'features', 'type']
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Get payment history
+    const payments = await Payment.findAll({
+      where: { userId },
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Get user activity logs
+    const activityLogs = await UserActivityLog.findAll({
+      where: { userId },
+      attributes: ['id', 'action', 'details', 'ipAddress', 'userAgent', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: 20
+    });
+
+    // Get user sessions
+    const sessions = await UserSession.findAll({
+      where: { userId },
+      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivity', 'createdAt'],
+      order: [['lastActivity', 'DESC']],
+      limit: 10
+    });
+
+    const userDetails = {
+      ...user.toJSON(),
+      statistics: {
+        totalApplications,
+        totalBookmarks,
+        totalJobsPosted,
+        totalResumes: user.resumes?.length || 0,
+        totalWorkExperiences: user.workExperiences?.length || 0,
+        totalEducations: user.educations?.length || 0
+      },
+      subscription: subscription || null,
+      payments: payments || [],
+      activityLogs: activityLogs || [],
+      sessions: sessions || []
+    };
+
+    res.json({
+      success: true,
+      data: userDetails
+    });
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user details',
+      error: error.message
+    });
+  }
+});
+
+// Get comprehensive company details for superadmin
+router.get('/companies/:companyId/details', async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    
+    const company = await Company.findByPk(companyId, {
+      include: [
+        {
+          model: User,
+          as: 'users',
+          attributes: ['id', 'first_name', 'last_name', 'email', 'user_type', 'is_active', 'createdAt']
+        },
+        {
+          model: Job,
+          as: 'jobs',
+          attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'applicationDeadline'],
+          include: [{
+            model: JobApplication,
+            as: 'applications',
+            attributes: ['id', 'status', 'createdAt'],
+            include: [{
+              model: User,
+              as: 'user',
+              attributes: ['id', 'first_name', 'last_name', 'email']
+            }]
+          }],
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: CompanyPhoto,
+          as: 'photos',
+          attributes: ['id', 'filePath', 'isPrimary', 'createdAt']
+        },
+        {
+          model: CompanyReview,
+          as: 'reviews',
+          attributes: ['id', 'rating', 'comment', 'createdAt'],
+          include: [{
+            model: User,
+            as: 'user',
+            attributes: ['id', 'first_name', 'last_name']
+          }],
+          order: [['createdAt', 'DESC']],
+          limit: 10
+        }
+      ]
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    // Get additional statistics
+    const totalJobs = await Job.count({ where: { companyId } });
+    const activeJobs = await Job.count({ where: { companyId, status: 'active' } });
+    const totalApplications = await JobApplication.count({
+      include: [{
+        model: Job,
+        as: 'job',
+        where: { companyId }
+      }]
+    });
+    const totalReviews = await CompanyReview.count({ where: { companyId } });
+    const averageRating = await CompanyReview.findOne({
+      where: { companyId },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'averageRating']
+      ],
+      raw: true
+    });
+
+    // Get company subscription/pricing information
+    const subscription = await Subscription.findOne({
+      where: { companyId },
+      include: [{
+        model: SubscriptionPlan,
+        as: 'plan',
+        attributes: ['id', 'name', 'price', 'duration', 'features', 'type']
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Get payment history
+    const payments = await Payment.findAll({
+      where: { companyId },
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    // Get company activity logs
+    const activityLogs = await CompanyActivityLog.findAll({
+      where: { companyId },
+      attributes: ['id', 'action', 'details', 'ipAddress', 'userAgent', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: 20
+    });
+
+    // Get company analytics
+    const analytics = await Analytics.findAll({
+      where: { companyId },
+      attributes: ['id', 'eventType', 'eventData', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    });
+
+    const companyDetails = {
+      ...company.toJSON(),
+      statistics: {
+        totalJobs,
+        activeJobs,
+        totalApplications,
+        totalReviews,
+        averageRating: averageRating?.averageRating ? parseFloat(averageRating.averageRating).toFixed(1) : 0,
+        totalEmployees: company.users?.length || 0,
+        totalPhotos: company.photos?.length || 0
+      },
+      subscription: subscription || null,
+      payments: payments || [],
+      activityLogs: activityLogs || [],
+      analytics: analytics || []
+    };
+
+    res.json({
+      success: true,
+      data: companyDetails
+    });
+  } catch (error) {
+    console.error('Error fetching company details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch company details',
+      error: error.message
+    });
+  }
+});
+
+// Get comprehensive job details for superadmin
+router.get('/jobs/:jobId/details', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    const job = await Job.findByPk(jobId, {
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
+        },
+        {
+          model: User,
+          as: 'postedBy',
+          attributes: ['id', 'first_name', 'last_name', 'email', 'user_type']
+        },
+        {
+          model: JobApplication,
+          as: 'applications',
+          attributes: ['id', 'status', 'coverLetter', 'createdAt', 'updatedAt'],
+          include: [{
+            model: User,
+            as: 'user',
+            attributes: ['id', 'first_name', 'last_name', 'email', 'phone_number', 'region'],
+            include: [{
+              model: Resume,
+              as: 'resumes',
+              attributes: ['id', 'title', 'filePath', 'isDefault'],
+              where: { isDefault: true },
+              required: false
+            }]
+          }],
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: JobBookmark,
+          as: 'bookmarks',
+          attributes: ['id', 'createdAt'],
+          include: [{
+            model: User,
+            as: 'user',
+            attributes: ['id', 'first_name', 'last_name', 'email']
+          }],
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: JobCategory,
+          as: 'category',
+          attributes: ['id', 'name', 'description']
+        },
+        {
+          model: Requirement,
+          as: 'requirements',
+          attributes: ['id', 'type', 'description', 'isRequired']
+        }
+      ]
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Get additional statistics
+    const totalApplications = await JobApplication.count({ where: { jobId } });
+    const totalBookmarks = await JobBookmark.count({ where: { jobId } });
+    const applicationsByStatus = await JobApplication.findAll({
+      where: { jobId },
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['status'],
+      raw: true
+    });
+
+    // Get job analytics
+    const jobAnalytics = await Analytics.findAll({
+      where: { 
+        jobId,
+        eventType: ['job_view', 'job_apply', 'job_bookmark']
+      },
+      attributes: ['id', 'eventType', 'eventData', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: 100
+    });
+
+    // Get job performance metrics
+    const viewCount = await Analytics.count({ 
+      where: { jobId, eventType: 'job_view' } 
+    });
+    const applyCount = await Analytics.count({ 
+      where: { jobId, eventType: 'job_apply' } 
+    });
+    const bookmarkCount = await Analytics.count({ 
+      where: { jobId, eventType: 'job_bookmark' } 
+    });
+
+    // Calculate conversion rates
+    const conversionRate = viewCount > 0 ? ((applyCount / viewCount) * 100).toFixed(2) : 0;
+    const bookmarkRate = viewCount > 0 ? ((bookmarkCount / viewCount) * 100).toFixed(2) : 0;
+
+    // Get similar jobs
+    const similarJobs = await Job.findAll({
+      where: {
+        id: { [Op.ne]: jobId },
+        [Op.or]: [
+          { categoryId: job.categoryId },
+          { companyId: job.companyId },
+          { location: { [Op.iLike]: `%${job.location?.split(',')[0]}%` } }
+        ]
+      },
+      attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt'],
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'name', 'industry']
+      }],
+      limit: 5,
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Get job requirements analysis
+    const requirementsAnalysis = {
+      totalRequirements: job.requirements?.length || 0,
+      requiredRequirements: job.requirements?.filter(req => req.isRequired).length || 0,
+      optionalRequirements: job.requirements?.filter(req => !req.isRequired).length || 0
+    };
+
+    const jobDetails = {
+      ...job.toJSON(),
+      statistics: {
+        totalApplications,
+        totalBookmarks,
+        viewCount,
+        applyCount,
+        bookmarkCount,
+        conversionRate: `${conversionRate}%`,
+        bookmarkRate: `${bookmarkRate}%`,
+        applicationsByStatus: applicationsByStatus.reduce((acc, item) => {
+          acc[item.status] = parseInt(item.count);
+          return acc;
+        }, {})
+      },
+      requirementsAnalysis,
+      analytics: jobAnalytics || [],
+      similarJobs: similarJobs || []
+    };
+
+    res.json({
+      success: true,
+      data: jobDetails
+    });
+  } catch (error) {
+    console.error('Error fetching job details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch job details',
       error: error.message
     });
   }

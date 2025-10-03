@@ -123,9 +123,9 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: 10000, // Reduced to 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: 5000, // Reduced to 5 seconds for faster fallback
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
       requireTLS: !provider.secure,
       tls: {
         rejectUnauthorized: false,
@@ -148,7 +148,7 @@ class EmailService {
       // Use a shorter timeout for verification
       const verifyPromise = transporter.verify();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Verification timeout')), 8000)
+        setTimeout(() => reject(new Error('Verification timeout')), 5000)
       );
       
       await Promise.race([verifyPromise, timeoutPromise]);
