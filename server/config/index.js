@@ -17,14 +17,6 @@ const Education = require('../models/Education');
 const Notification = require('../models/Notification');
 const CompanyReview = require('../models/CompanyReview');
 const CompanyFollow = require('../models/CompanyFollow');
-let CompanyPhoto;
-try {
-  CompanyPhoto = require('../models/CompanyPhoto');
-} catch (e) {
-  try {
-    CompanyPhoto = sequelize?.models?.CompanyPhoto;
-  } catch (_) {}
-}
 const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const UserSession = require('../models/UserSession');
@@ -34,7 +26,14 @@ const Conversation = require('../models/Conversation');
 const Payment = require('../models/Payment');
 const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
-const CompanyPhoto = require('../models/CompanyPhoto');
+let CompanyPhoto;
+try {
+  CompanyPhoto = require('../models/CompanyPhoto');
+} catch (e) {
+  try {
+    CompanyPhoto = sequelize?.models?.CompanyPhoto;
+  } catch (_) {}
+}
 const CandidateLike = require('../models/CandidateLike');
 const HotVacancy = require('../models/HotVacancy');
 const EmployerQuota = require('../models/EmployerQuota');
