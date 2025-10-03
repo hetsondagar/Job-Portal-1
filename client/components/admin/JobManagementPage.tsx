@@ -404,8 +404,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setSelectedJob(job)
-                          setShowJobDialog(true)
+                          router.push(`/admin/jobs/${job.id}`)
                         }}
                         className="text-white hover:bg-white/10 border-white/20 bg-white/5"
                       >
@@ -429,8 +428,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                           <DropdownMenuItem onClick={() => {
-                            setSelectedJob(job)
-                            setShowJobDialog(true)
+                            router.push(`/admin/jobs/${job.id}`)
                           }}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Details

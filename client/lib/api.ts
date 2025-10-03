@@ -3484,8 +3484,8 @@ class ApiService {
     return this.get(`/admin/users/portal/${portal}?${queryParams.toString()}`);
   }
 
-  async updateUserStatus(userId: string, isActive: boolean): Promise<ApiResponse<any>> {
-    return this.patch(`/admin/users/${userId}/status`, { isActive });
+  async updateUserStatus(userId: string, status: string): Promise<ApiResponse<any>> {
+    return this.patch(`/admin/users/${userId}/status`, { status });
   }
 
   async deleteUser(userId: string): Promise<ApiResponse<any>> {
@@ -3551,12 +3551,12 @@ class ApiService {
     return this.get(`/admin/companies/region/${region}?${queryParams.toString()}`);
   }
 
-  async updateCompanyStatus(companyId: string, isActive: boolean): Promise<ApiResponse<any>> {
-    return this.patch(`/admin/companies/${companyId}/status`, { isActive });
+  async updateCompanyStatus(companyId: string, status: string): Promise<ApiResponse<any>> {
+    return this.patch(`/admin/companies/${companyId}/status`, { status });
   }
 
-  async updateCompanyVerification(companyId: string, isVerified: boolean): Promise<ApiResponse<any>> {
-    return this.patch(`/admin/companies/${companyId}/verification`, { isVerified });
+  async updateCompanyVerification(companyId: string, verification: string): Promise<ApiResponse<any>> {
+    return this.patch(`/admin/companies/${companyId}/verification`, { verification });
   }
 
   async deleteCompany(companyId: string): Promise<ApiResponse<any>> {
@@ -3669,6 +3669,19 @@ class ApiService {
 
   // ============================================================================
   // ADMIN METHODS
+
+  async getUserDetails(userId: string): Promise<ApiResponse<any>> {
+    return this.get(`/admin/users/${userId}/details`);
+  }
+
+  async getCompanyDetails(companyId: string): Promise<ApiResponse<any>> {
+    return this.get(`/admin/companies/${companyId}/details`);
+  }
+
+  async getJobDetails(jobId: string): Promise<ApiResponse<any>> {
+    return this.get(`/admin/jobs/${jobId}/details`);
+  }
+
 }
 
 export const apiService = new ApiService();

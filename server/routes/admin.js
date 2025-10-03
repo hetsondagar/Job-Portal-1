@@ -289,7 +289,7 @@ router.get('/users/:userId/details', async (req, res) => {
         },
         {
           model: JobApplication,
-          as: 'applications',
+          as: 'jobApplications',
           include: [{
             model: Job,
             as: 'job',
@@ -305,7 +305,7 @@ router.get('/users/:userId/details', async (req, res) => {
         },
         {
           model: JobBookmark,
-          as: 'bookmarks',
+          as: 'jobBookmarks',
           include: [{
             model: Job,
             as: 'job',
@@ -321,17 +321,17 @@ router.get('/users/:userId/details', async (req, res) => {
         },
         {
           model: Resume,
-          as: 'resumes',
+          as: 'userResumes',
           attributes: ['id', 'title', 'filePath', 'isDefault', 'createdAt']
         },
         {
           model: WorkExperience,
-          as: 'workExperiences',
+          as: 'userWorkExperiences',
           attributes: ['id', 'companyName', 'position', 'startDate', 'endDate', 'description', 'isCurrent']
         },
         {
           model: Education,
-          as: 'educations',
+          as: 'userEducations',
           attributes: ['id', 'institution', 'degree', 'fieldOfStudy', 'startDate', 'endDate', 'gpa', 'description']
         }
       ],
@@ -391,9 +391,9 @@ router.get('/users/:userId/details', async (req, res) => {
         totalApplications,
         totalBookmarks,
         totalJobsPosted,
-        totalResumes: user.resumes?.length || 0,
-        totalWorkExperiences: user.workExperiences?.length || 0,
-        totalEducations: user.educations?.length || 0
+        totalResumes: user.userResumes?.length || 0,
+        totalWorkExperiences: user.userWorkExperiences?.length || 0,
+        totalEducations: user.userEducations?.length || 0
       },
       subscription: subscription || null,
       payments: payments || [],
@@ -424,16 +424,16 @@ router.get('/companies/:companyId/details', async (req, res) => {
       include: [
         {
           model: User,
-          as: 'users',
+          as: 'companyUsers',
           attributes: ['id', 'first_name', 'last_name', 'email', 'user_type', 'is_active', 'createdAt']
         },
         {
           model: Job,
-          as: 'jobs',
+          as: 'companyJobs',
           attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'applicationDeadline'],
           include: [{
             model: JobApplication,
-            as: 'applications',
+            as: 'jobApplications',
             attributes: ['id', 'status', 'createdAt'],
             include: [{
               model: User,
@@ -445,12 +445,12 @@ router.get('/companies/:companyId/details', async (req, res) => {
         },
         {
           model: CompanyPhoto,
-          as: 'photos',
+          as: 'companyPhotos',
           attributes: ['id', 'filePath', 'isPrimary', 'createdAt']
         },
         {
           model: CompanyReview,
-          as: 'reviews',
+          as: 'companyReviews',
           attributes: ['id', 'rating', 'comment', 'createdAt'],
           include: [{
             model: User,
@@ -532,8 +532,8 @@ router.get('/companies/:companyId/details', async (req, res) => {
         totalApplications,
         totalReviews,
         averageRating: averageRating?.averageRating ? parseFloat(averageRating.averageRating).toFixed(1) : 0,
-        totalEmployees: company.users?.length || 0,
-        totalPhotos: company.photos?.length || 0
+        totalEmployees: company.companyUsers?.length || 0,
+        totalPhotos: company.companyPhotos?.length || 0
       },
       subscription: subscription || null,
       payments: payments || [],
@@ -574,7 +574,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         },
         {
           model: JobApplication,
-          as: 'applications',
+          as: 'jobApplications',
           attributes: ['id', 'status', 'coverLetter', 'createdAt', 'updatedAt'],
           include: [{
             model: User,
@@ -582,7 +582,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             attributes: ['id', 'first_name', 'last_name', 'email', 'phone_number', 'region'],
             include: [{
               model: Resume,
-              as: 'resumes',
+              as: 'userResumes',
               attributes: ['id', 'title', 'filePath', 'isDefault'],
               where: { isDefault: true },
               required: false
@@ -592,7 +592,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         },
         {
           model: JobBookmark,
-          as: 'bookmarks',
+          as: 'jobBookmarks',
           attributes: ['id', 'createdAt'],
           include: [{
             model: User,
@@ -608,7 +608,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         },
         {
           model: Requirement,
-          as: 'requirements',
+          as: 'jobRequirements',
           attributes: ['id', 'type', 'description', 'isRequired']
         }
       ]
@@ -682,9 +682,9 @@ router.get('/jobs/:jobId/details', async (req, res) => {
 
     // Get job requirements analysis
     const requirementsAnalysis = {
-      totalRequirements: job.requirements?.length || 0,
-      requiredRequirements: job.requirements?.filter(req => req.isRequired).length || 0,
-      optionalRequirements: job.requirements?.filter(req => !req.isRequired).length || 0
+        totalRequirements: job.jobRequirements?.length || 0,
+        requiredRequirements: job.jobRequirements?.filter(req => req.isRequired).length || 0,
+        optionalRequirements: job.jobRequirements?.filter(req => !req.isRequired).length || 0
     };
 
     const jobDetails = {

@@ -411,8 +411,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setSelectedCompany(company)
-                          setShowCompanyDialog(true)
+                          router.push(`/admin/companies/${company.id}`)
                         }}
                         className="text-white hover:bg-white/10 border-white/20 bg-white/5"
                       >
