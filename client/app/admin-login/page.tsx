@@ -20,11 +20,11 @@ export default function AdminLoginPage() {
   const router = useRouter()
   const { user, loading: authLoading, manualRefreshUser, updateUser } = useAuth()
 
-  // Redirect if already logged in as admin
+  // Redirect if already logged in as admin or superadmin
   useEffect(() => {
     if (authLoading) return
     
-    if (user && user.userType === 'admin') {
+    if (user && (user.userType === 'admin' || user.userType === 'superadmin')) {
       router.push('/admin/dashboard')
     }
   }, [user, authLoading, router])
@@ -41,8 +41,8 @@ export default function AdminLoginPage() {
     )
   }
 
-  // Don't show login form if already logged in as admin
-  if (user && user.userType === 'admin') {
+  // Don't show login form if already logged in as admin or superadmin
+  if (user && (user.userType === 'admin' || user.userType === 'superadmin')) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
         <div className="text-white text-center">
@@ -71,10 +71,10 @@ export default function AdminLoginPage() {
       })
       
       if (response.success) {
-        const { user, token } = response.data
+        const { user, token, redirectTo } = response.data
         
-        // Check if user is admin
-        if (user.userType !== 'admin') {
+        // Check if user is admin or superadmin
+        if (user.userType !== 'admin' && user.userType !== 'superadmin') {
           toast.error("Access denied. Admin privileges required.")
           return
         }
@@ -91,8 +91,9 @@ export default function AdminLoginPage() {
         
         toast.success("Login successful!")
         
-        // Navigate to admin dashboard
-        router.push('/admin/dashboard')
+        // Use redirect URL from backend response, fallback to admin dashboard
+        const redirectUrl = redirectTo || '/admin/dashboard'
+        router.push(redirectUrl)
       } else {
         toast.error(response.message || "Login failed")
       }

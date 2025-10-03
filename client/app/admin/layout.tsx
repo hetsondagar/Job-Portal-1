@@ -23,14 +23,14 @@ export default function AdminLayout({
       return
     }
 
-    // If logged in but not admin, redirect to home
-    if (user.userType !== 'admin') {
+    // If logged in but not admin or superadmin, redirect to home
+    if (user.userType !== 'admin' && user.userType !== 'superadmin') {
       router.push('/')
       return
     }
 
-    // If accessing admin-login while already logged in as admin, redirect to dashboard
-    if (pathname === '/admin-login' && user.userType === 'admin') {
+    // If accessing admin-login while already logged in as admin or superadmin, redirect to dashboard
+    if (pathname === '/admin-login' && (user.userType === 'admin' || user.userType === 'superadmin')) {
       router.push('/admin/dashboard')
       return
     }
@@ -50,8 +50,8 @@ export default function AdminLayout({
     )
   }
 
-  // If not authenticated or not admin, don't render children
-  if (!user || user.userType !== 'admin') {
+  // If not authenticated or not admin/superadmin, don't render children
+  if (!user || (user.userType !== 'admin' && user.userType !== 'superadmin')) {
     return null
   }
 

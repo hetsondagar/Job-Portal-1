@@ -12,7 +12,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  userType: 'jobseeker' | 'employer' | 'admin';
+  userType: 'jobseeker' | 'employer' | 'admin' | 'superadmin';
   region?: 'india' | 'gulf' | 'other';
   isEmailVerified: boolean;
   accountStatus: string;
