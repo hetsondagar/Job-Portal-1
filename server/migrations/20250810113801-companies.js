@@ -156,8 +156,7 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('companies', ['slug']);
+    // Add indexes (slug index is automatically created by unique constraint)
     await queryInterface.addIndex('companies', ['industry']);
     await queryInterface.addIndex('companies', ['city']);
     await queryInterface.addIndex('companies', ['verification_status']);

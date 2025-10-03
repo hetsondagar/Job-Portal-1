@@ -64,8 +64,7 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('job_categories', ['slug']);
+    // Add indexes (slug index is automatically created by unique constraint)
     await queryInterface.addIndex('job_categories', ['parent_id']);
     await queryInterface.addIndex('job_categories', ['is_active']);
     await queryInterface.addIndex('job_categories', ['sort_order']);

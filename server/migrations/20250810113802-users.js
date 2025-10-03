@@ -169,8 +169,7 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('users', ['email']);
+    // Add indexes (email index is automatically created by unique constraint)
     await queryInterface.addIndex('users', ['user_type']);
     await queryInterface.addIndex('users', ['company_id']);
     await queryInterface.addIndex('users', ['is_active']);
