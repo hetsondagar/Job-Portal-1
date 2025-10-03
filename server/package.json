@@ -11,6 +11,7 @@
     "fix:enum": "node fix-enum-jobs-status.js",
     "fix:company-photos": "node fix-company-photo-model.js",
     "fix:admin-stats": "node fix-admin-stats-endpoint.js",
+    "fix:schema": "node fix-database-schema-issues.js",
     "test:admin-dashboard": "node test-admin-dashboard.js",
     "optimize": "node optimize-production.js",
     "dev": "nodemon index.js",

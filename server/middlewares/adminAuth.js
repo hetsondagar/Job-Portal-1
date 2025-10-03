@@ -22,9 +22,9 @@ const requireAdmin = async (req, res, next) => {
       user_type: req.user.user_type
     });
 
-    // Check if user is admin
-    if (req.user.user_type !== 'admin') {
-      console.log('❌ [ADMIN] User is not admin, user_type:', req.user.user_type);
+    // Check if user is admin or superadmin
+    if (req.user.user_type !== 'admin' && req.user.user_type !== 'superadmin') {
+      console.log('❌ [ADMIN] User is not admin or superadmin, user_type:', req.user.user_type);
       return res.status(403).json({
         success: false,
         message: 'Admin privileges required'

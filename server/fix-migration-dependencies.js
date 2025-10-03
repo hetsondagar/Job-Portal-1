@@ -81,7 +81,7 @@ async function createEnumTypes(queryInterface) {
       
       switch (enumType) {
         case 'enum_users_user_type':
-          createQuery = `CREATE TYPE "enum_users_user_type" AS ENUM ('jobseeker', 'employer', 'admin')`;
+          createQuery = `CREATE TYPE "enum_users_user_type" AS ENUM ('jobseeker', 'employer', 'admin', 'superadmin')`;
           break;
         case 'enum_users_gender':
           createQuery = `CREATE TYPE "enum_users_gender" AS ENUM ('male', 'female', 'other')`;
@@ -275,6 +275,10 @@ async function createCompaniesTable(queryInterface) {
           type: Sequelize.ENUM('active', 'inactive', 'suspended'),
           defaultValue: 'active'
         },
+        why_join_us: {
+          type: Sequelize.TEXT,
+          allowNull: true
+        },
         created_at: {
           type: Sequelize.DATE,
           allowNull: false,
@@ -339,7 +343,7 @@ async function createUsersTable(queryInterface) {
           allowNull: true
         },
         user_type: {
-          type: Sequelize.ENUM('jobseeker', 'employer', 'admin'),
+          type: Sequelize.ENUM('jobseeker', 'employer', 'admin', 'superadmin'),
           allowNull: false,
           defaultValue: 'jobseeker'
         },
@@ -788,7 +792,7 @@ async function createCompanyPhotosTable(queryInterface) {
       WHERE table_schema = 'public' AND table_name = 'company_photos'
     `);
     
-    if (results.length === 0) {
+    if (!results || results.length === 0) {
       await queryInterface.createTable('company_photos', {
         id: {
           type: Sequelize.UUID,

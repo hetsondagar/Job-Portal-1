@@ -55,8 +55,8 @@ router.get('/stats', async (req, res) => {
       // Company statistics
       Promise.all([
         Company.count(),
-        Company.count({ where: { isVerified: true } }),
-        Company.count({ where: { isVerified: false } }),
+        Company.count({ where: { verificationStatus: 'verified' } }),
+        Company.count({ where: { verificationStatus: 'unverified' } }),
         Company.count({ where: { isActive: true } }),
         Company.count({
           where: {
