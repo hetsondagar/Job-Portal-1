@@ -112,7 +112,7 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const CompanyPhoto = require('../models/CompanyPhoto');
+    const { CompanyPhoto } = require('../config');
 
     const filename = req.file.filename;
     const filePath = `/uploads/company-photos/${filename}`;
@@ -150,7 +150,7 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
 router.get('/:id/photos', async (req, res) => {
   try {
     const { id } = req.params;
-    const CompanyPhoto = require('../models/CompanyPhoto');
+    const { CompanyPhoto } = require('../config');
     const photos = await CompanyPhoto.findAll({
       where: { companyId: id, isActive: true },
       order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
@@ -166,7 +166,7 @@ router.get('/:id/photos', async (req, res) => {
 router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
   try {
     const { photoId } = req.params;
-    const CompanyPhoto = require('../models/CompanyPhoto');
+    const { CompanyPhoto } = require('../config');
     const photo = await CompanyPhoto.findByPk(photoId);
     if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
 

@@ -533,7 +533,7 @@ export default function CompaniesPage() {
     return {
       id: String(c.id),
       name: c.name || 'Company',
-      logo: "/placeholder.svg?height=80&width=80",
+      logo: c.logo || "/placeholder.svg?height=80&width=80",
       industry,
       sector,
       location: locationParts.join(', ') || '—',
