@@ -26,6 +26,7 @@ const Conversation = require('../models/Conversation');
 const Payment = require('../models/Payment');
 const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
+const CompanyPhoto = require('../models/CompanyPhoto');
 const CandidateLike = require('../models/CandidateLike');
 const HotVacancy = require('../models/HotVacancy');
 const EmployerQuota = require('../models/EmployerQuota');
@@ -69,6 +70,7 @@ Company.hasMany(Job, { foreignKey: 'companyId', as: 'jobs' });
 Company.hasMany(CompanyReview, { foreignKey: 'companyId', as: 'reviews' });
 Company.hasMany(CompanyFollow, { foreignKey: 'companyId', as: 'followers' });
 Company.hasMany(User, { foreignKey: 'company_id', as: 'employees' });
+Company.hasMany(CompanyPhoto, { foreignKey: 'companyId', as: 'photos' });
 
 // Job associations
 Job.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
@@ -94,6 +96,10 @@ JobBookmark.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 // JobPhoto associations
 JobPhoto.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 JobPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
+
+// CompanyPhoto associations
+CompanyPhoto.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+CompanyPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 
 // HotVacancy associations
 HotVacancy.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
@@ -247,6 +253,7 @@ module.exports = {
   Payment,
   Analytics,
   JobPhoto,
+  CompanyPhoto,
   CandidateLike,
   HotVacancy,
   EmployerQuota,

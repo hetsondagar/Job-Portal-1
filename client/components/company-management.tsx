@@ -82,7 +82,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   }
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       [field]: value
     }))
@@ -203,6 +203,17 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                 onChange={(e) => handleInputChange("about", e.target.value)}
                 placeholder="Company description"
                 rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whyJoinUs">Why Join Us</Label>
+              <Textarea
+                id="whyJoinUs"
+                value={formData.whyJoinUs || ""}
+                onChange={(e) => handleInputChange("whyJoinUs", e.target.value)}
+                placeholder="Tell jobseekers why they should join your company"
+                rows={5}
               />
             </div>
             

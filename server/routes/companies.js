@@ -2,6 +2,9 @@ const express = require('express');
 const Company = require('../models/Company');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 // (moved list and join company routes below middleware definition)
@@ -88,6 +91,60 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Storage for company logo uploads
+const logoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/company-logos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname).toLowerCase();
+    cb(null, 'company-logo-' + uniqueSuffix + extension);
+  }
+});
+
+const companyLogoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: function (req, file, cb) {
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed'));
+  }
+});
+
+// Storage for company gallery photos
+const companyPhotoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/company-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname).toLowerCase();
+    cb(null, 'company-photo-' + uniqueSuffix + extension);
+  }
+});
+
+const companyPhotoUpload = multer({
+  storage: companyPhotoStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: function (req, file, cb) {
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed'));
+  }
+});
+
 // Join existing company (job seekers become employers, existing employers without company)
 router.post('/join', authenticateToken, async (req, res) => {
   try {
@@ -139,7 +196,7 @@ router.post('/join', authenticateToken, async (req, res) => {
 // Create a new company
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region } = req.body;
+    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs } = req.body;
     
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
@@ -193,6 +250,7 @@ router.post('/', authenticateToken, async (req, res) => {
       email: email || req.user.email,
       phone: phone || req.user.phone,
       description,
+      whyJoinUs: typeof whyJoinUs === 'string' ? whyJoinUs : null,
       address,
       city,
       state,
@@ -227,6 +285,7 @@ router.post('/', authenticateToken, async (req, res) => {
           email: company.email,
           phone: company.phone,
           description: company.description,
+        whyJoinUs: company.whyJoinUs,
           address: company.address,
           city: company.city,
           state: company.state,
@@ -251,6 +310,126 @@ router.post('/', authenticateToken, async (req, res) => {
       success: false,
       message: 'Internal server error'
     });
+  }
+});
+
+// Upload/replace company logo
+router.post('/:id/logo', authenticateToken, companyLogoUpload.single('logo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No logo file provided' });
+    }
+
+    // Only company owner/admin can update
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(id)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const company = await Company.findByPk(id);
+    if (!company) return res.status(404).json({ success: false, message: 'Company not found' });
+
+    const filename = req.file.filename;
+    const filePath = `/uploads/company-logos/${filename}`;
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+
+    await company.update({ logo: fileUrl });
+
+    return res.status(200).json({ success: true, message: 'Company logo updated', data: { logo: fileUrl } });
+  } catch (error) {
+    console.error('Company logo upload error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload logo' });
+  }
+});
+
+// Upload a company gallery photo
+router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { altText, caption, displayOrder, isPrimary } = req.body || {};
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No photo file provided' });
+    }
+
+    // Only company owner/admin can add photos
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(id)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const { CompanyPhoto } = require('../config');
+
+    const filename = req.file.filename;
+    const filePath = `/uploads/company-photos/${filename}`;
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+
+    // If marking as primary, unset others for this company
+    if (isPrimary === 'true' || isPrimary === true) {
+      try {
+        await CompanyPhoto.update({ isPrimary: false }, { where: { companyId: id } });
+      } catch (_) {}
+    }
+
+    const photo = await CompanyPhoto.create({
+      companyId: id,
+      filename,
+      filePath,
+      fileUrl,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      altText: altText || null,
+      caption: caption || null,
+      displayOrder: parseInt(displayOrder) || 0,
+      isPrimary: isPrimary === 'true' || isPrimary === true || false,
+      uploadedBy: req.user.id
+    });
+
+    return res.status(201).json({ success: true, message: 'Company photo uploaded', data: photo });
+  } catch (error) {
+    console.error('Company photo upload error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload photo' });
+  }
+});
+
+// List company photos
+router.get('/:id/photos', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { CompanyPhoto } = require('../config');
+    const photos = await CompanyPhoto.findAll({
+      where: { companyId: id, isActive: true },
+      order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
+    });
+    return res.status(200).json({ success: true, data: photos });
+  } catch (error) {
+    console.error('List company photos error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to list photos' });
+  }
+});
+
+// Delete a company photo
+router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
+  try {
+    const { photoId } = req.params;
+    const { CompanyPhoto, Company } = require('../config');
+    const photo = await CompanyPhoto.findByPk(photoId, { include: [{ model: Company, as: 'company' }] });
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    // Must be admin or owner of company
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(photo.companyId)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Delete file from disk (best-effort)
+    try {
+      const absPath = path.join(__dirname, '..', photo.filePath);
+      if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
+    } catch (_) {}
+
+    await photo.destroy();
+    return res.status(200).json({ success: true, message: 'Company photo deleted' });
+  } catch (error) {
+    console.error('Delete company photo error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete photo' });
   }
 });
 
@@ -360,6 +539,7 @@ router.get('/:id', async (req, res) => {
         email: company.email,
         phone: company.phone,
         description: company.description,
+        whyJoinUs: company.whyJoinUs,
         address: company.address,
         city: company.city,
         state: company.state,
@@ -475,7 +655,7 @@ router.get('/:id/jobs', async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, industry, companySize, website, description, address, city, state, country } = req.body;
+    const { name, industry, companySize, website, description, address, city, state, country, whyJoinUs } = req.body;
     
     // Check if the user has access to this company
     if (req.user.user_type !== 'admin') {
@@ -503,6 +683,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       companySize: companySize || company.companySize,
       website: website || company.website,
       description: description || company.description,
+      whyJoinUs: typeof whyJoinUs === 'string' ? whyJoinUs : company.whyJoinUs,
       address: address || company.address,
       city: city || company.city,
       state: state || company.state,
@@ -521,6 +702,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         email: company.email,
         phone: company.phone,
         description: company.description,
+      whyJoinUs: company.whyJoinUs,
         address: company.address,
         city: company.city,
         state: company.state,
