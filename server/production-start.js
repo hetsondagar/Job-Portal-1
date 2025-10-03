@@ -69,7 +69,17 @@ async function startServer() {
     
     console.log('✅ Database connection successful');
     
-    // Fix ALL database issues FIRST (missing columns, tables, constraints)
+    // Fix migration dependencies FIRST
+    console.log('🔧 Fixing migration dependencies...');
+    try {
+      const { fixMigrationDependencies } = require('./fix-migration-dependencies');
+      await fixMigrationDependencies();
+      console.log('✅ Migration dependencies fixed successfully!');
+    } catch (fixError) {
+      console.warn('⚠️ Migration dependency fix failed, continuing with startup:', fixError?.message || fixError);
+    }
+    
+    // Fix ALL database issues (missing columns, tables, constraints)
     console.log('🔧 Running comprehensive database fixes...');
     try {
       const { exec } = require('child_process');
