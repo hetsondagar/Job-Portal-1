@@ -86,6 +86,16 @@ async function deployWithDbFix() {
       console.log('⚠️ Superadmin setup failed, continuing:', error.message);
     }
 
+    // Step 5.7: Fix superadmin redirect
+    console.log('🔧 Step 5.7: Fixing superadmin redirect...');
+    try {
+      const { fixSuperadminRedirect } = require('./fix-superadmin-redirect');
+      await fixSuperadminRedirect();
+      console.log('✅ Superadmin redirect fixed');
+    } catch (error) {
+      console.log('⚠️ Superadmin redirect fix failed, continuing:', error.message);
+    }
+
     // Step 6: Fix admin stats endpoint
     console.log('🔧 Step 6: Fixing admin stats endpoint...');
     try {

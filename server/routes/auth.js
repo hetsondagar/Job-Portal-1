@@ -167,7 +167,9 @@ const generateToken = (user) => {
 
 // Helper function to determine redirect URL based on user type and region
 const getRedirectUrl = (userType, region) => {
-  if (userType === 'employer' || userType === 'admin') {
+  if (userType === 'superadmin') {
+    return '/admin/dashboard';
+  } else if (userType === 'employer' || userType === 'admin') {
     return region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard';
   } else if (userType === 'jobseeker') {
     if (region === 'gulf') {
@@ -553,12 +555,21 @@ router.post('/login', validateLogin, async (req, res) => {
         });
       }
       
-      if (loginType === 'jobseeker' && (user.user_type === 'employer' || user.user_type === 'admin')) {
-        console.log('❌ Employer/Admin trying to login through jobseeker login');
+      if (loginType === 'jobseeker' && (user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'superadmin')) {
+        console.log('❌ Employer/Admin/Superadmin trying to login through jobseeker login');
         return res.status(403).json({
           success: false,
           message: 'This account is registered as an employer. Please use the employer login page.',
           redirectTo: '/employer-login'
+        });
+      }
+      
+      if (loginType === 'employer' && user.user_type === 'superadmin') {
+        console.log('❌ Superadmin trying to login through employer login');
+        return res.status(403).json({
+          success: false,
+          message: 'This account is registered as a system administrator. Please use the admin login page.',
+          redirectTo: '/admin-login'
         });
       }
     }
