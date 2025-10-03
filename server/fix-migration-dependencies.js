@@ -51,7 +51,11 @@ async function createTablesInOrder(sequelize) {
   console.log('💼 Creating jobs table...');
   await createJobsTable(queryInterface);
   
-  // Step 6: Create other dependent tables
+  // Step 6: Create company_photos table (depends on companies and users)
+  console.log('📸 Creating company_photos table...');
+  await createCompanyPhotosTable(queryInterface);
+  
+  // Step 7: Create other dependent tables
   console.log('📄 Creating other tables...');
   await createOtherTables(queryInterface);
 }
@@ -773,6 +777,116 @@ async function createJobsTable(queryInterface) {
     }
   } catch (error) {
     console.log('  ⚠️ Jobs table error:', error.message);
+  }
+}
+
+async function createCompanyPhotosTable(queryInterface) {
+  try {
+    // Check if company_photos table exists
+    const [results] = await queryInterface.sequelize.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'company_photos'
+    `);
+    
+    if (results.length === 0) {
+      await queryInterface.createTable('company_photos', {
+        id: {
+          type: Sequelize.UUID,
+          defaultValue: Sequelize.UUIDV4,
+          primaryKey: true
+        },
+        company_id: {
+          type: Sequelize.UUID,
+          allowNull: false,
+          references: {
+            model: 'companies',
+            key: 'id'
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE'
+        },
+        filename: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        file_path: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        file_url: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        file_size: {
+          type: Sequelize.INTEGER,
+          allowNull: false
+        },
+        mime_type: {
+          type: Sequelize.STRING,
+          allowNull: false
+        },
+        alt_text: {
+          type: Sequelize.STRING,
+          allowNull: true
+        },
+        caption: {
+          type: Sequelize.TEXT,
+          allowNull: true
+        },
+        display_order: {
+          type: Sequelize.INTEGER,
+          defaultValue: 0,
+          allowNull: false
+        },
+        is_primary: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false
+        },
+        is_active: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: true,
+          allowNull: false
+        },
+        uploaded_by: {
+          type: Sequelize.UUID,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'id'
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE'
+        },
+        metadata: {
+          type: Sequelize.JSONB,
+          allowNull: true
+        },
+        created_at: {
+          type: Sequelize.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        },
+        updated_at: {
+          type: Sequelize.DATE,
+          allowNull: false,
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        }
+      });
+
+      // Add indexes
+      await queryInterface.addIndex('company_photos', ['company_id']);
+      await queryInterface.addIndex('company_photos', ['uploaded_by']);
+      await queryInterface.addIndex('company_photos', ['is_active']);
+      await queryInterface.addIndex('company_photos', ['is_primary']);
+      await queryInterface.addIndex('company_photos', ['display_order']);
+      
+      console.log('  ✅ Company photos table created');
+    } else {
+      console.log('  ✅ Company photos table already exists');
+    }
+  } catch (error) {
+    console.log('  ⚠️ Company photos table error:', error.message);
   }
 }
 

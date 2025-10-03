@@ -55,9 +55,19 @@ async function deployWithDbFix() {
     } catch (error) {
       console.log('⚠️ Enum jobs status fix failed, continuing:', error.message);
     }
+
+    // Step 5: Fix admin stats endpoint
+    console.log('🔧 Step 5: Fixing admin stats endpoint...');
+    try {
+      const { fixAdminStatsEndpoint } = require('./fix-admin-stats-endpoint');
+      await fixAdminStatsEndpoint();
+      console.log('✅ Admin stats endpoint fixed');
+    } catch (error) {
+      console.log('⚠️ Admin stats endpoint fix failed, continuing:', error.message);
+    }
     
-    // Step 5: Fix all database issues
-    console.log('🔧 Step 5: Fixing all database issues...');
+    // Step 6: Fix all database issues
+    console.log('🔧 Step 6: Fixing all database issues...');
     try {
       await execAsync('node fix-all-database-issues.js', { cwd: __dirname });
       console.log('✅ Database issues fixed');
@@ -65,8 +75,8 @@ async function deployWithDbFix() {
       console.log('⚠️ Database fix failed, continuing:', error.message);
     }
     
-    // Step 6: Final connection test
-    console.log('🔍 Step 6: Final database connection test...');
+    // Step 7: Final connection test
+    console.log('🔍 Step 7: Final database connection test...');
     const finalTest = await dbConnection.testConnection();
     
     if (finalTest) {
@@ -77,8 +87,18 @@ async function deployWithDbFix() {
     
     await dbConnection.disconnect();
     
-    // Step 7: Optimize for production
-    console.log('🚀 Step 7: Optimizing for production...');
+    // Step 8: Fix CompanyPhoto model registration
+    console.log('🔧 Step 8: Fixing CompanyPhoto model registration...');
+    try {
+      const { fixCompanyPhotoModel } = require('./fix-company-photo-model');
+      await fixCompanyPhotoModel();
+      console.log('✅ CompanyPhoto model registration fixed');
+    } catch (error) {
+      console.log('⚠️ CompanyPhoto model fix failed, continuing:', error.message);
+    }
+
+    // Step 9: Optimize for production
+    console.log('🚀 Step 9: Optimizing for production...');
     try {
       const { optimizeProduction } = require('./optimize-production');
       await optimizeProduction();
@@ -87,8 +107,8 @@ async function deployWithDbFix() {
       console.log('⚠️ Production optimization failed, continuing:', error.message);
     }
     
-    // Step 8: Start the production server
-    console.log('🚀 Step 8: Starting production server...');
+    // Step 10: Start the production server
+    console.log('🚀 Step 10: Starting production server...');
     
     const { spawn } = require('child_process');
     const serverProcess = spawn('node', ['production-start.js'], {
