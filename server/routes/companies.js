@@ -9,6 +9,28 @@ const fs = require('fs');
 const router = express.Router();
 // (moved list and join company routes below middleware definition)
 
+// Helper to resolve CompanyPhoto model in all environments
+const getCompanyPhotoModel = () => {
+  try {
+    // Preferred: direct model import
+    return require('../models/CompanyPhoto');
+  } catch (_) {
+    try {
+      // Fallback: via sequelize registry
+      const { sequelize } = require('../config/sequelize');
+      return sequelize?.models?.CompanyPhoto;
+    } catch (__) {
+      try {
+        // Last resort: from aggregated config (if exported)
+        const cfg = require('../config');
+        return cfg?.CompanyPhoto;
+      } catch (___) {
+        return undefined;
+      }
+    }
+  }
+};
+
 // Middleware to verify JWT token (must be defined before use)
 const authenticateToken = async (req, res, next) => {
   try {
@@ -112,7 +134,8 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const { CompanyPhoto } = require('../config');
+    const CompanyPhoto = getCompanyPhotoModel();
+    if (!CompanyPhoto) return res.status(500).json({ success: false, message: 'CompanyPhoto model unavailable' });
 
     const filename = req.file.filename;
     const filePath = `/uploads/company-photos/${filename}`;
@@ -150,7 +173,8 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
 router.get('/:id/photos', async (req, res) => {
   try {
     const { id } = req.params;
-    const { CompanyPhoto } = require('../config');
+    const CompanyPhoto = getCompanyPhotoModel();
+    if (!CompanyPhoto) return res.status(500).json({ success: false, message: 'CompanyPhoto model unavailable' });
     const photos = await CompanyPhoto.findAll({
       where: { companyId: id, isActive: true },
       order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
@@ -166,7 +190,8 @@ router.get('/:id/photos', async (req, res) => {
 router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
   try {
     const { photoId } = req.params;
-    const { CompanyPhoto } = require('../config');
+    const CompanyPhoto = getCompanyPhotoModel();
+    if (!CompanyPhoto) return res.status(500).json({ success: false, message: 'CompanyPhoto model unavailable' });
     const photo = await CompanyPhoto.findByPk(photoId);
     if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
 
