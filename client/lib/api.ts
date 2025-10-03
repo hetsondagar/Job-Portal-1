@@ -3467,6 +3467,23 @@ class ApiService {
     return this.get(`/admin/users/region/${region}?${queryParams.toString()}`);
   }
 
+  async getUsersByPortal(portal: string, params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    userType?: string;
+    status?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.userType) queryParams.append('userType', params.userType);
+    if (params?.status) queryParams.append('status', params.status);
+    
+    return this.get(`/admin/users/portal/${portal}?${queryParams.toString()}`);
+  }
+
   async updateUserStatus(userId: string, isActive: boolean): Promise<ApiResponse<any>> {
     return this.patch(`/admin/users/${userId}/status`, { isActive });
   }

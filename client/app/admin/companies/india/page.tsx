@@ -366,7 +366,7 @@ export default function IndiaCompaniesPage() {
                               <Users className="w-3 h-3 mr-1" />
                               {company.totalApplications || 0} applications
                             </div>
-                            {company.rating && (
+                            {company.rating && typeof company.rating === 'number' && (
                               <div className="flex items-center">
                                 <Star className="w-3 h-3 mr-1" />
                                 {company.rating.toFixed(1)}

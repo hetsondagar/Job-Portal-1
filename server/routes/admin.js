@@ -254,6 +254,104 @@ router.get('/users/region/:region', async (req, res) => {
   }
 });
 
+// Portal-based user categorization routes
+router.get('/users/portal/:portal', async (req, res) => {
+  try {
+    const { portal } = req.params;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      userType,
+      status
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    let whereClause = {};
+
+    // Portal-based filtering logic
+    switch (portal) {
+      case 'normal':
+        // Normal dashboard users (India region or null region)
+        whereClause = {
+          [Op.or]: [
+            { region: 'india' },
+            { region: null },
+            { region: 'other' }
+          ]
+        };
+        break;
+      case 'gulf':
+        // Gulf dashboard users (Gulf region only)
+        whereClause = { region: 'gulf' };
+        break;
+      case 'both':
+        // Users who can access both portals (this would need additional logic)
+        // For now, we'll consider users with specific preferences or all regions
+        whereClause = {
+          [Op.or]: [
+            { willing_to_relocate: true },
+            { preferred_locations: { [Op.contains]: ['india', 'gulf'] } }
+          ]
+        };
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid portal type. Use: normal, gulf, or both'
+        });
+    }
+
+    // Add filters
+    if (userType && userType !== 'all') {
+      whereClause.user_type = userType;
+    }
+
+    if (status && status !== 'all') {
+      whereClause.is_active = status === 'active';
+    }
+
+    if (search) {
+      whereClause[Op.and] = whereClause[Op.and] || [];
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { first_name: { [Op.iLike]: `%${search}%` } },
+          { last_name: { [Op.iLike]: `%${search}%` } },
+          { email: { [Op.iLike]: `%${search}%` } }
+        ]
+      });
+    }
+
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      attributes: { exclude: ['password'] }
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        totalPages,
+        currentPage: parseInt(page),
+        totalCount: count,
+        portal: portal
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users by portal:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users by portal',
+      error: error.message
+    });
+  }
+});
+
 // Update user status
 router.patch('/users/:id/status', async (req, res) => {
   try {

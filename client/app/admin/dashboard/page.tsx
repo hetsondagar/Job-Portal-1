@@ -270,7 +270,7 @@ export default function AdminDashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/admin/users/all">
+                    <Link href="/admin/users/normal">
                       <Button className="w-full justify-between bg-blue-600 hover:bg-blue-700">
                         Manage Users
                         <Users className="w-4 h-4" />
@@ -375,28 +375,34 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">User Management</h2>
                 <div className="flex space-x-2">
-                  <Link href="/admin/users/india">
+                  <Link href="/admin/users/normal">
                     <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      India Users
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Normal Portal
                     </Button>
                   </Link>
-                  <Link href="/admin/users/gulf">
+                  <Link href="/admin/users/gulf-portal">
                     <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
                       <Globe className="w-4 h-4 mr-2" />
-                      Gulf Users
+                      Gulf Portal
+                    </Button>
+                  </Link>
+                  <Link href="/admin/users/both">
+                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                      <Users className="w-4 h-4 mr-2" />
+                      Both Portals
                     </Button>
                   </Link>
                 </div>
               </div>
               
-              <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
-                <CardHeader>
-                  <CardTitle>All Users Overview</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Manage all users across India and Gulf regions
-                  </CardDescription>
-                </CardHeader>
+                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                  <CardHeader>
+                    <CardTitle>All Users Overview</CardTitle>
+                    <CardDescription className="text-gray-300">
+                      Manage users across different portals: Normal Portal, Gulf Portal, and Both Portals
+                    </CardDescription>
+                  </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white/5 rounded-lg p-4">
@@ -429,7 +435,7 @@ export default function AdminDashboardPage() {
                   </div>
                   
                   <div className="mt-6">
-                    <Link href="/admin/users/all">
+                    <Link href="/admin/users/normal">
                       <Button className="w-full bg-blue-600 hover:bg-blue-700">
                         <Users className="w-4 h-4 mr-2" />
                         View All Users
