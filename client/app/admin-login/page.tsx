@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, manualRefreshUser, updateUser } = useAuth()
 
   // Redirect if already logged in as admin
   useEffect(() => {
@@ -83,11 +83,13 @@ export default function AdminLoginPage() {
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
         
+        // Update the auth context immediately
+        updateUser(user)
+        
         toast.success("Login successful!")
         
-        // Use router.push with refresh to ensure auth state is updated
+        // Navigate to admin dashboard
         router.push('/admin/dashboard')
-        router.refresh()
       } else {
         toast.error(response.message || "Login failed")
       }
