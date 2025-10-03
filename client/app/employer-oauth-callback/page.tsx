@@ -70,9 +70,10 @@ export default function EmployerOAuthCallbackPage() {
             setStatus('success')
             setMessage(`Successfully signed in with ${providerParam || 'OAuth'}`)
             
-            // Redirect to employer dashboard
+            // Redirect to employer dashboard (respect Gulf region)
             setTimeout(() => {
-              router.push('/employer-dashboard')
+              const region = (userResponse.data.user as any)?.region
+              router.push(region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
             }, 2000)
           }
         } else {
@@ -124,9 +125,10 @@ export default function EmployerOAuthCallbackPage() {
           setUser(response.data.user)
         }
         
-        // Redirect to employer dashboard
+        // Redirect to employer dashboard (respect Gulf region)
         setTimeout(() => {
-          router.push('/employer-dashboard')
+          const region = (user as any)?.region
+          router.push(region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
         }, 2000)
       } else {
         toast.error(response.message || 'Failed to complete profile setup')

@@ -162,7 +162,7 @@ const generateToken = (user) => {
 // Helper function to determine redirect URL based on user type and region
 const getRedirectUrl = (userType, region) => {
   if (userType === 'employer' || userType === 'admin') {
-    return '/employer-dashboard';
+    return region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard';
   } else if (userType === 'jobseeker') {
     if (region === 'gulf') {
       return '/jobseeker-gulf-dashboard';
