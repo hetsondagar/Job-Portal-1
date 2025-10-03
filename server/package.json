@@ -8,6 +8,7 @@
     "start": "node deploy-with-db-fix.js",
     "deploy": "node deploy-with-db-fix.js",
     "test:db": "node test-database-connection.js",
+    "fix:enum": "node fix-enum-jobs-status.js",
     "dev": "nodemon index.js",
     "dev:safe": "node start-server.js",
     "setup:production": "node setup-production.js",

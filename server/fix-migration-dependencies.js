@@ -107,7 +107,7 @@ async function createEnumTypes(queryInterface) {
           createQuery = `CREATE TYPE "enum_jobs_location_type" AS ENUM ('remote', 'on-site', 'hybrid')`;
           break;
         case 'enum_jobs_status':
-          createQuery = `CREATE TYPE "enum_jobs_status" AS ENUM ('draft', 'active', 'paused', 'closed', 'expired')`;
+          createQuery = `CREATE TYPE "enum_jobs_status" AS ENUM ('draft', 'active', 'paused', 'closed', 'expired', 'inactive')`;
           break;
       }
       
@@ -715,10 +715,10 @@ async function createJobsTable(queryInterface) {
           type: Sequelize.INTEGER,
           defaultValue: 0
         },
-        status: {
-          type: Sequelize.ENUM('draft', 'active', 'paused', 'closed', 'expired'),
-          defaultValue: 'draft'
-        },
+    status: {
+      type: Sequelize.ENUM('draft', 'active', 'paused', 'closed', 'expired', 'inactive'),
+      defaultValue: 'draft'
+    },
         is_featured: {
           type: Sequelize.BOOLEAN,
           defaultValue: false

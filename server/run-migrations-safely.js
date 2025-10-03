@@ -503,7 +503,7 @@ async function createJobsTable(queryInterface) {
   await queryInterface.sequelize.query(`DO $$ BEGIN CREATE TYPE "enum_jobs_experience_level" AS ENUM ('entry', 'junior', 'mid', 'senior', 'lead', 'executive'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
   await queryInterface.sequelize.query(`DO $$ BEGIN CREATE TYPE "enum_jobs_salary_type" AS ENUM ('per-year', 'per-month', 'per-hour'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
   await queryInterface.sequelize.query(`DO $$ BEGIN CREATE TYPE "enum_jobs_location_type" AS ENUM ('remote', 'on-site', 'hybrid'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
-  await queryInterface.sequelize.query(`DO $$ BEGIN CREATE TYPE "enum_jobs_status" AS ENUM ('draft', 'active', 'paused', 'closed', 'expired'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
+  await queryInterface.sequelize.query(`DO $$ BEGIN CREATE TYPE "enum_jobs_status" AS ENUM ('draft', 'active', 'paused', 'closed', 'expired', 'inactive'); EXCEPTION WHEN duplicate_object THEN null; END $$`);
 
   await queryInterface.createTable('jobs', {
     id: {
@@ -648,7 +648,7 @@ async function createJobsTable(queryInterface) {
       defaultValue: 0
     },
     status: {
-      type: Sequelize.ENUM('draft', 'active', 'paused', 'closed', 'expired'),
+      type: Sequelize.ENUM('draft', 'active', 'paused', 'closed', 'expired', 'inactive'),
       defaultValue: 'draft'
     },
     is_featured: {
