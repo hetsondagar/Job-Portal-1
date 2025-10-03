@@ -64,19 +64,11 @@ export default function AdminLoginPage() {
     setLoading(true)
     
     try {
-      // Use dedicated admin login endpoint
-      const response = await fetch('/api/admin-auth/admin-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
+      // Use dedicated admin login method from API service
+      const response = await apiService.adminLogin({ email, password })
       
-      const data = await response.json()
-      
-      if (data.success) {
-        const { user, token, redirectTo } = data.data
+      if (response.success && response.data) {
+        const { user, token, redirectTo } = response.data
         
         // Check if user is admin or superadmin
         if (user.userType !== 'admin' && user.userType !== 'superadmin') {
@@ -100,7 +92,7 @@ export default function AdminLoginPage() {
         const redirectUrl = redirectTo || '/admin/dashboard'
         router.push(redirectUrl)
       } else {
-        toast.error(data.message || "Login failed")
+        toast.error(response.message || "Login failed")
       }
     } catch (error) {
       console.error('Login error:', error)

@@ -56,6 +56,7 @@ export interface AuthResponse {
   user: User;
   company?: Company;
   token: string;
+  redirectTo?: string;
 }
 
 export interface SignupData {
@@ -697,6 +698,32 @@ class ApiService {
     this.clearAuth();
 
     return this.handleResponse(response);
+  }
+
+  async adminLogin(data: { email: string; password: string }): Promise<ApiResponse<AuthResponse>> {
+    const response = await fetch(`${API_BASE_URL}/admin-auth/admin-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await this.handleResponse<AuthResponse>(response);
+
+    // Only set auth data if login was successful
+    if (result.success && result.data?.token) {
+      this.setToken(result.data.token);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
+      if (result.data.company) {
+        localStorage.setItem('company', JSON.stringify(result.data.company));
+      }
+    } else {
+      // Clear any existing auth data on failed login
+      this.clearAuth();
+    }
+
+    return result;
   }
 
   async forgotPassword(data: ForgotPasswordData): Promise<ApiResponse> {
