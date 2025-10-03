@@ -64,19 +64,6 @@ export default function AdminLoginPage() {
     setLoading(true)
     
     try {
-      // First, ensure admin user exists
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/setup/ensure-admin`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      } catch (setupError) {
-        console.warn('Admin setup check failed:', setupError);
-        // Continue with login attempt even if setup check fails
-      }
-
       const response = await apiService.login({
         email,
         password,
@@ -97,7 +84,10 @@ export default function AdminLoginPage() {
         localStorage.setItem('user', JSON.stringify(user))
         
         toast.success("Login successful!")
+        
+        // Use router.push with refresh to ensure auth state is updated
         router.push('/admin/dashboard')
+        router.refresh()
       } else {
         toast.error(response.message || "Login failed")
       }
