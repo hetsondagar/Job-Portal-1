@@ -185,8 +185,7 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('jobs', ['slug']);
+    // Add indexes (slug index is automatically created by unique constraint)
     await queryInterface.addIndex('jobs', ['company_id']);
     await queryInterface.addIndex('jobs', ['posted_by']);
     await queryInterface.addIndex('jobs', ['job_category_id']);
