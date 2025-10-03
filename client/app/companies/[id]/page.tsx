@@ -111,6 +111,7 @@ function CompanyDetailPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [company, setCompany] = useState<any>(null)
   const [companyJobs, setCompanyJobs] = useState<any[]>([])
+  const [companyPhotos, setCompanyPhotos] = useState<any[]>([])
   const [loadingCompany, setLoadingCompany] = useState(true)
   const [loadingJobs, setLoadingJobs] = useState(true)
   const [companyError, setCompanyError] = useState<string>("")
@@ -461,6 +462,29 @@ function CompanyDetailPage() {
     }
   }, [companyId, isValidUuid])
 
+  const fetchCompanyPhotos = useCallback(async () => {
+    try {
+      if (!isValidUuid) {
+        setCompanyPhotos([])
+        return
+      }
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const resp = await fetch(`${base}/companies/${companyId}/photos`)
+      if (resp.ok) {
+        const data = await resp.json()
+        if (data?.success && Array.isArray(data.data)) {
+          setCompanyPhotos(data.data)
+        } else {
+          setCompanyPhotos([])
+        }
+      } else {
+        setCompanyPhotos([])
+      }
+    } catch {
+      setCompanyPhotos([])
+    }
+  }, [companyId, isValidUuid])
+
   // Handle filter changes
   const handleFilterChange = useCallback((filterType: string, value: string) => {
     const newFilters = { ...filters, [filterType]: value }
@@ -472,10 +496,11 @@ function CompanyDetailPage() {
     if (companyId) {
       fetchCompanyData()
       fetchCompanyJobs()
+      fetchCompanyPhotos()
       fetchAppliedJobs()
       fetchFollowStatus()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchAppliedJobs, fetchFollowStatus])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchCompanyPhotos, fetchAppliedJobs, fetchFollowStatus])
 
   // Load watch status for expired jobs when jobs or auth changes
   useEffect(() => {
@@ -1067,6 +1092,34 @@ function CompanyDetailPage() {
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Workplace Photos */}
+                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Workplace Photos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {companyPhotos.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {companyPhotos.map((p:any) => (
+                          <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
+                            <img
+                              src={p.fileUrl}
+                              alt={p.altText || company.name}
+                              className="w-full h-32 md:h-40 object-cover"
+                              loading="lazy"
+                            />
+                            {p.caption ? (
+                              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-slate-600 dark:text-slate-300">No photos uploaded yet.</div>
+                    )}
                   </CardContent>
                 </Card>
 

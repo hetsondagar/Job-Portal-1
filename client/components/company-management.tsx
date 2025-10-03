@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
 
 interface CompanyManagementProps {
   companyId: string
@@ -24,6 +25,10 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState<any>({})
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photos, setPhotos] = useState<any[]>([])
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const auth = useAuth() as any
 
   const companySizes = [
     "1-50", "51-200", "201-500", "500-1000", "1000+"
@@ -45,6 +50,15 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
       if (response.success && response.data) {
         setCompany(response.data)
         setFormData(response.data)
+        // fetch photos
+        try {
+          const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+          const res = await fetch(`${base}/companies/${companyId}/photos`)
+          if (res.ok) {
+            const data = await res.json()
+            if (data?.success && Array.isArray(data.data)) setPhotos(data.data)
+          }
+        } catch {}
       } else {
         toast.error("Failed to load company data")
       }
@@ -53,6 +67,61 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
       toast.error("Failed to load company data")
     } finally {
       setIsLoading(false)
+    }
+  }
+  const handlePhotoUpload = async (file: File) => {
+    if (!file) return
+    try {
+      setUploadingPhoto(true)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const form = new FormData()
+      form.append('photo', file)
+      form.append('altText', `${company?.name || 'Company'} photo`)
+      form.append('isPrimary', photos.length === 0 ? 'true' : 'false')
+      const res = await fetch(`${base}/companies/${companyId}/photos`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: form
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.success) {
+        toast.success('Photo uploaded')
+        setPhotos(prev => [data.data, ...prev])
+      } else {
+        toast.error(data?.message || 'Upload failed')
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Upload failed')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return
+    try {
+      setUploadingLogo(true)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const form = new FormData()
+      form.append('logo', file)
+      const res = await fetch(`${base}/companies/${companyId}/logo`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: form
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.success) {
+        toast.success('Logo updated')
+        setCompany((prev:any) => ({ ...(prev||{}), logo: data.data.logo }))
+      } else {
+        toast.error(data?.message || 'Logo upload failed')
+      }
+    } catch (e:any) {
+      toast.error(e?.message || 'Logo upload failed')
+    } finally {
+      setUploadingLogo(false)
     }
   }
 
@@ -193,6 +262,54 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                   placeholder="https://company.com"
                 />
               </div>
+            </div>
+
+            {/* Company Photos */}
+            <div className="space-y-2">
+              <Label>Workplace Photos</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handlePhotoUpload(file)
+                  }}
+                  disabled={uploadingPhoto}
+                />
+                {uploadingPhoto && <span className="text-sm">Uploading...</span>}
+              </div>
+              {photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  {photos.map((p:any) => (
+                    <div key={p.id} className="relative overflow-hidden rounded-lg border">
+                      <img src={p.fileUrl} alt={p.altText || 'Photo'} className="w-full h-24 object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Company Logo */}
+            <div className="space-y-2">
+              <Label>Company Logo</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleLogoUpload(file)
+                  }}
+                  disabled={uploadingLogo}
+                />
+                {uploadingLogo && <span className="text-sm">Uploading...</span>}
+              </div>
+              {company?.logo && (
+                <div className="mt-2 w-28 h-28 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900/30">
+                  <img src={company.logo} alt="Company logo" className="w-full h-full object-cover" />
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
