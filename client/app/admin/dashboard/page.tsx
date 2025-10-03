@@ -376,19 +376,19 @@ export default function AdminDashboardPage() {
                 <h2 className="text-2xl font-bold text-white">User Management</h2>
                 <div className="flex space-x-2">
                   <Link href="/admin/users/normal">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <Building2 className="w-4 h-4 mr-2" />
                       Normal Portal
                     </Button>
                   </Link>
                   <Link href="/admin/users/gulf-portal">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <Globe className="w-4 h-4 mr-2" />
                       Gulf Portal
                     </Button>
                   </Link>
                   <Link href="/admin/users/both">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <Users className="w-4 h-4 mr-2" />
                       Both Portals
                     </Button>
@@ -454,13 +454,13 @@ export default function AdminDashboardPage() {
                 <h2 className="text-2xl font-bold text-white">Company Management</h2>
                 <div className="flex space-x-2">
                   <Link href="/admin/companies/india">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <MapPin className="w-4 h-4 mr-2" />
                       India Companies
                     </Button>
                   </Link>
                   <Link href="/admin/companies/gulf">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <Globe className="w-4 h-4 mr-2" />
                       Gulf Companies
                     </Button>
@@ -526,13 +526,13 @@ export default function AdminDashboardPage() {
                 <h2 className="text-2xl font-bold text-white">Job Management</h2>
                 <div className="flex space-x-2">
                   <Link href="/admin/jobs/india">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <MapPin className="w-4 h-4 mr-2" />
                       India Jobs
                     </Button>
                   </Link>
                   <Link href="/admin/jobs/gulf">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
                       <Globe className="w-4 h-4 mr-2" />
                       Gulf Jobs
                     </Button>
