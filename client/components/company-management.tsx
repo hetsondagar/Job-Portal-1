@@ -485,7 +485,14 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                   <div>
                     <Label className="text-sm text-slate-500">About</Label>
                     <p className="text-slate-700 dark:text-slate-300">
-                      {company.about || 'No description provided'}
+                      {company.about || company.description || 'No description provided'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm text-slate-500">Why Join Us</Label>
+                    <p className="text-slate-700 dark:text-slate-300">
+                      {company.whyJoinUs || 'No information provided'}
                     </p>
                   </div>
                 </div>

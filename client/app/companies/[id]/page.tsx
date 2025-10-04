@@ -971,7 +971,17 @@ function CompanyDetailPage() {
               <CardContent className="p-8 -mt-16 relative">
                 <div className="flex flex-col lg:flex-row items-start lg:items-end space-y-6 lg:space-y-0 lg:space-x-8">
                   <Avatar className="w-32 h-32 ring-4 ring-white dark:ring-slate-800 shadow-xl">
-                    <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
+                    <AvatarImage 
+                      src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder.svg"} 
+                      alt={company.name}
+                      onLoad={() => {
+                        console.log('✅ Company logo loaded:', company.logo);
+                      }}
+                      onError={(e) => {
+                        console.error('❌ Company logo failed:', company.logo);
+                        console.log('🔍 Logo data:', company);
+                      }}
+                    />
                     <AvatarFallback className={`text-4xl font-bold ${sectorColors.text}`}>
                       {(company.name||'')[0]}
                     </AvatarFallback>
