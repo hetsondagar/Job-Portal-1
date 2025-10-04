@@ -19,10 +19,9 @@ const {
   CompanyActivityLog,
   UserSession,
   Analytics,
-  Requirement,
-  Sequelize 
+  Requirement
 } = require('../config');
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const { authenticateToken } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/adminAuth');
 
@@ -189,7 +188,7 @@ router.get('/users', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -250,7 +249,7 @@ router.get('/users/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -358,16 +357,16 @@ router.get('/users/:userId/details', async (req, res) => {
       include: [{
         model: SubscriptionPlan,
         as: 'plan',
-        attributes: ['id', 'name', 'price', 'duration', 'features', 'type']
+        attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get payment history
     const payments = await Payment.findAll({
       where: { userId },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
     });
 
@@ -375,7 +374,7 @@ router.get('/users/:userId/details', async (req, res) => {
     const activityLogs = await UserActivityLog.findAll({
       where: { userId },
       attributes: ['id', 'action', 'details', 'ipAddress', 'userAgent', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 20
     });
 
@@ -432,18 +431,18 @@ router.get('/companies/:companyId/details', async (req, res) => {
         {
           model: Job,
           as: 'jobs',
-          attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'applicationDeadline'],
+          attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'validTill'],
           include: [{
             model: JobApplication,
             as: 'jobApplications',
-            attributes: ['id', 'status', 'createdAt'],
+            attributes: ['id', 'status', 'created_at'],
             include: [{
               model: User,
               as: 'applicant',
               attributes: ['id', 'first_name', 'last_name', 'email']
             }]
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: CompanyPhoto,
@@ -459,7 +458,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
             as: 'reviewer',
             attributes: ['id', 'first_name', 'last_name']
           }],
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 10
         }
       ]
@@ -486,7 +485,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const averageRating = await CompanyReview.findOne({
       where: { companyId },
       attributes: [
-        [sequelize.fn('AVG', sequelize.col('rating')), 'averageRating']
+        [Sequelize.fn('AVG', Sequelize.col('rating')), 'averageRating']
       ],
       raw: true
     });
@@ -497,16 +496,16 @@ router.get('/companies/:companyId/details', async (req, res) => {
       include: [{
         model: SubscriptionPlan,
         as: 'plan',
-        attributes: ['id', 'name', 'price', 'duration', 'features', 'type']
+        attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get payment history
     const payments = await Payment.findAll({
       where: { companyId },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
     });
 
@@ -514,7 +513,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const activityLogs = await CompanyActivityLog.findAll({
       where: { companyId },
       attributes: ['id', 'action', 'details', 'ipAddress', 'userAgent', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 20
     });
 
@@ -522,7 +521,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const analytics = await Analytics.findAll({
       where: { companyId },
       attributes: ['id', 'eventType', 'eventData', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 50
     });
 
@@ -581,7 +580,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
           include: [{
             model: User,
             as: 'applicant',
-            attributes: ['id', 'first_name', 'last_name', 'email', 'phone_number', 'region'],
+            attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'region'],
             include: [{
               model: Resume,
               as: 'resumes',
@@ -620,7 +619,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       where: { jobId },
       attributes: [
         'status',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']
       ],
       group: ['status'],
       raw: true
@@ -633,7 +632,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         eventType: ['job_view', 'job_apply', 'job_bookmark']
       },
       attributes: ['id', 'eventType', 'eventData', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 100
     });
 
@@ -669,7 +668,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         attributes: ['id', 'name', 'industry']
       }],
       limit: 5,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get job requirements analysis
@@ -785,7 +784,7 @@ router.get('/users/portal/:portal', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -901,7 +900,7 @@ router.get('/users/export', async (req, res) => {
     const users = await User.findAll({
       where: whereClause,
       attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Convert to CSV
@@ -978,7 +977,7 @@ router.get('/companies', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1038,7 +1037,7 @@ router.get('/companies/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1174,7 +1173,7 @@ router.get('/companies/export', async (req, res) => {
 
     const companies = await Company.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Convert to CSV
@@ -1257,7 +1256,7 @@ router.get('/jobs', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1324,7 +1323,7 @@ router.get('/jobs/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1436,7 +1435,7 @@ router.get('/jobs/export', async (req, res) => {
 
     const jobs = await Job.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
