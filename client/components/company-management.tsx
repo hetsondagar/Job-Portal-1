@@ -98,6 +98,27 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
     }
   }
 
+  const handlePhotoDelete = async (photoId: string) => {
+    if (!confirm('Are you sure you want to delete this photo?')) return
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const res = await fetch(`${base}/companies/photos/${photoId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.success) {
+        toast.success('Photo deleted')
+        setPhotos(prev => prev.filter(p => p.id !== photoId))
+      } else {
+        toast.error(data?.message || 'Delete failed')
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Delete failed')
+    }
+  }
+
   const handleLogoUpload = async (file: File) => {
     if (!file) return
     try {
@@ -282,8 +303,15 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               {photos.length > 0 && (
                 <div className="grid grid-cols-3 gap-3 mt-3">
                   {photos.map((p:any) => (
-                    <div key={p.id} className="relative overflow-hidden rounded-lg border">
+                    <div key={p.id} className="relative overflow-hidden rounded-lg border group">
                       <img src={p.fileUrl} alt={p.altText || 'Photo'} className="w-full h-24 object-cover" />
+                      <button
+                        onClick={() => handlePhotoDelete(p.id)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        title="Delete photo"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>

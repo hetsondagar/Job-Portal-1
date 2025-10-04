@@ -485,6 +485,28 @@ function CompanyDetailPage() {
     }
   }, [companyId, isValidUuid])
 
+  // Delete company photo (for employers)
+  const handlePhotoDelete = useCallback(async (photoId: string) => {
+    if (!confirm('Are you sure you want to delete this photo?')) return
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const res = await fetch(`${base}/companies/photos/${photoId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.success) {
+        toast.success('Photo deleted')
+        setCompanyPhotos(prev => prev.filter(p => p.id !== photoId))
+      } else {
+        toast.error(data?.message || 'Delete failed')
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Delete failed')
+    }
+  }, [])
+
   // Handle filter changes
   const handleFilterChange = useCallback((filterType: string, value: string) => {
     const newFilters = { ...filters, [filterType]: value }
@@ -1107,7 +1129,7 @@ function CompanyDetailPage() {
                     {companyPhotos.length > 0 ? (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {companyPhotos.map((p:any) => (
-                          <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
+                          <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 group">
                             <img
                               src={p.fileUrl}
                               alt={p.altText || company.name}
@@ -1117,6 +1139,16 @@ function CompanyDetailPage() {
                             {p.caption ? (
                               <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
                             ) : null}
+                            {/* Delete button for company owners/admins */}
+                            {user && (user.userType === 'employer' || user.userType === 'admin') && user.companyId === companyId && (
+                              <button
+                                onClick={() => handlePhotoDelete(p.id)}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                title="Delete photo"
+                              >
+                                ×
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
