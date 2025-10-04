@@ -308,19 +308,6 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                         src={p.fileUrl} 
                         alt={p.altText || 'Photo'} 
                         className="w-full h-24 object-cover"
-                        onError={(e) => {
-                          console.error('Image load error:', p.fileUrl, e);
-                          // Try fallback URL without /api prefix since static files are served directly
-                          if (!e.currentTarget.dataset.fallbackTried) {
-                            const fallbackUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`.replace('/api', '');
-                            console.log('🔍 Trying fallback URL:', fallbackUrl);
-                            e.currentTarget.src = fallbackUrl;
-                            e.currentTarget.dataset.fallbackTried = 'true';
-                          } else {
-                            console.error('Both primary and fallback URLs failed, showing placeholder');
-                            e.currentTarget.style.display = 'none';
-                          }
-                        }}
                       />
                       <button
                         onClick={() => handlePhotoDelete(p.id)}

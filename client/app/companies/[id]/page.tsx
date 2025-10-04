@@ -1137,22 +1137,6 @@ function CompanyDetailPage() {
                               alt={p.altText || company.name}
                               className="w-full h-32 md:h-40 object-cover"
                               loading="lazy"
-                              onError={(e) => {
-                                console.error('Image load error:', p.fileUrl, e);
-                                // Try fallback URL without /api prefix since static files are served directly
-                                if (!e.currentTarget.dataset.fallbackTried) {
-                                  const fallbackUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`.replace('/api', '');
-                                  console.log('🔍 Trying fallback URL:', fallbackUrl);
-                                  e.currentTarget.src = fallbackUrl;
-                                  e.currentTarget.dataset.fallbackTried = 'true';
-                                } else {
-                                  console.error('Both primary and fallback URLs failed, showing placeholder');
-                                  e.currentTarget.style.display = 'none';
-                                }
-                              }}
-                              onLoad={() => {
-                                console.log('Image loaded successfully:', p.fileUrl);
-                              }}
                             />
                             {p.caption ? (
                               <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
