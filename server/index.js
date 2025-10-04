@@ -28,6 +28,14 @@ uploadDirs.forEach(dir => {
   }
 });
 
+// Clean up orphaned photos on startup (in production)
+if (process.env.NODE_ENV === 'production') {
+  const { cleanupOrphanedPhotos } = require('./scripts/cleanup-orphaned-photos');
+  cleanupOrphanedPhotos().catch(err => {
+    console.error('❌ Failed to cleanup orphaned photos:', err);
+  });
+}
+
 // Import database configuration
 const { sequelize, testConnection } = require('./config/sequelize');
 

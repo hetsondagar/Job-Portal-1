@@ -1063,4 +1063,22 @@ router.get('/:id/follow-status', authenticateToken, async (req, res) => {
   }
 });
 
+// Cleanup orphaned photos (admin only)
+router.post('/cleanup-orphaned-photos', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+    
+    const { cleanupOrphanedPhotos } = require('../scripts/cleanup-orphaned-photos');
+    await cleanupOrphanedPhotos();
+    
+    return res.status(200).json({ success: true, message: 'Orphaned photos cleaned up successfully' });
+  } catch (error) {
+    console.error('Cleanup orphaned photos error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to cleanup orphaned photos' });
+  }
+});
+
 module.exports = router;

@@ -101,6 +101,13 @@ async function startServer() {
       }
     });
     console.log('✅ Upload directories ensured successfully!');
+
+// Clean up orphaned photos on startup
+console.log('🧹 Cleaning up orphaned photos...');
+const { cleanupOrphanedPhotos } = require('./scripts/cleanup-orphaned-photos');
+cleanupOrphanedPhotos().catch(err => {
+  console.error('❌ Failed to cleanup orphaned photos:', err);
+});
     
     // Fix ALL database issues (missing columns, tables, constraints)
     console.log('🔧 Running comprehensive database fixes...');
