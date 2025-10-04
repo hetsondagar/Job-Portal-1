@@ -16,7 +16,6 @@ const {
   SubscriptionPlan,
   Payment,
   UserActivityLog,
-  CompanyActivityLog,
   UserSession,
   Analytics,
   Requirement
@@ -365,7 +364,7 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get payment history
     const payments = await Payment.findAll({
       where: { userId },
-      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
     });
@@ -373,16 +372,16 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get user activity logs
     const activityLogs = await UserActivityLog.findAll({
       where: { userId },
-      attributes: ['id', 'action', 'details', 'ipAddress', 'userAgent', 'createdAt'],
-      order: [['created_at', 'DESC']],
+      attributes: ['id', 'activityType', 'details', 'timestamp'],
+      order: [['timestamp', 'DESC']],
       limit: 20
     });
 
     // Get user sessions
     const sessions = await UserSession.findAll({
       where: { userId },
-      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivity', 'createdAt'],
-      order: [['lastActivity', 'DESC']],
+      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivityAt', 'created_at'],
+      order: [['lastActivityAt', 'DESC']],
       limit: 10
     });
 
@@ -447,12 +446,12 @@ router.get('/companies/:companyId/details', async (req, res) => {
         {
           model: CompanyPhoto,
           as: 'photos',
-          attributes: ['id', 'filePath', 'isPrimary', 'createdAt']
+          attributes: ['id', 'filePath', 'isPrimary', 'created_at']
         },
         {
           model: CompanyReview,
           as: 'reviews',
-          attributes: ['id', 'rating', 'comment', 'createdAt'],
+          attributes: ['id', 'rating', 'review', 'created_at'],
           include: [{
             model: User,
             as: 'reviewer',
@@ -504,23 +503,25 @@ router.get('/companies/:companyId/details', async (req, res) => {
     // Get payment history
     const payments = await Payment.findAll({
       where: { companyId },
-      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
     });
 
-    // Get company activity logs
-    const activityLogs = await CompanyActivityLog.findAll({
-      where: { companyId },
-      attributes: ['id', 'action', 'details', 'ipAddress', 'userAgent', 'createdAt'],
-      order: [['created_at', 'DESC']],
+    // Get company activity logs (using UserActivityLog for now)
+    const activityLogs = await UserActivityLog.findAll({
+      where: { 
+        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+      },
+      attributes: ['id', 'activityType', 'details', 'timestamp'],
+      order: [['timestamp', 'DESC']],
       limit: 20
     });
 
     // Get company analytics
     const analytics = await Analytics.findAll({
       where: { companyId },
-      attributes: ['id', 'eventType', 'eventData', 'createdAt'],
+      attributes: ['id', 'eventType', 'metadata', 'created_at'],
       order: [['created_at', 'DESC']],
       limit: 50
     });
@@ -631,7 +632,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         jobId,
         eventType: ['job_view', 'job_apply', 'job_bookmark']
       },
-      attributes: ['id', 'eventType', 'eventData', 'createdAt'],
+      attributes: ['id', 'eventType', 'metadata', 'created_at'],
       order: [['created_at', 'DESC']],
       limit: 100
     });
