@@ -200,7 +200,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
     // If it's already a full URL, return as is
     if (logoPath.startsWith('http')) return logoPath
     // Otherwise, construct the full URL
-    return `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${logoPath}`
+    return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${logoPath}`
   }
 
   if (loading && companies.length === 0) {

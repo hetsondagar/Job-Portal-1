@@ -304,7 +304,15 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                 <div className="grid grid-cols-3 gap-3 mt-3">
                   {photos.map((p:any) => (
                     <div key={p.id} className="relative overflow-hidden rounded-lg border group">
-                      <img src={p.fileUrl} alt={p.altText || 'Photo'} className="w-full h-24 object-cover" />
+                      <img 
+                        src={p.fileUrl || `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`} 
+                        alt={p.altText || 'Photo'} 
+                        className="w-full h-24 object-cover"
+                        onError={(e) => {
+                          console.error('Image load error:', p.fileUrl, e);
+                          e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                        }}
+                      />
                       <button
                         onClick={() => handlePhotoDelete(p.id)}
                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"

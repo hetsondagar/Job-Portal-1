@@ -120,6 +120,9 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
     const filename = req.file.filename;
     const filePath = `/uploads/company-photos/${filename}`;
     const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+    
+    console.log('🔍 BACKEND_URL:', process.env.BACKEND_URL);
+    console.log('🔍 Generated company photo URL:', fileUrl);
 
     // If marking as primary, unset others for this company
     if (isPrimary === 'true' || isPrimary === true) {
@@ -158,6 +161,15 @@ router.get('/:id/photos', async (req, res) => {
       where: { companyId: id, isActive: true },
       order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
     });
+    
+    console.log('🔍 Company photos found:', photos.length);
+    console.log('🔍 First photo data:', photos[0] ? {
+      id: photos[0].id,
+      fileUrl: photos[0].fileUrl,
+      filePath: photos[0].filePath,
+      filename: photos[0].filename
+    } : 'No photos');
+    
     return res.status(200).json({ success: true, data: photos });
   } catch (error) {
     console.error('List company photos error:', error);
@@ -519,6 +531,9 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
     const filename = req.file.filename;
     const filePath = `/uploads/company-photos/${filename}`;
     const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+    
+    console.log('🔍 BACKEND_URL:', process.env.BACKEND_URL);
+    console.log('🔍 Generated company photo URL:', fileUrl);
 
     // If marking as primary, unset others for this company
     if (isPrimary === 'true' || isPrimary === true) {

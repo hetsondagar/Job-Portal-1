@@ -472,7 +472,9 @@ function CompanyDetailPage() {
       const resp = await fetch(`${base}/companies/${companyId}/photos`)
       if (resp.ok) {
         const data = await resp.json()
+        console.log('🔍 Company photos API response:', data)
         if (data?.success && Array.isArray(data.data)) {
+          console.log('🔍 Company photos data:', data.data)
           setCompanyPhotos(data.data)
         } else {
           setCompanyPhotos([])
@@ -1131,10 +1133,18 @@ function CompanyDetailPage() {
                         {companyPhotos.map((p:any) => (
                           <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 group">
                             <img
-                              src={p.fileUrl}
+                              src={p.fileUrl || `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`}
                               alt={p.altText || company.name}
                               className="w-full h-32 md:h-40 object-cover"
                               loading="lazy"
+                              onError={(e) => {
+                                console.error('Image load error:', p.fileUrl, e);
+                                console.log('🔍 Trying fallback URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`);
+                                e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                              }}
+                              onLoad={() => {
+                                console.log('Image loaded successfully:', p.fileUrl);
+                              }}
                             />
                             {p.caption ? (
                               <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
