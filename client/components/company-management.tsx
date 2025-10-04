@@ -536,6 +536,58 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                 </div>
               </div>
             </div>
+
+            {/* Company Photos Display */}
+            {photos.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Workplace Photos</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((p: any) => (
+                    <div key={p.id} className="relative overflow-hidden rounded-lg border group">
+                      <img 
+                        src={p.fileUrl} 
+                        alt={p.altText || 'Photo'} 
+                        className="w-full h-32 object-cover"
+                        onLoad={() => {
+                          console.log('✅ Display image loaded:', p.fileUrl);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Display image failed:', p.fileUrl);
+                          console.log('🔍 Photo data:', p);
+                        }}
+                      />
+                      <button
+                        onClick={() => handlePhotoDelete(p.id)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        title="Delete photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Company Logo Display */}
+            {company?.logo && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Company Logo</h3>
+                <div className="w-32 h-32 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900/30">
+                  <img 
+                    src={company.logo} 
+                    alt="Company logo" 
+                    className="w-full h-full object-cover"
+                    onLoad={() => {
+                      console.log('✅ Logo loaded:', company.logo);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ Logo failed:', company.logo);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
