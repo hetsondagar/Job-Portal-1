@@ -211,6 +211,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
     // Allow cross-origin usage of uploaded files (for frontend domains)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'public, max-age=31536000');
+    // Fix Cross-Origin-Resource-Policy issue
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
     // Set accurate content-type based on extension
     const lower = filePath.toLowerCase();
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
