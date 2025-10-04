@@ -290,6 +290,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: JobApplication,
           as: 'jobApplications',
+          attributes: ['id', 'status', 'created_at'],
           include: [{
             model: Job,
             as: 'job',
@@ -306,6 +307,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: JobBookmark,
           as: 'jobBookmarks',
+          attributes: ['id', 'created_at'],
           include: [{
             model: Job,
             as: 'job',
@@ -332,7 +334,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Education,
           as: 'educations',
-          attributes: ['id', 'institution', 'degree', 'fieldOfStudy', 'startDate', 'endDate', 'gpa', 'description']
+          attributes: ['id', 'institution', 'degree', 'fieldOfStudy', 'startDate', 'endDate', 'cgpa', 'percentage', 'description']
         }
       ],
       attributes: { exclude: ['password'] }
@@ -454,7 +456,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
           attributes: ['id', 'rating', 'comment', 'createdAt'],
           include: [{
             model: User,
-            as: 'user',
+            as: 'reviewer',
             attributes: ['id', 'first_name', 'last_name']
           }],
           order: [['createdAt', 'DESC']],
@@ -575,7 +577,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         {
           model: JobApplication,
           as: 'jobApplications',
-          attributes: ['id', 'status', 'coverLetter', 'createdAt', 'updatedAt'],
+          attributes: ['id', 'status', 'coverLetter', 'created_at', 'updated_at'],
           include: [{
             model: User,
             as: 'applicant',
@@ -593,7 +595,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         {
           model: JobBookmark,
           as: 'bookmarks',
-          attributes: ['id', 'createdAt'],
+          attributes: ['id', 'created_at'],
           include: [{
             model: User,
             as: 'user',
