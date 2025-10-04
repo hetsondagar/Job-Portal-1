@@ -358,7 +358,7 @@ router.get('/users/:userId/details', async (req, res) => {
       include: [{
         model: SubscriptionPlan,
         as: 'plan',
-        attributes: ['id', 'name', 'price', 'duration', 'features', 'type']
+        attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
       order: [['createdAt', 'DESC']]
     });
@@ -432,7 +432,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
         {
           model: Job,
           as: 'jobs',
-          attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'applicationDeadline'],
+          attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'validTill'],
           include: [{
             model: JobApplication,
             as: 'jobApplications',
@@ -486,7 +486,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const averageRating = await CompanyReview.findOne({
       where: { companyId },
       attributes: [
-        [sequelize.fn('AVG', sequelize.col('rating')), 'averageRating']
+        [Sequelize.fn('AVG', Sequelize.col('rating')), 'averageRating']
       ],
       raw: true
     });
@@ -497,7 +497,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
       include: [{
         model: SubscriptionPlan,
         as: 'plan',
-        attributes: ['id', 'name', 'price', 'duration', 'features', 'type']
+        attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
       order: [['createdAt', 'DESC']]
     });
@@ -581,7 +581,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
           include: [{
             model: User,
             as: 'applicant',
-            attributes: ['id', 'first_name', 'last_name', 'email', 'phone_number', 'region'],
+            attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'region'],
             include: [{
               model: Resume,
               as: 'resumes',
@@ -620,7 +620,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       where: { jobId },
       attributes: [
         'status',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']
       ],
       group: ['status'],
       raw: true
