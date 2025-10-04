@@ -1165,7 +1165,11 @@ function CompanyDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-slate-600 dark:text-slate-300">No photos uploaded yet.</div>
+                      <div className="text-slate-600 dark:text-slate-300">
+                        No photos uploaded yet. 
+                        <br />
+                        <small className="text-xs">Debug: Photos count = {companyPhotos.length}</small>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
