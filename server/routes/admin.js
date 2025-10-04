@@ -491,7 +491,9 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Get company subscription/pricing information
     const subscription = await Subscription.findOne({
-      where: { companyId },
+      where: { 
+        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+      },
       include: [{
         model: SubscriptionPlan,
         as: 'plan',
@@ -653,15 +655,21 @@ router.get('/jobs/:jobId/details', async (req, res) => {
     const bookmarkRate = viewCount > 0 ? ((bookmarkCount / viewCount) * 100).toFixed(2) : 0;
 
     // Get similar jobs
+    const similarJobsQuery = {
+      id: { [Op.ne]: jobId },
+      [Op.or]: [
+        { companyId: job.companyId },
+        { location: { [Op.iLike]: `%${job.location?.split(',')[0]}%` } }
+      ]
+    };
+
+    // Add category filter only if job has a category
+    if (job.category) {
+      similarJobsQuery[Op.or].unshift({ category: job.category });
+    }
+
     const similarJobs = await Job.findAll({
-      where: {
-        id: { [Op.ne]: jobId },
-        [Op.or]: [
-          { categoryId: job.categoryId },
-          { companyId: job.companyId },
-          { location: { [Op.iLike]: `%${job.location?.split(',')[0]}%` } }
-        ]
-      },
+      where: similarJobsQuery,
       attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt'],
       include: [{
         model: Company,
@@ -669,7 +677,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         attributes: ['id', 'name', 'industry']
       }],
       limit: 5,
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     // Get job requirements analysis
