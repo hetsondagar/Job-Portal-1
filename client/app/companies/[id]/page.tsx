@@ -1133,16 +1133,17 @@ function CompanyDetailPage() {
                         {companyPhotos.map((p:any) => (
                           <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 group">
                             <img
-                              src={p.fileUrl || `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`}
+                              src={p.fileUrl}
                               alt={p.altText || company.name}
                               className="w-full h-32 md:h-40 object-cover"
                               loading="lazy"
                               onError={(e) => {
                                 console.error('Image load error:', p.fileUrl, e);
-                                // Prevent infinite loop by checking if we've already tried the fallback
+                                // Try fallback URL without /api prefix since static files are served directly
                                 if (!e.currentTarget.dataset.fallbackTried) {
-                                  console.log('🔍 Trying fallback URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`);
-                                  e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                                  const fallbackUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`.replace('/api', '');
+                                  console.log('🔍 Trying fallback URL:', fallbackUrl);
+                                  e.currentTarget.src = fallbackUrl;
                                   e.currentTarget.dataset.fallbackTried = 'true';
                                 } else {
                                   console.error('Both primary and fallback URLs failed, showing placeholder');

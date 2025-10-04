@@ -305,14 +305,16 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                   {photos.map((p:any) => (
                     <div key={p.id} className="relative overflow-hidden rounded-lg border group">
                       <img 
-                        src={p.fileUrl || `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`} 
+                        src={p.fileUrl} 
                         alt={p.altText || 'Photo'} 
                         className="w-full h-24 object-cover"
                         onError={(e) => {
                           console.error('Image load error:', p.fileUrl, e);
-                          // Prevent infinite loop by checking if we've already tried the fallback
+                          // Try fallback URL without /api prefix since static files are served directly
                           if (!e.currentTarget.dataset.fallbackTried) {
-                            e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                            const fallbackUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`.replace('/api', '');
+                            console.log('🔍 Trying fallback URL:', fallbackUrl);
+                            e.currentTarget.src = fallbackUrl;
                             e.currentTarget.dataset.fallbackTried = 'true';
                           } else {
                             console.error('Both primary and fallback URLs failed, showing placeholder');
