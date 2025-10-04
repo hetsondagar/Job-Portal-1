@@ -399,6 +399,14 @@ const startServer = async () => {
       console.warn('⚠️ Skipping default template seeding:', seedError?.message || seedError);
     }
 
+    // Create job preferences table if it doesn't exist
+    try {
+      const { createJobPreferencesTable } = require('./scripts/create-job-preferences-table');
+      await createJobPreferencesTable();
+    } catch (tableError) {
+      console.warn('⚠️ Skipping job preferences table creation:', tableError?.message || tableError);
+    }
+
     // Seed admin user
     try {
       const { seedAdminUser } = require('./scripts/seedAdminUser');
