@@ -833,6 +833,52 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Job preferences endpoints
+  async getJobPreferences(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-preferences`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async updateJobPreferences(preferences: any): Promise<ApiResponse<any>> {
+    try {
+      console.log('🔍 API Service - Updating job preferences...');
+      const response = await fetch(`${API_BASE_URL}/job-preferences`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(preferences),
+      });
+
+      console.log('🔍 API Service - Job preferences update response status:', response.status);
+      const result = await this.handleResponse(response);
+      console.log('🔍 API Service - Job preferences update result:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - updateJobPreferences error:', error);
+      throw error;
+    }
+  }
+
+  async getMatchingJobs(page: number = 1, limit: number = 20): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-preferences/matching-jobs?page=${page}&limit=${limit}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async deleteJobPreferences(): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/job-preferences`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
   async getNotifications(): Promise<ApiResponse<any[]>> {
     try {
       const response = await fetch(`${API_BASE_URL}/user/notifications`, {

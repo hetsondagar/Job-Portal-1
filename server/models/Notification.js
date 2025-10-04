@@ -29,7 +29,8 @@ const Notification = sequelize.define('Notification', {
       'interview_cancelled',
       'interview_reminder',
       'candidate_shortlisted',
-      'application_shortlisted'
+      'application_shortlisted',
+      'preferred_job_posted'
     ),
     allowNull: false
   },
@@ -144,7 +145,8 @@ Notification.prototype.getTypeIcon = function() {
     application_shortlisted: 'check-circle',
     interview_scheduled: 'calendar',
     interview_cancelled: 'x-circle',
-    interview_reminder: 'clock'
+    interview_reminder: 'clock',
+    preferred_job_posted: 'star'
   };
   return typeIcons[this.type] || 'bell';
 };

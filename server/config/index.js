@@ -47,6 +47,7 @@ const SecureJobTap = require('../models/SecureJobTap');
 const BulkJobImport = require('../models/BulkJobImport')(sequelize);
 const CandidateAnalytics = require('../models/CandidateAnalytics')(sequelize);
 const JobTemplate = require('../models/JobTemplate');
+const JobPreference = require('../models/JobPreference');
 
 // Define associations
 
@@ -62,6 +63,7 @@ User.hasMany(CoverLetter, { foreignKey: 'userId', as: 'coverLetters' });
 User.hasMany(WorkExperience, { foreignKey: 'userId', as: 'workExperiences' });
 User.hasMany(Education, { foreignKey: 'userId', as: 'educations' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+User.hasOne(JobPreference, { foreignKey: 'userId', as: 'jobPreference' });
 User.hasMany(CompanyReview, { foreignKey: 'userId', as: 'companyReviews' });
 User.hasMany(CompanyFollow, { foreignKey: 'userId', as: 'companyFollows' });
 User.hasMany(Subscription, { foreignKey: 'userId', as: 'subscriptions' });
@@ -278,5 +280,6 @@ module.exports = {
   BulkJobImport,
   CandidateAnalytics,
   JobTemplate,
+  JobPreference,
   syncDatabase
 }; 

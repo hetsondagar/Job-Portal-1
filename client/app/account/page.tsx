@@ -76,11 +76,29 @@ export default function AccountPage() {
       linkedin: '',
       github: '',
       portfolio: ''
+    },
+    jobPreferences: {
+      preferredJobTitles: [] as string[],
+      preferredIndustries: [] as string[],
+      preferredLocations: [] as string[],
+      preferredJobTypes: [] as string[],
+      preferredExperienceLevels: [] as string[],
+      preferredSalaryMin: '',
+      preferredSalaryMax: '',
+      preferredSkills: [] as string[],
+      preferredCompanies: [] as string[],
+      preferredWorkMode: [] as string[],
+      willingToTravel: false
     }
   })
   
   const [newSkill, setNewSkill] = useState('')
   const [newLanguage, setNewLanguage] = useState('')
+  const [newJobTitle, setNewJobTitle] = useState('')
+  const [newIndustry, setNewIndustry] = useState('')
+  const [newLocation, setNewLocation] = useState('')
+  const [newCompany, setNewCompany] = useState('')
+  const [newPreferredSkill, setNewPreferredSkill] = useState('')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -167,6 +185,8 @@ export default function AccountPage() {
   const saveProfessionalData = async () => {
     try {
       setSaving(true)
+      
+      // Save professional data
       const response = await apiService.updateProfile({
         ...professionalData,
         expectedSalary: professionalData.expectedSalary ? Number(professionalData.expectedSalary) : undefined,
@@ -174,9 +194,18 @@ export default function AccountPage() {
       })
       
       if (response.success) {
-        await refreshUser()
-        setEditingProfessional(false)
-        toast.success('Professional details updated successfully')
+        // Save job preferences
+        const preferencesResponse = await apiService.updateJobPreferences(professionalData.jobPreferences)
+        
+        if (preferencesResponse.success) {
+          await refreshUser()
+          setEditingProfessional(false)
+          toast.success('Professional details and job preferences updated successfully')
+        } else {
+          await refreshUser()
+          setEditingProfessional(false)
+          toast.success('Professional details updated successfully, but job preferences failed to save')
+        }
       } else {
         toast.error(response.message || 'Failed to update professional details')
       }
@@ -219,6 +248,155 @@ export default function AccountPage() {
     setProfessionalData(prev => ({
       ...prev,
       languages: prev.languages.filter(lang => lang !== languageToRemove)
+    }))
+  }
+
+  // Job preferences helper functions
+  const addJobTitle = () => {
+    if (newJobTitle.trim() && !professionalData.jobPreferences.preferredJobTitles.includes(newJobTitle.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredJobTitles: [...prev.jobPreferences.preferredJobTitles, newJobTitle.trim()]
+        }
+      }))
+      setNewJobTitle('')
+    }
+  }
+
+  const removeJobTitle = (titleToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredJobTitles: prev.jobPreferences.preferredJobTitles.filter(title => title !== titleToRemove)
+      }
+    }))
+  }
+
+  const addIndustry = () => {
+    if (newIndustry.trim() && !professionalData.jobPreferences.preferredIndustries.includes(newIndustry.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredIndustries: [...prev.jobPreferences.preferredIndustries, newIndustry.trim()]
+        }
+      }))
+      setNewIndustry('')
+    }
+  }
+
+  const removeIndustry = (industryToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredIndustries: prev.jobPreferences.preferredIndustries.filter(industry => industry !== industryToRemove)
+      }
+    }))
+  }
+
+  const addLocation = () => {
+    if (newLocation.trim() && !professionalData.jobPreferences.preferredLocations.includes(newLocation.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredLocations: [...prev.jobPreferences.preferredLocations, newLocation.trim()]
+        }
+      }))
+      setNewLocation('')
+    }
+  }
+
+  const removeLocation = (locationToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredLocations: prev.jobPreferences.preferredLocations.filter(location => location !== locationToRemove)
+      }
+    }))
+  }
+
+  const addCompany = () => {
+    if (newCompany.trim() && !professionalData.jobPreferences.preferredCompanies.includes(newCompany.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredCompanies: [...prev.jobPreferences.preferredCompanies, newCompany.trim()]
+        }
+      }))
+      setNewCompany('')
+    }
+  }
+
+  const removeCompany = (companyToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredCompanies: prev.jobPreferences.preferredCompanies.filter(company => company !== companyToRemove)
+      }
+    }))
+  }
+
+  const addJobType = (jobType: string) => {
+    if (!professionalData.jobPreferences.preferredJobTypes.includes(jobType)) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredJobTypes: [...prev.jobPreferences.preferredJobTypes, jobType]
+        }
+      }))
+    }
+  }
+
+  const removeJobType = (jobTypeToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredJobTypes: prev.jobPreferences.preferredJobTypes.filter(type => type !== jobTypeToRemove)
+      }
+    }))
+  }
+
+  const addExperienceLevel = (level: string) => {
+    if (!professionalData.jobPreferences.preferredExperienceLevels.includes(level)) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredExperienceLevels: [...prev.jobPreferences.preferredExperienceLevels, level]
+        }
+      }))
+    }
+  }
+
+  const removeExperienceLevel = (levelToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredExperienceLevels: prev.jobPreferences.preferredExperienceLevels.filter(level => level !== levelToRemove)
+      }
+    }))
+  }
+
+  const toggleWorkMode = (mode: string, checked: boolean) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredWorkMode: checked 
+          ? [...prev.jobPreferences.preferredWorkMode, mode]
+          : prev.jobPreferences.preferredWorkMode.filter(m => m !== mode)
+      }
     }))
   }
 
@@ -641,6 +819,269 @@ export default function AccountPage() {
                             <Button type="button" onClick={addLanguage} size="sm">
                               <Plus className="w-4 h-4" />
                             </Button>
+                          </div>
+                        </div>
+
+                        {/* Job Preferences Section */}
+                        <div className="space-y-6 border-t pt-6">
+                          <div className="flex items-center space-x-2">
+                            <Star className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold">Job Preferences</h3>
+                          </div>
+                          
+                          {/* Preferred Job Titles */}
+                          <div>
+                            <Label>Preferred Job Titles</Label>
+                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                              {professionalData.jobPreferences.preferredJobTitles.map((title, index) => (
+                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                  {title}
+                                  <button
+                                    onClick={() => removeJobTitle(title)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Input
+                                value={newJobTitle}
+                                onChange={(e) => setNewJobTitle(e.target.value)}
+                                placeholder="e.g., Software Engineer, Product Manager"
+                                onKeyPress={(e) => e.key === 'Enter' && addJobTitle()}
+                              />
+                              <Button type="button" onClick={addJobTitle} size="sm">
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Preferred Industries */}
+                          <div>
+                            <Label>Preferred Industries</Label>
+                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                              {professionalData.jobPreferences.preferredIndustries.map((industry, index) => (
+                                <Badge key={index} variant="outline" className="flex items-center gap-1">
+                                  {industry}
+                                  <button
+                                    onClick={() => removeIndustry(industry)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Input
+                                value={newIndustry}
+                                onChange={(e) => setNewIndustry(e.target.value)}
+                                placeholder="e.g., Technology, Healthcare, Finance"
+                                onKeyPress={(e) => e.key === 'Enter' && addIndustry()}
+                              />
+                              <Button type="button" onClick={addIndustry} size="sm">
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Preferred Locations */}
+                          <div>
+                            <Label>Preferred Locations</Label>
+                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                              {professionalData.jobPreferences.preferredLocations.map((location, index) => (
+                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                  {location}
+                                  <button
+                                    onClick={() => removeLocation(location)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Input
+                                value={newLocation}
+                                onChange={(e) => setNewLocation(e.target.value)}
+                                placeholder="e.g., Mumbai, Bangalore, Remote"
+                                onKeyPress={(e) => e.key === 'Enter' && addLocation()}
+                              />
+                              <Button type="button" onClick={addLocation} size="sm">
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Preferred Companies */}
+                          <div>
+                            <Label>Preferred Companies</Label>
+                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                              {professionalData.jobPreferences.preferredCompanies.map((company, index) => (
+                                <Badge key={index} variant="outline" className="flex items-center gap-1">
+                                  {company}
+                                  <button
+                                    onClick={() => removeCompany(company)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Input
+                                value={newCompany}
+                                onChange={(e) => setNewCompany(e.target.value)}
+                                placeholder="e.g., Google, Microsoft, Amazon"
+                                onKeyPress={(e) => e.key === 'Enter' && addCompany()}
+                              />
+                              <Button type="button" onClick={addCompany} size="sm">
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Job Type and Experience Preferences */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <Label>Preferred Job Types</Label>
+                              <Select
+                                value=""
+                                onValueChange={(value) => addJobType(value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select job type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="full-time">Full-time</SelectItem>
+                                  <SelectItem value="part-time">Part-time</SelectItem>
+                                  <SelectItem value="contract">Contract</SelectItem>
+                                  <SelectItem value="internship">Internship</SelectItem>
+                                  <SelectItem value="freelance">Freelance</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {professionalData.jobPreferences.preferredJobTypes.map((type, index) => (
+                                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                    {type}
+                                    <button
+                                      onClick={() => removeJobType(type)}
+                                      className="ml-1 hover:text-red-500"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label>Preferred Experience Levels</Label>
+                              <Select
+                                value=""
+                                onValueChange={(value) => addExperienceLevel(value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select experience level" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="entry">Entry Level</SelectItem>
+                                  <SelectItem value="junior">Junior</SelectItem>
+                                  <SelectItem value="mid">Mid Level</SelectItem>
+                                  <SelectItem value="senior">Senior</SelectItem>
+                                  <SelectItem value="lead">Lead</SelectItem>
+                                  <SelectItem value="executive">Executive</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {professionalData.jobPreferences.preferredExperienceLevels.map((level, index) => (
+                                  <Badge key={index} variant="outline" className="flex items-center gap-1">
+                                    {level}
+                                    <button
+                                      onClick={() => removeExperienceLevel(level)}
+                                      className="ml-1 hover:text-red-500"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Work Mode Preferences */}
+                          <div>
+                            <Label>Preferred Work Mode</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {['on-site', 'remote', 'hybrid'].map((mode) => (
+                                <div key={mode} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`workMode-${mode}`}
+                                    checked={professionalData.jobPreferences.preferredWorkMode.includes(mode)}
+                                    onCheckedChange={(checked) => toggleWorkMode(mode, !!checked)}
+                                  />
+                                  <Label htmlFor={`workMode-${mode}`} className="capitalize">
+                                    {mode}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Salary Preferences */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <Label>Preferred Minimum Salary (LPA)</Label>
+                              <Input
+                                type="number"
+                                value={professionalData.jobPreferences.preferredSalaryMin}
+                                onChange={(e) => setProfessionalData(prev => ({
+                                  ...prev,
+                                  jobPreferences: {
+                                    ...prev.jobPreferences,
+                                    preferredSalaryMin: e.target.value
+                                  }
+                                }))}
+                                placeholder="e.g., 5"
+                              />
+                            </div>
+                            <div>
+                              <Label>Preferred Maximum Salary (LPA)</Label>
+                              <Input
+                                type="number"
+                                value={professionalData.jobPreferences.preferredSalaryMax}
+                                onChange={(e) => setProfessionalData(prev => ({
+                                  ...prev,
+                                  jobPreferences: {
+                                    ...prev.jobPreferences,
+                                    preferredSalaryMax: e.target.value
+                                  }
+                                }))}
+                                placeholder="e.g., 15"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Additional Preferences */}
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="willingToTravel"
+                                checked={professionalData.jobPreferences.willingToTravel}
+                                onCheckedChange={(checked) => setProfessionalData(prev => ({
+                                  ...prev,
+                                  jobPreferences: {
+                                    ...prev.jobPreferences,
+                                    willingToTravel: !!checked
+                                  }
+                                }))}
+                              />
+                              <Label htmlFor="willingToTravel">Willing to travel for work</Label>
+                            </div>
                           </div>
                         </div>
 

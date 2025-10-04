@@ -513,6 +513,67 @@ This is an automated notification. Please do not reply to this email.
   }
 
   /**
+   * Send preferred job notification to jobseekers
+   * @param {string} jobId - ID of the newly posted job
+   * @param {object} jobData - Job data including title, company, location, etc.
+   * @param {array} matchingUserIds - Array of user IDs who have matching preferences
+   */
+  static async sendPreferredJobNotification(jobId, jobData, matchingUserIds) {
+    try {
+      if (!matchingUserIds || matchingUserIds.length === 0) {
+        console.log('📝 No matching users found for job preferences');
+        return { success: true, message: 'No matching users found' };
+      }
+
+      console.log(`🔔 Sending preferred job notifications for job ${jobId} to ${matchingUserIds.length} users`);
+
+      // Create notification data for each matching user
+      const notifications = matchingUserIds.map(userId => ({
+        userId,
+        type: 'preferred_job_posted',
+        title: `🎯 New Job Matching Your Preferences!`,
+        message: `A new job "${jobData.title}" at ${jobData.companyName} in ${jobData.location} has been posted that matches your job preferences. Don't miss this opportunity!`,
+        shortMessage: `New job: ${jobData.title} at ${jobData.companyName}`,
+        priority: 'high',
+        actionUrl: `/jobs/${jobId}`,
+        actionText: 'View Job',
+        icon: 'star',
+        metadata: {
+          jobId,
+          jobTitle: jobData.title,
+          companyName: jobData.companyName,
+          location: jobData.location,
+          salary: jobData.salary,
+          jobType: jobData.jobType,
+          experienceLevel: jobData.experienceLevel,
+          postedAt: new Date().toISOString(),
+          isPreferred: true
+        }
+      }));
+
+      // Send bulk notifications
+      const result = await this.sendBulkNotifications(notifications);
+
+      console.log(`✅ Preferred job notifications sent: ${result.successful} successful, ${result.failed} failed`);
+
+      return {
+        success: true,
+        notificationsSent: result.successful,
+        notificationsFailed: result.failed,
+        totalUsers: matchingUserIds.length
+      };
+
+    } catch (error) {
+      console.error('❌ Error sending preferred job notifications:', error);
+      return {
+        success: false,
+        message: 'Failed to send preferred job notifications',
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Send bulk notifications to multiple users
    */
   static async sendBulkNotifications(notifications) {
