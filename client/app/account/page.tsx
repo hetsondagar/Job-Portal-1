@@ -111,6 +111,7 @@ export default function AccountPage() {
     if (user && !loading) {
       fetchResumeStats()
       initializeFormData()
+      fetchJobPreferences()
     }
   }, [user, loading])
 
@@ -136,6 +137,19 @@ export default function AccountPage() {
           linkedin: user.socialLinks?.linkedin || '',
           github: user.socialLinks?.github || '',
           portfolio: user.socialLinks?.portfolio || ''
+        },
+        jobPreferences: {
+          preferredJobTitles: user.jobPreferences?.preferredJobTitles || [],
+          preferredIndustries: user.jobPreferences?.preferredIndustries || [],
+          preferredLocations: user.jobPreferences?.preferredLocations || [],
+          preferredJobTypes: user.jobPreferences?.preferredJobTypes || [],
+          preferredExperienceLevels: user.jobPreferences?.preferredExperienceLevels || [],
+          preferredSalaryMin: user.jobPreferences?.preferredSalaryMin?.toString() || '',
+          preferredSalaryMax: user.jobPreferences?.preferredSalaryMax?.toString() || '',
+          preferredSkills: user.jobPreferences?.preferredSkills || [],
+          preferredCompanies: user.jobPreferences?.preferredCompanies || [],
+          preferredWorkMode: user.jobPreferences?.preferredWorkMode || [],
+          willingToTravel: user.jobPreferences?.willingToTravel || false
         }
       })
     }
@@ -149,6 +163,32 @@ export default function AccountPage() {
       }
     } catch (error) {
       console.error('Error fetching resume stats:', error)
+    }
+  }
+
+  const fetchJobPreferences = async () => {
+    try {
+      const response = await apiService.getJobPreferences()
+      if (response.success && response.data) {
+        setProfessionalData(prev => ({
+          ...prev,
+          jobPreferences: {
+            preferredJobTitles: response.data.preferredJobTitles || [],
+            preferredIndustries: response.data.preferredIndustries || [],
+            preferredLocations: response.data.preferredLocations || [],
+            preferredJobTypes: response.data.preferredJobTypes || [],
+            preferredExperienceLevels: response.data.preferredExperienceLevels || [],
+            preferredSalaryMin: response.data.preferredSalaryMin?.toString() || '',
+            preferredSalaryMax: response.data.preferredSalaryMax?.toString() || '',
+            preferredSkills: response.data.preferredSkills || [],
+            preferredCompanies: response.data.preferredCompanies || [],
+            preferredWorkMode: response.data.preferredWorkMode || [],
+            willingToTravel: response.data.willingToTravel || false
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching job preferences:', error)
     }
   }
 
@@ -253,12 +293,12 @@ export default function AccountPage() {
 
   // Job preferences helper functions
   const addJobTitle = () => {
-    if (newJobTitle.trim() && !professionalData.jobPreferences.preferredJobTitles.includes(newJobTitle.trim())) {
+    if (newJobTitle.trim() && !(professionalData.jobPreferences?.preferredJobTitles || []).includes(newJobTitle.trim())) {
       setProfessionalData(prev => ({
         ...prev,
         jobPreferences: {
           ...prev.jobPreferences,
-          preferredJobTitles: [...prev.jobPreferences.preferredJobTitles, newJobTitle.trim()]
+          preferredJobTitles: [...(prev.jobPreferences?.preferredJobTitles || []), newJobTitle.trim()]
         }
       }))
       setNewJobTitle('')
@@ -270,7 +310,7 @@ export default function AccountPage() {
       ...prev,
       jobPreferences: {
         ...prev.jobPreferences,
-        preferredJobTitles: prev.jobPreferences.preferredJobTitles.filter(title => title !== titleToRemove)
+        preferredJobTitles: (prev.jobPreferences?.preferredJobTitles || []).filter(title => title !== titleToRemove)
       }
     }))
   }
@@ -833,7 +873,7 @@ export default function AccountPage() {
                           <div>
                             <Label>Preferred Job Titles</Label>
                             <div className="flex flex-wrap gap-2 mt-2 mb-3">
-                              {professionalData.jobPreferences.preferredJobTitles.map((title, index) => (
+                              {(professionalData.jobPreferences?.preferredJobTitles || []).map((title, index) => (
                                 <Badge key={index} variant="secondary" className="flex items-center gap-1">
                                   {title}
                                   <button
