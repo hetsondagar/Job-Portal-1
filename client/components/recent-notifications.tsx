@@ -20,7 +20,8 @@ import {
   UserCheck,
   Clock,
   XCircle,
-  ArrowRight
+  ArrowRight,
+  ArrowUp
 } from 'lucide-react'
 import { apiService } from '@/lib/api'
 
