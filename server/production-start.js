@@ -79,6 +79,29 @@ async function startServer() {
       console.warn('⚠️ Migration dependency fix failed, continuing with startup:', fixError?.message || fixError);
     }
     
+    // Ensure upload directories exist (critical for production)
+    console.log('🔧 Ensuring upload directories exist...');
+    const fs = require('fs');
+    const path = require('path');
+    const uploadDirs = [
+      'uploads',
+      'uploads/company-photos',
+      'uploads/company-logos',
+      'uploads/avatars',
+      'uploads/resumes',
+      'uploads/job-photos',
+      'uploads/hot-vacancy-photos'
+    ];
+    
+    uploadDirs.forEach(dir => {
+      const fullPath = path.join(__dirname, dir);
+      if (!fs.existsSync(fullPath)) {
+        fs.mkdirSync(fullPath, { recursive: true });
+        console.log(`✅ Created upload directory: ${dir}`);
+      }
+    });
+    console.log('✅ Upload directories ensured successfully!');
+    
     // Fix ALL database issues (missing columns, tables, constraints)
     console.log('🔧 Running comprehensive database fixes...');
     try {

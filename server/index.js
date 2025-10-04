@@ -7,7 +7,26 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const session = require('express-session');
 const path = require('path'); // Added for static file serving
+const fs = require('fs');
 
+// Ensure upload directories exist on startup
+const uploadDirs = [
+  'uploads',
+  'uploads/company-photos',
+  'uploads/company-logos',
+  'uploads/avatars',
+  'uploads/resumes',
+  'uploads/job-photos',
+  'uploads/hot-vacancy-photos'
+];
+
+uploadDirs.forEach(dir => {
+  const fullPath = path.join(__dirname, dir);
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+    console.log(`✅ Created upload directory: ${dir}`);
+  }
+});
 
 // Import database configuration
 const { sequelize, testConnection } = require('./config/sequelize');
