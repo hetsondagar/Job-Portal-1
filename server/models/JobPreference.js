@@ -22,11 +22,6 @@ const JobPreference = sequelize.define('JobPreference', {
     allowNull: true,
     defaultValue: []
   },
-  preferredIndustries: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
-  },
   preferredLocations: {
     type: DataTypes.JSONB,
     allowNull: true,
@@ -56,11 +51,6 @@ const JobPreference = sequelize.define('JobPreference', {
     defaultValue: 'INR'
   },
   preferredSkills: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
-  },
-  preferredCompanies: {
     type: DataTypes.JSONB,
     allowNull: true,
     defaultValue: []

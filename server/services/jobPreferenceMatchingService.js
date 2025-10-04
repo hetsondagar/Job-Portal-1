@@ -49,17 +49,6 @@ class JobPreferenceMatchingService {
           }
         }
 
-        // Check industry match (if job has industry info)
-        if (preference.preferredIndustries && preference.preferredIndustries.length > 0 && jobData.industry) {
-          hasAnyPreference = true;
-          const industryMatch = preference.preferredIndustries.some(industry => 
-            jobData.industry.toLowerCase().includes(industry.toLowerCase()) ||
-            industry.toLowerCase().includes(jobData.industry.toLowerCase())
-          );
-          if (industryMatch) {
-            matchScore += 2;
-          }
-        }
 
         // Check location match
         if (preference.preferredLocations && preference.preferredLocations.length > 0) {
@@ -100,17 +89,6 @@ class JobPreferenceMatchingService {
           }
         }
 
-        // Check company match
-        if (preference.preferredCompanies && preference.preferredCompanies.length > 0) {
-          hasAnyPreference = true;
-          const companyMatch = preference.preferredCompanies.some(company => 
-            jobData.companyName.toLowerCase().includes(company.toLowerCase()) ||
-            company.toLowerCase().includes(jobData.companyName.toLowerCase())
-          );
-          if (companyMatch) {
-            matchScore += 3; // High weight for company match
-          }
-        }
 
         // Check salary match (if both have salary info)
         if (preference.preferredSalaryMin && jobData.salaryMin) {
@@ -148,12 +126,11 @@ class JobPreferenceMatchingService {
             matchScore,
             preferences: {
               jobTitles: preference.preferredJobTitles,
-              industries: preference.preferredIndustries,
               locations: preference.preferredLocations,
-              companies: preference.preferredCompanies,
               jobTypes: preference.preferredJobTypes,
               experienceLevels: preference.preferredExperienceLevels,
-              workModes: preference.preferredWorkMode
+              workModes: preference.preferredWorkMode,
+              skills: preference.preferredSkills
             }
           });
         }
@@ -221,15 +198,6 @@ class JobPreferenceMatchingService {
         }
       }
 
-      if (preference.preferredCompanies && preference.preferredCompanies.length > 0) {
-        const companyMatch = preference.preferredCompanies.some(company => 
-          jobData.companyName.toLowerCase().includes(company.toLowerCase())
-        );
-        if (companyMatch) {
-          matchScore += 3;
-          matchDetails.push('Company matches preference');
-        }
-      }
 
       return {
         match: matchScore >= 2,
@@ -238,8 +206,8 @@ class JobPreferenceMatchingService {
         preferences: {
           jobTitles: preference.preferredJobTitles,
           locations: preference.preferredLocations,
-          companies: preference.preferredCompanies,
-          jobTypes: preference.preferredJobTypes
+          jobTypes: preference.preferredJobTypes,
+          skills: preference.preferredSkills
         }
       };
 

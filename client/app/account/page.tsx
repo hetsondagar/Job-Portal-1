@@ -79,14 +79,12 @@ export default function AccountPage() {
     },
     jobPreferences: {
       preferredJobTitles: [] as string[],
-      preferredIndustries: [] as string[],
       preferredLocations: [] as string[],
       preferredJobTypes: [] as string[],
       preferredExperienceLevels: [] as string[],
       preferredSalaryMin: '',
       preferredSalaryMax: '',
       preferredSkills: [] as string[],
-      preferredCompanies: [] as string[],
       preferredWorkMode: [] as string[],
       willingToTravel: false
     }
@@ -95,9 +93,7 @@ export default function AccountPage() {
   const [newSkill, setNewSkill] = useState('')
   const [newLanguage, setNewLanguage] = useState('')
   const [newJobTitle, setNewJobTitle] = useState('')
-  const [newIndustry, setNewIndustry] = useState('')
   const [newLocation, setNewLocation] = useState('')
-  const [newCompany, setNewCompany] = useState('')
   const [newPreferredSkill, setNewPreferredSkill] = useState('')
 
   useEffect(() => {
@@ -140,14 +136,12 @@ export default function AccountPage() {
         },
         jobPreferences: {
           preferredJobTitles: user.jobPreferences?.preferredJobTitles || [],
-          preferredIndustries: user.jobPreferences?.preferredIndustries || [],
           preferredLocations: user.jobPreferences?.preferredLocations || [],
           preferredJobTypes: user.jobPreferences?.preferredJobTypes || [],
           preferredExperienceLevels: user.jobPreferences?.preferredExperienceLevels || [],
           preferredSalaryMin: user.jobPreferences?.preferredSalaryMin?.toString() || '',
           preferredSalaryMax: user.jobPreferences?.preferredSalaryMax?.toString() || '',
           preferredSkills: user.jobPreferences?.preferredSkills || [],
-          preferredCompanies: user.jobPreferences?.preferredCompanies || [],
           preferredWorkMode: user.jobPreferences?.preferredWorkMode || [],
           willingToTravel: user.jobPreferences?.willingToTravel || false
         }
@@ -174,14 +168,12 @@ export default function AccountPage() {
           ...prev,
           jobPreferences: {
             preferredJobTitles: response.data.preferredJobTitles || [],
-            preferredIndustries: response.data.preferredIndustries || [],
             preferredLocations: response.data.preferredLocations || [],
             preferredJobTypes: response.data.preferredJobTypes || [],
             preferredExperienceLevels: response.data.preferredExperienceLevels || [],
             preferredSalaryMin: response.data.preferredSalaryMin?.toString() || '',
             preferredSalaryMax: response.data.preferredSalaryMax?.toString() || '',
             preferredSkills: response.data.preferredSkills || [],
-            preferredCompanies: response.data.preferredCompanies || [],
             preferredWorkMode: response.data.preferredWorkMode || [],
             willingToTravel: response.data.willingToTravel || false
           }
@@ -189,6 +181,8 @@ export default function AccountPage() {
       }
     } catch (error) {
       console.error('Error fetching job preferences:', error)
+      // If API fails, keep the default empty preferences
+      // This ensures the form still works even if the backend is not ready
     }
   }
 
@@ -315,28 +309,6 @@ export default function AccountPage() {
     }))
   }
 
-  const addIndustry = () => {
-    if (newIndustry.trim() && !professionalData.jobPreferences.preferredIndustries.includes(newIndustry.trim())) {
-      setProfessionalData(prev => ({
-        ...prev,
-        jobPreferences: {
-          ...prev.jobPreferences,
-          preferredIndustries: [...prev.jobPreferences.preferredIndustries, newIndustry.trim()]
-        }
-      }))
-      setNewIndustry('')
-    }
-  }
-
-  const removeIndustry = (industryToRemove: string) => {
-    setProfessionalData(prev => ({
-      ...prev,
-      jobPreferences: {
-        ...prev.jobPreferences,
-        preferredIndustries: prev.jobPreferences.preferredIndustries.filter(industry => industry !== industryToRemove)
-      }
-    }))
-  }
 
   const addLocation = () => {
     if (newLocation.trim() && !professionalData.jobPreferences.preferredLocations.includes(newLocation.trim())) {
@@ -361,28 +333,6 @@ export default function AccountPage() {
     }))
   }
 
-  const addCompany = () => {
-    if (newCompany.trim() && !professionalData.jobPreferences.preferredCompanies.includes(newCompany.trim())) {
-      setProfessionalData(prev => ({
-        ...prev,
-        jobPreferences: {
-          ...prev.jobPreferences,
-          preferredCompanies: [...prev.jobPreferences.preferredCompanies, newCompany.trim()]
-        }
-      }))
-      setNewCompany('')
-    }
-  }
-
-  const removeCompany = (companyToRemove: string) => {
-    setProfessionalData(prev => ({
-      ...prev,
-      jobPreferences: {
-        ...prev.jobPreferences,
-        preferredCompanies: prev.jobPreferences.preferredCompanies.filter(company => company !== companyToRemove)
-      }
-    }))
-  }
 
   const addJobType = (jobType: string) => {
     if (!professionalData.jobPreferences.preferredJobTypes.includes(jobType)) {
@@ -436,6 +386,29 @@ export default function AccountPage() {
         preferredWorkMode: checked 
           ? [...prev.jobPreferences.preferredWorkMode, mode]
           : prev.jobPreferences.preferredWorkMode.filter(m => m !== mode)
+      }
+    }))
+  }
+
+  const addPreferredSkill = () => {
+    if (newPreferredSkill.trim() && !(professionalData.jobPreferences?.preferredSkills || []).includes(newPreferredSkill.trim())) {
+      setProfessionalData(prev => ({
+        ...prev,
+        jobPreferences: {
+          ...prev.jobPreferences,
+          preferredSkills: [...(prev.jobPreferences?.preferredSkills || []), newPreferredSkill.trim()]
+        }
+      }))
+      setNewPreferredSkill('')
+    }
+  }
+
+  const removePreferredSkill = (skillToRemove: string) => {
+    setProfessionalData(prev => ({
+      ...prev,
+      jobPreferences: {
+        ...prev.jobPreferences,
+        preferredSkills: (prev.jobPreferences?.preferredSkills || []).filter(skill => skill !== skillToRemove)
       }
     }))
   }
@@ -898,34 +871,6 @@ export default function AccountPage() {
                             </div>
                           </div>
 
-                          {/* Preferred Industries */}
-                          <div>
-                            <Label>Preferred Industries</Label>
-                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
-                              {professionalData.jobPreferences.preferredIndustries.map((industry, index) => (
-                                <Badge key={index} variant="outline" className="flex items-center gap-1">
-                                  {industry}
-                                  <button
-                                    onClick={() => removeIndustry(industry)}
-                                    className="ml-1 hover:text-red-500"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </Badge>
-                              ))}
-                            </div>
-                            <div className="flex space-x-2">
-                              <Input
-                                value={newIndustry}
-                                onChange={(e) => setNewIndustry(e.target.value)}
-                                placeholder="e.g., Technology, Healthcare, Finance"
-                                onKeyPress={(e) => e.key === 'Enter' && addIndustry()}
-                              />
-                              <Button type="button" onClick={addIndustry} size="sm">
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
 
                           {/* Preferred Locations */}
                           <div>
@@ -956,34 +901,6 @@ export default function AccountPage() {
                             </div>
                           </div>
 
-                          {/* Preferred Companies */}
-                          <div>
-                            <Label>Preferred Companies</Label>
-                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
-                              {professionalData.jobPreferences.preferredCompanies.map((company, index) => (
-                                <Badge key={index} variant="outline" className="flex items-center gap-1">
-                                  {company}
-                                  <button
-                                    onClick={() => removeCompany(company)}
-                                    className="ml-1 hover:text-red-500"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </Badge>
-                              ))}
-                            </div>
-                            <div className="flex space-x-2">
-                              <Input
-                                value={newCompany}
-                                onChange={(e) => setNewCompany(e.target.value)}
-                                placeholder="e.g., Google, Microsoft, Amazon"
-                                onKeyPress={(e) => e.key === 'Enter' && addCompany()}
-                              />
-                              <Button type="button" onClick={addCompany} size="sm">
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
 
                           {/* Job Type and Experience Preferences */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1069,6 +986,35 @@ export default function AccountPage() {
                                   </Label>
                                 </div>
                               ))}
+                            </div>
+                          </div>
+
+                          {/* Preferred Skills */}
+                          <div>
+                            <Label>Preferred Skills</Label>
+                            <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                              {(professionalData.jobPreferences?.preferredSkills || []).map((skill, index) => (
+                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                  {skill}
+                                  <button
+                                    onClick={() => removePreferredSkill(skill)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Input
+                                value={newPreferredSkill}
+                                onChange={(e) => setNewPreferredSkill(e.target.value)}
+                                placeholder="e.g., React, Python, Machine Learning"
+                                onKeyPress={(e) => e.key === 'Enter' && addPreferredSkill()}
+                              />
+                              <Button type="button" onClick={addPreferredSkill} size="sm">
+                                <Plus className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
 

@@ -9,6 +9,18 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     
+    // Check if JobPreference table exists
+    try {
+      await JobPreference.describe();
+    } catch (tableError) {
+      console.error('JobPreference table does not exist:', tableError);
+      return res.status(500).json({
+        success: false,
+        message: 'Job preferences table not found. Please run database migration.',
+        error: 'TABLE_NOT_FOUND'
+      });
+    }
+    
     let preferences = await JobPreference.findOne({
       where: { userId, isActive: true }
     });
@@ -30,7 +42,8 @@ router.get('/', authenticateToken, async (req, res) => {
     console.error('Error fetching job preferences:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch job preferences'
+      message: 'Failed to fetch job preferences',
+      error: error.message
     });
   }
 });
@@ -41,7 +54,6 @@ router.put('/', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const {
       preferredJobTitles,
-      preferredIndustries,
       preferredLocations,
       preferredJobTypes,
       preferredExperienceLevels,
@@ -49,7 +61,6 @@ router.put('/', authenticateToken, async (req, res) => {
       preferredSalaryMax,
       preferredSalaryCurrency,
       preferredSkills,
-      preferredCompanies,
       preferredWorkMode,
       preferredShiftTiming,
       willingToRelocate,
@@ -66,7 +77,6 @@ router.put('/', authenticateToken, async (req, res) => {
 
     const updateData = {
       preferredJobTitles: preferredJobTitles || [],
-      preferredIndustries: preferredIndustries || [],
       preferredLocations: preferredLocations || [],
       preferredJobTypes: preferredJobTypes || [],
       preferredExperienceLevels: preferredExperienceLevels || [],
@@ -74,7 +84,6 @@ router.put('/', authenticateToken, async (req, res) => {
       preferredSalaryMax: preferredSalaryMax || null,
       preferredSalaryCurrency: preferredSalaryCurrency || (req.user.region === 'gulf' ? 'AED' : 'INR'),
       preferredSkills: preferredSkills || [],
-      preferredCompanies: preferredCompanies || [],
       preferredWorkMode: preferredWorkMode || [],
       preferredShiftTiming: preferredShiftTiming || [],
       willingToRelocate: willingToRelocate || false,
