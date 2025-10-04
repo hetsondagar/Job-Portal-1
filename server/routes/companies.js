@@ -498,36 +498,6 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Upload/replace company logo
-router.post('/:id/logo', authenticateToken, companyLogoUpload.single('logo'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No logo file provided' });
-    }
-
-    // Only company owner/admin can update
-    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(id)) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
-
-    const company = await Company.findByPk(id);
-    if (!company) return res.status(404).json({ success: false, message: 'Company not found' });
-
-    const filename = req.file.filename;
-    const filePath = `/uploads/company-logos/${filename}`;
-    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
-
-    await company.update({ logo: fileUrl });
-
-    return res.status(200).json({ success: true, message: 'Company logo updated', data: { logo: fileUrl } });
-  } catch (error) {
-    console.error('Company logo upload error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to upload logo' });
-  }
-});
-
-
 // List company photos
 router.get('/:id/photos', async (req, res) => {
   try {

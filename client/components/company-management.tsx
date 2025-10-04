@@ -308,6 +308,13 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                         src={p.fileUrl} 
                         alt={p.altText || 'Photo'} 
                         className="w-full h-24 object-cover"
+                        onLoad={() => {
+                          console.log('✅ Management image loaded:', p.fileUrl);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Management image failed:', p.fileUrl);
+                          console.log('🔍 Photo data:', p);
+                        }}
                       />
                       <button
                         onClick={() => handlePhotoDelete(p.id)}

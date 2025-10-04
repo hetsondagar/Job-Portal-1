@@ -475,6 +475,8 @@ function CompanyDetailPage() {
         console.log('🔍 Company photos API response:', data)
         if (data?.success && Array.isArray(data.data)) {
           console.log('🔍 Company photos data:', data.data)
+          console.log('🔍 First photo fileUrl:', data.data[0]?.fileUrl)
+          console.log('🔍 First photo filePath:', data.data[0]?.filePath)
           setCompanyPhotos(data.data)
         } else {
           setCompanyPhotos([])
@@ -1137,6 +1139,14 @@ function CompanyDetailPage() {
                               alt={p.altText || company.name}
                               className="w-full h-32 md:h-40 object-cover"
                               loading="lazy"
+                              onLoad={() => {
+                                console.log('✅ Image loaded successfully:', p.fileUrl);
+                              }}
+                              onError={(e) => {
+                                console.error('❌ Image failed to load:', p.fileUrl);
+                                console.error('❌ Error details:', e);
+                                console.log('🔍 Photo data:', p);
+                              }}
                             />
                             {p.caption ? (
                               <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
