@@ -123,6 +123,21 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
     
     console.log('🔍 BACKEND_URL:', process.env.BACKEND_URL);
     console.log('🔍 Generated company photo URL:', fileUrl);
+    console.log('🔍 File saved to:', req.file.path);
+    console.log('🔍 File exists:', require('fs').existsSync(req.file.path));
+    
+    // Check upload directory
+    const uploadDir = require('path').join(__dirname, '..', 'uploads', 'company-photos');
+    console.log('🔍 Upload directory exists:', require('fs').existsSync(uploadDir));
+    console.log('🔍 Upload directory path:', uploadDir);
+    
+    // List files in upload directory
+    try {
+      const files = require('fs').readdirSync(uploadDir);
+      console.log('🔍 Files in upload directory:', files.slice(0, 5)); // Show first 5 files
+    } catch (err) {
+      console.log('🔍 Error reading upload directory:', err.message);
+    }
 
     // If marking as primary, unset others for this company
     if (isPrimary === 'true' || isPrimary === true) {
@@ -534,6 +549,21 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
     
     console.log('🔍 BACKEND_URL:', process.env.BACKEND_URL);
     console.log('🔍 Generated company photo URL:', fileUrl);
+    console.log('🔍 File saved to:', req.file.path);
+    console.log('🔍 File exists:', require('fs').existsSync(req.file.path));
+    
+    // Check upload directory
+    const uploadDir = require('path').join(__dirname, '..', 'uploads', 'company-photos');
+    console.log('🔍 Upload directory exists:', require('fs').existsSync(uploadDir));
+    console.log('🔍 Upload directory path:', uploadDir);
+    
+    // List files in upload directory
+    try {
+      const files = require('fs').readdirSync(uploadDir);
+      console.log('🔍 Files in upload directory:', files.slice(0, 5)); // Show first 5 files
+    } catch (err) {
+      console.log('🔍 Error reading upload directory:', err.message);
+    }
 
     // If marking as primary, unset others for this company
     if (isPrimary === 'true' || isPrimary === true) {

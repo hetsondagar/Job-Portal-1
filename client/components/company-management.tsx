@@ -310,7 +310,14 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                         className="w-full h-24 object-cover"
                         onError={(e) => {
                           console.error('Image load error:', p.fileUrl, e);
-                          e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                          // Prevent infinite loop by checking if we've already tried the fallback
+                          if (!e.currentTarget.dataset.fallbackTried) {
+                            e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                            e.currentTarget.dataset.fallbackTried = 'true';
+                          } else {
+                            console.error('Both primary and fallback URLs failed, showing placeholder');
+                            e.currentTarget.style.display = 'none';
+                          }
                         }}
                       />
                       <button

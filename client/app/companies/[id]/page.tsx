@@ -1139,8 +1139,15 @@ function CompanyDetailPage() {
                               loading="lazy"
                               onError={(e) => {
                                 console.error('Image load error:', p.fileUrl, e);
-                                console.log('🔍 Trying fallback URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`);
-                                e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                                // Prevent infinite loop by checking if we've already tried the fallback
+                                if (!e.currentTarget.dataset.fallbackTried) {
+                                  console.log('🔍 Trying fallback URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`);
+                                  e.currentTarget.src = `${process.env.NEXT_PUBLIC_API_URL || 'https://job-portal-97q3.onrender.com'}${p.filePath}`;
+                                  e.currentTarget.dataset.fallbackTried = 'true';
+                                } else {
+                                  console.error('Both primary and fallback URLs failed, showing placeholder');
+                                  e.currentTarget.style.display = 'none';
+                                }
                               }}
                               onLoad={() => {
                                 console.log('Image loaded successfully:', p.fileUrl);
