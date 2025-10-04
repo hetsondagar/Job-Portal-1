@@ -504,7 +504,9 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Get payment history
     const payments = await Payment.findAll({
-      where: { companyId },
+      where: { 
+        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+      },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
