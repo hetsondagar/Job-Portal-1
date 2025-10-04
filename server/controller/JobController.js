@@ -8,6 +8,8 @@ const JobPhoto = require('../models/JobPhoto');
 const ViewTrackingService = require('../services/viewTrackingService');
 const EmployerActivityService = require('../services/employerActivityService');
 const EmployerQuotaService = require('../services/employerQuotaService');
+const NotificationService = require('../services/notificationService');
+const JobPreferenceMatchingService = require('../services/jobPreferenceMatchingService');
 
 /**
  * Create a new job
@@ -273,6 +275,54 @@ exports.createJob = async (req, res, next) => {
     }
 
     console.log('✅ Job created successfully:', job.id);
+
+    // Send notifications to users with matching preferences (only for active jobs)
+    if (job.status === 'active') {
+      try {
+        console.log('🔔 Checking for users with matching job preferences...');
+        
+        // Prepare job data for matching
+        const jobData = {
+          title: job.title,
+          companyName: userCompany?.name || 'Unknown Company',
+          location: job.location,
+          jobType: job.jobType,
+          experienceLevel: job.experienceLevel,
+          remoteWork: job.remoteWork,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salary: job.salary,
+          skills: job.skills || [],
+          industry: userCompany?.industry,
+          region: job.region
+        };
+
+        // Find users with matching preferences
+        const matchingUserIds = await JobPreferenceMatchingService.findMatchingUsers(jobData);
+        
+        if (matchingUserIds.length > 0) {
+          console.log(`🎯 Found ${matchingUserIds.length} users with matching preferences`);
+          
+          // Send notifications to matching users
+          const notificationResult = await NotificationService.sendPreferredJobNotification(
+            job.id,
+            jobData,
+            matchingUserIds
+          );
+          
+          if (notificationResult.success) {
+            console.log(`✅ Sent ${notificationResult.notificationsSent} preferred job notifications`);
+          } else {
+            console.error('❌ Failed to send preferred job notifications:', notificationResult.message);
+          }
+        } else {
+          console.log('📝 No users found with matching job preferences');
+        }
+      } catch (notificationError) {
+        console.error('❌ Error sending preferred job notifications:', notificationError);
+        // Don't fail the job creation if notifications fail
+      }
+    }
 
     return res.status(201).json({
       success: true,

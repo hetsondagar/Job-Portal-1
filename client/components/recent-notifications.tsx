@@ -122,6 +122,7 @@ export function RecentNotifications({
       case 'interview_reminder': return <Calendar className="w-4 h-4" />
       case 'candidate_shortlisted': return <UserCheck className="w-4 h-4" />
       case 'application_shortlisted': return <CheckCircle className="w-4 h-4" />
+      case 'preferred_job_posted': return <Star className="w-4 h-4" />
       default: return <Bell className="w-4 h-4" />
     }
   }
@@ -251,6 +252,12 @@ export function RecentNotifications({
                     {notification.priority === 'high' && (
                       <Badge variant="secondary" className="mt-2 text-xs">
                         High Priority
+                      </Badge>
+                    )}
+                    {notification.type === 'preferred_job_posted' && (
+                      <Badge className="mt-2 text-xs bg-blue-100 text-blue-800 border-blue-200">
+                        <Star className="w-3 h-3 mr-1" />
+                        Preferred Job
                       </Badge>
                     )}
                   </div>

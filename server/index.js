@@ -267,6 +267,7 @@ app.use('/api/interviews', interviewsRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
 app.use('/api/salary', salaryRoutes);
+app.use('/api/job-preferences', require('./routes/job-preferences'));
 // Admin routes (secure)
 app.use('/api/admin', require('./routes/admin'));
 

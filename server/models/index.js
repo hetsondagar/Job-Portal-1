@@ -36,6 +36,7 @@ const CandidateLike = require('./CandidateLike');
 const ViewTracking = require('./ViewTracking');
 const Requirement = require('./Requirement');
 const Application = require('./Application');
+const JobPreference = require('./JobPreference');
 
 // Import Sequelize
 const { Sequelize } = require('sequelize');
@@ -97,7 +98,8 @@ const models = {
   CandidateLike,
   ViewTracking,
   Requirement,
-  Application
+  Application,
+  JobPreference
 };
 
 // Define associations

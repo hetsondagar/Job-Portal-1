@@ -93,6 +93,8 @@ export default function JobsPage() {
   const [jobsLoading, setJobsLoading] = useState(true)
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [preferredJobs, setPreferredJobs] = useState<Job[]>([])
+  const [preferredJobsLoading, setPreferredJobsLoading] = useState(false)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -133,6 +135,7 @@ export default function JobsPage() {
     // Fetch existing bookmarks and applications if user is logged in
     if (user) {
       fetchUserData()
+      fetchPreferredJobs()
     }
   }, [user])
 
@@ -247,6 +250,53 @@ export default function JobsPage() {
       }
     } catch (error) {
       console.error('❌ Error fetching user data:', error)
+    }
+  }
+
+  const fetchPreferredJobs = async () => {
+    try {
+      setPreferredJobsLoading(true)
+      const response = await apiService.getMatchingJobs(1, 20)
+      
+      if (response.success && response.data) {
+        const transformedJobs = response.data.jobs.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          company: {
+            id: job.company?.id || 'unknown',
+            name: job.company?.name || 'Unknown Company'
+          },
+          location: job.location,
+          experience: job.experienceLevel || job.experience || 'Not specified',
+          salary: job.salary || (job.salaryMin && job.salaryMax 
+            ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
+            : 'Not specified'),
+          skills: job.skills || [],
+          logo: job.company?.logo || '/placeholder-logo.png',
+          posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+          applicants: job.applications || job.application_count || 0,
+          description: job.description,
+          type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
+          remote: job.remoteWork === 'remote',
+          urgent: job.isUrgent || false,
+          featured: job.isFeatured || false,
+          companyRating: 4.5,
+          category: job.category || 'General',
+          photos: job.photos || [],
+          duration: job.duration,
+          startDate: job.startDate,
+          workMode: job.workMode,
+          learningObjectives: job.learningObjectives,
+          mentorship: job.mentorship,
+          isPreferred: true
+        }))
+        
+        setPreferredJobs(transformedJobs)
+      }
+    } catch (error) {
+      console.error('Error fetching preferred jobs:', error)
+    } finally {
+      setPreferredJobsLoading(false)
     }
   }
 
@@ -777,6 +827,120 @@ export default function JobsPage() {
             </Select>
           </div>
         </div>
+
+        {/* Preferred Jobs Section */}
+        {user && preferredJobs.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center space-x-2 mb-4">
+              <Star className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                Jobs Matching Your Preferences
+              </h2>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                {preferredJobs.length}
+              </Badge>
+            </div>
+            <div className="space-y-4">
+              {preferredJobs.slice(0, 3).map((job, index) => (
+                <motion.div
+                  key={job.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link href={`/jobs/${job.id}`}>
+                    <Card className="group cursor-pointer border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-l-4 border-l-blue-500">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-4 flex-1">
+                            <Avatar className="w-12 h-12 ring-2 ring-blue-200 group-hover:ring-4 transition-all duration-300">
+                              <AvatarImage src={job.logo} alt={job.company.name} />
+                              <AvatarFallback className="text-sm font-bold">{job.company.name[0]}</AvatarFallback>
+                            </Avatar>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
+                                    {job.title}
+                                  </h3>
+                                  <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
+                                    {job.company.name}
+                                  </p>
+                                </div>
+                                <div className="flex items-center space-x-2 ml-4">
+                                  <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                    <Star className="w-3 h-3 mr-1" />
+                                    Preferred
+                                  </Badge>
+                                  {job.urgent && (
+                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                      Urgent
+                                    </Badge>
+                                  )}
+                                  {job.featured && (
+                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
+                                      Featured
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-3">
+                                <div className="flex items-center space-x-1">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{job.location}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Briefcase className="w-4 h-4" />
+                                  <span>{job.experience}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <IndianRupee className="w-4 h-4" />
+                                  <span>{job.salary}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{job.posted}</span>
+                                </div>
+                              </div>
+
+                              {job.skills && job.skills.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                  {job.skills.slice(0, 3).map((skill, skillIndex) => (
+                                    <Badge key={skillIndex} variant="outline" className="text-xs">
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                  {job.skills.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{job.skills.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+
+                              <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2">
+                                {job.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+            {preferredJobs.length > 3 && (
+              <div className="text-center mt-4">
+                <Button variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                  View All {preferredJobs.length} Preferred Jobs
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Jobs Grid */}
         <div className="space-y-6">
