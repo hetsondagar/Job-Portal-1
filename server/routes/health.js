@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const dbConnection = require('../lib/database-connection');
+const { sequelize } = require('../config/sequelize');
 
 // Comprehensive health check endpoint
 router.get('/', async (req, res) => {
@@ -40,10 +40,9 @@ router.get('/', async (req, res) => {
     let dbHealth = { status: 'unknown', responseTime: 0 };
     try {
       const dbStartTime = Date.now();
-      const success = await dbConnection.testConnection();
+      await sequelize.authenticate();
       dbHealth.responseTime = Date.now() - dbStartTime;
-      dbHealth.status = success ? 'healthy' : 'unhealthy';
-      await dbConnection.disconnect();
+      dbHealth.status = 'healthy';
     } catch (error) {
       dbHealth.status = 'error';
       dbHealth.error = error.message;
@@ -115,13 +114,11 @@ router.get('/ping', (req, res) => {
 router.get('/db', async (req, res) => {
   try {
     const startTime = Date.now();
-    const success = await dbConnection.testConnection();
+    await sequelize.authenticate();
     const responseTime = Date.now() - startTime;
     
-    await dbConnection.disconnect();
-    
-    res.status(success ? 200 : 503).json({
-      status: success ? 'healthy' : 'unhealthy',
+    res.status(200).json({
+      status: 'healthy',
       responseTime,
       timestamp: new Date().toISOString()
     });
