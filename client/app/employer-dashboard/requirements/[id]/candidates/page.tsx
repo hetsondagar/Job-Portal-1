@@ -485,8 +485,17 @@ export default function CandidatesPage() {
             <Card key={candidate.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start space-x-4">
                 <Avatar className="w-16 h-16">
-                  <AvatarImage src={constructAvatarUrl(candidate.avatar)} alt={candidate.name} />
-                  <AvatarFallback className="text-lg font-bold">{candidate.name[0]}</AvatarFallback>
+                  <AvatarImage 
+                    src={constructAvatarUrl(candidate.avatar)} 
+                    alt={candidate.name}
+                    onError={(e) => {
+                      console.log('Avatar image failed to load:', candidate.avatar);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                    {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 min-w-0">

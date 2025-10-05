@@ -7,7 +7,7 @@ module.exports = {
     database: process.env.DB_NAME || 'jobportal_dev_0u1u',
     host: process.env.DB_HOST || 'dpg-d372gajuibrs738lnm5g-a.singapore-postgres.render.com',
     port: process.env.DB_PORT || 5432,
-    url: process.env.DB_URL || 'postgresql://jobportal_dev_0u1u_user:yK9WCII787btQrSqZJVdq0Cx61rZoTsc@dpg-d372gajuibrs738lnm5g-a/jobportal_dev_0u1u',
+    url: process.env.DB_URL || 'postgresql://jobportal_dev_0u1u_user:yK9WCII787btQrSqZJVdq0Cx61rZoTsc@dpg-d372gajuibrs738lnm5g-a.singapore-postgres.render.com:5432/jobportal_dev_0u1u',
     dialect: 'postgres',
     logging: console.log,
     pool: {

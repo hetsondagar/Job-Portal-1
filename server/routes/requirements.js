@@ -810,7 +810,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       });
     } else {
       // Default: Sort by relevance score (highest first)
-      transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
     }
     
     return res.status(200).json({
