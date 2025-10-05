@@ -2191,10 +2191,15 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
         }
       }
       if (!filePath) {
+        console.log('⚠️ IMPORTANT: File not found - Render free tier ephemeral storage issue');
+        console.log('📋 Filename sought:', filename);
+        console.log('💡 Solution: Re-upload resume OR migrate to cloud storage');
         return res.status(404).json({
           success: false,
-          message: 'Resume file not found on server. The file may have been lost during server restart. Please ask the candidate to re-upload their resume.',
-          code: 'FILE_NOT_FOUND'
+          message: 'Resume file not found. On Render free tier, uploaded files are stored in ephemeral storage and are deleted when the server restarts. Please re-upload the resume or migrate to cloud storage (AWS S3, Cloudinary) for production.',
+          code: 'FILE_NOT_FOUND',
+          filename: filename,
+          technicalNote: 'Render free tier uses ephemeral filesystem'
         });
       }
     }
