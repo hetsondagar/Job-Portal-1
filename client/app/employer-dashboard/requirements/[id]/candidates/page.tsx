@@ -166,26 +166,39 @@ export default function CandidatesPage() {
     })
   }
 
-  const handleCalculateATS = async () => {
+  const handleCalculateATS = async (processAll = false) => {
     try {
       setCalculatingATS(true)
       
+      const candidateCount = processAll ? 'all candidates' : candidates.length
       toast.info('Starting ATS calculation...', {
-        description: `Processing ${candidates.length} candidates. This may take a few minutes.`
+        description: `Processing ${candidateCount}. This may take a few minutes.`
       })
       
-      // Get candidate IDs from current list
-      const candidateIds = candidates.map(c => c.id)
+      // Prepare request body based on processing mode
+      const requestBody = processAll 
+        ? { 
+            page: pagination.page, 
+            limit: parseInt(showCount), 
+            processAll: true 
+          }
+        : { 
+            candidateIds: candidates.map(c => c.id) 
+          }
       
-      const response = await apiService.calculateATSScores(params.id as string, candidateIds)
+      console.log('🚀 ATS calculation request:', { processAll, requestBody })
+      
+      const response = await apiService.calculateATSScores(params.id as string, requestBody)
       
       if (response.success) {
+        const { successful, errors, pagination: paginationData } = response.data
+        
         toast.success('ATS scores calculated successfully!', {
-          description: `Processed ${response.data.successful} candidates with ${response.data.errors} errors.`
+          description: `Processed ${successful} candidates${errors > 0 ? ` with ${errors} errors` : ''}. ${processAll && paginationData?.hasMorePages ? 'More pages available.' : ''}`
         })
         
-        // Add a small delay to ensure backend processing is complete
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Add a longer delay to ensure backend processing is complete
+        await new Promise(resolve => setTimeout(resolve, 3000))
         
         // Refresh candidates list to show updated ATS scores
         console.log('🔄 Refreshing candidates list to show ATS scores...')
@@ -202,6 +215,13 @@ export default function CandidatesPage() {
           console.log('🔍 Full candidate data structure:', refreshResponse.data.candidates?.[0])
           setCandidates(refreshResponse.data.candidates || [])
           setSortBy('ats') // Update sort dropdown
+          
+          // Show pagination info if processing all
+          if (processAll && paginationData?.hasMorePages) {
+            toast.info('More candidates available', {
+              description: `Page ${paginationData.currentPage} of ${Math.ceil(paginationData.totalCandidates / paginationData.limit)} completed. Use pagination to process more candidates.`
+            })
+          }
         } else {
           console.log('❌ Failed to refresh candidates:', refreshResponse)
         }
@@ -284,24 +304,45 @@ export default function CandidatesPage() {
               />
           </div>
 
-            {/* ATS Score Button */}
-            <Button
-              onClick={handleCalculateATS}
-              disabled={calculatingATS || candidates.length === 0}
-              className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              {calculatingATS ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Calculating ATS...</span>
-                </>
-              ) : (
-                <>
-                  <Brain className="w-4 h-4" />
-                  <span>Calculate ATS Scores</span>
-                </>
-              )}
-            </Button>
+            {/* ATS Score Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleCalculateATS(false)}
+                disabled={calculatingATS || candidates.length === 0}
+                className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {calculatingATS ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Calculating ATS...</span>
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-4 h-4" />
+                    <span>ATS (Current Page)</span>
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={() => handleCalculateATS(true)}
+                disabled={calculatingATS}
+                variant="outline"
+                className="flex items-center space-x-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+              >
+                {calculatingATS ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Processing All...</span>
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-4 h-4" />
+                    <span>ATS (All Candidates)</span>
+                  </>
+                )}
+              </Button>
+            </div>
 
             {/* Filter Toggle */}
             <Button
@@ -491,11 +532,17 @@ export default function CandidatesPage() {
         {/* ATS Calculation Progress */}
         {calculatingATS && (
           <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center space-x-3">
-              <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-              <div>
-                <h3 className="text-sm font-medium text-purple-900">Calculating ATS Scores</h3>
-                <p className="text-xs text-purple-700">Processing {candidates.length} candidates. This may take a few minutes...</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                <div>
+                  <h3 className="text-sm font-medium text-purple-900">Calculating ATS Scores</h3>
+                  <p className="text-xs text-purple-700">Processing candidates with AI analysis. This may take several minutes for large datasets...</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-purple-500">Rule-based scoring active</p>
+                <p className="text-xs text-purple-400">Gemini AI fallback enabled</p>
               </div>
             </div>
           </div>

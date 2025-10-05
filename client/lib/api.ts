@@ -1942,11 +1942,11 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
-  async calculateATSScores(requirementId: string, candidateIds?: string[]): Promise<ApiResponse<any>> {
+  async calculateATSScores(requirementId: string, requestBody: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${this.baseURL}/requirements/${requirementId}/calculate-ats`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ candidateIds })
+      body: JSON.stringify(requestBody)
     });
 
     return this.handleResponse<any>(response);

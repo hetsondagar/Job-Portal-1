@@ -2313,9 +2313,10 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
 router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
   try {
     const requirementId = req.params.id;
-    const { candidateIds } = req.body; // Optional: specific candidate IDs to process
+    const { candidateIds, page = 1, limit = 50, processAll = false } = req.body;
     
     console.log(`🎯 ATS calculation requested for requirement ${requirementId}`);
+    console.log(`📄 Pagination params: page=${page}, limit=${limit}, processAll=${processAll}`);
     
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
@@ -2339,8 +2340,10 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
       });
     }
     
-    // Get all candidates for this requirement if not specified
+    // Get candidates for this requirement with pagination support
     let targetCandidateIds = candidateIds;
+    let totalCandidates = 0;
+    let hasMorePages = false;
     
     if (!targetCandidateIds || targetCandidateIds.length === 0) {
       console.log('📋 Fetching candidates matching this requirement...');
@@ -2359,28 +2362,71 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         };
       }
       
-      // Fetch candidates
-      const candidates = await User.findAll({
-        where: whereConditions,
-        attributes: ['id'],
-        limit: 100 // Process max 100 candidates at a time
+      // Get total count for pagination
+      totalCandidates = await User.count({
+        where: whereConditions
       });
       
-      // If no candidates match skills, fall back to all active jobseekers for this requirement
-      if (candidates.length === 0) {
+      console.log(`📊 Total candidates matching criteria: ${totalCandidates}`);
+      
+      if (processAll) {
+        // Process all candidates with pagination
+        const offset = (page - 1) * limit;
+        const candidates = await User.findAll({
+          where: whereConditions,
+          attributes: ['id'],
+          limit: parseInt(limit),
+          offset: offset,
+          order: [['createdAt', 'DESC']]
+        });
+        
+        targetCandidateIds = candidates.map(c => c.id);
+        hasMorePages = offset + candidates.length < totalCandidates;
+        
+        console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates (${offset + 1}-${offset + targetCandidateIds.length} of ${totalCandidates})`);
+      } else {
+        // Process only current page
+        const candidates = await User.findAll({
+          where: whereConditions,
+          attributes: ['id'],
+          limit: parseInt(limit),
+          offset: (page - 1) * limit,
+          order: [['createdAt', 'DESC']]
+        });
+        
+        targetCandidateIds = candidates.map(c => c.id);
+        hasMorePages = (page * limit) < totalCandidates;
+        
+        console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates`);
+      }
+      
+      // If no candidates match skills, fall back to all active jobseekers
+      if (targetCandidateIds.length === 0) {
         console.log('⚠️ No candidates match skills, fetching all active jobseekers...');
+        totalCandidates = await User.count({
+          where: {
+            user_type: 'jobseeker',
+            account_status: 'active'
+          }
+        });
+        
         const allCandidates = await User.findAll({
           where: {
             user_type: 'jobseeker',
             account_status: 'active'
           },
           attributes: ['id'],
-          limit: 100
+          limit: parseInt(limit),
+          offset: (page - 1) * limit,
+          order: [['createdAt', 'DESC']]
         });
+        
         targetCandidateIds = allCandidates.map(c => c.id);
-      } else {
-        targetCandidateIds = candidates.map(c => c.id);
+        hasMorePages = (page * limit) < totalCandidates;
       }
+    } else {
+      // Specific candidates provided
+      totalCandidates = targetCandidateIds.length;
     }
     
     if (targetCandidateIds.length === 0) {
@@ -2395,18 +2441,18 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
     // Import ATS service
     const atsService = require('../services/atsService');
     
-    // Calculate ATS scores in batches
+    // Calculate ATS scores in batches with progress tracking
     const batchResults = await atsService.calculateBatchATSScores(
       targetCandidateIds,
       requirementId,
       (progress) => {
-        // Progress callback (could be used for real-time updates via WebSocket)
+        // Progress callback with detailed logging
         console.log(`📈 Progress: ${progress.current}/${progress.total} - Candidate ${progress.candidateId}: ${progress.status}`);
       }
     );
     
-    // Add a small delay to ensure database transactions are committed
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add a longer delay to ensure database transactions are committed
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     return res.status(200).json({
       success: true,
@@ -2416,7 +2462,14 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         successful: batchResults.successful.length,
         errors: batchResults.errors.length,
         results: batchResults.successful,
-        errorDetails: batchResults.errors
+        errorDetails: batchResults.errors,
+        pagination: {
+          currentPage: parseInt(page),
+          limit: parseInt(limit),
+          totalCandidates,
+          hasMorePages,
+          processed: targetCandidateIds.length
+        }
       }
     });
     
