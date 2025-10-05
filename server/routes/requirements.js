@@ -2127,4 +2127,22 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
   }
 });
 
+// ATS Calculate endpoint (placeholder - ATS functionality removed during git reset)
+router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
+  try {
+    return res.status(501).json({
+      success: false,
+      message: 'ATS feature is currently unavailable. Please contact support for assistance.',
+      code: 'FEATURE_UNAVAILABLE'
+    });
+  } catch (error) {
+    console.error('ATS calculate error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'ATS calculation failed',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

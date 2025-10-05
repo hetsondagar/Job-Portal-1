@@ -192,30 +192,26 @@ export default function CandidateProfilePage() {
     }
 
     try {
-      // Prefer direct file URL if available
-      const directUrl = toAbsoluteApiUrl(resume?.metadata?.fileUrl || resume?.fileUrl)
-      if (directUrl) {
-        window.open(directUrl, '_blank', 'noopener,noreferrer')
-        return
-      }
-
-      // Fallback: fetch via API and open blob URL
-      const response = await apiService.downloadCandidateResume(requirementId, candidateIdStr, resume.id)
-      if (!response.ok) {
-        throw new Error(`Failed to load resume: ${response.status} ${response.statusText}`)
-      }
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url)
-      }, 10000)
-      if (!newWindow) {
-        toast({ title: 'Popup blocked', description: 'Please allow popups to view the resume', variant: 'destructive' })
-      }
+      // Get token for authentication
+      const token = localStorage.getItem('token')
+      
+      // Create view URL with token
+      const viewUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/requirements/${requirementId}/candidates/${candidateIdStr}/resume/${resume.id}/view${token ? `?token=${encodeURIComponent(token)}` : ''}`
+      
+      // Open in new tab
+      window.open(viewUrl, '_blank', 'noopener,noreferrer')
+      
+      toast({
+        title: "Success",
+        description: "Resume opened in new tab"
+      })
     } catch (error) {
-      console.error('Error viewing resume:', error)
-      toast({ title: 'Error', description: 'Failed to view resume', variant: 'destructive' })
+      console.error('View error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to view resume",
+        variant: "destructive"
+      })
     }
   }
 
@@ -940,16 +936,62 @@ export default function CandidateProfilePage() {
                             PDF • {candidate.resumes[0].fileSize || 'Document'} • Uploaded {new Date(candidate.resumes[0].uploadDate || candidate.resumes[0].lastUpdated).toLocaleDateString()}
                       </p>
                       
-                      {/* CV Preview Image */}
+                      {/* CV Preview */}
                       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mb-4">
-                        <div className="aspect-[3/4] bg-slate-100 dark:bg-slate-700 rounded flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-3">
-                              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">CV Preview</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Click to view full document</p>
-                          </div>
+                        <div className="bg-white dark:bg-slate-900">
+                          {(() => {
+                            const pdfUrl = toAbsoluteApiUrl(candidate.resumes[0]?.metadata?.fileUrl || candidate.resumes[0]?.fileUrl);
+                            console.log('📄 PDF URL for preview:', pdfUrl);
+                            
+                            if (!pdfUrl) {
+                              return (
+                                <div className="flex items-center justify-center h-[800px] bg-slate-50 dark:bg-slate-800">
+                                  <div className="text-center p-8">
+                                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                      <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No PDF URL</h3>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">Resume URL not available.</p>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div className="relative h-[800px]">
+                                <iframe
+                                  src={`${pdfUrl}#view=FitH`}
+                                  className="w-full h-full border-0"
+                                  title="Resume Preview"
+                                  style={{ display: 'block' }}
+                                >
+                                  <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-800">
+                                    <div className="text-center p-8">
+                                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                      </div>
+                                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Preview Not Available</h3>
+                                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Your browser doesn't support PDF preview.</p>
+                                      <Button onClick={() => window.open(pdfUrl, '_blank')}>
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View in New Tab
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </iframe>
+                                <div className="absolute bottom-4 right-4 space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => window.open(pdfUrl, '_blank')}
+                                  >
+                                    <ExternalLink className="w-4 h-4 mr-1" />
+                                    Open in New Tab
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                       

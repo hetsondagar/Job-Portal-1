@@ -1929,7 +1929,11 @@ class ApiService {
   }
 
   async downloadCandidateResume(requirementId: string, candidateId: string, resumeId: string): Promise<Response> {
-    const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/resume/${resumeId}/download`, {
+    const token = this.authToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+    const url = `${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/resume/${resumeId}/download`;
+    const urlWithToken = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+    
+    const response = await fetch(urlWithToken, {
       headers: this.getAuthHeaders(),
     });
 
