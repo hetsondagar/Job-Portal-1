@@ -30,7 +30,14 @@ const Company = sequelize.define('Company', {
   },
   industry: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    set(value) {
+      if (typeof value === 'string') {
+        this.setDataValue('industry', value.trim());
+      } else {
+        this.setDataValue('industry', value);
+      }
+    }
   },
   sector: {
     type: DataTypes.STRING,
@@ -149,7 +156,14 @@ const Company = sequelize.define('Company', {
   },
   companyType: {
     type: DataTypes.ENUM('startup', 'midsize', 'enterprise', 'multinational'),
-    allowNull: true
+    allowNull: true,
+    set(value) {
+      if (typeof value === 'string') {
+        this.setDataValue('companyType', value.toLowerCase());
+      } else {
+        this.setDataValue('companyType', value);
+      }
+    }
   },
   fundingStage: {
     type: DataTypes.ENUM('bootstrapped', 'seed', 'series-a', 'series-b', 'series-c', 'public'),

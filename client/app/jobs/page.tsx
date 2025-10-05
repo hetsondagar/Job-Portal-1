@@ -656,7 +656,10 @@ export default function JobsPage() {
     // Industry (company industry) client-side safeguard
     if (filters.industry) {
       const q = filters.industry.toLowerCase()
-      filtered = filtered.filter(job => (job as any).company?.industry ? String((job as any).company.industry).toLowerCase().includes(q) : true)
+      filtered = filtered.filter(job => {
+        const ind = (job as any).company?.industry
+        return ind ? String(ind).toLowerCase().includes(q) : false
+      })
     }
 
     // Department
@@ -682,13 +685,19 @@ export default function JobsPage() {
     // Company Type
     if (filters.companyType) {
       const q = filters.companyType.toLowerCase()
-      filtered = filtered.filter(job => (job as any).company?.companyType ? String((job as any).company.companyType).toLowerCase() === q : true)
+      filtered = filtered.filter(job => {
+        const ct = (job as any).company?.companyType
+        return ct ? String(ct).toLowerCase() === q : false
+      })
     }
 
     // Work Mode
     if (filters.workMode) {
       const q = filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode.toLowerCase()
-      filtered = filtered.filter(job => String(job.workMode || (job as any).remoteWork || '').toLowerCase().includes(q))
+      filtered = filtered.filter(job => {
+        const wm = String(job.workMode || (job as any).remoteWork || '').toLowerCase()
+        return wm ? wm.includes(q) : false
+      })
     }
 
     // Education

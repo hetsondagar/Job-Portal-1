@@ -562,9 +562,9 @@ exports.getAllJobs = async (req, res, next) => {
         attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
         where: {
-          ...(industry ? { industry: { [OpLike]: `%${industry}%` } } : {}),
-          ...(companyType ? { companyType } : {}),
-          ...(companyName ? { name: { [OpLike]: `%${companyName}%` } } : {}),
+          ...(industry ? { industry: { [OpLike]: `%${String(industry).toLowerCase()}%` } } : {}),
+          ...(companyType ? { companyType: String(companyType).toLowerCase() } : {}),
+          ...(companyName ? { name: { [OpLike]: `%${String(companyName).toLowerCase()}%` } } : {}),
         }
       },
       {
