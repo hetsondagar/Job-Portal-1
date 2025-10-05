@@ -1915,14 +1915,87 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', atta
       // Don't fail the view if activity logging fails
     }
     
-    res.json({
-      success: true,
-      message: 'Resume view logged successfully',
-      data: {
-        resumeId: resume.id,
-        views: resume.views
+    // Get file path for serving the PDF
+    const metadata = resume.metadata || {};
+    const filename = metadata.filename || metadata.originalName || `resume-${resume.id}.pdf`;
+    const originalName = metadata.originalName || filename;
+    
+    console.log('🔍 Resume metadata:', JSON.stringify(metadata, null, 2));
+    console.log('🔍 Filename from metadata:', filename);
+    
+    // Try to find the file
+    let filePath = null;
+    const possiblePaths = [
+      metadata.filePath,
+      metadata.fileUrl,
+      path.join(__dirname, '../uploads/resumes', filename),
+      path.join(__dirname, '../uploads', filename),
+      path.join(process.cwd(), 'uploads/resumes', filename),
+      path.join(process.cwd(), 'uploads', filename),
+      path.join(process.cwd(), 'server/uploads/resumes', filename),
+      path.join(process.cwd(), 'server/uploads', filename),
+      `/tmp/uploads/resumes/${filename}`,
+      `/tmp/uploads/${filename}`,
+      `/var/tmp/uploads/resumes/${filename}`,
+      `/var/tmp/uploads/${filename}`
+    ];
+    
+    // Check each possible path
+    for (const testPath of possiblePaths) {
+      if (testPath && fs.existsSync(testPath)) {
+        filePath = testPath;
+        break;
       }
-    });
+    }
+    
+    if (!filePath) {
+      console.log('❌ File does not exist in any of the expected locations');
+      console.log('🔍 Checked paths:', possiblePaths);
+      // Fallback: redirect to stored public path if present
+      if (metadata.filePath) {
+        return res.redirect(metadata.filePath);
+      }
+      // Try to find the file by searching common directories
+      const searchDirs = [
+        path.join(__dirname, '../uploads'),
+        path.join(process.cwd(), 'uploads'),
+        path.join(process.cwd(), 'server', 'uploads'),
+        '/tmp/uploads',
+        '/var/tmp/uploads'
+      ];
+      for (const searchDir of searchDirs) {
+        try {
+          if (fs.existsSync(searchDir)) {
+            const files = fs.readdirSync(searchDir, { recursive: true });
+            const found = files.find(f => typeof f === 'string' && f.includes(filename));
+            if (found) {
+              filePath = path.join(searchDir, found);
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`🔍 Could not search in ${searchDir}:`, error.message);
+        }
+      }
+      if (!filePath) {
+        return res.status(404).json({
+          success: false,
+          message: 'Resume file not found on server. The file may have been lost during server restart. Please ask the candidate to re-upload their resume.',
+          code: 'FILE_NOT_FOUND'
+        });
+      }
+    }
+    
+    console.log('✅ File found at:', filePath);
+    
+    // Set headers for PDF viewing (inline display)
+    res.setHeader('Content-Disposition', `inline; filename="${originalName || filename}"`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    
+    // Send file
+    console.log('📤 Sending file for view:', filePath);
+    res.sendFile(filePath);
   } catch (error) {
     console.error('Error viewing resume:', error);
     res.status(500).json({
@@ -2001,15 +2074,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     console.log('🔍 Full resume data:', JSON.stringify(resume.dataValues, null, 2));
     const metadata = resume.metadata || {};
     console.log('🔍 Resume metadata:', JSON.stringify(metadata, null, 2));
-    const filename = metadata.filename;
-    const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
+    const filename = metadata.filename || metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
+    const originalName = metadata.originalName || metadata.original_name || filename;
     
-    if (!filename) {
-      return res.status(404).json({
-        success: false,
-        message: 'Resume file not found'
-      });
-    }
+    console.log('🔍 Filename resolved:', filename);
+    console.log('🔍 Original name resolved:', originalName);
     
     // Try multiple possible file paths
     let filePath;

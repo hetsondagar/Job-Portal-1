@@ -949,10 +949,10 @@ export default function CandidateProfilePage() {
                                   <div className="text-center p-8">
                                     <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
                                       <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
-                                    </div>
+                            </div>
                                     <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No PDF URL</h3>
                                     <p className="text-sm text-slate-600 dark:text-slate-400">Resume URL not available.</p>
-                                  </div>
+                          </div>
                                 </div>
                               );
                             }
