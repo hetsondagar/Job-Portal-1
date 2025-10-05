@@ -100,6 +100,134 @@ function extractCandidateProfile(user) {
 }
 
 /**
+ * Calculate rule-based ATS score (fallback when Gemini AI is not available)
+ */
+function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirementDetails) {
+  console.log('🧮 Calculating rule-based ATS score...');
+  
+  let score = 0;
+  const matchingSkills = [];
+  const matchingPoints = [];
+  const gaps = [];
+  
+  // Extract requirement skills
+  const requirementSkills = requirementDetails.keySkills || requirementDetails.skills || [];
+  const candidateSkills = candidateProfile.skills || [];
+  
+  // Skills matching (40 points)
+  if (requirementSkills.length > 0 && candidateSkills.length > 0) {
+    const matchingSkillsCount = requirementSkills.filter(reqSkill => 
+      candidateSkills.some(candSkill => 
+        candSkill.toLowerCase().includes(reqSkill.toLowerCase()) ||
+        reqSkill.toLowerCase().includes(candSkill.toLowerCase())
+      )
+    ).length;
+    
+    const skillsMatchPercentage = (matchingSkillsCount / requirementSkills.length) * 100;
+    const skillsScore = Math.min(skillsMatchPercentage * 0.4, 40); // Max 40 points
+    score += skillsScore;
+    
+    matchingSkills.push(...requirementSkills.filter(reqSkill => 
+      candidateSkills.some(candSkill => 
+        candSkill.toLowerCase().includes(reqSkill.toLowerCase()) ||
+        reqSkill.toLowerCase().includes(candSkill.toLowerCase())
+      )
+    ));
+    
+    matchingPoints.push(`${matchingSkillsCount}/${requirementSkills.length} required skills matched (${skillsMatchPercentage.toFixed(1)}%)`);
+  }
+  
+  // Experience matching (25 points)
+  const requiredExpMin = requirementDetails.experienceMin || 0;
+  const requiredExpMax = requirementDetails.experienceMax || 10;
+  const candidateExp = candidateProfile.experience_years || 0;
+  
+  if (candidateExp >= requiredExpMin && candidateExp <= requiredExpMax) {
+    score += 25;
+    matchingPoints.push(`Experience matches requirement (${candidateExp} years)`);
+  } else if (candidateExp > requiredExpMax) {
+    score += 20;
+    matchingPoints.push(`Experience exceeds requirement (${candidateExp} years)`);
+  } else if (candidateExp > 0) {
+    score += Math.max(0, 25 * (candidateExp / requiredExpMin));
+    gaps.push(`Experience below requirement (${candidateExp} vs ${requiredExpMin}+ years)`);
+  } else {
+    gaps.push('No experience specified');
+  }
+  
+  // Location matching (15 points)
+  const requiredLocations = requirementDetails.candidateLocations || [];
+  const candidateLocation = candidateProfile.current_location || '';
+  const candidatePreferredLocations = candidateProfile.preferred_locations || [];
+  
+  if (requiredLocations.length > 0) {
+    const locationMatches = requiredLocations.some(reqLoc => 
+      candidateLocation.toLowerCase().includes(reqLoc.toLowerCase()) ||
+      candidatePreferredLocations.some(prefLoc => 
+        prefLoc.toLowerCase().includes(reqLoc.toLowerCase())
+      )
+    );
+    
+    if (locationMatches) {
+      score += 15;
+      matchingPoints.push('Location matches requirement');
+    } else {
+      gaps.push('Location does not match requirement');
+    }
+  }
+  
+  // Education matching (10 points)
+  if (candidateProfile.education && candidateProfile.education.length > 0) {
+    score += 10;
+    matchingPoints.push('Education information available');
+  } else {
+    gaps.push('No education information provided');
+  }
+  
+  // Resume content quality (10 points)
+  if (resumeContent && resumeContent.length > 100) {
+    score += 10;
+    matchingPoints.push('Detailed resume content available');
+  } else {
+    gaps.push('Limited resume content');
+  }
+  
+  // Ensure score is between 0-100
+  score = Math.min(Math.max(score, 0), 100);
+  
+  // Determine experience match level
+  let experienceMatch = 'poor';
+  if (candidateExp >= requiredExpMin && candidateExp <= requiredExpMax) {
+    experienceMatch = 'excellent';
+  } else if (candidateExp > requiredExpMax) {
+    experienceMatch = 'good';
+  } else if (candidateExp > requiredExpMin * 0.7) {
+    experienceMatch = 'average';
+  }
+  
+  // Determine recommendation
+  let recommendation = 'not_recommended';
+  if (score >= 80) {
+    recommendation = 'strongly_recommended';
+  } else if (score >= 60) {
+    recommendation = 'recommended';
+  } else if (score >= 40) {
+    recommendation = 'consider';
+  }
+  
+  return {
+    ats_score: Math.round(score),
+    matching_skills: matchingSkills,
+    matching_points: matchingPoints,
+    gaps: gaps,
+    experience_match: experienceMatch,
+    skills_match_percentage: Math.round((matchingSkills.length / Math.max(requirementSkills.length, 1)) * 100),
+    overall_assessment: `Rule-based ATS score: ${Math.round(score)}/100. ${matchingPoints.length > 0 ? 'Strengths: ' + matchingPoints.slice(0, 2).join(', ') + '.' : ''} ${gaps.length > 0 ? 'Areas for improvement: ' + gaps.slice(0, 2).join(', ') + '.' : ''}`,
+    recommendation: recommendation
+  };
+}
+
+/**
  * Extract requirement details
  */
 function extractRequirementDetails(requirement) {
@@ -209,48 +337,39 @@ ${resumeContent}
 Provide ONLY the JSON response, no additional text.
 `;
     
-    // Call Gemini AI
-    console.log('🤖 Calling Gemini AI for ATS scoring...');
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro',
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 1024,
-      }
-    });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    console.log('✅ Gemini AI response received');
-    
-    // Parse the JSON response
+    // Try Gemini AI first, fallback to rule-based scoring
+    console.log('🤖 Attempting Gemini AI for ATS scoring...');
     let atsData;
+    
     try {
-      // Extract JSON from response (in case there's extra text)
+      const model = genAI.getGenerativeModel({ 
+        model: 'gemini-pro',
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 1024,
+        }
+      });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('✅ Gemini AI response received');
+      
+      // Parse the JSON response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         atsData = JSON.parse(jsonMatch[0]);
       } else {
         throw new Error('No JSON found in response');
       }
-    } catch (parseError) {
-      console.error('❌ Error parsing Gemini response:', parseError);
-      console.log('Raw response:', text);
       
-      // Fallback: Create default score
-      atsData = {
-        ats_score: 50,
-        matching_skills: [],
-        matching_points: ['Unable to fully analyze - using default score'],
-        gaps: ['AI response parsing failed'],
-        experience_match: 'average',
-        skills_match_percentage: 50,
-        overall_assessment: 'Unable to generate detailed assessment. Please try again.',
-        recommendation: 'consider'
-      };
+    } catch (geminiError) {
+      console.log('⚠️ Gemini AI failed, using rule-based scoring:', geminiError.message);
+      
+      // Fallback: Use rule-based ATS scoring
+      atsData = calculateRuleBasedATSScore(candidateProfile, resumeContent, requirementDetails);
     }
     
     // Store the ATS score in the database
