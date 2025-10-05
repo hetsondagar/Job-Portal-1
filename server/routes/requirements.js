@@ -192,6 +192,8 @@ router.post('/', authenticateToken, async (req, res) => {
       skills: Array.isArray(body.skills) ? body.skills : [],
       keySkills: Array.isArray(body.keySkills) ? body.keySkills : [],
       education: body.education || null,
+      industry: body.industry || null,
+      department: body.department || null,
       validTill: body.validTill ? new Date(body.validTill) : null,
       noticePeriod: body.noticePeriod || null,
       remoteWork: normalizedRemoteWork || null,
@@ -202,6 +204,9 @@ router.post('/', authenticateToken, async (req, res) => {
       includeWillingToRelocate: !!body.includeWillingToRelocate,
       includeNotMentioned: !!body.includeNotMentioned,
       benefits: Array.isArray(body.benefits) ? body.benefits : [],
+      institute: body.institute || null,
+      resumeFreshness: body.resumeFreshness ? new Date(body.resumeFreshness) : null,
+      currentCompany: body.currentCompany || null,
       metadata: body.metadata || {}
     });
 
