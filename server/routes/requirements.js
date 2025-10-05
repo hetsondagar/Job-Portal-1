@@ -708,7 +708,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             ats_score as "atsScore",
             last_calculated as "lastCalculated"
           FROM candidate_analytics
-          WHERE user_id = ANY(:candidateIds) AND requirement_id = :requirementId
+          WHERE user_id IN (:candidateIds) AND requirement_id = :requirementId
         `, {
           replacements: { candidateIds, requirementId: requirementId },
           type: QueryTypes.SELECT
@@ -721,8 +721,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             lastCalculated: score.lastCalculated
           };
         });
+        
+        console.log('🔍 ATS scores fetched:', {
+          totalCandidates: candidateIds.length,
+          atsScoresFound: atsScores.length,
+          atsScoresMap: Object.keys(atsScoresMap).length
+        });
       } catch (atsError) {
         console.log('⚠️ Could not fetch ATS scores:', atsError.message);
+        console.log('🔍 ATS Error details:', atsError);
       }
     }
     
@@ -730,6 +737,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     const transformedCandidates = finalCandidates.map(candidate => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
       const atsData = atsScoresMap[candidate.id];
+      
+      // Debug: Log ATS data for first few candidates only
+      if (Math.random() < 0.1) { // Log only 10% of candidates to reduce noise
+        console.log(`🔍 Candidate ${candidate.id} ATS data:`, {
+          atsData: atsData,
+          atsScore: atsData ? atsData.score : null
+        });
+      }
       
       return {
         id: candidate.id,
@@ -794,12 +809,17 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     
     if (sortByOption === 'ats' || sortByOption === 'ats:desc') {
       // Sort by ATS score (highest first), nulls last
+      console.log('🔄 Sorting by ATS score (descending)');
+      console.log('📊 Candidates before ATS sort:', transformedCandidates.map(c => ({ name: c.name, atsScore: c.atsScore })));
+      
       transformedCandidates.sort((a, b) => {
         if (a.atsScore === null && b.atsScore === null) return 0;
         if (a.atsScore === null) return 1;
         if (b.atsScore === null) return -1;
         return b.atsScore - a.atsScore;
       });
+      
+      console.log('📊 Candidates after ATS sort:', transformedCandidates.map(c => ({ name: c.name, atsScore: c.atsScore })));
     } else if (sortByOption === 'ats:asc') {
       // Sort by ATS score (lowest first), nulls last
       transformedCandidates.sort((a, b) => {
