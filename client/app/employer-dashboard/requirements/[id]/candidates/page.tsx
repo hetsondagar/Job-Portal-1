@@ -112,6 +112,7 @@ export default function CandidatesPage() {
         console.log('🔍 Candidates API response:', response)
         
         if (response.success && response.data) {
+          console.log('📊 Initial candidates data with ATS scores:', response.data.candidates?.map(c => ({ name: c.name, atsScore: c.atsScore })))
           setCandidates(response.data.candidates || [])
           setRequirement(response.data.requirement)
           setPagination(response.data.pagination || pagination)
@@ -183,6 +184,7 @@ export default function CandidatesPage() {
         })
         
         // Refresh candidates list to show updated ATS scores
+        console.log('🔄 Refreshing candidates list to show ATS scores...')
         const refreshResponse = await apiService.getRequirementCandidates(params.id as string, {
           page: pagination.page,
           limit: parseInt(showCount),
@@ -191,8 +193,12 @@ export default function CandidatesPage() {
         })
         
         if (refreshResponse.success && refreshResponse.data) {
+          console.log('✅ Candidates refreshed:', refreshResponse.data.candidates?.length)
+          console.log('📊 ATS scores in refreshed data:', refreshResponse.data.candidates?.map(c => ({ name: c.name, atsScore: c.atsScore })))
           setCandidates(refreshResponse.data.candidates || [])
           setSortBy('ats') // Update sort dropdown
+        } else {
+          console.log('❌ Failed to refresh candidates:', refreshResponse)
         }
       } else {
         toast.error('ATS calculation failed', {
@@ -277,17 +283,17 @@ export default function CandidatesPage() {
             <Button
               onClick={handleCalculateATS}
               disabled={calculatingATS || candidates.length === 0}
-              className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {calculatingATS ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Calculating...</span>
+                  <span>Calculating ATS...</span>
                 </>
               ) : (
                 <>
                   <Brain className="w-4 h-4" />
-                  <span>ATS Score</span>
+                  <span>Calculate ATS Scores</span>
                 </>
               )}
             </Button>
@@ -477,12 +483,25 @@ export default function CandidatesPage() {
                             )}
                           </div>
 
+        {/* ATS Calculation Progress */}
+        {calculatingATS && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+              <div>
+                <h3 className="text-sm font-medium text-purple-900">Calculating ATS Scores</h3>
+                <p className="text-xs text-purple-700">Processing {candidates.length} candidates. This may take a few minutes...</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Candidates List */}
         {!loading && !error && (
         <div className="space-y-4">
             {candidates.length > 0 ? (
               candidates.map((candidate) => (
-            <Card key={candidate.id} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={candidate.id} className={`p-6 hover:shadow-lg transition-shadow ${calculatingATS ? 'opacity-75' : ''}`}>
               <div className="flex items-start space-x-4">
                 <Avatar className="w-16 h-16">
                   <AvatarImage 
@@ -545,18 +564,34 @@ export default function CandidatesPage() {
                           <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
                             {candidate.profileCompletion}% Complete
                           </Badge>
-                          {candidate.atsScore !== null && candidate.atsScore !== undefined && (
+                          {/* ATS Score Badge */}
+                          {candidate.atsScore !== null && candidate.atsScore !== undefined ? (
                             <Badge 
                               variant="secondary" 
-                              className={`text-xs ${
-                                candidate.atsScore >= 80 ? 'bg-emerald-100 text-emerald-800' :
-                                candidate.atsScore >= 60 ? 'bg-blue-100 text-blue-800' :
-                                candidate.atsScore >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
+                              className={`text-xs font-semibold px-3 py-1 ${
+                                candidate.atsScore >= 80 ? 'bg-emerald-100 text-emerald-800 border-emerald-200 shadow-sm' :
+                                candidate.atsScore >= 60 ? 'bg-blue-100 text-blue-800 border-blue-200 shadow-sm' :
+                                candidate.atsScore >= 40 ? 'bg-yellow-100 text-yellow-800 border-yellow-200 shadow-sm' :
+                                'bg-red-100 text-red-800 border-red-200 shadow-sm'
+                              }`}
+                              title={`ATS Score: ${candidate.atsScore}/100 - ${
+                                candidate.atsScore >= 80 ? 'Excellent Match' :
+                                candidate.atsScore >= 60 ? 'Good Match' :
+                                candidate.atsScore >= 40 ? 'Average Match' :
+                                'Poor Match'
                               }`}
                             >
                               <Brain className="w-3 h-3 mr-1" />
                               ATS: {candidate.atsScore}
+                            </Badge>
+                          ) : (
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs text-gray-500 border-gray-300 px-3 py-1"
+                              title="Click 'Calculate ATS Scores' to generate ATS score for this candidate"
+                            >
+                              <Brain className="w-3 h-3 mr-1" />
+                              No ATS Score
                             </Badge>
                           )}
                           <button
