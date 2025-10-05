@@ -940,7 +940,9 @@ export default function CandidateProfilePage() {
                       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mb-4">
                         <div className="bg-white dark:bg-slate-900">
                           {(() => {
-                            const pdfUrl = toAbsoluteApiUrl(candidate.resumes[0]?.metadata?.fileUrl || candidate.resumes[0]?.fileUrl);
+                            // Use the download URL with token for preview
+                            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                            const pdfUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/requirements/${requirementId}/candidates/${candidateIdStr}/resume/${candidate.resumes[0].id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
                             console.log('📄 PDF URL for preview:', pdfUrl);
                             
                             if (!pdfUrl) {

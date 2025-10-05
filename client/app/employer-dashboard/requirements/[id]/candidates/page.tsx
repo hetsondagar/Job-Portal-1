@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp } from "lucide-react"
+import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp, Brain } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
-import { apiService } from "@/lib/api"
+import { apiService, constructAvatarUrl } from "@/lib/api"
 import { toast } from "sonner"
 
 interface Candidate {
@@ -40,6 +40,8 @@ interface Candidate {
   profileCompletion: number;
   likeCount?: number;
   likedByCurrent?: boolean;
+  atsScore?: number | null;
+  atsCalculatedAt?: string | null;
 }
 
 interface Requirement {
@@ -57,6 +59,7 @@ export default function CandidatesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [calculatingATS, setCalculatingATS] = useState(false)
   
   // Data states
   const [candidates, setCandidates] = useState<Candidate[]>([])
@@ -161,6 +164,51 @@ export default function CandidatesPage() {
     })
   }
 
+  const handleCalculateATS = async () => {
+    try {
+      setCalculatingATS(true)
+      
+      toast.info('Starting ATS calculation...', {
+        description: `Processing ${candidates.length} candidates. This may take a few minutes.`
+      })
+      
+      // Get candidate IDs from current list
+      const candidateIds = candidates.map(c => c.id)
+      
+      const response = await apiService.calculateATSScores(params.id as string, candidateIds)
+      
+      if (response.success) {
+        toast.success('ATS scores calculated successfully!', {
+          description: `Processed ${response.data.successful} candidates with ${response.data.errors} errors.`
+        })
+        
+        // Refresh candidates list to show updated ATS scores
+        const refreshResponse = await apiService.getRequirementCandidates(params.id as string, {
+          page: pagination.page,
+          limit: parseInt(showCount),
+          search: searchQuery || undefined,
+          sortBy: 'ats' // Sort by ATS score after calculation
+        })
+        
+        if (refreshResponse.success && refreshResponse.data) {
+          setCandidates(refreshResponse.data.candidates || [])
+          setSortBy('ats') // Update sort dropdown
+        }
+      } else {
+        toast.error('ATS calculation failed', {
+          description: response.message
+        })
+      }
+    } catch (error: any) {
+      console.error('❌ Error calculating ATS scores:', error)
+      toast.error('Failed to calculate ATS scores', {
+        description: error.message || 'Please try again later'
+      })
+    } finally {
+      setCalculatingATS(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <EmployerNavbar />
@@ -225,6 +273,25 @@ export default function CandidatesPage() {
               />
           </div>
 
+            {/* ATS Score Button */}
+            <Button
+              onClick={handleCalculateATS}
+              disabled={calculatingATS || candidates.length === 0}
+              className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+            >
+              {calculatingATS ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Calculating...</span>
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4" />
+                  <span>ATS Score</span>
+                </>
+              )}
+            </Button>
+
             {/* Filter Toggle */}
             <Button
               variant="outline"
@@ -244,6 +311,7 @@ export default function CandidatesPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="relevance">Relevance</SelectItem>
+                            <SelectItem value="ats">ATS Score</SelectItem>
                             <SelectItem value="experience">Experience</SelectItem>
                   <SelectItem value="location">Location</SelectItem>
                   <SelectItem value="lastActive">Last Active</SelectItem>
@@ -417,7 +485,7 @@ export default function CandidatesPage() {
             <Card key={candidate.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start space-x-4">
                 <Avatar className="w-16 h-16">
-                  <AvatarImage src={candidate.avatar} alt={candidate.name} />
+                  <AvatarImage src={constructAvatarUrl(candidate.avatar)} alt={candidate.name} />
                   <AvatarFallback className="text-lg font-bold">{candidate.name[0]}</AvatarFallback>
                 </Avatar>
 
@@ -468,6 +536,20 @@ export default function CandidatesPage() {
                           <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
                             {candidate.profileCompletion}% Complete
                           </Badge>
+                          {candidate.atsScore !== null && candidate.atsScore !== undefined && (
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs ${
+                                candidate.atsScore >= 80 ? 'bg-emerald-100 text-emerald-800' :
+                                candidate.atsScore >= 60 ? 'bg-blue-100 text-blue-800' :
+                                candidate.atsScore >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              <Brain className="w-3 h-3 mr-1" />
+                              ATS: {candidate.atsScore}
+                            </Badge>
+                          )}
                           <button
                             aria-label={candidate.likedByCurrent ? 'Remove upvote' : 'Upvote candidate'}
                             onClick={async (e) => {

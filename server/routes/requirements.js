@@ -696,9 +696,40 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       return { score, matchReasons };
     };
     
-    // Transform candidates data for frontend with relevance scoring
+    // Fetch ATS scores for candidates
+    const candidateIds = finalCandidates.map(c => c.id);
+    let atsScoresMap = {};
+    
+    if (candidateIds.length > 0) {
+      try {
+        const atsScores = await sequelize.query(`
+          SELECT 
+            user_id as "userId",
+            ats_score as "atsScore",
+            last_calculated as "lastCalculated"
+          FROM candidate_analytics
+          WHERE user_id = ANY(:candidateIds) AND requirement_id = :requirementId
+        `, {
+          replacements: { candidateIds, requirementId: requirementId },
+          type: QueryTypes.SELECT
+        });
+        
+        // Create a map for quick lookup
+        atsScores.forEach(score => {
+          atsScoresMap[score.userId] = {
+            score: score.atsScore,
+            lastCalculated: score.lastCalculated
+          };
+        });
+      } catch (atsError) {
+        console.log('⚠️ Could not fetch ATS scores:', atsError.message);
+      }
+    }
+    
+    // Transform candidates data for frontend with relevance scoring and ATS scores
     const transformedCandidates = finalCandidates.map(candidate => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
+      const atsData = atsScoresMap[candidate.id];
       
       return {
         id: candidate.id,
@@ -726,7 +757,9 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
         profileCompletion: candidate.profile_completion || 0,
         relevanceScore: score,
-        matchReasons: matchReasons
+        matchReasons: matchReasons,
+        atsScore: atsData ? atsData.score : null,
+        atsCalculatedAt: atsData ? atsData.lastCalculated : null
       };
     });
 
@@ -756,8 +789,29 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       console.warn('Failed to enrich candidates with like data:', likeErr?.message || likeErr);
     }
     
-    // Sort candidates by relevance score (highest first)
-    transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    // Sort candidates based on sortBy parameter from query
+    const sortByOption = sortBy || 'relevance';
+    
+    if (sortByOption === 'ats' || sortByOption === 'ats:desc') {
+      // Sort by ATS score (highest first), nulls last
+      transformedCandidates.sort((a, b) => {
+        if (a.atsScore === null && b.atsScore === null) return 0;
+        if (a.atsScore === null) return 1;
+        if (b.atsScore === null) return -1;
+        return b.atsScore - a.atsScore;
+      });
+    } else if (sortByOption === 'ats:asc') {
+      // Sort by ATS score (lowest first), nulls last
+      transformedCandidates.sort((a, b) => {
+        if (a.atsScore === null && b.atsScore === null) return 0;
+        if (a.atsScore === null) return 1;
+        if (b.atsScore === null) return -1;
+        return a.atsScore - b.atsScore;
+      });
+    } else {
+      // Default: Sort by relevance score (highest first)
+      transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    }
     
     return res.status(200).json({
       success: true,
@@ -2215,16 +2269,116 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
   }
 });
 
-// ATS Calculate endpoint (placeholder - ATS functionality removed during git reset)
+// ATS Calculate endpoint - Calculate ATS scores for candidates of a specific requirement
 router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
   try {
-    return res.status(501).json({
-      success: false,
-      message: 'ATS feature is currently unavailable. Please contact support for assistance.',
-      code: 'FEATURE_UNAVAILABLE'
+    const requirementId = req.params.id;
+    const { candidateIds } = req.body; // Optional: specific candidate IDs to process
+    
+    console.log(`🎯 ATS calculation requested for requirement ${requirementId}`);
+    
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can calculate ATS scores.'
+      });
+    }
+    
+    // Verify requirement ownership
+    const requirement = await Requirement.findOne({
+      where: req.user.user_type === 'admin' 
+        ? { id: requirementId }
+        : { id: requirementId, companyId: req.user.companyId }
     });
+    
+    if (!requirement) {
+      return res.status(404).json({
+        success: false,
+        message: 'Requirement not found or access denied'
+      });
+    }
+    
+    // Get all candidates for this requirement if not specified
+    let targetCandidateIds = candidateIds;
+    
+    if (!targetCandidateIds || targetCandidateIds.length === 0) {
+      console.log('📋 Fetching candidates matching this requirement...');
+      
+      // Build a query to find candidates that match requirement criteria
+      const whereConditions = {
+        user_type: 'jobseeker',
+        account_status: 'active'
+      };
+      
+      // Add skill matching if requirement has specific skills
+      if (requirement.skills_required && requirement.skills_required.length > 0) {
+        // Check if candidate skills overlap with required skills
+        whereConditions.skills = {
+          [Op.overlap]: requirement.skills_required
+        };
+      }
+      
+      // Fetch candidates
+      const candidates = await User.findAll({
+        where: whereConditions,
+        attributes: ['id'],
+        limit: 100 // Process max 100 candidates at a time
+      });
+      
+      // If no candidates match skills, fall back to all active jobseekers for this requirement
+      if (candidates.length === 0) {
+        console.log('⚠️ No candidates match skills, fetching all active jobseekers...');
+        const allCandidates = await User.findAll({
+          where: {
+            user_type: 'jobseeker',
+            account_status: 'active'
+          },
+          attributes: ['id'],
+          limit: 100
+        });
+        targetCandidateIds = allCandidates.map(c => c.id);
+      } else {
+        targetCandidateIds = candidates.map(c => c.id);
+      }
+    }
+    
+    if (targetCandidateIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No candidates found for this requirement'
+      });
+    }
+    
+    console.log(`📊 Processing ATS scores for ${targetCandidateIds.length} candidates`);
+    
+    // Import ATS service
+    const atsService = require('../services/atsService');
+    
+    // Calculate ATS scores in batches
+    const batchResults = await atsService.calculateBatchATSScores(
+      targetCandidateIds,
+      requirementId,
+      (progress) => {
+        // Progress callback (could be used for real-time updates via WebSocket)
+        console.log(`📈 Progress: ${progress.current}/${progress.total} - Candidate ${progress.candidateId}: ${progress.status}`);
+      }
+    );
+    
+    return res.status(200).json({
+      success: true,
+      message: 'ATS calculation completed',
+      data: {
+        total: batchResults.total,
+        successful: batchResults.successful.length,
+        errors: batchResults.errors.length,
+        results: batchResults.successful,
+        errorDetails: batchResults.errors
+      }
+    });
+    
   } catch (error) {
-    console.error('ATS calculate error:', error);
+    console.error('❌ ATS calculate error:', error);
     return res.status(500).json({
       success: false,
       message: 'ATS calculation failed',

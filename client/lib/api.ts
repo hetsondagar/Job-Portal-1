@@ -1942,6 +1942,16 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async calculateATSScores(requirementId: string, candidateIds?: string[]): Promise<ApiResponse<any>> {
+    const response = await fetch(`${this.baseURL}/requirements/${requirementId}/calculate-ats`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ candidateIds })
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   async downloadCandidateResume(requirementId: string, candidateId: string, resumeId: string): Promise<Response> {
     const token = this.authToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     const url = `${API_BASE_URL}/requirements/${requirementId}/candidates/${candidateId}/resume/${resumeId}/download`;
