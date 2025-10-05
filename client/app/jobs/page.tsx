@@ -648,7 +648,55 @@ export default function JobsPage() {
       )
     }
 
-    // Category filter
+    // Industry (company industry) client-side safeguard
+    if (filters.industry) {
+      const q = filters.industry.toLowerCase()
+      filtered = filtered.filter(job => (job as any).company?.industry ? String((job as any).company.industry).toLowerCase().includes(q) : true)
+    }
+
+    // Department
+    if (filters.department) {
+      const q = filters.department.toLowerCase()
+      filtered = filtered.filter(job => String((job as any).department || job.category || '').toLowerCase().includes(q))
+    }
+
+    // Role / Designation
+    if (filters.role) {
+      const q = filters.role.toLowerCase()
+      filtered = filtered.filter(job => job.title.toLowerCase().includes(q))
+    }
+
+    // Skills / Keywords
+    if (filters.skills) {
+      const parts = filters.skills.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      if (parts.length) {
+        filtered = filtered.filter(job => parts.some(p => job.skills.some(s => s.toLowerCase().includes(p)) || job.description.toLowerCase().includes(p)))
+      }
+    }
+
+    // Company Type
+    if (filters.companyType) {
+      const q = filters.companyType.toLowerCase()
+      filtered = filtered.filter(job => (job as any).company?.companyType ? String((job as any).company.companyType).toLowerCase() === q : true)
+    }
+
+    // Work Mode
+    if (filters.workMode) {
+      const q = filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode.toLowerCase()
+      filtered = filtered.filter(job => String(job.workMode || (job as any).remoteWork || '').toLowerCase().includes(q))
+    }
+
+    // Education
+    if (filters.education) {
+      const q = filters.education.toLowerCase()
+      filtered = filtered.filter(job => String((job as any).education || '').toLowerCase().includes(q))
+    }
+
+    // Company Name
+    if (filters.companyName) {
+      const q = filters.companyName.toLowerCase()
+      filtered = filtered.filter(job => job.company.name.toLowerCase().includes(q))
+    }
     if (filters.category) {
       filtered = filtered.filter(job => job.category === filters.category)
     }

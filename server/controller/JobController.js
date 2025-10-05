@@ -559,7 +559,7 @@ exports.getAllJobs = async (req, res, next) => {
         model: Company,
         as: 'company',
         attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
-        required: false,
+        required: Boolean(industry || companyType || companyName) || false,
         where: {
           ...(industry ? { industry: { [OpLike]: `%${industry}%` } } : {}),
           ...(companyType ? { companyType } : {}),
@@ -570,7 +570,7 @@ exports.getAllJobs = async (req, res, next) => {
         model: User,
         as: 'employer',
         attributes: ['id', 'first_name', 'last_name', 'email', 'companyId'],
-        required: false
+        required: Boolean(recruiterType) || false
       },
       {
         model: JobPhoto,
