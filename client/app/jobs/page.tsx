@@ -709,6 +709,24 @@ export default function JobsPage() {
     return filtered
   }, [allJobs, filters, sortBy])
 
+  // Determine if any filters are active (for preferred tag display)
+  const hasActiveFilters = useMemo(() => Boolean(
+    (filters.search && filters.search.trim()) ||
+    (filters.location && filters.location.trim()) ||
+    filters.experienceLevels.length ||
+    filters.jobTypes.length ||
+    (filters.salaryRange && filters.salaryRange.trim()) ||
+    (filters.industry && filters.industry.trim()) ||
+    (filters.department && filters.department.trim()) ||
+    (filters.role && filters.role.trim()) ||
+    (filters.skills && filters.skills.trim()) ||
+    (filters.companyType && (filters.companyType as any).trim && (filters.companyType as any).trim()) ||
+    (filters.workMode && (filters.workMode as any).trim && (filters.workMode as any).trim()) ||
+    (filters.education && filters.education.trim()) ||
+    (filters.companyName && filters.companyName.trim()) ||
+    (filters.recruiterType && (filters.recruiterType as any).trim && (filters.recruiterType as any).trim())
+  ), [filters])
+
   // Record search in database
   const recordSearch = useCallback(async (searchQuery: string) => {
     if (!user || !searchQuery.trim()) return;
@@ -1156,6 +1174,12 @@ export default function JobsPage() {
                                   </p>
                                 </div>
                                 <div className="flex items-center space-x-2 ml-4">
+                                  {!hasActiveFilters && job.isPreferred && (
+                                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                      <Star className="w-3 h-3 mr-1" />
+                                      Preferred
+                                    </Badge>
+                                  )}
                                   {job.urgent && (
                                     <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
                                       Urgent
