@@ -440,8 +440,28 @@ exports.getAllJobs = async (req, res, next) => {
       ];
     }
     if (companyId) whereClause.company_id = companyId;
-    if (location) whereClause.location = { [Job.sequelize.Op.iLike]: `%${location}%` };
-    if (jobType) whereClause.jobType = jobType;
+    if (location) {
+      const { Op } = Job.sequelize;
+      whereClause[Op.or] = [
+        ...(whereClause[Op.or] || []),
+        { location: { [Op.iLike]: `%${location}%` } },
+        { city: { [Op.iLike]: `%${location}%` } },
+        { state: { [Op.iLike]: `%${location}%` } },
+        { country: { [Op.iLike]: `%${location}%` } },
+      ];
+    }
+    if (jobType) {
+      const { Op } = Job.sequelize;
+      const types = String(jobType)
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (types.length === 1) {
+        whereClause.jobType = types[0];
+      } else if (types.length > 1) {
+        whereClause.jobType = { [Op.in]: types };
+      }
+    }
     if (experienceLevel) whereClause.experienceLevel = experienceLevel;
 
     // Experience range (e.g., "0-1,2-5,6-10") maps to experienceMin/Max
@@ -477,10 +497,14 @@ exports.getAllJobs = async (req, res, next) => {
       }
     }
 
-    // Salary min
+    // Salary min/max
     if (salaryMin) {
       const { Op } = Job.sequelize;
       whereClause.salaryMin = { [Op.gte]: parseFloat(salaryMin) };
+    }
+    if (req.query.salaryMax) {
+      const { Op } = Job.sequelize;
+      whereClause.salaryMax = { [Op.lte]: parseFloat(req.query.salaryMax) };
     }
 
     // Department / Functional Area
@@ -535,6 +559,7 @@ exports.getAllJobs = async (req, res, next) => {
       whereClause[Job.sequelize.Op.or] = [
         { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
         { description: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+        { requirements: { [Job.sequelize.Op.iLike]: `%${search}%` } },
         { location: { [Job.sequelize.Op.iLike]: `%${search}%` } }
       ];
     }
