@@ -306,11 +306,26 @@ app.use('/api/admin', require('./routes/admin'));
     // Forward to user route if available
     try {
       const token = req.headers.authorization || req.query.token || req.query.access_token || '';
+      const cleanToken = token.replace(/^Bearer\s+/i, '');
       const url = `/api/user/cover-letters/${req.params.id}/download`;
-      // If running behind same server, rewrite path
-      req.url = url + (req.url.includes('?') ? `&` : `?`) + (token ? `token=${encodeURIComponent(token.replace(/^Bearer\s+/i, ''))}` : '');
-      return userRoutes.handle(req, res);
-    } catch (_) {
+      
+      console.log('🔍 Cover letter redirect - Original URL:', req.originalUrl);
+      console.log('🔍 Cover letter redirect - Forwarding to:', url);
+      console.log('🔍 Cover letter redirect - Token present:', !!cleanToken);
+      
+      // Create new request object with updated URL and headers
+      const newReq = Object.create(req);
+      newReq.url = url + (cleanToken ? `?token=${encodeURIComponent(cleanToken)}` : '');
+      newReq.originalUrl = url;
+      newReq.path = `/cover-letters/${req.params.id}/download`;
+      
+      if (cleanToken && !newReq.headers.authorization) {
+        newReq.headers.authorization = `Bearer ${cleanToken}`;
+      }
+      
+      return userRoutes.handle(newReq, res);
+    } catch (error) {
+      console.error('❌ Cover letter redirect error:', error);
       return res.status(404).json({ success: false, message: 'Route /api/cover-letters/:id/download not found' });
     }
   });

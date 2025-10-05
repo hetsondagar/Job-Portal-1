@@ -3598,9 +3598,11 @@ router.put('/cover-letters/:id/set-default', authenticateToken, async (req, res)
 });
 
 // Download cover letter file
-router.get('/cover-letters/:id/download', authenticateToken, async (req, res) => {
+router.get('/cover-letters/:id/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Cover letter download request:', { coverLetterId: req.params.id, userId: req.user.id });
+    console.log('🔍 Cover letter download - Auth header:', req.headers?.authorization ? 'Present' : 'Missing');
+    console.log('🔍 Cover letter download - Query token:', req.query?.token ? 'Present' : 'Missing');
     
     const coverLetter = await CoverLetter.findOne({
       where: { id: req.params.id, userId: req.user.id }

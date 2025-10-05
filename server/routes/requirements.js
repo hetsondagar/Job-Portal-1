@@ -14,7 +14,7 @@ const User = require('../models/User');
 const Company = require('../models/Company');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
-const { Resume } = require('../config/index');
+const Resume = require('../models/Resume');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -2004,7 +2004,9 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     }
     
     console.log('✅ Resume found:', resume.id, 'filename:', resume.metadata?.filename);
+    console.log('🔍 Full resume data:', JSON.stringify(resume.dataValues, null, 2));
     const metadata = resume.metadata || {};
+    console.log('🔍 Resume metadata:', JSON.stringify(metadata, null, 2));
     const filename = metadata.filename;
     const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
     
@@ -2137,12 +2139,15 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
     
     // Send file
+    console.log('📤 Sending file:', filePath);
     res.sendFile(filePath);
   } catch (error) {
-    console.error('Error downloading candidate resume:', error);
+    console.error('❌ Error downloading candidate resume:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Failed to download resume'
+      message: 'Failed to download resume',
+      error: error.message
     });
   }
 });
