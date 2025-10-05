@@ -372,28 +372,45 @@ Provide ONLY the JSON response, no additional text.
       atsData = calculateRuleBasedATSScore(candidateProfile, resumeContent, requirementDetails);
     }
     
-    // Store the ATS score in the database
-    await sequelize.query(`
-      INSERT INTO candidate_analytics 
-        (user_id, requirement_id, ats_score, ats_analysis, last_calculated, "createdAt", "updatedAt")
-      VALUES 
-        (:userId, :requirementId, :atsScore, :atsAnalysis, NOW(), NOW(), NOW())
-      ON CONFLICT (user_id, requirement_id) 
-      DO UPDATE SET 
-        ats_score = :atsScore,
-        ats_analysis = :atsAnalysis,
-        last_calculated = NOW(),
-        "updatedAt" = NOW();
-    `, {
-      replacements: {
-        userId: candidateId,
-        requirementId: requirementId,
-        atsScore: atsData.ats_score,
-        atsAnalysis: JSON.stringify(atsData)
-      }
+    // Store the ATS score in the database with explicit transaction
+    await sequelize.transaction(async (transaction) => {
+      await sequelize.query(`
+        INSERT INTO candidate_analytics 
+          (user_id, requirement_id, ats_score, ats_analysis, last_calculated, "createdAt", "updatedAt")
+        VALUES 
+          (:userId, :requirementId, :atsScore, :atsAnalysis, NOW(), NOW(), NOW())
+        ON CONFLICT (user_id, requirement_id) 
+        DO UPDATE SET 
+          ats_score = :atsScore,
+          ats_analysis = :atsAnalysis,
+          last_calculated = NOW(),
+          "updatedAt" = NOW();
+      `, {
+        replacements: {
+          userId: candidateId,
+          requirementId: requirementId,
+          atsScore: atsData.ats_score,
+          atsAnalysis: JSON.stringify(atsData)
+        },
+        transaction
+      });
     });
     
-    console.log(`✅ ATS score ${atsData.ats_score} saved for candidate ${candidateId}`);
+    // Verify the score was saved by querying it back
+    const [verification] = await sequelize.query(`
+      SELECT ats_score, last_calculated 
+      FROM candidate_analytics 
+      WHERE user_id = :userId AND requirement_id = :requirementId
+    `, {
+      replacements: { userId: candidateId, requirementId: requirementId },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    if (verification && verification.ats_score === atsData.ats_score) {
+      console.log(`✅ ATS score ${atsData.ats_score} verified and saved for candidate ${candidateId}`);
+    } else {
+      console.log(`⚠️ ATS score verification failed for candidate ${candidateId}`);
+    }
     
     return {
       candidateId,
@@ -449,7 +466,7 @@ async function calculateBatchATSScores(candidateIds, requirementId, onProgress) 
       
       // Add delay to avoid rate limiting (1 second between requests)
       if (i < candidateIds.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Increased delay for database commits
       }
       
     } catch (error) {

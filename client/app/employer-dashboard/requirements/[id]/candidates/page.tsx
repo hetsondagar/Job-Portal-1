@@ -184,6 +184,9 @@ export default function CandidatesPage() {
           description: `Processed ${response.data.successful} candidates with ${response.data.errors} errors.`
         })
         
+        // Add a small delay to ensure backend processing is complete
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
         // Refresh candidates list to show updated ATS scores
         console.log('🔄 Refreshing candidates list to show ATS scores...')
         const refreshResponse = await apiService.getRequirementCandidates(params.id as string, {

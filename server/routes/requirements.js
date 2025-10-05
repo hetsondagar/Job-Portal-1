@@ -2405,6 +2405,9 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
       }
     );
     
+    // Add a small delay to ensure database transactions are committed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     return res.status(200).json({
       success: true,
       message: 'ATS calculation completed',
