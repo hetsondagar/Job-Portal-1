@@ -50,6 +50,15 @@ interface FilterState {
   salaryRange: string
   category: string
   type: string
+  industry?: string
+  department?: string
+  role?: string
+  skills?: string
+  companyType?: string
+  workMode?: string
+  education?: string
+  companyName?: string
+  recruiterType?: string
 }
 
 interface GulfJob {
@@ -107,6 +116,15 @@ export default function GulfJobsPage() {
     salaryRange: "",
     category: "",
     type: "",
+    industry: "",
+    department: "",
+    role: "",
+    skills: "",
+    companyType: "",
+    workMode: "",
+    education: "",
+    companyName: "",
+    recruiterType: "",
   })
 
   // Check URL parameters for filters
@@ -139,18 +157,60 @@ export default function GulfJobsPage() {
     }
   }, [user])
 
+  // Sync filters to URL and refetch (debounced)
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (filters.search) params.set('search', filters.search)
+    if (filters.location) params.set('location', filters.location)
+    if (filters.jobTypes.length > 0) params.set('jobType', filters.jobTypes.map(j => j.toLowerCase().replace(/\s+/g,'-')).join(','))
+    if (filters.experienceLevels.length > 0) params.set('experienceRange', filters.experienceLevels.join(','))
+    if (filters.salaryRange) params.set('salaryRange', filters.salaryRange)
+    if (filters.industry) params.set('industry', filters.industry)
+    if (filters.department) params.set('department', filters.department)
+    if (filters.role) params.set('role', filters.role)
+    if (filters.skills) params.set('skills', filters.skills)
+    if (filters.companyType) params.set('companyType', filters.companyType)
+    if (filters.workMode) params.set('workMode', filters.workMode)
+    if (filters.education) params.set('education', filters.education)
+    if (filters.companyName) params.set('companyName', filters.companyName)
+    if (filters.recruiterType) params.set('recruiterType', filters.recruiterType)
+
+    const qs = params.toString()
+    if (typeof window !== 'undefined') window.history.replaceState({}, '', qs ? `/gulf-jobs?${qs}` : '/gulf-jobs')
+
+    const t = setTimeout(() => { fetchJobs() }, 400)
+    return () => clearTimeout(t)
+  }, [filters])
+
   const fetchJobs = async () => {
     try {
       setJobsLoading(true)
       
       // Fetch Gulf jobs from backend
-      const response = await apiService.getGulfJobs({
-        search: filters.search,
-        location: filters.location,
-        jobType: filters.type,
-        experienceLevel: filters.experienceLevels.join(','),
+      const params: Record<string, string | number | boolean | undefined> = {
+        search: filters.search || undefined,
+        location: filters.location || undefined,
+        jobType: filters.jobTypes.length > 0 ? filters.jobTypes.map(t => t.toLowerCase().replace(/\s+/g,'-')).join(',') : undefined,
+        experienceRange: filters.experienceLevels.length > 0 ? filters.experienceLevels.map(r => r.includes('+') ? r.replace('+','-100') : r).join(',') : undefined,
+        ...(filters.salaryRange ? (() => {
+          const sr = filters.salaryRange
+          if (sr.includes('+')) return { salaryMin: parseInt(sr) * 1 }
+          const [minStr, maxStr] = sr.split('-');
+          const min = parseInt(minStr); const max = parseInt(maxStr)
+          return { salaryMin: isNaN(min)?undefined:min, salaryMax: isNaN(max)?undefined:max }
+        })() : {}),
+        industry: filters.industry || undefined,
+        department: filters.department || undefined,
+        role: filters.role || undefined,
+        skills: filters.skills || undefined,
+        companyType: filters.companyType || undefined,
+        workMode: filters.workMode ? (filters.workMode.toLowerCase().includes('home')?'remote':filters.workMode) : undefined,
+        education: filters.education || undefined,
+        companyName: filters.companyName || undefined,
+        recruiterType: filters.recruiterType || undefined,
         limit: 100
-      })
+      }
+      const response = await apiService.getGulfJobs(params)
       
       if (response.success && response.data) {
         // Transform backend jobs to match frontend format
@@ -159,8 +219,10 @@ export default function GulfJobsPage() {
           title: job.title,
           company: {
             id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company'
-          },
+            name: job.company?.name || 'Unknown Company',
+            industry: job.company?.industry,
+            companyType: job.company?.companyType,
+          } as any,
           location: job.location,
           experience: job.experienceLevel || job.experience || 'Not specified',
           salary: job.salary || (job.salaryMin && job.salaryMax 
@@ -181,7 +243,7 @@ export default function GulfJobsPage() {
           // Internship-specific fields
           duration: job.duration,
           startDate: job.startDate,
-          workMode: job.workMode,
+          workMode: job.workMode || job.remoteWork,
           learningObjectives: job.learningObjectives,
           mentorship: job.mentorship
         }))
@@ -543,6 +605,40 @@ export default function GulfJobsPage() {
     // Type filter
     if (filters.type) {
       filtered = filtered.filter(job => job.type.toLowerCase() === filters.type.toLowerCase())
+    }
+
+    // Industry
+    if (filters.industry) {
+      const q = filters.industry.toLowerCase()
+      const synonyms = q.includes('information technology') || q === 'it'
+        ? ['information technology','technology','tech','software','it']
+        : [q]
+      filtered = filtered.filter(job => {
+        const ind = (job as any).company?.industry
+        if (!ind) return false
+        const low = String(ind).toLowerCase()
+        return synonyms.some(s => low.includes(s))
+      })
+    }
+
+    // Company Type
+    if (filters.companyType) {
+      const q = filters.companyType.toLowerCase()
+      filtered = filtered.filter(job => {
+        const ct = (job as any).company?.companyType
+        return ct ? String(ct).toLowerCase() === q : false
+      })
+    }
+
+    // Work Mode
+    if (filters.workMode) {
+      const q = filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode.toLowerCase()
+      filtered = filtered.filter(job => {
+        const wm = String(job.workMode || (job as any).remoteWork || '').toLowerCase()
+        if (!wm) return false
+        if (q === 'remote') return wm.includes('remote') || wm.includes('work from home')
+        return wm.includes(q)
+      })
     }
 
     // Sort jobs
