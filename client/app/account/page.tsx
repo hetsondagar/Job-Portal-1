@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { constructAvatarUrl } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -498,7 +499,7 @@ export default function AccountPage() {
                 <div className="flex-shrink-0">
                   <Avatar className="w-20 h-20 border-4 border-white dark:border-slate-700 shadow-lg">
                     <AvatarImage 
-                      src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
+                      src={constructAvatarUrl(user.avatar)} 
                       alt={`${user.firstName} ${user.lastName}`}
                     />
                     <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">

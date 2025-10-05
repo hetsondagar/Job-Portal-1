@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { constructAvatarUrl } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -296,13 +297,13 @@ export default function ProfilePage() {
                     <div className="relative group">
                       <Avatar className="w-32 h-32 border-4 border-white dark:border-slate-700 shadow-lg" key={user?.avatar || 'no-avatar'}>
                         <AvatarImage 
-                          src={user.avatar ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}` : undefined} 
+                          src={constructAvatarUrl(user.avatar)} 
                           alt={`${user.firstName} ${user.lastName}`}
                           onLoad={() => console.log('✅ Avatar image loaded successfully')}
                           onError={(e) => {
                             console.error('❌ Avatar image failed to load:', e);
                             console.log('🔍 Avatar URL that failed:', user.avatar);
-                            console.log('🔍 Full avatar URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${user.avatar}`);
+                            console.log('🔍 Constructed avatar URL:', constructAvatarUrl(user.avatar));
                           }}
                         />
                         <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">

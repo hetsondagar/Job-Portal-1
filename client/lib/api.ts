@@ -1,5 +1,19 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+// Utility function to construct avatar URLs correctly
+export const constructAvatarUrl = (avatarPath: string | null | undefined): string | undefined => {
+  if (!avatarPath) return undefined;
+  
+  // If it's already a full URL, return as is
+  if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+    return avatarPath;
+  }
+  
+  // If it's a relative path, prepend the API base URL
+  const baseUrl = API_BASE_URL.replace('/api', ''); // Remove /api from base URL for static files
+  return `${baseUrl}${avatarPath}`;
+};
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;

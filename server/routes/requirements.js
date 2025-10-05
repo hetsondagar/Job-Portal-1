@@ -1854,10 +1854,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', atta
     const resume = await Resume.findOne({
       where: { 
         id: resumeId,
-        [Op.or]: [
-          { userId: candidateId },
-          { user_id: candidateId }
-        ]
+        userId: candidateId
       }
     });
     
@@ -1988,10 +1985,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     const resume = await Resume.findOne({
       where: { 
         id: resumeId,
-        [Op.or]: [
-          { userId: candidateId },
-          { user_id: candidateId }
-        ]
+        userId: candidateId
       }
     });
     
