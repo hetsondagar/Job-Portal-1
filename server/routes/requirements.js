@@ -21,22 +21,30 @@ const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+    
+    console.log('🔍 authenticateToken - Auth header:', authHeader ? 'Present' : 'Missing');
+    console.log('🔍 authenticateToken - Token:', token ? 'Present' : 'Missing');
 
     if (!token) {
+      console.log('❌ authenticateToken - No token found');
       return res.status(401).json({ success: false, message: 'Access token required' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    console.log('✅ authenticateToken - Token decoded for user:', decoded.id);
+    
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
+      console.log('❌ authenticateToken - User not found:', decoded.id);
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    console.log('✅ authenticateToken - User authenticated:', user.email, user.user_type);
     req.user = user;
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error('❌ authenticateToken - Token verification error:', error);
     return res.status(403).json({ success: false, message: 'Invalid or expired token' });
   }
 };
@@ -1816,7 +1824,7 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
 });
 
 // View candidate resume (for employers) - increment view count and log activity
-router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', authenticateToken, async (req, res) => {
+router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId, resumeId } = req.params;
     
@@ -1932,10 +1940,16 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', auth
 function attachTokenFromQuery(req, _res, next) {
   try {
     const qToken = req.query && (req.query.token || req.query.access_token);
+    console.log('🔍 attachTokenFromQuery - Query token:', qToken ? 'Present' : 'Missing');
+    console.log('🔍 attachTokenFromQuery - Existing auth header:', req.headers?.authorization ? 'Present' : 'Missing');
+    
     if (!req.headers?.authorization && qToken) {
       req.headers.authorization = `Bearer ${qToken}`;
+      console.log('✅ attachTokenFromQuery - Added token to headers');
     }
-  } catch (_) {}
+  } catch (error) {
+    console.error('❌ attachTokenFromQuery error:', error);
+  }
   next();
 }
 
@@ -1943,9 +1957,12 @@ function attachTokenFromQuery(req, _res, next) {
 router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId, resumeId } = req.params;
+    console.log('🔍 Download request - requirementId:', requirementId, 'candidateId:', candidateId, 'resumeId:', resumeId);
+    console.log('🔍 Download request - user:', req.user?.email, req.user?.user_type);
     
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      console.log('❌ Download request - Access denied for user type:', req.user.user_type);
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. Only employers and admins can download candidate resumes.' 
@@ -1967,6 +1984,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     }
     
     // Get the resume
+    console.log('🔍 Looking for resume with ID:', resumeId, 'for candidate:', candidateId);
     const resume = await Resume.findOne({
       where: { 
         id: resumeId,
@@ -1978,12 +1996,14 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     });
     
     if (!resume) {
+      console.log('❌ Resume not found for ID:', resumeId, 'candidate:', candidateId);
       return res.status(404).json({
         success: false,
         message: 'Resume not found'
       });
     }
     
+    console.log('✅ Resume found:', resume.id, 'filename:', resume.metadata?.filename);
     const metadata = resume.metadata || {};
     const filename = metadata.filename;
     const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;

@@ -959,10 +959,11 @@ export default function CandidateProfilePage() {
                             
                             return (
                               <div className="relative h-[800px]">
-                                <iframe
-                                  src={`${pdfUrl}#view=FitH`}
+                                {/* Use object tag instead of iframe to avoid CSP issues */}
+                                <object
+                                  data={`${pdfUrl}#view=FitH`}
+                                  type="application/pdf"
                                   className="w-full h-full border-0"
-                                  title="Resume Preview"
                                   style={{ display: 'block' }}
                                 >
                                   <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-800">
@@ -978,7 +979,7 @@ export default function CandidateProfilePage() {
                                       </Button>
                                     </div>
                                   </div>
-                                </iframe>
+                                </object>
                                 <div className="absolute bottom-4 right-4 space-x-2">
                                   <Button
                                     size="sm"
