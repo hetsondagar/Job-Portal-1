@@ -535,10 +535,18 @@ exports.getAllJobs = async (req, res, next) => {
       }
     }
 
-    // Work mode (remoteWork enum on jobs: on-site, remote, hybrid)
+    // Work mode (remoteWork enum on jobs: on-site, remote, hybrid) with fallback to workMode text
     if (workMode) {
       const normalized = String(workMode).toLowerCase().includes('home') ? 'remote' : String(workMode).toLowerCase();
-      whereClause.remoteWork = normalized;
+      const Or = Job.sequelize.Op.or;
+      const OpLike = Job.sequelize.Op.iLike;
+      andGroups.push({
+        [Or]: [
+          { remoteWork: normalized },
+          { workMode: { [OpLike]: `%${normalized}%` } },
+          ...(normalized === 'remote' ? [{ workMode: { [OpLike]: `%work from home%` } }] : [])
+        ]
+      });
     }
 
     // Education / Qualification
@@ -561,11 +569,21 @@ exports.getAllJobs = async (req, res, next) => {
         as: 'company',
         attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
-        where: {
-          ...(industry ? { industry: { [OpLike]: `%${String(industry).toLowerCase()}%` } } : {}),
-          ...(companyType ? { companyType: String(companyType).toLowerCase() } : {}),
-          ...(companyName ? { name: { [OpLike]: `%${String(companyName).toLowerCase()}%` } } : {}),
-        }
+        where: (() => {
+          const where = {} as any;
+          const OpLike = Job.sequelize.Op.iLike;
+          const Or = Job.sequelize.Op.or;
+          if (industry) {
+            const ind = String(industry).toLowerCase();
+            const terms = ind.includes('information technology') || ind === 'it'
+              ? ['information technology', 'technology', 'tech', 'software', 'it']
+              : [ind];
+            (where as any)[Or] = terms.map(t => ({ industry: { [OpLike]: `%${t}%` } }));
+          }
+          if (companyType) where.companyType = String(companyType).toLowerCase();
+          if (companyName) where.name = { [OpLike]: `%${String(companyName).toLowerCase()}%` };
+          return where;
+        })()
       },
       {
         model: User,

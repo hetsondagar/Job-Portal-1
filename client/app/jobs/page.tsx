@@ -656,9 +656,14 @@ export default function JobsPage() {
     // Industry (company industry) client-side safeguard
     if (filters.industry) {
       const q = filters.industry.toLowerCase()
+      const synonyms = q.includes('information technology') || q === 'it'
+        ? ['information technology','technology','tech','software','it']
+        : [q]
       filtered = filtered.filter(job => {
         const ind = (job as any).company?.industry
-        return ind ? String(ind).toLowerCase().includes(q) : false
+        if (!ind) return false
+        const low = String(ind).toLowerCase()
+        return synonyms.some(s => low.includes(s))
       })
     }
 
@@ -696,7 +701,9 @@ export default function JobsPage() {
       const q = filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode.toLowerCase()
       filtered = filtered.filter(job => {
         const wm = String(job.workMode || (job as any).remoteWork || '').toLowerCase()
-        return wm ? wm.includes(q) : false
+        if (!wm) return false
+        if (q === 'remote') return wm.includes('remote') || wm.includes('work from home')
+        return wm.includes(q)
       })
     }
 
