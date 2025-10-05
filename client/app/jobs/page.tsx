@@ -658,7 +658,25 @@ export default function JobsPage() {
       filtered = filtered.filter(job => job.type.toLowerCase() === filters.type.toLowerCase())
     }
 
-    // Sort jobs: preferred first, then selected sort
+    // Determine if any filters are active
+    const hasActiveFilters = Boolean(
+      (filters.search && filters.search.trim()) ||
+      (filters.location && filters.location.trim()) ||
+      filters.experienceLevels.length ||
+      filters.jobTypes.length ||
+      (filters.salaryRange && filters.salaryRange.trim()) ||
+      (filters.industry && filters.industry.trim()) ||
+      (filters.department && filters.department.trim()) ||
+      (filters.role && filters.role.trim()) ||
+      (filters.skills && filters.skills.trim()) ||
+      (filters.companyType && filters.companyType.trim && filters.companyType.trim()) ||
+      (filters.workMode && filters.workMode.trim && filters.workMode.trim()) ||
+      (filters.education && filters.education.trim()) ||
+      (filters.companyName && filters.companyName.trim()) ||
+      (filters.recruiterType && filters.recruiterType.trim && filters.recruiterType.trim())
+    )
+
+    // Sort jobs: if no filters, preferred first; otherwise normal selected sort
     const sortSecondary = (a: Job, b: Job) => {
       switch (sortBy) {
         case "recent":
@@ -676,13 +694,17 @@ export default function JobsPage() {
           return 0
       }
     }
-
-    filtered.sort((a, b) => {
-      const aPref = a.isPreferred ? 1 : 0
-      const bPref = b.isPreferred ? 1 : 0
-      if (aPref !== bPref) return bPref - aPref
-      return sortSecondary(a, b)
-    })
+    
+    if (!hasActiveFilters) {
+      filtered.sort((a, b) => {
+        const aPref = a.isPreferred ? 1 : 0
+        const bPref = b.isPreferred ? 1 : 0
+        if (aPref !== bPref) return bPref - aPref
+        return sortSecondary(a, b)
+      })
+    } else {
+      filtered.sort(sortSecondary)
+    }
 
     return filtered
   }, [allJobs, filters, sortBy])
