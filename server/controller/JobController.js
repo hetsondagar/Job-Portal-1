@@ -535,9 +535,10 @@ exports.getAllJobs = async (req, res, next) => {
       }
     }
 
-    // Work mode
+    // Work mode (remoteWork enum on jobs: on-site, remote, hybrid)
     if (workMode) {
-      whereClause.remoteWork = workMode;
+      const normalized = String(workMode).toLowerCase().includes('home') ? 'remote' : String(workMode).toLowerCase();
+      whereClause.remoteWork = normalized;
     }
 
     // Education / Qualification
@@ -583,9 +584,9 @@ exports.getAllJobs = async (req, res, next) => {
 
     // Recruiter type: company (employer has companyId) or consultant (no companyId)
     if (recruiterType === 'company') {
-      include[1] = { ...include[1], where: { companyId: { [Job.sequelize.Op.ne]: null } } };
+      include[1] = { ...include[1], where: { companyId: { [Job.sequelize.Op.ne]: null } }, required: true };
     } else if (recruiterType === 'consultant') {
-      include[1] = { ...include[1], where: { companyId: null } };
+      include[1] = { ...include[1], where: { companyId: null }, required: true };
     }
 
     const finalWhere = andGroups.length ? { [And]: [whereClause, ...andGroups] } : whereClause;

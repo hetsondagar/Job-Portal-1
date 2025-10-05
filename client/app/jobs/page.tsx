@@ -240,8 +240,11 @@ export default function JobsPage() {
           title: job.title,
           company: {
             id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company'
-          },
+            name: job.company?.name || 'Unknown Company',
+            // enrich for filtering
+            industry: job.company?.industry,
+            companyType: job.company?.companyType,
+          } as any,
           location: job.location,
           experience: job.experienceLevel || job.experience || 'Not specified',
           salary: job.salary || (job.salaryMin && job.salaryMax 
@@ -262,7 +265,7 @@ export default function JobsPage() {
           // Internship-specific fields
           duration: job.duration,
           startDate: job.startDate,
-          workMode: job.workMode,
+          workMode: job.workMode || job.remoteWork,
           learningObjectives: job.learningObjectives,
           mentorship: job.mentorship
         }))
@@ -345,8 +348,10 @@ export default function JobsPage() {
           title: job.title,
           company: {
             id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company'
-          },
+            name: job.company?.name || 'Unknown Company',
+            industry: job.company?.industry,
+            companyType: job.company?.companyType,
+          } as any,
           location: job.location,
           experience: job.experienceLevel || job.experience || 'Not specified',
           salary: job.salary || (job.salaryMin && job.salaryMax 
@@ -366,7 +371,7 @@ export default function JobsPage() {
           photos: job.photos || [],
           duration: job.duration,
           startDate: job.startDate,
-          workMode: job.workMode,
+          workMode: job.workMode || job.remoteWork,
           learningObjectives: job.learningObjectives,
           mentorship: job.mentorship,
           isPreferred: true
