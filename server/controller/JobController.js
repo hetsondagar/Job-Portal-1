@@ -570,7 +570,7 @@ exports.getAllJobs = async (req, res, next) => {
         attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
         where: (() => {
-          const where = {} as any;
+          const where = {};
           const OpLike = Job.sequelize.Op.iLike;
           const Or = Job.sequelize.Op.or;
           if (industry) {
@@ -578,7 +578,7 @@ exports.getAllJobs = async (req, res, next) => {
             const terms = ind.includes('information technology') || ind === 'it'
               ? ['information technology', 'technology', 'tech', 'software', 'it']
               : [ind];
-            (where as any)[Or] = terms.map(t => ({ industry: { [OpLike]: `%${t}%` } }));
+            where[Or] = terms.map(t => ({ industry: { [OpLike]: `%${t}%` } }));
           }
           if (companyType) where.companyType = String(companyType).toLowerCase();
           if (companyName) where.name = { [OpLike]: `%${String(companyName).toLowerCase()}%` };
