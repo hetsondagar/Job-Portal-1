@@ -413,6 +413,13 @@ exports.getAllJobs = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
     const whereClause = {};
+    const And = Job.sequelize.Op.and;
+    const Or = Job.sequelize.Op.or;
+    const OpLike = Job.sequelize.Op.iLike;
+    const OpIn = Job.sequelize.Op.in;
+    const OpGte = Job.sequelize.Op.gte;
+    const OpLte = Job.sequelize.Op.lte;
+    const andGroups = [];
 
     // Add region filtering to ensure proper job visibility
     if (region) {
@@ -434,24 +441,20 @@ exports.getAllJobs = async (req, res, next) => {
       // Default public listing: only active jobs that are not expired by date
       whereClause.status = 'active';
       const now = new Date();
-      whereClause[Op.or] = [
-        { validTill: null },
-        { validTill: { [Op.gte]: now } }
-      ];
+      andGroups.push({ [Or]: [{ validTill: null }, { validTill: { [OpGte]: now } }] });
     }
     if (companyId) whereClause.company_id = companyId;
     if (location) {
-      const { Op } = Job.sequelize;
-      whereClause[Op.or] = [
-        ...(whereClause[Op.or] || []),
-        { location: { [Op.iLike]: `%${location}%` } },
-        { city: { [Op.iLike]: `%${location}%` } },
-        { state: { [Op.iLike]: `%${location}%` } },
-        { country: { [Op.iLike]: `%${location}%` } },
-      ];
+      andGroups.push({
+        [Or]: [
+          { location: { [OpLike]: `%${location}%` } },
+          { city: { [OpLike]: `%${location}%` } },
+          { state: { [OpLike]: `%${location}%` } },
+          { country: { [OpLike]: `%${location}%` } },
+        ]
+      });
     }
     if (jobType) {
-      const { Op } = Job.sequelize;
       const types = String(jobType)
         .split(',')
         .map(s => s.trim().toLowerCase())
@@ -459,14 +462,13 @@ exports.getAllJobs = async (req, res, next) => {
       if (types.length === 1) {
         whereClause.jobType = types[0];
       } else if (types.length > 1) {
-        whereClause.jobType = { [Op.in]: types };
+        whereClause.jobType = { [OpIn]: types };
       }
     }
     if (experienceLevel) whereClause.experienceLevel = experienceLevel;
 
     // Experience range (e.g., "0-1,2-5,6-10") maps to experienceMin/Max
     if (experienceRange) {
-      const { Op } = Job.sequelize;
       const ranges = String(experienceRange)
         .split(',')
         .map(s => s.trim())
@@ -477,49 +479,37 @@ exports.getAllJobs = async (req, res, next) => {
           const max = parseInt(maxStr, 10);
           if (!isNaN(min) && !isNaN(max)) {
             return {
-              [Op.and]: [
-                { experienceMin: { [Op.gte]: min } },
-                { experienceMax: { [Op.lte]: max } }
+              [And]: [
+                { experienceMin: { [OpGte]: min } },
+                { experienceMax: { [OpLte]: max } }
               ]
             };
           }
           if (!isNaN(min) && isNaN(max)) {
-            return { experienceMin: { [Op.gte]: min } };
+            return { experienceMin: { [OpGte]: min } };
           }
           return null;
         })
         .filter(Boolean);
-      if (ranges.length > 0) {
-        whereClause[Job.sequelize.Op.or] = [
-          ...(whereClause[Job.sequelize.Op.or] || []),
-          ...ranges
-        ];
-      }
+      if (ranges.length > 0) andGroups.push({ [Or]: ranges });
     }
 
     // Salary min/max
-    if (salaryMin) {
-      const { Op } = Job.sequelize;
-      whereClause.salaryMin = { [Op.gte]: parseFloat(salaryMin) };
-    }
-    if (req.query.salaryMax) {
-      const { Op } = Job.sequelize;
-      whereClause.salaryMax = { [Op.lte]: parseFloat(req.query.salaryMax) };
-    }
+    if (salaryMin) whereClause.salaryMin = { [OpGte]: parseFloat(salaryMin) };
+    if (req.query.salaryMax) whereClause.salaryMax = { [OpLte]: parseFloat(req.query.salaryMax) };
 
     // Department / Functional Area
     if (department) {
-      whereClause.department = { [Job.sequelize.Op.iLike]: `%${department}%` };
+      whereClause.department = { [OpLike]: `%${department}%` };
     }
 
     // Role / Designation
     if (role) {
-      whereClause.title = { [Job.sequelize.Op.iLike]: `%${role}%` };
+      whereClause.title = { [OpLike]: `%${role}%` };
     }
 
     // Skills / Keywords
     if (skills) {
-      const { Op } = Job.sequelize;
       const sequelize = Job.sequelize;
       const skillTerms = String(skills)
         .split(',')
@@ -529,20 +519,19 @@ exports.getAllJobs = async (req, res, next) => {
         const jsonbLowerContains = skillTerms.map(term =>
           sequelize.where(
             sequelize.fn('LOWER', sequelize.cast(sequelize.col('skills'), 'text')),
-            { [Op.like]: `%${term.toLowerCase()}%` }
+            { [Job.sequelize.Op.like]: `%${term.toLowerCase()}%` }
           )
         );
 
-        whereClause[Op.or] = [
-          ...(whereClause[Op.or] || []),
-          // Exact array contains (case-sensitive, fast with GIN)
-          { skills: { [Op.contains]: skillTerms } },
-          // Fallback case-insensitive match on serialized JSON
-          ...jsonbLowerContains,
-          { requirements: { [Op.iLike]: `%${skills}%` } },
-          { description: { [Op.iLike]: `%${skills}%` } },
-          { title: { [Op.iLike]: `%${skills}%` } }
-        ];
+        andGroups.push({
+          [Or]: [
+            { skills: { [Job.sequelize.Op.contains]: skillTerms } },
+            ...jsonbLowerContains,
+            { requirements: { [OpLike]: `%${skills}%` } },
+            { description: { [OpLike]: `%${skills}%` } },
+            { title: { [OpLike]: `%${skills}%` } }
+          ]
+        });
       }
     }
 
@@ -552,16 +541,16 @@ exports.getAllJobs = async (req, res, next) => {
     }
 
     // Education / Qualification
-    if (education) {
-      whereClause.education = { [Job.sequelize.Op.iLike]: `%${education}%` };
-    }
+    if (education) whereClause.education = { [OpLike]: `%${education}%` };
     if (search) {
-      whereClause[Job.sequelize.Op.or] = [
-        { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
-        { description: { [Job.sequelize.Op.iLike]: `%${search}%` } },
-        { requirements: { [Job.sequelize.Op.iLike]: `%${search}%` } },
-        { location: { [Job.sequelize.Op.iLike]: `%${search}%` } }
-      ];
+      andGroups.push({
+        [Or]: [
+          { title: { [OpLike]: `%${search}%` } },
+          { description: { [OpLike]: `%${search}%` } },
+          { requirements: { [OpLike]: `%${search}%` } },
+          { location: { [OpLike]: `%${search}%` } }
+        ]
+      });
     }
 
     // Build include and company-based filters
@@ -572,9 +561,9 @@ exports.getAllJobs = async (req, res, next) => {
         attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: false,
         where: {
-          ...(industry ? { industry: { [Job.sequelize.Op.iLike]: `%${industry}%` } } : {}),
+          ...(industry ? { industry: { [OpLike]: `%${industry}%` } } : {}),
           ...(companyType ? { companyType } : {}),
-          ...(companyName ? { name: { [Job.sequelize.Op.iLike]: `%${companyName}%` } } : {}),
+          ...(companyName ? { name: { [OpLike]: `%${companyName}%` } } : {}),
         }
       },
       {
@@ -599,8 +588,9 @@ exports.getAllJobs = async (req, res, next) => {
       include[1] = { ...include[1], where: { companyId: null } };
     }
 
+    const finalWhere = andGroups.length ? { [And]: [whereClause, ...andGroups] } : whereClause;
     const { count, rows: jobs } = await Job.findAndCountAll({
-      where: whereClause,
+      where: finalWhere,
       include,
       order: [[sortBy, sortOrder]],
       limit: parseInt(limit),
