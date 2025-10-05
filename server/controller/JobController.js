@@ -397,7 +397,18 @@ exports.getAllJobs = async (req, res, next) => {
       search,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
-      region
+      region,
+      experienceRange,
+      salaryMin,
+      industry,
+      department,
+      role,
+      skills,
+      companyType,
+      workMode,
+      education,
+      companyName,
+      recruiterType
     } = req.query;
 
     const offset = (page - 1) * limit;
@@ -430,8 +441,96 @@ exports.getAllJobs = async (req, res, next) => {
     }
     if (companyId) whereClause.company_id = companyId;
     if (location) whereClause.location = { [Job.sequelize.Op.iLike]: `%${location}%` };
-    if (jobType) whereClause.employment_type = jobType;
-    if (experienceLevel) whereClause.experience_level = experienceLevel;
+    if (jobType) whereClause.jobType = jobType;
+    if (experienceLevel) whereClause.experienceLevel = experienceLevel;
+
+    // Experience range (e.g., "0-1,2-5,6-10") maps to experienceMin/Max
+    if (experienceRange) {
+      const { Op } = Job.sequelize;
+      const ranges = String(experienceRange)
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(r => {
+          const [minStr, maxStr] = r.replace('+', '-100').split('-');
+          const min = parseInt(minStr, 10);
+          const max = parseInt(maxStr, 10);
+          if (!isNaN(min) && !isNaN(max)) {
+            return {
+              [Op.and]: [
+                { experienceMin: { [Op.gte]: min } },
+                { experienceMax: { [Op.lte]: max } }
+              ]
+            };
+          }
+          if (!isNaN(min) && isNaN(max)) {
+            return { experienceMin: { [Op.gte]: min } };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      if (ranges.length > 0) {
+        whereClause[Job.sequelize.Op.or] = [
+          ...(whereClause[Job.sequelize.Op.or] || []),
+          ...ranges
+        ];
+      }
+    }
+
+    // Salary min
+    if (salaryMin) {
+      const { Op } = Job.sequelize;
+      whereClause.salaryMin = { [Op.gte]: parseFloat(salaryMin) };
+    }
+
+    // Department / Functional Area
+    if (department) {
+      whereClause.department = { [Job.sequelize.Op.iLike]: `%${department}%` };
+    }
+
+    // Role / Designation
+    if (role) {
+      whereClause.title = { [Job.sequelize.Op.iLike]: `%${role}%` };
+    }
+
+    // Skills / Keywords
+    if (skills) {
+      const { Op } = Job.sequelize;
+      const sequelize = Job.sequelize;
+      const skillTerms = String(skills)
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (skillTerms.length > 0) {
+        const jsonbLowerContains = skillTerms.map(term =>
+          sequelize.where(
+            sequelize.fn('LOWER', sequelize.cast(sequelize.col('skills'), 'text')),
+            { [Op.like]: `%${term.toLowerCase()}%` }
+          )
+        );
+
+        whereClause[Op.or] = [
+          ...(whereClause[Op.or] || []),
+          // Exact array contains (case-sensitive, fast with GIN)
+          { skills: { [Op.contains]: skillTerms } },
+          // Fallback case-insensitive match on serialized JSON
+          ...jsonbLowerContains,
+          { requirements: { [Op.iLike]: `%${skills}%` } },
+          { description: { [Op.iLike]: `%${skills}%` } },
+          { title: { [Op.iLike]: `%${skills}%` } }
+        ];
+      }
+    }
+
+    // Work mode
+    if (workMode) {
+      whereClause.remoteWork = workMode;
+    }
+
+    // Education / Qualification
+    if (education) {
+      whereClause.education = { [Job.sequelize.Op.iLike]: `%${education}%` };
+    }
     if (search) {
       whereClause[Job.sequelize.Op.or] = [
         { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
@@ -440,29 +539,44 @@ exports.getAllJobs = async (req, res, next) => {
       ];
     }
 
+    // Build include and company-based filters
+    const include = [
+      {
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
+        required: false,
+        where: {
+          ...(industry ? { industry: { [Job.sequelize.Op.iLike]: `%${industry}%` } } : {}),
+          ...(companyType ? { companyType } : {}),
+          ...(companyName ? { name: { [Job.sequelize.Op.iLike]: `%${companyName}%` } } : {}),
+        }
+      },
+      {
+        model: User,
+        as: 'employer',
+        attributes: ['id', 'first_name', 'last_name', 'email', 'companyId'],
+        required: false
+      },
+      {
+        model: JobPhoto,
+        as: 'photos',
+        attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
+        where: { isActive: true },
+        required: false
+      }
+    ];
+
+    // Recruiter type: company (employer has companyId) or consultant (no companyId)
+    if (recruiterType === 'company') {
+      include[1] = { ...include[1], where: { companyId: { [Job.sequelize.Op.ne]: null } } };
+    } else if (recruiterType === 'consultant') {
+      include[1] = { ...include[1], where: { companyId: null } };
+    }
+
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
-      include: [
-        {
-          model: Company,
-          as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone'],
-          required: false
-        },
-        {
-          model: User,
-          as: 'employer',
-          attributes: ['id', 'first_name', 'last_name', 'email'],
-          required: false
-        },
-        {
-          model: JobPhoto,
-          as: 'photos',
-          attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
-          where: { isActive: true },
-          required: false
-        }
-      ],
+      include,
       order: [[sortBy, sortOrder]],
       limit: parseInt(limit),
       offset: parseInt(offset)

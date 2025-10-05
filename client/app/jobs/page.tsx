@@ -49,6 +49,16 @@ interface FilterState {
   salaryRange: string
   category: string
   type: string
+  industry?: string
+  department?: string
+  role?: string
+  skills?: string
+  companyType?: string
+  workMode?: string
+  education?: string
+  companyName?: string
+  recruiterType?: string
+  salaryMin?: number
 }
 
 interface Job {
@@ -106,6 +116,16 @@ export default function JobsPage() {
     salaryRange: "",
     category: "",
     type: "",
+    industry: "",
+    department: "",
+    role: "",
+    skills: "",
+    companyType: "",
+    workMode: "",
+    education: "",
+    companyName: "",
+    recruiterType: "",
+    salaryMin: undefined,
   })
 
   // Check URL parameters for filters
@@ -139,15 +159,62 @@ export default function JobsPage() {
     }
   }, [user])
 
+  // Refetch when filters change (debounced) and sync URL
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (filters.search) params.set('search', filters.search)
+    if (filters.location) params.set('location', filters.location)
+    if (filters.jobTypes.length === 1) params.set('jobType', filters.jobTypes[0].toLowerCase())
+    if (filters.experienceLevels.length > 0) params.set('experienceRange', filters.experienceLevels.join(','))
+    if (filters.salaryRange) params.set('salaryRange', filters.salaryRange)
+    if (filters.industry) params.set('industry', filters.industry)
+    if (filters.department) params.set('department', filters.department)
+    if (filters.role) params.set('role', filters.role)
+    if (filters.skills) params.set('skills', filters.skills)
+    if (filters.companyType) params.set('companyType', filters.companyType)
+    if (filters.workMode) params.set('workMode', filters.workMode)
+    if (filters.education) params.set('education', filters.education)
+    if (filters.companyName) params.set('companyName', filters.companyName)
+    if (filters.recruiterType) params.set('recruiterType', filters.recruiterType)
+
+    const qs = params.toString()
+    const url = qs ? `/jobs?${qs}` : '/jobs'
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', url)
+    }
+
+    const t = setTimeout(() => {
+      fetchJobs()
+    }, 400)
+    return () => clearTimeout(t)
+  }, [filters])
+
   const fetchJobs = async () => {
     try {
       setJobsLoading(true)
       
       // Fetch jobs from backend - get all active jobs
-      const response = await apiService.getJobs({
+      // Map UI filters to backend query params
+      const params: Record<string, string | number | boolean | undefined> = {
         status: 'active',
-        limit: 100 // Get more jobs to show
-      })
+        limit: 100,
+        search: filters.search || undefined,
+        location: filters.location || undefined,
+        jobType: filters.jobTypes.length === 1 ? filters.jobTypes[0].toLowerCase() : undefined,
+        experienceRange: filters.experienceLevels.join(',') || undefined,
+        salaryMin: filters.salaryMin || (filters.salaryRange ? parseInt(filters.salaryRange.split('-')[0]) * 100000 : undefined),
+        industry: filters.industry || undefined,
+        department: filters.department || undefined,
+        role: filters.role || undefined,
+        skills: filters.skills || undefined,
+        companyType: filters.companyType || undefined,
+        workMode: filters.workMode || undefined,
+        education: filters.education || undefined,
+        companyName: filters.companyName || undefined,
+        recruiterType: filters.recruiterType || undefined,
+      }
+
+      const response = await apiService.getJobs(params)
       
       if (response.success && response.data) {
         // Double-check: Filter to ensure ONLY non-Gulf jobs are shown
@@ -469,12 +536,11 @@ export default function JobsPage() {
   }, [])
 
   const experienceLevels = [
-    "Fresher",
-    "1-3 years",
-    "3-5 years",
-    "5-8 years",
-    "8-12 years",
-    "12+ years",
+    "0-1",
+    "2-5",
+    "6-10",
+    "11-15",
+    "16+",
   ]
 
   const jobTypes = [
@@ -501,6 +567,30 @@ export default function JobsPage() {
     "Work from home",
   ]
 
+  // Curated lists for better UX
+  const industries = [
+    'Information Technology', 'Banking', 'Financial Services', 'Insurance', 'Healthcare', 'Pharmaceuticals',
+    'Education', 'E-Learning', 'Manufacturing', 'Automotive', 'Aerospace', 'Telecommunications', 'Retail',
+    'E-Commerce', 'FMCG', 'Hospitality', 'Travel & Tourism', 'Construction', 'Real Estate', 'Energy', 'Oil & Gas',
+    'Media & Entertainment', 'Logistics & Supply Chain', 'Consulting', 'Government', 'Non-Profit', 'Agriculture'
+  ]
+
+  const departments = [
+    'Engineering', 'Information Technology', 'Product Management', 'Design', 'Data Science', 'Analytics', 'Quality Assurance',
+    'DevOps', 'Cloud', 'Cybersecurity', 'Human Resources', 'Talent Acquisition', 'Learning & Development', 'Finance',
+    'Accounting', 'Legal', 'Compliance', 'Sales', 'Business Development', 'Marketing', 'Digital Marketing', 'Content',
+    'Operations', 'Administration', 'Customer Support', 'Technical Support', 'Supply Chain', 'Procurement', 'Logistics',
+    'Research & Development', 'Project Management', 'Strategy', 'Corporate Communications'
+  ]
+
+  const commonRoles = [
+    'Software Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'DevOps Engineer', 'Data Analyst',
+    'Data Scientist', 'ML Engineer', 'QA Engineer', 'Automation Engineer', 'UI/UX Designer', 'Product Manager',
+    'Project Manager', 'Business Analyst', 'HR Manager', 'Talent Acquisition Specialist', 'Finance Executive',
+    'Accountant', 'Legal Counsel', 'Compliance Officer', 'Sales Executive', 'Sales Manager', 'Marketing Manager',
+    'Digital Marketing Executive', 'Content Writer', 'Customer Support Executive', 'Operations Manager'
+  ]
+
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
     let filtered = [...jobs]
@@ -524,17 +614,16 @@ export default function JobsPage() {
 
     // Experience level filter
     if (filters.experienceLevels.length > 0) {
+      // UI is now sending experienceRange to backend; client-side list still filters by substring for safety
       filtered = filtered.filter(job =>
-        filters.experienceLevels.some(level => job.experience.includes(level))
+        filters.experienceLevels.some(level => job.experience.toLowerCase().includes(level.toLowerCase()))
       )
     }
 
     // Job type filter
     if (filters.jobTypes.length > 0) {
       filtered = filtered.filter(job =>
-        filters.jobTypes.some(filterType => 
-          job.type.toLowerCase() === filterType.toLowerCase()
-        )
+        filters.jobTypes.some(filterType => job.type.toLowerCase() === filterType.toLowerCase())
       )
     }
 
@@ -620,6 +709,16 @@ export default function JobsPage() {
       salaryRange: "",
       category: "",
       type: "",
+      industry: "",
+      department: "",
+      role: "",
+      skills: "",
+      companyType: "",
+      workMode: "",
+      education: "",
+      companyName: "",
+      recruiterType: "",
+      salaryMin: undefined,
     })
   }, [])
 
@@ -783,6 +882,115 @@ export default function JobsPage() {
                     <SelectItem value="10-20">10-20 LPA</SelectItem>
                     <SelectItem value="20-50">20-50 LPA</SelectItem>
                     <SelectItem value="50+">50+ LPA</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Industry */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Industry</h3>
+                <Select value={filters.industry} onValueChange={(v) => handleFilterChange('industry', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {industries.map((ind) => (
+                      <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Department / Functional Area */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Department</h3>
+                <Select value={filters.department} onValueChange={(v) => handleFilterChange('department', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dep) => (
+                      <SelectItem key={dep} value={dep}>{dep}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Role / Designation */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Role / Designation</h3>
+                <Select value={filters.role} onValueChange={(v) => handleFilterChange('role', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {commonRoles.map((r) => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Skills / Keywords */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Skills / Keywords</h3>
+                <Input placeholder="e.g., React, Java" value={filters.skills} onChange={(e) => handleFilterChange('skills', e.target.value)} />
+              </div>
+
+              {/* Company Type */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Company Type</h3>
+                <Select value={filters.companyType} onValueChange={(v) => handleFilterChange('companyType', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="startup">Startup</SelectItem>
+                    <SelectItem value="midsize">Midsize</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="multinational">MNC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Work Mode */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Work Mode</h3>
+                <Select value={filters.workMode} onValueChange={(v) => handleFilterChange('workMode', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="on-site">On-site</SelectItem>
+                    <SelectItem value="remote">Remote</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                    <SelectItem value="work from home">Work from Home</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Education / Qualification */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Education</h3>
+                <Input placeholder="e.g., Any Graduate, B.Tech, MBA" value={filters.education} onChange={(e) => handleFilterChange('education', e.target.value)} />
+              </div>
+
+              {/* Company Name */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Company Name</h3>
+                <Input placeholder="e.g., TCS, Infosys" value={filters.companyName} onChange={(e) => handleFilterChange('companyName', e.target.value)} />
+              </div>
+
+              {/* Recruiter Type */}
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Recruiter Type</h3>
+                <Select value={filters.recruiterType} onValueChange={(v) => handleFilterChange('recruiterType', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="company">Company Recruiter</SelectItem>
+                    <SelectItem value="consultant">Consultant</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
