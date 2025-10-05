@@ -727,6 +727,12 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           atsScoresFound: atsScores.length,
           atsScoresMap: Object.keys(atsScoresMap).length
         });
+        
+        // Debug: Log specific ATS scores for known candidates
+        console.log('🔍 ATS scores details for debugging:');
+        atsScores.forEach(score => {
+          console.log(`  - User ${score.userId}: Score ${score.atsScore} (${score.lastCalculated})`);
+        });
       } catch (atsError) {
         console.log('⚠️ Could not fetch ATS scores:', atsError.message);
         console.log('🔍 ATS Error details:', atsError);
@@ -738,11 +744,12 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
       const atsData = atsScoresMap[candidate.id];
       
-      // Debug: Log ATS data for first few candidates only
-      if (Math.random() < 0.1) { // Log only 10% of candidates to reduce noise
-        console.log(`🔍 Candidate ${candidate.id} ATS data:`, {
+      // Debug: Log ATS data for specific candidates
+      if (candidate.id === '4200f403-25dc-4aa6-bcc9-1363adf0ee7b' || candidate.id === '10994ba4-1e33-45c3-b522-2f56a873e1e2') {
+        console.log(`🔍 Candidate ${candidate.id} (${candidate.first_name} ${candidate.last_name}) ATS data:`, {
           atsData: atsData,
-          atsScore: atsData ? atsData.score : null
+          atsScore: atsData ? atsData.score : null,
+          atsCalculatedAt: atsData ? atsData.lastCalculated : null
         });
       }
       
@@ -776,6 +783,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         atsScore: atsData ? atsData.score : null,
         atsCalculatedAt: atsData ? atsData.lastCalculated : null
       };
+    });
+    
+    // Debug: Log final transformed candidates with ATS scores
+    console.log('🔍 Final transformed candidates with ATS scores:');
+    transformedCandidates.forEach(candidate => {
+      if (candidate.id === '4200f403-25dc-4aa6-bcc9-1363adf0ee7b' || candidate.id === '10994ba4-1e33-45c3-b522-2f56a873e1e2') {
+        console.log(`  - ${candidate.name} (${candidate.id}): ATS Score ${candidate.atsScore} (${candidate.atsCalculatedAt})`);
+      }
     });
 
     // Enrich transformed candidates with like counts and current employer like status
@@ -2337,10 +2352,10 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
       };
       
       // Add skill matching if requirement has specific skills
-      if (requirement.skills_required && requirement.skills_required.length > 0) {
+      if (requirement.keySkills && requirement.keySkills.length > 0) {
         // Check if candidate skills overlap with required skills
         whereConditions.skills = {
-          [Op.overlap]: requirement.skills_required
+          [Op.overlap]: requirement.keySkills
         };
       }
       
