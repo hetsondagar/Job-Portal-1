@@ -191,30 +191,80 @@ export default function CandidatesPage() {
       const response = await apiService.calculateATSScores(params.id as string, requestBody)
       
       if (response.success) {
-        const { successful, errors, pagination: paginationData } = response.data
+        const { successful, errors, pagination: paginationData, verification } = response.data
         
-        toast.success('ATS scores calculated successfully!', {
-          description: `Processed ${successful} candidates${errors > 0 ? ` with ${errors} errors` : ''}. ${processAll && paginationData?.hasMorePages ? 'More pages available.' : ''}`
+        console.log('✅ ATS calculation response:', {
+          successful,
+          errors,
+          verification: verification?.verified,
+          total: verification?.total
         })
         
-        // Add a longer delay to ensure backend processing is complete
-        await new Promise(resolve => setTimeout(resolve, 3000))
+        // Check if all scores were verified in database
+        if (verification && verification.verified < verification.total) {
+          console.log(`⚠️ Only ${verification.verified}/${verification.total} scores verified. Polling for completion...`)
+          
+          // Implement smart polling to wait for database consistency
+          let attempts = 0
+          const maxAttempts = 10
+          let allVerified = false
+          
+          while (attempts < maxAttempts && !allVerified) {
+            attempts++
+            console.log(`🔄 Polling attempt ${attempts}/${maxAttempts}...`)
+            
+            // Wait before next poll
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
+            // Check if scores are now available
+            const checkResponse = await apiService.getRequirementCandidates(params.id as string, {
+              page: pagination.page,
+              limit: parseInt(showCount),
+              search: searchQuery || undefined,
+              sortBy: 'ats'
+            })
+            
+            if (checkResponse.success && checkResponse.data?.candidates) {
+              const candidatesWithScores = checkResponse.data.candidates.filter(c => c.atsScore !== null && c.atsScore !== undefined)
+              console.log(`📊 Found ${candidatesWithScores.length} candidates with ATS scores`)
+              
+              if (candidatesWithScores.length >= successful) {
+                allVerified = true
+                console.log('✅ All ATS scores are now available!')
+                
+                setCandidates(checkResponse.data.candidates)
+                setSortBy('ats')
+                break
+              }
+            }
+          }
+          
+          if (!allVerified) {
+            console.log('⚠️ Polling timeout - proceeding with partial results')
+          }
+        }
         
-        // Refresh candidates list to show updated ATS scores
-        console.log('🔄 Refreshing candidates list to show ATS scores...')
+        // Final refresh to ensure we have the latest data
+        console.log('🔄 Final refresh to get latest ATS scores...')
         const refreshResponse = await apiService.getRequirementCandidates(params.id as string, {
           page: pagination.page,
           limit: parseInt(showCount),
           search: searchQuery || undefined,
-          sortBy: 'ats' // Sort by ATS score after calculation
+          sortBy: 'ats'
         })
         
         if (refreshResponse.success && refreshResponse.data) {
-          console.log('✅ Candidates refreshed:', refreshResponse.data.candidates?.length)
-          console.log('📊 ATS scores in refreshed data:', refreshResponse.data.candidates?.map(c => ({ name: c.name, atsScore: c.atsScore })))
-          console.log('🔍 Full candidate data structure:', refreshResponse.data.candidates?.[0])
+          console.log('✅ Final candidates refresh:', refreshResponse.data.candidates?.length)
+          console.log('📊 ATS scores in final data:', refreshResponse.data.candidates?.map(c => ({ name: c.name, atsScore: c.atsScore })))
+          
           setCandidates(refreshResponse.data.candidates || [])
-          setSortBy('ats') // Update sort dropdown
+          setSortBy('ats')
+          
+          // Show success message with verification info
+          const verifiedCount = refreshResponse.data.candidates?.filter(c => c.atsScore !== null).length || 0
+          toast.success('ATS scores calculated successfully!', {
+            description: `Processed ${successful} candidates. ${verifiedCount} scores now visible.${processAll && paginationData?.hasMorePages ? ' More pages available.' : ''}`
+          })
           
           // Show pagination info if processing all
           if (processAll && paginationData?.hasMorePages) {
@@ -224,6 +274,9 @@ export default function CandidatesPage() {
           }
         } else {
           console.log('❌ Failed to refresh candidates:', refreshResponse)
+          toast.error('ATS calculation completed but failed to refresh display', {
+            description: 'Please refresh the page to see updated scores'
+          })
         }
       } else {
         toast.error('ATS calculation failed', {
@@ -537,12 +590,16 @@ export default function CandidatesPage() {
                 <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                 <div>
                   <h3 className="text-sm font-medium text-purple-900">Calculating ATS Scores</h3>
-                  <p className="text-xs text-purple-700">Processing candidates with AI analysis. This may take several minutes for large datasets...</p>
+                  <p className="text-xs text-purple-700">
+                    Processing requirement-specific candidates with AI analysis. 
+                    Smart polling ensures scores are visible immediately when ready...
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs text-purple-500">Rule-based scoring active</p>
-                <p className="text-xs text-purple-400">Gemini AI fallback enabled</p>
+                <p className="text-xs text-purple-500">Requirement-specific filtering</p>
+                <p className="text-xs text-purple-400">Smart polling enabled</p>
+                <p className="text-xs text-purple-300">Real-time verification</p>
               </div>
             </div>
           </div>

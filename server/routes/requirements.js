@@ -2340,81 +2340,70 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
       });
     }
     
-    // Get candidates for this requirement with pagination support
+    // Get candidates for this requirement with proper filtering
     let targetCandidateIds = candidateIds;
     let totalCandidates = 0;
     let hasMorePages = false;
     
     if (!targetCandidateIds || targetCandidateIds.length === 0) {
-      console.log('📋 Fetching candidates matching this requirement...');
+      console.log('📋 Fetching candidates matching this specific requirement...');
       
-      // Build a query to find candidates that match requirement criteria
+      // Build comprehensive requirement matching criteria
       const whereConditions = {
         user_type: 'jobseeker',
-        account_status: 'active'
+        account_status: 'active',
+        is_active: true
       };
       
       // Add skill matching if requirement has specific skills
       if (requirement.keySkills && requirement.keySkills.length > 0) {
-        // Check if candidate skills overlap with required skills
+        console.log('🎯 Matching candidates with required skills:', requirement.keySkills);
         whereConditions.skills = {
           [Op.overlap]: requirement.keySkills
         };
       }
+      
+      // Add location matching if requirement specifies locations
+      if (requirement.candidateLocations && requirement.candidateLocations.length > 0) {
+        console.log('📍 Matching candidates in locations:', requirement.candidateLocations);
+        whereConditions[Op.or] = [
+          { current_location: { [Op.iLike]: { [Op.any]: requirement.candidateLocations.map(loc => `%${loc}%`) } } },
+          { willing_to_relocate: true }
+        ];
+      }
+      
+      // Add experience matching if specified
+      if (requirement.experienceMin || requirement.experienceMax) {
+        const expConditions = {};
+        if (requirement.experienceMin) expConditions[Op.gte] = requirement.experienceMin;
+        if (requirement.experienceMax) expConditions[Op.lte] = requirement.experienceMax;
+        whereConditions.experience_years = expConditions;
+      }
+      
+      console.log('🔍 Requirement matching criteria:', JSON.stringify(whereConditions, null, 2));
       
       // Get total count for pagination
       totalCandidates = await User.count({
         where: whereConditions
       });
       
-      console.log(`📊 Total candidates matching criteria: ${totalCandidates}`);
+      console.log(`📊 Total candidates matching requirement criteria: ${totalCandidates}`);
       
-      if (processAll) {
-        // Process all candidates with pagination
-        const offset = (page - 1) * limit;
-        const candidates = await User.findAll({
-          where: whereConditions,
-          attributes: ['id'],
-          limit: parseInt(limit),
-          offset: offset,
-          order: [['createdAt', 'DESC']]
-        });
+      if (totalCandidates === 0) {
+        console.log('⚠️ No candidates match requirement criteria, using relaxed fallback...');
+        // Relaxed fallback - remove strict skill matching
+        const relaxedConditions = {
+          user_type: 'jobseeker',
+          account_status: 'active',
+          is_active: true
+        };
         
-        targetCandidateIds = candidates.map(c => c.id);
-        hasMorePages = offset + candidates.length < totalCandidates;
-        
-        console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates (${offset + 1}-${offset + targetCandidateIds.length} of ${totalCandidates})`);
-      } else {
-        // Process only current page
-        const candidates = await User.findAll({
-          where: whereConditions,
-          attributes: ['id'],
-          limit: parseInt(limit),
-          offset: (page - 1) * limit,
-          order: [['createdAt', 'DESC']]
-        });
-        
-        targetCandidateIds = candidates.map(c => c.id);
-        hasMorePages = (page * limit) < totalCandidates;
-        
-        console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates`);
-      }
-      
-      // If no candidates match skills, fall back to all active jobseekers
-      if (targetCandidateIds.length === 0) {
-        console.log('⚠️ No candidates match skills, fetching all active jobseekers...');
         totalCandidates = await User.count({
-          where: {
-            user_type: 'jobseeker',
-            account_status: 'active'
-          }
+          where: relaxedConditions
         });
         
         const allCandidates = await User.findAll({
-          where: {
-            user_type: 'jobseeker',
-            account_status: 'active'
-          },
+          where: relaxedConditions,
           attributes: ['id'],
           limit: parseInt(limit),
           offset: (page - 1) * limit,
@@ -2423,10 +2412,57 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         
         targetCandidateIds = allCandidates.map(c => c.id);
         hasMorePages = (page * limit) < totalCandidates;
+        
+        console.log(`📄 Using relaxed criteria: ${targetCandidateIds.length} candidates`);
+      } else {
+        if (processAll) {
+          // Process all candidates with pagination
+          const offset = (page - 1) * limit;
+          const candidates = await User.findAll({
+            where: whereConditions,
+            attributes: ['id'],
+            limit: parseInt(limit),
+            offset: offset,
+            order: [['createdAt', 'DESC']]
+          });
+          
+          targetCandidateIds = candidates.map(c => c.id);
+          hasMorePages = offset + candidates.length < totalCandidates;
+          
+          console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates (${offset + 1}-${offset + targetCandidateIds.length} of ${totalCandidates})`);
+        } else {
+          // Process only current page
+          const candidates = await User.findAll({
+            where: whereConditions,
+            attributes: ['id'],
+            limit: parseInt(limit),
+            offset: (page - 1) * limit,
+            order: [['createdAt', 'DESC']]
+          });
+          
+          targetCandidateIds = candidates.map(c => c.id);
+          hasMorePages = (page * limit) < totalCandidates;
+          
+          console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates`);
+        }
       }
     } else {
-      // Specific candidates provided
+      // Specific candidates provided - validate they match requirement
+      console.log('🎯 Validating provided candidates against requirement...');
+      const validatedCandidates = await User.findAll({
+        where: {
+          id: { [Op.in]: candidateIds },
+          user_type: 'jobseeker',
+          account_status: 'active',
+          is_active: true
+        },
+        attributes: ['id']
+      });
+      
+      targetCandidateIds = validatedCandidates.map(c => c.id);
       totalCandidates = targetCandidateIds.length;
+      
+      console.log(`✅ Validated ${targetCandidateIds.length} candidates for ATS calculation`);
     }
     
     if (targetCandidateIds.length === 0) {
@@ -2451,8 +2487,49 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
       }
     );
     
-    // Add a longer delay to ensure database transactions are committed
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Verify ATS scores were actually saved before responding
+    console.log('🔍 Verifying ATS scores were saved to database...');
+    
+    const verificationResults = await Promise.all(
+      batchResults.successful.map(async (result) => {
+        try {
+          const [verification] = await sequelize.query(`
+            SELECT ats_score, last_calculated 
+            FROM candidate_analytics 
+            WHERE user_id = :userId AND requirement_id = :requirementId
+          `, {
+            replacements: { 
+              userId: result.candidateId, 
+              requirementId: requirementId 
+            },
+            type: QueryTypes.SELECT
+          });
+          
+          return {
+            candidateId: result.candidateId,
+            expectedScore: result.atsScore,
+            actualScore: verification?.ats_score,
+            verified: verification?.ats_score === result.atsScore,
+            timestamp: verification?.last_calculated
+          };
+        } catch (error) {
+          return {
+            candidateId: result.candidateId,
+            error: error.message,
+            verified: false
+          };
+        }
+      })
+    );
+    
+    const verifiedCount = verificationResults.filter(r => r.verified).length;
+    console.log(`✅ Verified ${verifiedCount}/${batchResults.successful.length} ATS scores in database`);
+    
+    // Log any verification failures
+    const failedVerifications = verificationResults.filter(r => !r.verified);
+    if (failedVerifications.length > 0) {
+      console.log('❌ Failed verifications:', failedVerifications);
+    }
     
     return res.status(200).json({
       success: true,
@@ -2463,6 +2540,11 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         errors: batchResults.errors.length,
         results: batchResults.successful,
         errorDetails: batchResults.errors,
+        verification: {
+          verified: verifiedCount,
+          total: batchResults.successful.length,
+          results: verificationResults
+        },
         pagination: {
           currentPage: parseInt(page),
           limit: parseInt(limit),
