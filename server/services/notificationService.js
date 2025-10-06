@@ -512,8 +512,37 @@ This is an automated notification. Please do not reply to this email.
         };
       }
 
-      // Create notification in database
-      const notification = await Notification.create(notificationData);
+      // Create notification in database with fallback for enum issues
+      let notification;
+      try {
+        notification = await Notification.create(notificationData);
+      } catch (createErr) {
+        console.error('❌ Failed to create application_shortlisted notification, attempting fallback:', createErr?.message || createErr);
+        const fallbackData = {
+          userId: candidateId,
+          type: 'application_status',
+          title: `Application Status Update: Shortlisted`,
+          message: `You have been shortlisted for ${jobTitle} at ${companyName}.`,
+          shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
+          priority: 'high',
+          actionUrl: '/applications',
+          actionText: 'View Applications',
+          icon: 'user-check',
+          metadata: {
+            employerId,
+            applicationId,
+            oldStatus,
+            newStatus,
+            companyName,
+            jobTitle,
+            updatedAt: new Date().toISOString(),
+            fallback: true,
+            originalType: 'application_shortlisted',
+            ...context
+          }
+        };
+        notification = await Notification.create(fallbackData);
+      }
 
       console.log(`✅ Application status notification created for candidate ${candidateId}`);
       console.log(`📋 Notification details:`, {
