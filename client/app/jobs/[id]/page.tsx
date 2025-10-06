@@ -45,6 +45,8 @@ export default function JobDetailPage() {
   const [forceUpdate, setForceUpdate] = useState(false)
   const [jobLoading, setJobLoading] = useState(true)
   const [job, setJob] = useState<any | null>(null)
+  const [similarJobs, setSimilarJobs] = useState<any[]>([])
+  const [similarJobsLoading, setSimilarJobsLoading] = useState(false)
 
   const jobIdFromParams = (params?.id as string) || ''
 
@@ -234,6 +236,131 @@ export default function JobDetailPage() {
     loadJob()
     return () => { isMounted = false }
   }, [jobIdFromParams])
+
+  // Load similar jobs with comprehensive error handling
+  useEffect(() => {
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout | null = null
+    
+    const loadSimilarJobs = async () => {
+      if (!jobIdFromParams || !job) return
+      
+      setSimilarJobsLoading(true)
+      setSimilarJobs([]) // Clear previous results
+      
+      try {
+        console.log('🔍 Fetching similar jobs for:', jobIdFromParams)
+        
+        // Add timeout to prevent hanging requests
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Request timeout')), 10000)
+        })
+        
+        const apiPromise = apiService.getSimilarJobs(jobIdFromParams, 3)
+        
+        const res = await Promise.race([apiPromise, timeoutPromise])
+        
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        
+        console.log('📋 Similar jobs response:', res)
+        
+        if (isMounted) {
+          if (res && res.success && Array.isArray(res.data)) {
+            // Validate and sanitize the response data
+            const validJobs = res.data.filter(job => 
+              job && 
+              job.id && 
+              job.title && 
+              typeof job.title === 'string' &&
+              job.title.trim().length > 0
+            ).map(job => ({
+              ...job,
+              // Ensure all required fields have fallback values
+              title: job.title?.trim() || 'Untitled Job',
+              company: job.company?.trim() || 'Company not specified',
+              location: job.location?.trim() || 'Location not specified',
+              salary: job.salary?.trim() || 'Salary not disclosed',
+              type: job.type || 'full-time',
+              experienceLevel: job.experienceLevel || 'mid',
+              department: job.department || 'General',
+              skills: Array.isArray(job.skills) ? job.skills : [],
+              posted: job.posted || new Date().toLocaleDateString(),
+              applications: typeof job.applications === 'number' ? job.applications : 0,
+              views: typeof job.views === 'number' ? job.views : 0,
+              isFeatured: Boolean(job.isFeatured),
+              isPremium: Boolean(job.isPremium),
+              description: job.description?.trim() || '',
+              companyInfo: {
+                industry: job.companyInfo?.industry || 'Not specified',
+                size: job.companyInfo?.size || 'Not specified',
+                website: job.companyInfo?.website || '',
+                isFeatured: Boolean(job.companyInfo?.isFeatured),
+                rating: typeof job.companyInfo?.rating === 'number' ? job.companyInfo.rating : 0,
+                totalReviews: typeof job.companyInfo?.totalReviews === 'number' ? job.companyInfo.totalReviews : 0
+              },
+              similarityScore: job.similarityScore || '0.0'
+            }))
+            
+            setSimilarJobs(validJobs)
+            console.log(`✅ Loaded ${validJobs.length} valid similar jobs`)
+          } else {
+            console.warn('⚠️ Invalid similar jobs response:', res)
+            setSimilarJobs([])
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error fetching similar jobs:', error)
+        
+        if (isMounted) {
+          // Set empty array on error to show empty state
+          setSimilarJobs([])
+          
+          // Show user-friendly error message
+          if (error instanceof Error) {
+            if (error.message === 'Request timeout') {
+              console.warn('⏰ Similar jobs request timed out')
+            } else {
+              console.warn('🔧 Similar jobs request failed:', error.message)
+            }
+          }
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        
+        if (isMounted) {
+          setSimilarJobsLoading(false)
+        }
+      }
+    }
+
+    // Only load similar jobs after the main job is loaded and we have a valid job ID
+    if (job && !jobLoading && jobIdFromParams && jobIdFromParams.length > 0) {
+      // Add a small delay to ensure the main job is fully rendered
+      const delayId = setTimeout(() => {
+        loadSimilarJobs()
+      }, 100)
+      
+      return () => {
+        isMounted = false
+        clearTimeout(delayId)
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+      }
+    }
+
+    return () => { 
+      isMounted = false
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
+  }, [jobIdFromParams, job, jobLoading])
 
   const hasApplied = useMemo(() => sampleJobManager.hasApplied(jobIdFromParams), [jobIdFromParams, forceUpdate])
 
@@ -789,7 +916,7 @@ export default function JobDetailPage() {
                 </Card>
               </motion.div>
 
-              {/* Similar Jobs (static placeholder) */}
+              {/* Similar Jobs - Ultra Advanced */}
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -797,17 +924,219 @@ export default function JobDetailPage() {
               >
                 <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
                   <CardHeader>
-                    <CardTitle>Similar Jobs</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span>Similar Jobs</span>
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          AI-Powered
+                        </Badge>
+                      </div>
+                      {similarJobs.length > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {similarJobs.length}
+                        </Badge>
+                      )}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {[1,2,3].map((n) => (
-                        <div key={n} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                          <div className="h-4 w-48 bg-slate-200 dark:bg-slate-600 rounded mb-2" />
-                          <div className="h-3 w-64 bg-slate-200 dark:bg-slate-600 rounded" />
+                    {similarJobsLoading ? (
+                      <div className="space-y-4">
+                        {[1,2,3].map((n) => (
+                          <div key={n} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg animate-pulse">
+                            <div className="flex items-start space-x-3">
+                              <div className="w-10 h-10 bg-slate-200 dark:bg-slate-600 rounded-lg flex-shrink-0" />
+                              <div className="flex-1 space-y-2">
+                                <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-600 rounded" />
+                                <div className="h-3 w-1/2 bg-slate-200 dark:bg-slate-600 rounded" />
+                                <div className="h-3 w-2/3 bg-slate-200 dark:bg-slate-600 rounded" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : similarJobs.length > 0 ? (
+                      <div className="space-y-4">
+                        {similarJobs.map((similarJob, index) => (
+                          <Link 
+                            key={`${similarJob.id}-${index}`} 
+                            href={`/jobs/${similarJob.id}`}
+                            className="block group"
+                          >
+                            <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200 cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-600">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-slate-900 dark:text-white mb-1 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                    {similarJob.title}
+                                  </h4>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-1">
+                                    {similarJob.company}
+                                  </p>
+                                </div>
+                                <div className="flex flex-col items-end space-y-1 ml-2">
+                                  {similarJob.isFeatured && (
+                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
+                                      Featured
+                                    </Badge>
+                                  )}
+                                  {similarJob.isPremium && (
+                                    <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                                      Premium
+                                    </Badge>
+                                  )}
+                                  {similarJob.similarityScore && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {similarJob.similarityScore}% match
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
+                                <div className="flex items-center">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  <span className="line-clamp-1">{similarJob.location}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Briefcase className="w-3 h-3 mr-1" />
+                                  <span className="capitalize">{similarJob.type?.replace('-', ' ')}</span>
+                                </div>
+                                {similarJob.experienceLevel && (
+                                  <div className="flex items-center">
+                                    <Award className="w-3 h-3 mr-1" />
+                                    <span className="capitalize">{similarJob.experienceLevel}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {similarJob.salary && similarJob.salary !== 'Salary not disclosed' && (
+                                <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">
+                                  {similarJob.salary}
+                                </div>
+                              )}
+                              
+                              {similarJob.skills && similarJob.skills.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {similarJob.skills.slice(0, 3).map((skill, skillIndex) => (
+                                    <Badge key={skillIndex} variant="secondary" className="text-xs px-2 py-0.5">
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                  {similarJob.skills.length > 3 && (
+                                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                      +{similarJob.skills.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between text-xs text-slate-400">
+                                <span>Posted {similarJob.posted}</span>
+                                <div className="flex items-center space-x-2">
+                                  {similarJob.views > 0 && (
+                                    <span>{similarJob.views} views</span>
+                                  )}
+                                  {similarJob.applications > 0 && (
+                                    <span>{similarJob.applications} applications</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                        
+                        {/* Show More Button with Enhanced Filtering */}
+                        <Button 
+                          onClick={() => {
+                            try {
+                              // Build comprehensive filter params based on current job
+                              const params = new URLSearchParams()
+                              
+                              // Location filtering
+                              if (job?.location) {
+                                const locationParts = job.location.split(',')
+                                if (locationParts.length > 0) {
+                                  params.append('location', locationParts[0].trim())
+                                }
+                              }
+                              
+                              // Job type filtering
+                              if (job?.type) {
+                                params.append('jobType', job.type)
+                              }
+                              
+                              // Experience level filtering
+                              if (job?.experienceLevel) {
+                                params.append('experienceLevel', job.experienceLevel)
+                              }
+                              
+                              // Department filtering
+                              if (job?.department) {
+                                params.append('department', job.department)
+                              }
+                              
+                              // Skills filtering (if available)
+                              if (job?.skills && Array.isArray(job.skills) && job.skills.length > 0) {
+                                params.append('skills', job.skills.slice(0, 3).join(','))
+                              }
+                              
+                              // Industry filtering (if available)
+                              if (job?.companyInfo?.industry) {
+                                params.append('industry', job.companyInfo.industry)
+                              }
+                              
+                              // Add a flag to indicate this is from similar jobs
+                              params.append('fromSimilar', 'true')
+                              
+                              const queryString = params.toString()
+                              console.log('🔍 Navigating to jobs with filters:', queryString)
+                              
+                              router.push(`/jobs?${queryString}`)
+                            } catch (error) {
+                              console.error('❌ Error building filter params:', error)
+                              // Fallback to basic jobs page
+                              router.push('/jobs')
+                            }
+                          }}
+                          variant="outline" 
+                          className="w-full mt-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200"
+                        >
+                          <span className="flex items-center justify-center">
+                            Show More Similar Jobs
+                            <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                          </span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                          <Briefcase className="w-8 h-8 opacity-50" />
                         </div>
-                      ))}
-                    </div>
+                        <h3 className="font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          No Similar Jobs Found
+                        </h3>
+                        <p className="text-sm mb-4">
+                          We couldn't find similar jobs at the moment. Try browsing all available positions.
+                        </p>
+                        <div className="space-y-2">
+                          <Button 
+                            onClick={() => router.push('/jobs')}
+                            className="w-full"
+                          >
+                            Browse All Jobs
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              // Try to reload similar jobs
+                              window.location.reload()
+                            }}
+                            variant="outline" 
+                            className="w-full"
+                          >
+                            Try Again
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
