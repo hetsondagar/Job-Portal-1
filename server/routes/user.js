@@ -876,51 +876,112 @@ router.get('/notifications', authenticateToken, async (req, res) => {
       }))
     });
 
-    // Backfill: ensure a shortlist notification exists if any application is shortlisted
+    // Sync notifications to current application tags/statuses (last 50 apps)
     try {
-      const shortlistedApps = await JobApplication.findAll({
-        where: { userId: req.user.id, status: 'shortlisted' },
+      const recentApps = await JobApplication.findAll({
+        where: { userId: req.user.id },
         order: [['updatedAt', 'DESC']],
-        limit: 5
+        limit: 50
       });
-      for (const app of shortlistedApps) {
-        const existingShortlist = notifications.find(n => 
-          (n.type === 'application_shortlisted' || (n.type === 'application_status' && n.metadata?.fallback && n.metadata?.originalType === 'application_shortlisted'))
-        );
-        if (!existingShortlist) {
-          // Fetch employer/company/job for richer message (best-effort)
-          let companyName = 'Company';
-          let jobTitle = 'a position';
-          try {
-            const employer = await User.findByPk(app.employerId, { include: [{ model: Company, as: 'company', attributes: ['name'] }] });
-            const job = await Job.findByPk(app.jobId, { attributes: ['title'] });
-            if (employer?.company?.name) companyName = employer.company.name;
-            if (job?.title) jobTitle = job.title;
-          } catch {}
 
-          const created = await Notification.create({
-            userId: req.user.id,
-            type: 'application_status',
-            title: `Application Status Update: Shortlisted`,
-            message: `You have been shortlisted for ${jobTitle} at ${companyName}.`,
-            shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
-            priority: 'high',
-            actionUrl: '/applications',
-            actionText: 'View Applications',
-            icon: 'user-check',
-            metadata: {
-              employerId: app.employerId,
-              applicationId: app.id,
-              jobId: app.jobId,
-              originalType: 'application_shortlisted',
-              fallback: true
-            }
-          });
-          notifications.unshift(created);
+      // Index existing notifications by applicationId and type
+      const notifByAppAndType = new Map();
+      for (const n of notifications) {
+        const meta = n.metadata && (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata);
+        const appId = meta?.applicationId;
+        if (!appId) continue;
+        const key = `${appId}|${n.type}`;
+        if (!notifByAppAndType.has(key)) notifByAppAndType.set(key, n);
+      }
+
+      const createdNotifs = [];
+      const removedNotifIds = [];
+
+      for (const app of recentApps) {
+        // Resolve job/employer details for better messages (best-effort)
+        let companyName = 'Company';
+        let jobTitle = 'a position';
+        try {
+          const employer = await User.findByPk(app.employerId, { include: [{ model: Company, as: 'company', attributes: ['name'] }] });
+          const job = await Job.findByPk(app.jobId, { attributes: ['title'] });
+          if (employer?.company?.name) companyName = employer.company.name;
+          if (job?.title) jobTitle = job.title;
+        } catch {}
+
+        const shortlistKey = `${app.id}|application_shortlisted`;
+        const statusKey = `${app.id}|application_status`;
+        const hasShortlistNotif = notifByAppAndType.has(shortlistKey);
+        const hasStatusNotif = notifByAppAndType.has(statusKey);
+
+        if (app.status === 'shortlisted') {
+          // Ensure shortlist notification exists
+          if (!hasShortlistNotif) {
+            const created = await Notification.create({
+              userId: req.user.id,
+              type: 'application_shortlisted',
+              title: `🎉 Congratulations! You've been shortlisted!`,
+              message: `Great news! You've been shortlisted for ${jobTitle} at ${companyName}.`,
+              shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
+              priority: 'high',
+              actionUrl: '/applications',
+              actionText: 'View Applications',
+              icon: 'user-check',
+              metadata: {
+                employerId: app.employerId,
+                applicationId: app.id,
+                jobId: app.jobId,
+                originalType: 'application_shortlisted'
+              }
+            });
+            createdNotifs.push(created);
+            notifByAppAndType.set(shortlistKey, created);
+          }
+          // Optionally remove stale application_status for shortlist to avoid clutter
+        } else {
+          // If not shortlisted anymore, remove any existing shortlist notification
+          if (hasShortlistNotif) {
+            try {
+              const toRemove = notifByAppAndType.get(shortlistKey);
+              await toRemove.destroy();
+              removedNotifIds.push(toRemove.id);
+              notifByAppAndType.delete(shortlistKey);
+            } catch {}
+          }
+          // Ensure a status notification exists reflecting current tag
+          if (!hasStatusNotif) {
+            const created = await Notification.create({
+              userId: req.user.id,
+              type: 'application_status',
+              title: `Application Status Update`,
+              message: `Your application status is "${app.status}" for ${jobTitle} at ${companyName}.`,
+              shortMessage: `Status: ${app.status} at ${companyName}`,
+              priority: 'medium',
+              actionUrl: '/applications',
+              actionText: 'View Applications',
+              icon: 'check-circle',
+              metadata: {
+                employerId: app.employerId,
+                applicationId: app.id,
+                jobId: app.jobId,
+                originalType: 'application_status_sync'
+              }
+            });
+            createdNotifs.push(created);
+            notifByAppAndType.set(statusKey, created);
+          }
         }
       }
-    } catch (bfErr) {
-      console.warn('Shortlist backfill skipped:', bfErr?.message || bfErr);
+
+      if (createdNotifs.length > 0 || removedNotifIds.length > 0) {
+        // Re-fetch latest 50 notifications to include new ones in correct order
+        notifications = await Notification.findAll({
+          where: { userId: req.user.id },
+          order: [['createdAt', 'DESC']],
+          limit: 50
+        });
+      }
+    } catch (syncErr) {
+      console.warn('Notification sync from application tags skipped:', syncErr?.message || syncErr);
     }
 
     if (!notifications || notifications.length === 0) {
