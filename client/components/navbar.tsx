@@ -8,15 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [showJobsDropdown, setShowJobsDropdown] = useState(false)
-  const [showCompaniesDropdown, setShowCompaniesDropdown] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const pathname = usePathname()
@@ -53,134 +50,110 @@ export function Navbar() {
             <div className="relative group">
               <Button 
                 variant="ghost" 
-                className="text-slate-700 dark:text-slate-300"
-                onMouseEnter={() => setShowJobsDropdown(true)}
-                onMouseLeave={() => setShowJobsDropdown(false)}
+                className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative"
               >
                 Jobs
                 <ChevronDown className="w-4 h-4 ml-1" />
               </Button>
               
-              <AnimatePresence>
-                {showJobsDropdown && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700"
-                    onMouseEnter={() => setShowJobsDropdown(true)}
-                    onMouseLeave={() => setShowJobsDropdown(false)}
-                  >
-                    <div className="p-4">
-                      <div className="grid grid-cols-3 gap-6">
-                        {/* Popular Categories */}
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-sm">Popular categories</h4>
-                          <div className="space-y-2">
-                            <Link href="/jobs?category=it" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">IT jobs</Link>
-                            <Link href="/jobs?category=sales" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Sales jobs</Link>
-                            <Link href="/jobs?category=marketing" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Marketing jobs</Link>
-                            <Link href="/jobs?category=data-science" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Data Science jobs</Link>
-                            <Link href="/jobs?category=hr" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">HR jobs</Link>
-                            <Link href="/jobs?category=engineering" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Engineering jobs</Link>
-                          </div>
-                        </div>
-
-                        {/* Jobs in demand */}
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-sm">Jobs in demand</h4>
-                          <div className="space-y-2">
-                            <Link href="/jobs?type=fresher" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Fresher jobs</Link>
-                            <Link href="/jobs?type=mnc" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">MNC jobs</Link>
-                            <Link href="/jobs?type=remote" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Remote jobs</Link>
-                            <Link href="/jobs?type=work-from-home" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Work from home jobs</Link>
-                            <Link href="/jobs?type=walk-in" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Walk-in jobs</Link>
-                            <Link href="/jobs?type=part-time" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Part-time jobs</Link>
-                          </div>
-                        </div>
-
-                        {/* Jobs by location */}
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-sm">Jobs by location</h4>
-                          <div className="space-y-2">
-                            <Link href="/jobs?location=Delhi" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Jobs in Delhi</Link>
-                            <Link href="/jobs?location=Mumbai" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Jobs in Mumbai</Link>
-                            <Link href="/jobs?location=Bangalore" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Jobs in Bangalore</Link>
-                            <Link href="/jobs?location=Hyderabad" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Jobs in Hyderabad</Link>
-                            <Link href="/jobs?location=Chennai" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Jobs in Chennai</Link>
-                            <Link href="/jobs?location=Pune" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Jobs in Pune</Link>
-                          </div>
-                        </div>
+              {/* Jobs Dropdown Menu */}
+              <div className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+                <div className="p-6">
+                  <div className="grid grid-cols-3 gap-8">
+                    {/* Popular Categories */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Popular categories</h4>
+                      <div className="space-y-3">
+                        <Link href="/jobs?category=it" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">IT jobs</Link>
+                        <Link href="/jobs?category=sales" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Sales jobs</Link>
+                        <Link href="/jobs?category=marketing" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Marketing jobs</Link>
+                        <Link href="/jobs?category=data-science" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Data Science jobs</Link>
+                        <Link href="/jobs?category=hr" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">HR jobs</Link>
+                        <Link href="/jobs?category=engineering" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Engineering jobs</Link>
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
+                    {/* Jobs in demand */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Jobs in demand</h4>
+                      <div className="space-y-3">
+                        <Link href="/jobs?type=fresher" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Fresher jobs</Link>
+                        <Link href="/jobs?type=mnc" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">MNC jobs</Link>
+                        <Link href="/jobs?type=remote" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Remote jobs</Link>
+                        <Link href="/jobs?type=work-from-home" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Work from home jobs</Link>
+                        <Link href="/jobs?type=walk-in" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Walk-in jobs</Link>
+                        <Link href="/jobs?type=part-time" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Part-time jobs</Link>
+                      </div>
+                    </div>
+
+                    {/* Jobs by location */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Jobs by location</h4>
+                      <div className="space-y-3">
+                        <Link href="/jobs?location=Delhi" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Delhi</Link>
+                        <Link href="/jobs?location=Mumbai" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Mumbai</Link>
+                        <Link href="/jobs?location=Bangalore" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Bangalore</Link>
+                        <Link href="/jobs?location=Hyderabad" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Hyderabad</Link>
+                        <Link href="/jobs?location=Chennai" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Chennai</Link>
+                        <Link href="/jobs?location=Pune" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Pune</Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Companies Dropdown */}
             <div className="relative group">
               <Button 
                 variant="ghost" 
-                className="text-slate-700 dark:text-slate-300"
-                onMouseEnter={() => setShowCompaniesDropdown(true)}
-                onMouseLeave={() => setShowCompaniesDropdown(false)}
+                className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative"
               >
                 Companies
                 <ChevronDown className="w-4 h-4 ml-1" />
               </Button>
               
-              <AnimatePresence>
-                {showCompaniesDropdown && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700"
-                    onMouseEnter={() => setShowCompaniesDropdown(true)}
-                    onMouseLeave={() => setShowCompaniesDropdown(false)}
-                  >
-                    <div className="p-4">
-                      <div className="grid grid-cols-3 gap-6">
-                        {/* Explore Categories */}
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-sm">Explore categories</h4>
-                          <div className="space-y-2">
-                            <Link href="/companies?type=unicorn" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Unicorn</Link>
-                            <Link href="/companies?type=mnc" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">MNC</Link>
-                            <Link href="/companies?type=startup" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Startup</Link>
-                            <Link href="/companies?type=product-based" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Product based</Link>
-                            <Link href="/companies?type=internet" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Internet</Link>
-                          </div>
-                        </div>
-
-                        {/* Explore Collections */}
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-sm">Explore collections</h4>
-                          <div className="space-y-2">
-                            <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Top companies</Link>
-                            <Link href="/companies?category=it" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">IT companies</Link>
-                            <Link href="/companies?category=fintech" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Fintech companies</Link>
-                            <Link href="/companies?type=sponsored" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Sponsored companies</Link>
-                            <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Featured companies</Link>
-                          </div>
-                        </div>
-
-                        {/* Research companies by Ambitionbox */}
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-sm">Research companies by <span className="text-blue-600">Ambitionbox</span></h4>
-                          <div className="space-y-2">
-                            <Link href="/companies/interviews" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Interview questions</Link>
-                            <Link href="/salary-guide" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Company salaries</Link>
-                            <Link href="/companies/reviews" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Company reviews</Link>
-                            <Link href="/salary-calculator" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">Salary Calculator</Link>
-                          </div>
-                        </div>
+              {/* Companies Dropdown Menu */}
+              <div className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+                <div className="p-6">
+                  <div className="grid grid-cols-3 gap-8">
+                    {/* Explore Categories */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Explore categories</h4>
+                      <div className="space-y-3">
+                        <Link href="/companies?type=unicorn" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Unicorn</Link>
+                        <Link href="/companies?type=mnc" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">MNC</Link>
+                        <Link href="/companies?type=startup" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Startup</Link>
+                        <Link href="/companies?type=product-based" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Product based</Link>
+                        <Link href="/companies?type=internet" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Internet</Link>
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
+                    {/* Explore Collections */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Explore collections</h4>
+                      <div className="space-y-3">
+                        <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Top companies</Link>
+                        <Link href="/companies?category=it" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">IT companies</Link>
+                        <Link href="/companies?category=fintech" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Fintech companies</Link>
+                        <Link href="/companies?type=sponsored" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Sponsored companies</Link>
+                        <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Featured companies</Link>
+                      </div>
+                    </div>
+
+                    {/* Research companies by Ambitionbox */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Research companies by <span className="text-blue-600">Ambitionbox</span></h4>
+                      <div className="space-y-3">
+                        <Link href="/companies/interviews" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Interview questions</Link>
+                        <Link href="/salary-guide" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Company salaries</Link>
+                        <Link href="/companies/reviews" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Company reviews</Link>
+                        <Link href="/salary-calculator" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Salary Calculator</Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Job at Pace - Premium Link */}

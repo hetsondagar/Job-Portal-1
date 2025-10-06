@@ -39,6 +39,8 @@ import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
 import { RoleCategoryDropdown } from "@/components/ui/role-category-dropdown"
+import { IndustryDropdown } from "@/components/ui/industry-dropdown"
+import { DepartmentDropdown } from "@/components/ui/department-dropdown"
 
 // Types for state management
 interface FilterState {
@@ -61,6 +63,8 @@ interface FilterState {
   recruiterType?: string
   salaryMin?: number
   roleCategories?: string[]
+  industryCategories?: string[]
+  departmentCategories?: string[]
 }
 
 interface Job {
@@ -109,7 +113,11 @@ export default function JobsPage() {
   const [preferredJobs, setPreferredJobs] = useState<Job[]>([])
   const [preferredJobsLoading, setPreferredJobsLoading] = useState(false)
   const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
   const roleCategoryDropdownRef = useRef<HTMLDivElement>(null)
+  const industryDropdownRef = useRef<HTMLDivElement>(null)
+  const departmentDropdownRef = useRef<HTMLDivElement>(null)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -132,6 +140,8 @@ export default function JobsPage() {
     recruiterType: "",
     salaryMin: undefined,
     roleCategories: [],
+    industryCategories: [],
+    departmentCategories: [],
   })
 
   // Check URL parameters for filters
@@ -576,6 +586,40 @@ export default function JobsPage() {
     }
   }, [showRoleCategoryDropdown])
 
+  // Click outside handler for industry dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (industryDropdownRef.current && !industryDropdownRef.current.contains(event.target as Node)) {
+        setShowIndustryDropdown(false)
+      }
+    }
+
+    if (showIndustryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showIndustryDropdown])
+
+  // Click outside handler for department dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target as Node)) {
+        setShowDepartmentDropdown(false)
+      }
+    }
+
+    if (showDepartmentDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showDepartmentDropdown])
+
   const experienceLevels = [
     "0-1",
     "2-5",
@@ -713,6 +757,26 @@ export default function JobsPage() {
       })
     }
 
+    // Industry Categories
+    if (filters.industryCategories && filters.industryCategories.length > 0) {
+      filtered = filtered.filter(job => {
+        const companyIndustry = (job as any).company?.industry?.toLowerCase() || ''
+        return filters.industryCategories!.some(industry => 
+          companyIndustry.includes(industry.toLowerCase())
+        )
+      })
+    }
+
+    // Department Categories
+    if (filters.departmentCategories && filters.departmentCategories.length > 0) {
+      filtered = filtered.filter(job => {
+        const jobDepartment = (job as any).department?.toLowerCase() || job.category.toLowerCase()
+        return filters.departmentCategories!.some(department => 
+          jobDepartment.includes(department.toLowerCase())
+        )
+      })
+    }
+
     // Skills / Keywords
     if (filters.skills) {
       const parts = filters.skills.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
@@ -772,6 +836,8 @@ export default function JobsPage() {
       (filters.department && filters.department.trim()) ||
       (filters.role && filters.role.trim()) ||
       (filters.roleCategories && filters.roleCategories.length > 0) ||
+      (filters.industryCategories && filters.industryCategories.length > 0) ||
+      (filters.departmentCategories && filters.departmentCategories.length > 0) ||
       (filters.skills && filters.skills.trim()) ||
       (filters.companyType && filters.companyType.trim && filters.companyType.trim()) ||
       (filters.workMode && filters.workMode.trim && filters.workMode.trim()) ||
@@ -824,6 +890,8 @@ export default function JobsPage() {
     (filters.department && filters.department.trim()) ||
     (filters.role && filters.role.trim()) ||
     (filters.roleCategories && filters.roleCategories.length > 0) ||
+    (filters.industryCategories && filters.industryCategories.length > 0) ||
+    (filters.departmentCategories && filters.departmentCategories.length > 0) ||
     (filters.skills && filters.skills.trim()) ||
     (filters.companyType && (filters.companyType as any).trim && (filters.companyType as any).trim()) ||
     (filters.workMode && (filters.workMode as any).trim && (filters.workMode as any).trim()) ||
@@ -892,6 +960,8 @@ export default function JobsPage() {
       recruiterType: "",
       salaryMin: undefined,
       roleCategories: [],
+      industryCategories: [],
+      departmentCategories: [],
     })
   }, [])
 
@@ -1060,33 +1130,63 @@ export default function JobsPage() {
               </div>
 
               {/* Industry */}
-              <div>
+              <div className="relative">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Industry</h3>
-                <Select value={filters.industry} onValueChange={(v) => handleFilterChange('industry', v)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {industries.map((ind) => (
-                      <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Select 
+                    value={filters.industry} 
+                    onValueChange={(v) => handleFilterChange('industry', v)}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setShowIndustryDropdown(true)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select industry" />
+                    </SelectTrigger>
+                  </Select>
+                  
+                  {showIndustryDropdown && (
+                    <div ref={industryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-50">
+                      <IndustryDropdown
+                        selectedIndustries={filters.industryCategories || []}
+                        onIndustryChange={(industries) => handleFilterChange('industryCategories', industries)}
+                        onClose={() => setShowIndustryDropdown(false)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Department / Functional Area */}
-              <div>
+              <div className="relative">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Department</h3>
-                <Select value={filters.department} onValueChange={(v) => handleFilterChange('department', v)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dep) => (
-                      <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Select 
+                    value={filters.department} 
+                    onValueChange={(v) => handleFilterChange('department', v)}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setShowDepartmentDropdown(true)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                  </Select>
+                  
+                  {showDepartmentDropdown && (
+                    <div ref={departmentDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-50">
+                      <DepartmentDropdown
+                        selectedDepartments={filters.departmentCategories || []}
+                        onDepartmentChange={(departments) => handleFilterChange('departmentCategories', departments)}
+                        onClose={() => setShowDepartmentDropdown(false)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Role / Designation */}
