@@ -51,6 +51,7 @@ export function Navbar() {
               <Button 
                 variant="ghost" 
                 className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative"
+                onClick={() => window.location.href = '/jobs'}
               >
                 Jobs
                 <ChevronDown className="w-4 h-4 ml-1" />
@@ -108,6 +109,7 @@ export function Navbar() {
               <Button 
                 variant="ghost" 
                 className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative"
+                onClick={() => window.location.href = '/companies'}
               >
                 Companies
                 <ChevronDown className="w-4 h-4 ml-1" />
@@ -116,7 +118,7 @@ export function Navbar() {
               {/* Companies Dropdown Menu */}
               <div className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
                 <div className="p-6">
-                  <div className="grid grid-cols-3 gap-8">
+                  <div className="grid grid-cols-2 gap-8">
                     {/* Explore Categories */}
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Explore categories</h4>
@@ -138,17 +140,6 @@ export function Navbar() {
                         <Link href="/companies?category=fintech" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Fintech companies</Link>
                         <Link href="/companies?type=sponsored" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Sponsored companies</Link>
                         <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Featured companies</Link>
-                      </div>
-                    </div>
-
-                    {/* Research companies by Ambitionbox */}
-                    <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Research companies by <span className="text-blue-600">Ambitionbox</span></h4>
-                      <div className="space-y-3">
-                        <Link href="/companies/interviews" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Interview questions</Link>
-                        <Link href="/salary-guide" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Company salaries</Link>
-                        <Link href="/companies/reviews" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Company reviews</Link>
-                        <Link href="/salary-calculator" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Salary Calculator</Link>
                       </div>
                     </div>
                   </div>

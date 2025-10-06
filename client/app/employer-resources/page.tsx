@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, FileText, Video, MessageSquare, Download, ExternalLink } from 'lucide-react';
+import { BookOpen, FileText, Video, MessageSquare, Download, ExternalLink, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EmployerResourcesPage() {

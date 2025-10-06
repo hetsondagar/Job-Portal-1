@@ -1148,7 +1148,7 @@ export default function JobsPage() {
                   </Select>
                   
                   {showIndustryDropdown && (
-                    <div ref={industryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-50">
+                    <div ref={industryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-[9999]">
                       <IndustryDropdown
                         selectedIndustries={filters.industryCategories || []}
                         onIndustryChange={(industries) => handleFilterChange('industryCategories', industries)}
@@ -1178,7 +1178,7 @@ export default function JobsPage() {
                   </Select>
                   
                   {showDepartmentDropdown && (
-                    <div ref={departmentDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-50">
+                    <div ref={departmentDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-[9999]">
                       <DepartmentDropdown
                         selectedDepartments={filters.departmentCategories || []}
                         onDepartmentChange={(departments) => handleFilterChange('departmentCategories', departments)}
@@ -1189,9 +1189,9 @@ export default function JobsPage() {
                 </div>
               </div>
 
-              {/* Role / Designation */}
+              {/* Role Category */}
               <div className="relative">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Role / Designation</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Role Category</h3>
                 <div className="relative">
                   <Select 
                     value={filters.role} 
@@ -1208,7 +1208,7 @@ export default function JobsPage() {
                   </Select>
                   
                   {showRoleCategoryDropdown && (
-                    <div ref={roleCategoryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-50">
+                    <div ref={roleCategoryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-[9999]">
                       <RoleCategoryDropdown
                         selectedRoles={filters.roleCategories || []}
                         onRoleChange={(roles) => handleFilterChange('roleCategories', roles)}

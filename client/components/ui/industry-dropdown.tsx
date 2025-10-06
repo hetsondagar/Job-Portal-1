@@ -182,7 +182,7 @@ export function IndustryDropdown({ selectedIndustries, onIndustryChange, onClose
   }
 
   return (
-    <div className="w-full max-w-6xl bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
+    <div className="w-full max-w-7xl bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 z-[9999]">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
         <h3 className="text-xl font-bold text-slate-900 dark:text-white">Industry</h3>
@@ -214,7 +214,7 @@ export function IndustryDropdown({ selectedIndustries, onIndustryChange, onClose
 
       {/* Industry Categories */}
       <div className="p-4 max-h-96 overflow-y-auto overflow-x-auto">
-        <div className="grid grid-cols-3 gap-6 min-w-max">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-w-max">
           {currentCategories.map((categoryGroup, groupIndex) => (
             <div key={groupIndex} className="space-y-3">
               {/* Category Header */}
