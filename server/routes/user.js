@@ -880,7 +880,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     try {
       const recentApps = await JobApplication.findAll({
         where: { userId: req.user.id },
-        order: [['updatedAt', 'DESC']],
+        order: [['lastUpdatedAt', 'DESC']],
         limit: 50
       });
 
