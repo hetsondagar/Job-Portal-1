@@ -1626,7 +1626,8 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
     
     if (existingShortlist && isExistingForRequirement) {
       // Toggle shortlist status
-      const newStatus = existingShortlist.status === 'shortlisted' ? 'applied' : 'shortlisted';
+      const previousStatus = existingShortlist.status;
+      const newStatus = previousStatus === 'shortlisted' ? 'applied' : 'shortlisted';
       await existingShortlist.update({ 
         status: newStatus,
         updated_at: new Date()
@@ -1652,7 +1653,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
             }
           );
           console.log(`✅ Shortlisting notification sent to candidate ${candidateId}`);
-        } else if (newStatus === 'applied' && existingShortlist.status === 'shortlisted') {
+        } else if (newStatus === 'applied' && previousStatus === 'shortlisted') {
           // Remove notification when unshortlisting
           await NotificationService.removeShortlistingNotification(
             candidateId,
