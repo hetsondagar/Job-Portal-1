@@ -97,10 +97,39 @@ class NotificationService {
         }
       };
 
-      // Create notification in database
-      const notification = await Notification.create(notificationData);
-
-      console.log(`✅ Shortlisting notification created for candidate ${candidateId}`);
+      // Create notification in database with graceful fallback
+      let notification;
+      try {
+        notification = await Notification.create(notificationData);
+        console.log(`✅ Shortlisting notification created for candidate ${candidateId}`);
+      } catch (createErr) {
+        console.error('❌ Failed to create candidate_shortlisted notification, attempting fallback:', createErr?.message || createErr);
+        // Fallback to a generic application_status notification so the user still sees an alert
+        const fallbackData = {
+          userId: candidateId,
+          type: 'application_status',
+          title: `Application Status Update: Shortlisted`,
+          message: `You have been shortlisted for ${jobTitle} at ${companyName}.`,
+          shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
+          priority: 'high',
+          actionUrl: applicationUrl,
+          actionText: 'View Application',
+          icon: 'user-check',
+          metadata: {
+            employerId,
+            jobId,
+            requirementId,
+            companyName,
+            jobTitle,
+            shortlistedAt: new Date().toISOString(),
+            fallback: true,
+            originalType: 'candidate_shortlisted',
+            ...context
+          }
+        };
+        notification = await Notification.create(fallbackData);
+        console.log(`✅ Fallback shortlisting notification created for candidate ${candidateId}`);
+      }
 
       // Send email notification
       try {

@@ -65,6 +65,13 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (user && !loading) {
       fetchNotifications()
+
+      // Auto-refresh to surface new notifications (e.g., shortlisted) promptly
+      const intervalId = setInterval(() => {
+        fetchNotifications()
+      }, 30000)
+
+      return () => clearInterval(intervalId)
     }
   }, [user, loading])
 
@@ -73,7 +80,14 @@ export default function NotificationsPage() {
       setNotificationsLoading(true)
       const response = await apiService.getNotifications()
       if (response.success && response.data) {
-        setNotifications(response.data)
+        // Prioritize shortlisted types at the top, then by recency
+        const prioritized = [...response.data].sort((a: any, b: any) => {
+          const isShortA = a.type === 'candidate_shortlisted' || a.type === 'application_shortlisted'
+          const isShortB = b.type === 'candidate_shortlisted' || b.type === 'application_shortlisted'
+          if (isShortA !== isShortB) return isShortA ? -1 : 1
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
+        setNotifications(prioritized)
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
