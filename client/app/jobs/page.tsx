@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Camera,
   Calendar,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -115,9 +116,6 @@ export default function JobsPage() {
   const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
-  const roleCategoryDropdownRef = useRef<HTMLDivElement>(null)
-  const industryDropdownRef = useRef<HTMLDivElement>(null)
-  const departmentDropdownRef = useRef<HTMLDivElement>(null)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -573,56 +571,7 @@ export default function JobsPage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Click outside handler for role category dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (roleCategoryDropdownRef.current && !roleCategoryDropdownRef.current.contains(event.target as Node)) {
-        setShowRoleCategoryDropdown(false)
-      }
-    }
-
-    if (showRoleCategoryDropdown) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showRoleCategoryDropdown])
-
-  // Click outside handler for industry dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (industryDropdownRef.current && !industryDropdownRef.current.contains(event.target as Node)) {
-        setShowIndustryDropdown(false)
-      }
-    }
-
-    if (showIndustryDropdown) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showIndustryDropdown])
-
-  // Click outside handler for department dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target as Node)) {
-        setShowDepartmentDropdown(false)
-      }
-    }
-
-    if (showDepartmentDropdown) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showDepartmentDropdown])
+  // Removed click outside handlers since we're using Dialog components which handle this automatically
 
   const experienceLevels = [
     "0-1",
@@ -1254,26 +1203,20 @@ export default function JobsPage() {
               <div className="relative">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Industry</h3>
                 <div className="relative">
-                  <Select 
-                    value={filters.industry} 
-                    onValueChange={(v) => handleFilterChange('industry', v)}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        setShowIndustryDropdown(true)
-                      }
-                    }}
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-between ${(filters.industryCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    onClick={() => setShowIndustryDropdown(true)}
                   >
-                    <SelectTrigger className={`w-full ${(filters.industryCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <SelectValue placeholder={`Select industry${(filters.industryCategories?.length ?? 0) > 0 ? ` (${filters.industryCategories?.length} selected)` : ''}`} />
-                    </SelectTrigger>
-                  </Select>
+                    <span>{(filters.industryCategories?.length ?? 0) > 0 ? `${filters.industryCategories?.length} selected` : 'Select industry'}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
                   
                   {showIndustryDropdown && (
                     <IndustryDropdown
                       selectedIndustries={filters.industryCategories || []}
                       onIndustryChange={(industries: string[]) => {
                         handleFilterChange('industryCategories', industries)
-                        setShowIndustryDropdown(false)
                       }}
                       onClose={() => setShowIndustryDropdown(false)}
                     />
@@ -1285,26 +1228,20 @@ export default function JobsPage() {
               <div className="relative">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Department</h3>
                 <div className="relative">
-                  <Select 
-                    value={filters.department} 
-                    onValueChange={(v) => handleFilterChange('department', v)}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        setShowDepartmentDropdown(true)
-                      }
-                    }}
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-between ${(filters.departmentCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    onClick={() => setShowDepartmentDropdown(true)}
                   >
-                    <SelectTrigger className={`w-full ${(filters.departmentCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <SelectValue placeholder={`Select department${(filters.departmentCategories?.length ?? 0) > 0 ? ` (${filters.departmentCategories?.length} selected)` : ''}`} />
-                    </SelectTrigger>
-                  </Select>
+                    <span>{(filters.departmentCategories?.length ?? 0) > 0 ? `${filters.departmentCategories?.length} selected` : 'Select department'}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
                   
                   {showDepartmentDropdown && (
                     <DepartmentDropdown
                       selectedDepartments={filters.departmentCategories || []}
                       onDepartmentChange={(departments: string[]) => {
                         handleFilterChange('departmentCategories', departments)
-                        setShowDepartmentDropdown(false)
                       }}
                       onClose={() => setShowDepartmentDropdown(false)}
                     />
@@ -1316,27 +1253,22 @@ export default function JobsPage() {
               <div className="relative">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Role Category</h3>
                 <div className="relative">
-                  <Select 
-                    value={filters.role} 
-                    onValueChange={(v) => handleFilterChange('role', v)}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        setShowRoleCategoryDropdown(true)
-                      }
-                    }}
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-between ${(filters.roleCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    onClick={() => setShowRoleCategoryDropdown(true)}
                   >
-                    <SelectTrigger className={`w-full ${(filters.roleCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <SelectValue placeholder={`Select role${(filters.roleCategories?.length ?? 0) > 0 ? ` (${filters.roleCategories?.length ?? 0} selected)` : ''}`} />
-                    </SelectTrigger>
-                  </Select>
+                    <span>{(filters.roleCategories?.length ?? 0) > 0 ? `${filters.roleCategories?.length ?? 0} selected` : 'Select role category'}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
                   
                   {showRoleCategoryDropdown && (
                     <RoleCategoryDropdown
                       selectedRoles={filters.roleCategories || []}
                       onRoleChange={(roles: string[]) => {
                         handleFilterChange('roleCategories', roles)
-                        setShowRoleCategoryDropdown(false)
                       }}
+                      onClose={() => setShowRoleCategoryDropdown(false)}
                     />
                   )}
                 </div>

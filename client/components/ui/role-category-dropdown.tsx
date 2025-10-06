@@ -11,6 +11,7 @@ import { Search, X } from "lucide-react"
 interface RoleCategoryDropdownProps {
   selectedRoles: string[]
   onRoleChange: (roles: string[]) => void
+  onClose: () => void
 }
 
 // All role categories extracted from the images + department data merged
@@ -201,7 +202,7 @@ const roleCategories = [
   "Downstream"
 ]
 
-export default function RoleCategoryDropdown({ selectedRoles, onRoleChange }: RoleCategoryDropdownProps) {
+export default function RoleCategoryDropdown({ selectedRoles, onRoleChange, onClose }: RoleCategoryDropdownProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [tempSelectedRoles, setTempSelectedRoles] = useState(selectedRoles)
 
@@ -228,12 +229,12 @@ export default function RoleCategoryDropdown({ selectedRoles, onRoleChange }: Ro
 
   const handleApply = () => {
     onRoleChange(tempSelectedRoles)
+    onClose()
   }
 
   const handleCancel = () => {
     setTempSelectedRoles(selectedRoles)
-    // Close the dialog by calling onRoleChange with current selections
-    onRoleChange(selectedRoles)
+    onClose()
   }
 
   return (
