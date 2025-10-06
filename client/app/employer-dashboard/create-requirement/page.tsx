@@ -40,8 +40,8 @@ export default function CreateRequirementPage() {
     jobType: "Full-time",
     skills: [] as string[],
     education: "B.Tech/B.E.",
-    industry: "Technology",
-    department: "Engineering",
+    industry: "",
+    department: "",
     validTill: "",
     noticePeriod: "Immediately",
     remoteWork: "Hybrid",
@@ -100,11 +100,21 @@ export default function CreateRequirementPage() {
     }
   }
 
+  // Function to format skill text to proper case
+  const formatSkillText = (text: string) => {
+    return text
+      .trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  }
+
   const handleAddSkill = () => {
-    if (currentSkill.trim() && !formData.keySkills.includes(currentSkill.trim())) {
+    const formattedSkill = formatSkillText(currentSkill)
+    if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
       setFormData(prev => ({
         ...prev,
-        keySkills: [...prev.keySkills, currentSkill.trim()]
+        keySkills: [...prev.keySkills, formattedSkill]
       }))
       setCurrentSkill("")
     }
@@ -212,7 +222,14 @@ export default function CreateRequirementPage() {
     }
   }
 
-  const commonSkills = ["React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "MongoDB", "PostgreSQL", "AWS", "Docker", "Kubernetes"]
+  const commonSkills = [
+    "React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "PHP", "Ruby", "Go", "Swift", "Kotlin",
+    "HTML", "CSS", "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch",
+    "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Jenkins", "Git", "GitLab", "GitHub",
+    "Machine Learning", "Data Science", "Analytics", "Business Intelligence", "Project Management", "Agile", "Scrum",
+    "Communication", "Leadership", "Problem Solving", "Teamwork", "Time Management", "Critical Thinking",
+    "Sales", "Marketing", "Customer Service", "Finance", "Accounting", "HR", "Operations", "Strategy"
+  ]
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
   // Removed industries and departments arrays - using custom dropdowns now
 
@@ -507,6 +524,7 @@ export default function CreateRequirementPage() {
                           }
                         }}
                         onClose={() => setShowIndustryDropdown(false)}
+                        hideSelectAllButtons={true}
                       />
                     )}
                   </div>
@@ -534,6 +552,7 @@ export default function CreateRequirementPage() {
                           }
                         }}
                         onClose={() => setShowDepartmentDropdown(false)}
+                        hideSelectAllButtons={true}
                       />
                     )}
                   </div>

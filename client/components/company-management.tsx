@@ -263,6 +263,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                       }
                     }}
                     onClose={() => setShowIndustryDropdown(false)}
+                    hideSelectAllButtons={true}
                   />
                 )}
               </div>

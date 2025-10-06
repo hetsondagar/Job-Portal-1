@@ -722,6 +722,7 @@ export default function PostJobPage() {
                       }
                     }}
                     onClose={() => setShowDepartmentDropdown(false)}
+                    hideSelectAllButtons={true}
                   />
                 )}
               </div>

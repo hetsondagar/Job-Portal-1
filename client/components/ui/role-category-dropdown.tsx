@@ -12,6 +12,7 @@ interface RoleCategoryDropdownProps {
   selectedRoles: string[]
   onRoleChange: (roles: string[]) => void
   onClose: () => void
+  hideSelectAllButtons?: boolean // New prop to hide Select All/Clear All buttons
 }
 
 // All role categories extracted from the images + department data merged
@@ -202,7 +203,7 @@ const roleCategories = [
   "Downstream"
 ]
 
-export default function RoleCategoryDropdown({ selectedRoles, onRoleChange, onClose }: RoleCategoryDropdownProps) {
+export default function RoleCategoryDropdown({ selectedRoles, onRoleChange, onClose, hideSelectAllButtons = false }: RoleCategoryDropdownProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [tempSelectedRoles, setTempSelectedRoles] = useState(selectedRoles)
 
@@ -307,15 +308,17 @@ export default function RoleCategoryDropdown({ selectedRoles, onRoleChange, onCl
 
         {/* Actions */}
         <div className="flex items-center justify-between p-6 border-t border-slate-200 dark:border-slate-700">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleSelectAll}>
-              Select All
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleClearAll}>
-              Clear All
-            </Button>
-          </div>
-          <div className="flex gap-2">
+          {!hideSelectAllButtons && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                Select All
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClearAll}>
+                Clear All
+              </Button>
+            </div>
+          )}
+          <div className="flex gap-2 ml-auto">
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
