@@ -245,15 +245,23 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
   const handleCheckboxChange = (industryName: string, checked: boolean) => {
     const cleanName = cleanIndustryName(industryName)
     if (checked) {
-      setTempSelectedIndustries([...tempSelectedIndustries, cleanName])
+      // Add both clean name and full name to handle both formats
+      const newSelections = [...tempSelectedIndustries]
+      if (!newSelections.includes(cleanName) && !newSelections.includes(industryName)) {
+        newSelections.push(industryName) // Keep the full name with count
+      }
+      setTempSelectedIndustries(newSelections)
     } else {
-      setTempSelectedIndustries(tempSelectedIndustries.filter(name => name !== cleanName))
+      // Remove both clean name and full name
+      setTempSelectedIndustries(tempSelectedIndustries.filter(name => 
+        name !== cleanName && name !== industryName
+      ))
     }
   }
 
   const handleSelectAll = () => {
     const allIndustryNames = industryCategories.flatMap(cat => 
-      cat.industries.map(industry => cleanIndustryName(industry))
+      cat.industries.map(industry => industry) // Keep full names with counts
     )
     setTempSelectedIndustries(allIndustryNames)
   }
@@ -340,7 +348,7 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
                       <div key={cleanName} className="flex items-start space-x-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors min-h-[48px]">
                         <Checkbox
                           id={`industry-${cleanName}`}
-                          checked={tempSelectedIndustries.includes(cleanName)}
+                          checked={tempSelectedIndustries.includes(cleanName) || tempSelectedIndustries.includes(industry)}
                           onCheckedChange={(checked) => handleCheckboxChange(industry, checked as boolean)}
                           className="mt-0.5"
                         />

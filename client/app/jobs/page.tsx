@@ -62,6 +62,7 @@ interface FilterState {
   workMode?: string
   education?: string
   companyName?: string
+  jobTitle?: string
   recruiterType?: string
   salaryMin?: number
   roleCategories?: string[]
@@ -165,6 +166,10 @@ export default function JobsPage() {
       const workMode = urlParams.get('workMode')
       const jobType = urlParams.get('jobType')
       const jobTypes = urlParams.get('jobTypes')
+      const search = urlParams.get('search')
+      const exactMatch = urlParams.get('exactMatch')
+      const jobTitle = urlParams.get('jobTitle')
+      const company = urlParams.get('company')
 
       // Build new filter state
       const newFilters: Partial<FilterState> = {}
@@ -172,11 +177,21 @@ export default function JobsPage() {
       if (category) newFilters.category = category
       if (type) newFilters.type = type
       if (location) newFilters.location = location
+      if (search) {
+        newFilters.search = search
+        console.log('🔍 Setting search from URL:', search)
+      }
+      
+      // Handle exact match parameters
+      if (exactMatch === 'true') {
+        if (jobTitle) newFilters.jobTitle = jobTitle
+        if (company) newFilters.companyName = company
+      }
       if (experienceLevels) newFilters.experienceLevels = [experienceLevels]
       else if (experience) newFilters.experienceLevels = [experience]
       if (companyType) newFilters.companyType = companyType
       if (workMode) newFilters.workMode = workMode
-      if (jobTypes) newFilters.jobTypes = [jobTypes]
+      if (jobTypes) newFilters.jobTypes = jobTypes.split(',').map((j: string) => j.trim()).filter((j: string) => j)
       else if (jobType) newFilters.jobTypes = [jobType]
       
       // Handle filter categories (prioritize multi-value parameters)
@@ -253,6 +268,7 @@ export default function JobsPage() {
       const workMode = searchParams.get('workMode')
       const jobType = searchParams.get('jobType')
       const jobTypes = searchParams.get('jobTypes')
+      const search = searchParams.get('search')
 
       // Build new filter state
       const newFilters: Partial<FilterState> = {}
@@ -260,11 +276,15 @@ export default function JobsPage() {
       if (category) newFilters.category = category
       if (type) newFilters.type = type
       if (location) newFilters.location = location
-      if (experienceLevels) newFilters.experienceLevels = [experienceLevels]
+      if (search) {
+        newFilters.search = search
+        console.log('🔍 Setting search from searchParams:', search)
+      }
+      if (experienceLevels) newFilters.experienceLevels = experienceLevels.split(',').map((e: string) => e.trim()).filter((e: string) => e)
       else if (experience) newFilters.experienceLevels = [experience]
       if (companyType) newFilters.companyType = companyType
       if (workMode) newFilters.workMode = workMode
-      if (jobTypes) newFilters.jobTypes = [jobTypes]
+      if (jobTypes) newFilters.jobTypes = jobTypes.split(',').map((j: string) => j.trim()).filter((j: string) => j)
       else if (jobType) newFilters.jobTypes = [jobType]
       
       // Handle filter categories (prioritize multi-value parameters)
@@ -336,12 +356,13 @@ export default function JobsPage() {
         const industries = urlParams.get('industries')
         const departments = urlParams.get('departments')
         const roleCategories = urlParams.get('roleCategories')
-        const experience = urlParams.get('experience')
-        const experienceLevelsParam = urlParams.get('experienceLevels')
-        const companyType = urlParams.get('companyType')
-        const workMode = urlParams.get('workMode')
-        const jobType = urlParams.get('jobType')
-        const jobTypesParam = urlParams.get('jobTypes')
+      const experience = urlParams.get('experience')
+      const experienceLevelsParam = urlParams.get('experienceLevels')
+      const companyType = urlParams.get('companyType')
+      const workMode = urlParams.get('workMode')
+      const jobType = urlParams.get('jobType')
+      const jobTypesParam = urlParams.get('jobTypes')
+      const search = urlParams.get('search')
 
         // Build new filter state
         const newFilters: Partial<FilterState> = {}
@@ -349,6 +370,7 @@ export default function JobsPage() {
         if (category) newFilters.category = category
         if (type) newFilters.type = type
         if (location) newFilters.location = location
+        if (search) newFilters.search = search
         if (experienceLevelsParam) newFilters.experienceLevels = experienceLevelsParam.split(',').map((e: string) => e.trim()).filter((e: string) => e)
         else if (experience) newFilters.experienceLevels = [experience]
         if (companyType) newFilters.companyType = companyType
@@ -859,6 +881,507 @@ export default function JobsPage() {
 
   // Removed click outside handlers since we're using Dialog components which handle this automatically
 
+  // Helper function to get visible job types count (excluding walk-in)
+  const getVisibleJobTypesCount = () => {
+    return filters.jobTypes.filter(type => type.toLowerCase() !== 'walk-in').length
+  }
+
+  // Enhanced search handler that processes the query before setting it
+  const handleSearchChange = (value: string) => {
+    const processedQuery = processSearchQuery(value)
+    
+    // Handle exact matches differently
+    if (typeof processedQuery === 'object' && processedQuery.isExactMatch) {
+      // For exact matches, set multiple filters
+      handleFilterChange('search', processedQuery.originalQuery)
+      if (processedQuery.jobTitle) handleFilterChange('jobTitle', processedQuery.jobTitle)
+      if (processedQuery.company) handleFilterChange('companyName', processedQuery.company)
+      if (processedQuery.location) handleFilterChange('location', processedQuery.location)
+    } else {
+      // For regular processed queries
+      handleFilterChange('search', processedQuery)
+    }
+  }
+
+  // Enhanced smart search query processing (same as landing page)
+  const processSearchQuery = (query: string) => {
+    const lowerQuery = query.toLowerCase().trim()
+    
+    // First, check for exact matches in specific patterns (highest priority)
+    const exactMatchPatterns = [
+      // Job title at Company in Location patterns
+      /(.+?)\s+(?:at|in|@)\s+(.+?)\s+(?:in|at|@)\s+(.+)/i,
+      // Company in Location patterns  
+      /(.+?)\s+(?:in|at|@)\s+(.+)/i,
+      // Job title at Company patterns
+      /(.+?)\s+(?:at|@)\s+(.+)/i,
+    ]
+    
+    for (const pattern of exactMatchPatterns) {
+      const match = query.match(pattern)
+      if (match) {
+        // Return the structured query for exact matching
+        return {
+          isExactMatch: true,
+          jobTitle: match[1]?.trim(),
+          company: match[2]?.trim(),
+          location: match[3]?.trim() || match[2]?.trim(),
+          originalQuery: query.trim()
+        }
+      }
+    }
+    
+    // Check if query contains common exact search indicators
+    const exactSearchIndicators = ['at ', ' in ', '@', 'position:', 'company:', 'location:']
+    const hasExactIndicators = exactSearchIndicators.some(indicator => 
+      lowerQuery.includes(indicator.toLowerCase())
+    )
+    
+    if (hasExactIndicators) {
+      return {
+        isExactMatch: true,
+        originalQuery: query.trim(),
+        jobTitle: query.trim(),
+        company: query.trim(),
+        location: query.trim()
+      }
+    }
+    
+    // Comprehensive keyword mappings for all job roles and variations
+    const keywordMappings: { [key: string]: string[] } = {
+      // Programming Languages & Technologies
+      'python developer': ['python developer', 'python dev', 'python programmer', 'python engineer', 'python coder', 'py developer', 'pythonista'],
+      'javascript developer': ['javascript developer', 'js developer', 'javascript dev', 'js dev', 'javascript engineer', 'js engineer', 'nodejs developer'],
+      'java developer': ['java developer', 'java dev', 'java programmer', 'java engineer', 'java coder', 'javase developer'],
+      'react developer': ['react developer', 'reactjs developer', 'react dev', 'react engineer', 'react programmer', 'react frontend'],
+      'angular developer': ['angular developer', 'angularjs developer', 'angular dev', 'angular engineer', 'angular programmer'],
+      'vue developer': ['vue developer', 'vuejs developer', 'vue dev', 'vue engineer', 'vue programmer'],
+      'nodejs developer': ['nodejs developer', 'node developer', 'nodejs dev', 'node dev', 'node engineer', 'node programmer'],
+      'php developer': ['php developer', 'php dev', 'php programmer', 'php engineer', 'php coder', 'laravel developer'],
+      'c++ developer': ['c++ developer', 'cpp developer', 'c plus plus developer', 'c++ dev', 'cpp dev', 'c++ engineer'],
+      'c# developer': ['c# developer', 'csharp developer', 'c# dev', 'csharp dev', 'c# engineer', 'csharp engineer'],
+      'swift developer': ['swift developer', 'swift dev', 'swift engineer', 'ios developer', 'swift programmer'],
+      'kotlin developer': ['kotlin developer', 'kotlin dev', 'kotlin engineer', 'android developer', 'kotlin programmer'],
+      'flutter developer': ['flutter developer', 'flutter dev', 'flutter engineer', 'flutter programmer', 'dart developer'],
+      'react native developer': ['react native developer', 'reactnative developer', 'react native dev', 'rn developer'],
+      
+      // Specific Developer Roles
+      'frontend developer': ['frontend developer', 'front end developer', 'front-end developer', 'frontend dev', 'ui developer', 'frontend engineer'],
+      'backend developer': ['backend developer', 'back end developer', 'back-end developer', 'backend dev', 'server developer', 'backend engineer'],
+      'full stack developer': ['full stack developer', 'fullstack developer', 'full stack dev', 'fullstack dev', 'full stack engineer'],
+      'mobile developer': ['mobile developer', 'mobile dev', 'mobile engineer', 'mobile programmer', 'app developer'],
+      'web developer': ['web developer', 'web dev', 'web engineer', 'web programmer', 'website developer'],
+      'game developer': ['game developer', 'game dev', 'game engineer', 'game programmer', 'gamedev', 'game development'],
+      'blockchain developer': ['blockchain developer', 'blockchain dev', 'blockchain engineer', 'crypto developer', 'web3 developer'],
+      'devops engineer': ['devops engineer', 'devops developer', 'dev ops engineer', 'devops', 'site reliability engineer', 'sre'],
+      'cloud engineer': ['cloud engineer', 'cloud developer', 'aws engineer', 'azure engineer', 'gcp engineer', 'cloud architect'],
+      'security engineer': ['security engineer', 'cyber security engineer', 'cybersecurity engineer', 'security developer', 'infosec engineer'],
+      
+      // Data & Analytics
+      'data scientist': ['data scientist', 'data science', 'datascientist', 'data science engineer', 'ml engineer', 'machine learning engineer'],
+      'data analyst': ['data analyst', 'data analysis', 'data analytics', 'data analyst engineer'],
+      'data engineer': ['data engineer', 'data engineering', 'data pipeline engineer', 'etl developer', 'data infrastructure'],
+      'business analyst': ['business analyst', 'business analysis', 'ba', 'business intelligence analyst', 'bi analyst'],
+      'product analyst': ['product analyst', 'product analysis', 'product data analyst', 'product metrics analyst'],
+      'research analyst': ['research analyst', 'market research analyst', 'research associate', 'analyst researcher'],
+      
+      // Design & UX/UI
+      'ui designer': ['ui designer', 'user interface designer', 'interface designer', 'ui/ux designer', 'ui design'],
+      'ux designer': ['ux designer', 'user experience designer', 'experience designer', 'ui/ux designer', 'ux design'],
+      'graphic designer': ['graphic designer', 'graphics designer', 'visual designer', 'creative designer', 'graphic design'],
+      'product designer': ['product designer', 'product design', 'product ux designer', 'product ui designer'],
+      'web designer': ['web designer', 'website designer', 'web design', 'digital designer', 'online designer'],
+      'game designer': ['game designer', 'game design', 'game artist', 'level designer', 'game developer designer'],
+      'interior designer': ['interior designer', 'interior design', 'interior architect', 'space designer'],
+      'fashion designer': ['fashion designer', 'fashion design', 'clothing designer', 'apparel designer'],
+      
+      // Marketing & Digital
+      'digital marketing': ['digital marketing', 'digital marketer', 'online marketing', 'internet marketing', 'web marketing'],
+      'social media marketing': ['social media marketing', 'smm', 'social media manager', 'social media specialist'],
+      'content marketing': ['content marketing', 'content marketer', 'content strategy', 'content creator marketing'],
+      'email marketing': ['email marketing', 'email marketer', 'email campaign manager', 'email specialist'],
+      'seo specialist': ['seo specialist', 'seo expert', 'seo analyst', 'search engine optimization', 'seo consultant'],
+      'sem specialist': ['sem specialist', 'sem expert', 'paid search specialist', 'google ads specialist', 'ppc specialist'],
+      'affiliate marketing': ['affiliate marketing', 'affiliate manager', 'affiliate specialist', 'partner marketing'],
+      'brand manager': ['brand manager', 'brand marketing manager', 'brand specialist', 'brand strategist'],
+      'product manager': ['product manager', 'product owner', 'product specialist', 'product lead', 'pm'],
+      'project manager': ['project manager', 'project lead', 'project coordinator', 'project specialist', 'pm'],
+      'program manager': ['program manager', 'program lead', 'program coordinator', 'program specialist'],
+      
+      // Sales & Business Development
+      'sales manager': ['sales manager', 'sales lead', 'sales head', 'sales director', 'sales supervisor'],
+      'sales executive': ['sales executive', 'sales rep', 'sales representative', 'sales associate', 'sales officer'],
+      'business development': ['business development', 'bd manager', 'business dev', 'biz dev', 'bd executive'],
+      'account manager': ['account manager', 'account executive', 'client manager', 'customer manager', 'key account manager'],
+      'sales engineer': ['sales engineer', 'technical sales', 'pre sales engineer', 'sales technical specialist'],
+      'inside sales': ['inside sales', 'inside sales rep', 'inside sales executive', 'tele sales', 'phone sales'],
+      'field sales': ['field sales', 'outside sales', 'field sales rep', 'territory sales', 'regional sales'],
+      
+      // Finance & Accounting
+      'accountant': ['accountant', 'accounting', 'accounts executive', 'accounts officer', 'bookkeeper', 'financial accountant'],
+      'financial analyst': ['financial analyst', 'finance analyst', 'fin analyst', 'financial planning analyst', 'fp&a analyst'],
+      'tax consultant': ['tax consultant', 'tax advisor', 'tax specialist', 'tax expert', 'tax accountant'],
+      'auditor': ['auditor', 'internal auditor', 'external auditor', 'audit associate', 'audit specialist'],
+      'investment banker': ['investment banker', 'investment banking', 'ib analyst', 'corporate finance', 'mergers acquisitions'],
+      'financial advisor': ['financial advisor', 'financial consultant', 'wealth manager', 'investment advisor', 'financial planner'],
+      'treasury analyst': ['treasury analyst', 'treasury specialist', 'cash management analyst', 'liquidity analyst'],
+      'credit analyst': ['credit analyst', 'credit specialist', 'credit risk analyst', 'loan analyst', 'underwriter'],
+      
+      // Operations & Supply Chain
+      'operations manager': ['operations manager', 'ops manager', 'operations lead', 'operational manager', 'ops lead'],
+      'supply chain manager': ['supply chain manager', 'scm', 'logistics manager', 'procurement manager', 'sourcing manager'],
+      'quality assurance': ['quality assurance', 'qa engineer', 'qa analyst', 'quality control', 'qc engineer', 'test engineer'],
+      'production manager': ['production manager', 'manufacturing manager', 'plant manager', 'production supervisor'],
+      'inventory manager': ['inventory manager', 'inventory specialist', 'stock manager', 'warehouse manager'],
+      'logistics coordinator': ['logistics coordinator', 'logistics specialist', 'shipping coordinator', 'transport coordinator'],
+      'facilities manager': ['facilities manager', 'facility manager', 'facilities coordinator', 'building manager'],
+      
+      // Human Resources
+      'hr manager': ['hr manager', 'human resources manager', 'hr head', 'hr director', 'people manager'],
+      'hr executive': ['hr executive', 'hr specialist', 'hr coordinator', 'hr officer', 'people operations'],
+      'recruiter': ['recruiter', 'talent acquisition', 'recruitment specialist', 'hiring manager', 'talent recruiter'],
+      'hr business partner': ['hr business partner', 'hrbp', 'hr partner', 'people business partner'],
+      'compensation analyst': ['compensation analyst', 'compensation specialist', 'payroll analyst', 'benefits analyst'],
+      'training manager': ['training manager', 'learning development manager', 'ld manager', 'training specialist'],
+      'employee relations': ['employee relations', 'er specialist', 'employee relations manager', 'workplace relations'],
+      
+      // Customer Service & Support
+      'customer service': ['customer service', 'customer care', 'customer support', 'client service', 'customer success'],
+      'customer support': ['customer support', 'technical support', 'support engineer', 'helpdesk', 'support specialist'],
+      'call center': ['call center', 'call centre', 'contact center', 'customer service rep', 'telephone operator'],
+      'customer success': ['customer success', 'customer success manager', 'cs manager', 'account success manager'],
+      
+      // Healthcare & Medical
+      'doctor': ['doctor', 'physician', 'medical doctor', 'md', 'medical practitioner', 'doctorate'],
+      'nurse': ['nurse', 'registered nurse', 'rn', 'nursing', 'staff nurse', 'nurse practitioner'],
+      'pharmacist': ['pharmacist', 'pharmacy', 'pharmaceutical', 'drug specialist', 'dispensing pharmacist'],
+      'medical technician': ['medical technician', 'lab technician', 'medical lab tech', 'clinical technician'],
+      'physical therapist': ['physical therapist', 'physiotherapist', 'pt', 'physical therapy', 'rehabilitation therapist'],
+      'dental hygienist': ['dental hygienist', 'dental assistant', 'oral hygienist', 'dental care specialist'],
+      
+      // Education & Training
+      'teacher': ['teacher', 'instructor', 'educator', 'faculty', 'professor', 'tutor', 'trainer'],
+      'principal': ['principal', 'headmaster', 'headmistress', 'school principal', 'head teacher'],
+      'curriculum developer': ['curriculum developer', 'curriculum designer', 'educational content developer', 'instructional designer'],
+      'training coordinator': ['training coordinator', 'training specialist', 'learning coordinator', 'development coordinator'],
+      'academic advisor': ['academic advisor', 'student advisor', 'academic counselor', 'educational advisor'],
+      
+      // Legal & Compliance
+      'lawyer': ['lawyer', 'attorney', 'advocate', 'legal counsel', 'solicitor', 'barrister', 'legal advisor'],
+      'paralegal': ['paralegal', 'legal assistant', 'law clerk', 'legal secretary', 'legal support'],
+      'compliance officer': ['compliance officer', 'compliance manager', 'regulatory compliance', 'compliance specialist'],
+      'contract manager': ['contract manager', 'contract specialist', 'legal contract manager', 'agreement manager'],
+      
+      // Engineering (Various Disciplines)
+      'mechanical engineer': ['mechanical engineer', 'mech engineer', 'mechanical eng', 'mechanical design engineer'],
+      'civil engineer': ['civil engineer', 'civil eng', 'structural engineer', 'civil construction engineer'],
+      'electrical engineer': ['electrical engineer', 'electrical eng', 'power engineer', 'electrical design engineer'],
+      'chemical engineer': ['chemical engineer', 'chem engineer', 'process engineer', 'chemical process engineer'],
+      'aerospace engineer': ['aerospace engineer', 'aviation engineer', 'aircraft engineer', 'aerospace design engineer'],
+      'automotive engineer': ['automotive engineer', 'auto engineer', 'vehicle engineer', 'automotive design engineer'],
+      'biomedical engineer': ['biomedical engineer', 'bio engineer', 'medical engineer', 'biomedical device engineer'],
+      'environmental engineer': ['environmental engineer', 'env engineer', 'environmental consultant', 'sustainability engineer'],
+      
+      // Architecture & Construction
+      'architect': ['architect', 'architecture', 'building architect', 'design architect', 'project architect'],
+      'interior architect': ['interior architect', 'interior design architect', 'space architect', 'interior planner'],
+      'landscape architect': ['landscape architect', 'landscape designer', 'garden architect', 'outdoor designer'],
+      'construction manager': ['construction manager', 'site manager', 'construction supervisor', 'building manager'],
+      'civil contractor': ['civil contractor', 'construction contractor', 'building contractor', 'general contractor'],
+      
+      // Media & Entertainment
+      'journalist': ['journalist', 'reporter', 'news reporter', 'correspondent', 'media journalist'],
+      'editor': ['editor', 'content editor', 'text editor', 'managing editor', 'copy editor'],
+      'photographer': ['photographer', 'photo artist', 'camera operator', 'visual artist', 'photojournalist'],
+      'videographer': ['videographer', 'video producer', 'video editor', 'motion graphics artist', 'video creator'],
+      'content writer': ['content writer', 'content creator', 'copywriter', 'blog writer', 'article writer'],
+      'social media manager': ['social media manager', 'social media specialist', 'smm', 'social media coordinator'],
+      
+      // Retail & E-commerce
+      'store manager': ['store manager', 'retail manager', 'shop manager', 'store supervisor', 'retail supervisor'],
+      'sales associate': ['sales associate', 'retail associate', 'store associate', 'sales clerk', 'retail clerk'],
+      'merchandiser': ['merchandiser', 'merchandising specialist', 'visual merchandiser', 'product merchandiser'],
+      'e-commerce manager': ['e-commerce manager', 'ecommerce manager', 'online store manager', 'digital commerce manager'],
+      'category manager': ['category manager', 'product category manager', 'merchandise category manager'],
+      
+      // Hospitality & Tourism
+      'hotel manager': ['hotel manager', 'hotel general manager', 'hotel operations manager', 'lodging manager'],
+      'chef': ['chef', 'head chef', 'executive chef', 'kitchen chef', 'culinary chef', 'cook'],
+      'restaurant manager': ['restaurant manager', 'food service manager', 'dining manager', 'restaurant supervisor'],
+      'travel agent': ['travel agent', 'travel consultant', 'travel specialist', 'tourism agent', 'vacation planner'],
+      'event manager': ['event manager', 'event coordinator', 'event planner', 'conference manager', 'meeting planner'],
+      
+      // General Terms (fallbacks) - Enhanced with more variations
+      'developer': ['developer', 'devloper', 'developr', 'dev', 'programmer', 'coder', 'software developer', 'software dev', 'sw dev', 'prog', 'coding'],
+      'engineer': ['engineer', 'engneer', 'enginer', 'engr', 'engineering', 'technical engineer', 'tech eng', 'technical', 'eng', 'tech'],
+      'manager': ['manager', 'mangr', 'mgr', 'management', 'supervisor', 'lead', 'head', 'mgmt', 'superv', 'leadship', 'head of'],
+      'analyst': ['analyst', 'analysit', 'analysis', 'research analyst', 'analyze', 'analytics', 'data analysis'],
+      'consultant': ['consultant', 'consulting', 'advisor', 'specialist', 'expert', 'professional', 'cons', 'advice', 'consult'],
+      'coordinator': ['coordinator', 'coordination', 'organizer', 'facilitator', 'liaison', 'coord', 'organize', 'facilitate'],
+      'specialist': ['specialist', 'specialization', 'expert', 'professional', 'technician', 'spec', 'expertise', 'pro'],
+      'assistant': ['assistant', 'associate', 'support', 'helper', 'aide', 'junior', 'asst', 'support staff', 'helper staff'],
+      'director': ['director', 'head', 'chief', 'vp', 'vice president', 'executive', 'dir', 'head of', 'chief of', 'vice pres'],
+      'executive': ['executive', 'senior', 'lead', 'principal', 'chief', 'head', 'exec', 'senior level', 'principal level'],
+      
+      // Additional Basic Terms and Shortforms
+      'sales': ['sales', 'sale', 'selling', 'sell', 'salesperson', 'salesman', 'saleswoman', 'sales rep', 'revenue'],
+      'marketing': ['marketing', 'market', 'promotion', 'promote', 'advertising', 'advertise', 'brand', 'campaign'],
+      'hr': ['hr', 'human resources', 'human resource', 'people', 'personnel', 'staff', 'employee', 'workforce'],
+      'finance': ['finance', 'financial', 'money', 'accounting', 'accounts', 'budget', 'revenue', 'profit', 'cost'],
+      'admin': ['admin', 'administrative', 'administration', 'office', 'secretary', 'receptionist', 'clerk'],
+      'support': ['support', 'help', 'assistance', 'service', 'customer service', 'technical support', 'helpdesk'],
+      'design': ['design', 'designer', 'creative', 'art', 'graphics', 'visual', 'ui', 'ux', 'branding'],
+      'content': ['content', 'writing', 'writer', 'copy', 'copywriter', 'blog', 'article', 'editorial', 'journalism'],
+      'teaching': ['teaching', 'teacher', 'education', 'trainer', 'training', 'instructor', 'professor', 'tutor'],
+      'healthcare': ['healthcare', 'health', 'medical', 'doctor', 'nurse', 'hospital', 'clinic', 'pharmacy'],
+      'legal': ['legal', 'law', 'lawyer', 'attorney', 'court', 'justice', 'law firm', 'legal advice'],
+      'retail': ['retail', 'store', 'shop', 'shopping', 'sales associate', 'cashier', 'merchandise'],
+      'hospitality': ['hospitality', 'hotel', 'restaurant', 'food', 'catering', 'tourism', 'travel'],
+      'construction': ['construction', 'building', 'contractor', 'architect', 'civil', 'site', 'project'],
+      'manufacturing': ['manufacturing', 'production', 'factory', 'assembly', 'quality control', 'plant'],
+      'transportation': ['transportation', 'logistics', 'shipping', 'delivery', 'driver', 'transport', 'freight'],
+      'security': ['security', 'safety', 'guard', 'protection', 'surveillance', 'cyber security'],
+      'cleaning': ['cleaning', 'janitor', 'maintenance', 'housekeeping', 'sanitation', 'custodial'],
+      'food': ['food', 'cooking', 'chef', 'kitchen', 'culinary', 'beverage', 'restaurant'],
+      'fitness': ['fitness', 'gym', 'trainer', 'exercise', 'wellness', 'health coach', 'personal trainer'],
+      'beauty': ['beauty', 'salon', 'spa', 'cosmetics', 'hair', 'makeup', 'aesthetic'],
+      'automotive': ['automotive', 'car', 'vehicle', 'mechanic', 'auto', 'garage', 'repair'],
+      'technology': ['technology', 'tech', 'it', 'software', 'hardware', 'computer', 'digital', 'tech'],
+      'communication': ['communication', 'telecom', 'phone', 'telephone', 'internet', 'network', 'wireless'],
+      'real estate': ['real estate', 'property', 'realtor', 'broker', 'housing', 'land', 'commercial'],
+      'banking': ['banking', 'bank', 'financial services', 'investment', 'loan', 'credit', 'mortgage'],
+      'insurance': ['insurance', 'insurer', 'claims', 'policy', 'coverage', 'risk', 'actuary'],
+      'government': ['government', 'public sector', 'civil service', 'public service', 'municipal', 'federal'],
+      'nonprofit': ['nonprofit', 'ngo', 'charity', 'volunteer', 'social work', 'community service'],
+      'media': ['media', 'journalism', 'news', 'broadcasting', 'television', 'radio', 'publishing'],
+      'entertainment': ['entertainment', 'gaming', 'music', 'film', 'theater', 'arts', 'creative'],
+      'sports': ['sports', 'athletic', 'fitness', 'coach', 'trainer', 'recreation', 'athlete'],
+      'agriculture': ['agriculture', 'farming', 'crop', 'livestock', 'agricultural', 'farm', 'rural'],
+      'energy': ['energy', 'power', 'electricity', 'oil', 'gas', 'renewable', 'solar', 'wind'],
+      'environment': ['environment', 'environmental', 'sustainability', 'green', 'conservation', 'ecology'],
+      
+      // Common Shortforms and Abbreviations
+      'ceo': ['ceo', 'chief executive officer', 'chief exec', 'president'],
+      'cto': ['cto', 'chief technology officer', 'chief tech officer'],
+      'cfo': ['cfo', 'chief financial officer', 'chief finance officer'],
+      'coo': ['coo', 'chief operating officer', 'chief operations officer'],
+      'vp': ['vp', 'vice president', 'vice pres', 'v.p.'],
+      'svp': ['svp', 'senior vice president', 'senior vp'],
+      'avp': ['avp', 'assistant vice president', 'assistant vp'],
+      'senior': ['senior', 'sr', 'senior level', 'experienced'],
+      'junior': ['junior', 'jr', 'entry level', 'fresher', 'beginner'],
+      'intern': ['intern', 'internship', 'trainee', 'apprentice', 'inter', 'intirn', 'intrn', 'intership', 'internsip', 'internshp', 'trainee', 'apprentice'],
+      'freelance': ['freelance', 'freelancer', 'contract', 'contractor', 'consultant'],
+      'remote': ['remote', 'work from home', 'wfh', 'virtual', 'online'],
+      'part time': ['part time', 'part-time', 'pt', 'half time', 'flexible hours'],
+      'full time': ['full time', 'full-time', 'ft', 'permanent', 'regular'],
+      'contract': ['contract', 'contractual', 'temp', 'temporary', 'project based'],
+      
+      // Technology Shortforms
+      'ai': ['ai', 'artificial intelligence', 'machine learning', 'ml', 'deep learning'],
+      'ml': ['ml', 'machine learning', 'ai', 'artificial intelligence', 'deep learning'],
+      'data': ['data', 'database', 'db', 'data management', 'data processing'],
+      'cloud': ['cloud', 'aws', 'azure', 'gcp', 'cloud computing', 'saas'],
+      'mobile': ['mobile', 'app', 'ios', 'android', 'smartphone', 'tablet'],
+      'web': ['web', 'website', 'internet', 'online', 'digital', 'ecommerce'],
+      'api': ['api', 'rest api', 'web service', 'integration', 'microservice'],
+      'ui': ['ui', 'user interface', 'interface design', 'frontend', 'user experience'],
+      'ux': ['ux', 'user experience', 'usability', 'user research', 'interaction design'],
+      'qa': ['qa', 'quality assurance', 'testing', 'test engineer', 'quality control'],
+      'devops': ['devops', 'dev ops', 'deployment', 'ci cd', 'automation'],
+      'blockchain': ['blockchain', 'crypto', 'cryptocurrency', 'web3', 'defi'],
+      'iot': ['iot', 'internet of things', 'connected devices', 'smart devices'],
+      'ar': ['ar', 'augmented reality', 'mixed reality', 'virtual reality'],
+      'vr': ['vr', 'virtual reality', 'immersive', '3d', 'simulation'],
+      
+      // Industry Shortforms
+      'b2b': ['b2b', 'business to business', 'enterprise', 'corporate'],
+      'b2c': ['b2c', 'business to consumer', 'retail', 'consumer'],
+      'saas': ['saas', 'software as a service', 'cloud software', 'subscription'],
+      'paas': ['paas', 'platform as a service', 'cloud platform'],
+      'iaas': ['iaas', 'infrastructure as a service', 'cloud infrastructure'],
+      'fintech': ['fintech', 'financial technology', 'digital finance', 'payments'],
+      'edtech': ['edtech', 'education technology', 'e-learning', 'online education'],
+      'healthtech': ['healthtech', 'health technology', 'digital health', 'medtech'],
+      'proptech': ['proptech', 'property technology', 'real estate tech'],
+      'agritech': ['agritech', 'agriculture technology', 'farm tech', 'agtech'],
+      'cleantech': ['cleantech', 'clean technology', 'green tech', 'sustainability tech'],
+      
+      // Common Job Search Terms
+      'job': ['job', 'position', 'role', 'opportunity', 'career', 'employment', 'work'],
+      'career': ['career', 'profession', 'occupation', 'vocation', 'job', 'work'],
+      'work': ['work', 'job', 'employment', 'labor', 'service', 'duty'],
+      'employment': ['employment', 'job', 'work', 'career', 'occupation'],
+      'hiring': ['hiring', 'recruitment', 'recruiting', 'talent acquisition', 'staffing'],
+      'vacancy': ['vacancy', 'opening', 'position', 'opportunity', 'job opening'],
+      'fresher': ['fresher', 'freshers', 'entry level', 'junior', 'beginner', 'new graduate', 'entry', 'fresh', 'newbie', 'novice', 'trainee', 'graduate', '0-1', '0 to 1', 'zero experience', 'no experience', 'starting', 'entry-level'],
+      'experienced': ['experienced', 'senior', 'expert', 'professional', 'skilled'],
+      'urgent': ['urgent', 'immediate', 'asap', 'priority', 'rush'],
+      'walk in': ['walk in', 'walk-in', 'walkin', 'immediate joining'],
+      'work from home': ['work from home', 'wfh', 'remote work', 'home office', 'virtual'],
+      
+      // Location Related Terms
+      'bangalore': ['bangalore', 'bengaluru', 'blr', 'bangalore city'],
+      'mumbai': ['mumbai', 'bombay', 'mum', 'mumbai city'],
+      'delhi': ['delhi', 'ncr', 'new delhi', 'delhi ncr', 'gurgaon', 'noida'],
+      'hyderabad': ['hyderabad', 'hyd', 'cyberabad', 'hyderabad city'],
+      'chennai': ['chennai', 'madras', 'chn', 'chennai city'],
+      'pune': ['pune', 'pun', 'pune city'],
+      'kolkata': ['kolkata', 'calcutta', 'kol', 'kolkata city'],
+      'ahmedabad': ['ahmedabad', 'amd', 'ahmedabad city'],
+      'indore': ['indore', 'ind', 'indore city'],
+      'chandigarh': ['chandigarh', 'chd', 'chandigarh city'],
+      
+      // Company Size Terms
+      'startup': ['startup', 'start-up', 'early stage', 'seed stage', 'venture'],
+      'midsize': ['midsize', 'mid-size', 'medium', 'mid level', 'growing company'],
+      'enterprise': ['enterprise', 'large company', 'fortune 500', 'corporate', 'multinational'],
+      'mnc': ['mnc', 'multinational', 'global company', 'international', 'global'],
+      'unicorn': ['unicorn', 'billion dollar', 'high valuation', 'tech giant'],
+      
+      // Experience Level Terms - Enhanced
+      'entry level': ['entry level', 'fresher', '0-1 years', 'beginner', 'new graduate', 'entry', 'fresh', 'junior', 'newbie', 'novice', 'trainee', 'graduate', '0-1', '0 to 1', 'zero experience', 'no experience', 'starting', 'entry-level', 'first job', 'career starter'],
+      'mid level': ['mid level', 'mid-level', '2-5 years', 'intermediate', 'experienced', 'mid', 'middle', '2-5', '2 to 5', 'some experience', 'few years', 'developing', 'growing'],
+      'senior level': ['senior level', 'senior-level', '5+ years', 'expert', 'leadership', 'senior', 'sr', '5+', '5 plus', 'experienced', 'expert', 'lead', 'principal', 'staff', 'tech lead', 'team lead'],
+      'executive level': ['executive level', 'c-level', 'director level', 'vice president', 'executive', 'director', 'vp', 'head', 'chief', 'c-level', 'management', 'leadership', 'top level'],
+      
+      // Salary Related Terms
+      'high salary': ['high salary', 'good pay', 'competitive salary', 'attractive package'],
+      'low salary': ['low salary', 'budget friendly', 'affordable', 'cost effective'],
+      'negotiable': ['negotiable', 'negotiable salary', 'salary negotiable', 'discuss salary'],
+      
+      // Work Arrangement Terms
+      'flexible': ['flexible', 'flexible hours', 'flexible timing', 'work life balance'],
+      'night shift': ['night shift', 'night work', 'evening shift', 'graveyard shift'],
+      'day shift': ['day shift', 'day work', 'morning shift', 'regular hours'],
+      'weekend': ['weekend', 'weekend work', 'saturday sunday', 'weekend shift'],
+      
+      // Skill Related Terms
+      'leadership': ['leadership', 'leadership skills', 'team lead', 'management skills'],
+      'problem solving': ['problem solving', 'analytical', 'critical thinking', 'troubleshooting'],
+      'teamwork': ['teamwork', 'collaboration', 'team player', 'cooperative'],
+      'time management': ['time management', 'organizational', 'planning', 'efficiency'],
+      'sales skills': ['sales skills', 'selling', 'persuasion', 'negotiation', 'closing'],
+      'technical skills': ['technical skills', 'technical', 'programming', 'software', 'hardware'],
+      'creative': ['creative', 'creativity', 'innovative', 'design thinking', 'artistic'],
+      'analytical': ['analytical', 'analysis', 'data analysis', 'research', 'statistical'],
+      
+      // Education Related Terms
+      'graduate': ['graduate', 'bachelor', 'bachelors', 'degree', 'undergraduate'],
+      'postgraduate': ['postgraduate', 'masters', 'master degree', 'mba', 'ms', 'ma'],
+      'phd': ['phd', 'doctorate', 'doctoral', 'ph.d', 'research degree'],
+      'diploma': ['diploma', 'certificate', 'certification', 'course completion'],
+      'engineering': ['engineering', 'b.tech', 'be', 'b.e', 'engineering degree'],
+      'mba': ['mba', 'master of business administration', 'business degree', 'management degree'],
+      'computer science': ['computer science', 'cs', 'cse', 'computer engineering', 'it'],
+      'commerce': ['commerce', 'b.com', 'bcom', 'business studies', 'accounting'],
+      'arts': ['arts', 'ba', 'b.a', 'humanities', 'liberal arts'],
+      'science': ['science', 'bsc', 'b.sc', 'natural sciences', 'pure sciences'],
+    }
+    
+    // Check for exact matches first (highest priority)
+    for (const [correctTerm, variations] of Object.entries(keywordMappings)) {
+      if (variations.some(variation => 
+        lowerQuery.includes(variation) || 
+        variation.includes(lowerQuery) ||
+        calculateSimilarity(lowerQuery, variation) > 0.8
+      )) {
+        return correctTerm
+      }
+    }
+    
+    // Check for partial matches and similar words (medium priority)
+    for (const [correctTerm, variations] of Object.entries(keywordMappings)) {
+      for (const variation of variations) {
+        if (calculateSimilarity(lowerQuery, variation) > 0.7) {
+          return correctTerm
+        }
+      }
+    }
+    
+    // Check for word-by-word matching (lower priority)
+    const queryWords = lowerQuery.split(/\s+/)
+    for (const [correctTerm, variations] of Object.entries(keywordMappings)) {
+      for (const variation of variations) {
+        const variationWords = variation.split(/\s+/)
+        if (queryWords.some(qWord => 
+          variationWords.some(vWord => 
+            calculateSimilarity(qWord, vWord) > 0.8
+          )
+        )) {
+          return correctTerm
+        }
+      }
+    }
+    
+    // Enhanced fallback: Check for partial matches in any direction
+    for (const [correctTerm, variations] of Object.entries(keywordMappings)) {
+      for (const variation of variations) {
+        // Check if any word from query matches any word from variation
+        if (queryWords.some(qWord => 
+          variation.toLowerCase().split(/\s+/).some(vWord => 
+            qWord.includes(vWord) || vWord.includes(qWord) || calculateSimilarity(qWord, vWord) > 0.6
+          )
+        )) {
+          return correctTerm
+        }
+      }
+    }
+    
+    // Ultra fallback: Check for single character differences and common typos
+    for (const [correctTerm, variations] of Object.entries(keywordMappings)) {
+      for (const variation of variations) {
+        if (calculateSimilarity(lowerQuery, variation) > 0.5) {
+          return correctTerm
+        }
+      }
+    }
+    
+    // Final fallback: If no match found, return original query but with basic processing
+    // This ensures even completely unknown terms get basic search functionality
+    return query.trim()
+  }
+
+  // Simple similarity calculation (Levenshtein distance based)
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2
+    const shorter = str1.length > str2.length ? str2 : str1
+    
+    if (longer.length === 0) return 1.0
+    
+    const distance = levenshteinDistance(longer, shorter)
+    return (longer.length - distance) / longer.length
+  }
+  
+  // Levenshtein distance calculation
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = []
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i]
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length]
+  }
+
   const experienceLevels = [
     "0-1",
     "2-5",
@@ -870,6 +1393,7 @@ export default function JobsPage() {
   const jobTypes = [
     "Full-time",
     "Part-time",
+    "part-time", // Lowercase version for navbar compatibility
     "Contract",
     "Internship",
     "Freelance",
@@ -927,17 +1451,122 @@ export default function JobsPage() {
     let filtered = [...allJobs]
     console.log('🔄 Starting with', allJobs.length, 'jobs')
 
-    // Search filter - Case insensitive with better matching
+    // Enhanced search filter with smart matching and comprehensive job role detection
     if (filters.search) {
-      console.log('🔍 Applying search filter:', filters.search)
-      const searchLower = filters.search.toLowerCase().trim()
-      filtered = filtered.filter(job =>
-        job.title.toLowerCase().includes(searchLower) ||
-        job.company.name.toLowerCase().includes(searchLower) ||
-        job.skills.some(skill => skill.toLowerCase().includes(searchLower)) ||
-        job.description.toLowerCase().includes(searchLower) ||
-        job.category.toLowerCase().includes(searchLower)
-      )
+      console.log('🔍 Applying enhanced search filter:', filters.search)
+      const processedSearch = processSearchQuery(filters.search)
+      
+      filtered = filtered.filter(job => {
+        const jobTitle = job.title.toLowerCase()
+        const companyName = job.company.name.toLowerCase()
+        const jobSkills = job.skills.map(skill => skill.toLowerCase())
+        const jobDescription = job.description.toLowerCase()
+        const jobCategory = job.category.toLowerCase()
+        const jobLocation = job.location.toLowerCase()
+        
+        // Handle exact matches with structured data
+        if (typeof processedSearch === 'object' && processedSearch.isExactMatch) {
+          console.log('🎯 Processing exact match:', processedSearch)
+          
+          // For exact matches, require precise matching
+          let exactMatch = true
+          
+          if (processedSearch.jobTitle) {
+            exactMatch = exactMatch && (
+              jobTitle.includes(processedSearch.jobTitle.toLowerCase()) ||
+              processedSearch.jobTitle.toLowerCase().includes(jobTitle)
+            )
+          }
+          
+          if (processedSearch.company) {
+            exactMatch = exactMatch && (
+              companyName.includes(processedSearch.company.toLowerCase()) ||
+              processedSearch.company.toLowerCase().includes(companyName)
+            )
+          }
+          
+          if (processedSearch.location) {
+            exactMatch = exactMatch && (
+              jobLocation.includes(processedSearch.location.toLowerCase()) ||
+              processedSearch.location.toLowerCase().includes(jobLocation)
+            )
+          }
+          
+          return exactMatch
+        }
+        
+        // Regular search processing
+        const searchLower = typeof processedSearch === 'string' ? processedSearch.toLowerCase().trim() : filters.search.toLowerCase().trim()
+        const originalSearchLower = filters.search.toLowerCase().trim()
+        
+        console.log('🔍 Processing regular search:', { searchLower, originalSearchLower, jobTitle: job.title, companyName: job.company.name })
+        
+        // Check for exact matches in title, company, skills, description, category, and location
+        const exactMatch = 
+          jobTitle.includes(searchLower) ||
+          companyName.includes(searchLower) ||
+          jobSkills.some(skill => skill.includes(searchLower)) ||
+          jobDescription.includes(searchLower) ||
+          jobCategory.includes(searchLower) ||
+          jobLocation.includes(searchLower)
+        
+        // Check for original search term as well (in case no processing was done)
+        const originalMatch = 
+          jobTitle.includes(originalSearchLower) ||
+          companyName.includes(originalSearchLower) ||
+          jobSkills.some(skill => skill.includes(originalSearchLower)) ||
+          jobDescription.includes(originalSearchLower) ||
+          jobCategory.includes(originalSearchLower) ||
+          jobLocation.includes(originalSearchLower)
+        
+        // Check for partial word matches and synonyms
+        const words = searchLower.split(/\s+/)
+        const originalWords = originalSearchLower.split(/\s+/)
+        
+        const wordMatch = words.some(word => 
+          word.length > 2 && (
+            jobTitle.includes(word) ||
+            companyName.includes(word) ||
+            jobSkills.some(skill => skill.includes(word)) ||
+            jobDescription.includes(word) ||
+            jobCategory.includes(word) ||
+            jobLocation.includes(word)
+          )
+        )
+        
+        const originalWordMatch = originalWords.some(word => 
+          word.length > 2 && (
+            jobTitle.includes(word) ||
+            companyName.includes(word) ||
+            jobSkills.some(skill => skill.includes(word)) ||
+            jobDescription.includes(word) ||
+            jobCategory.includes(word) ||
+            jobLocation.includes(word)
+          )
+        )
+        
+        // Check for skill-based matching (for programming languages, technologies, etc.)
+        const skillMatch = jobSkills.some(skill => 
+          calculateSimilarity(skill, searchLower) > 0.7 ||
+          calculateSimilarity(skill, originalSearchLower) > 0.7
+        )
+        
+        const result = exactMatch || originalMatch || wordMatch || originalWordMatch || skillMatch
+        if (result) {
+          console.log('✅ Search match found:', { 
+            jobTitle: job.title, 
+            companyName: job.company.name, 
+            searchLower, 
+            originalSearchLower,
+            exactMatch, 
+            originalMatch, 
+            wordMatch, 
+            originalWordMatch, 
+            skillMatch 
+          })
+        }
+        return result
+      })
     }
 
     // Location filter - Case insensitive with better matching
@@ -1015,11 +1644,12 @@ export default function JobsPage() {
     // Industry Categories - Case insensitive matching with better logic
     if (filters.industryCategories && filters.industryCategories.length > 0) {
       console.log('🏭 Applying industry categories filter:', filters.industryCategories)
+      const beforeCount = filtered.length
       filtered = filtered.filter(job => {
         const companyIndustry = ((job as any).company?.industry || '').toLowerCase().trim()
         const companyName = job.company.name.toLowerCase().trim()
         
-        return filters.industryCategories!.some(industry => {
+        const match = filters.industryCategories!.some(industry => {
           const industryLower = industry.toLowerCase().trim()
           return companyIndustry.includes(industryLower) ||
                  industryLower.includes(companyIndustry) ||
@@ -1028,7 +1658,19 @@ export default function JobsPage() {
                  (industryLower === 'it' && (companyIndustry.includes('information technology') || companyIndustry.includes('software'))) ||
                  (industryLower === 'fintech' && (companyIndustry.includes('financial') || companyIndustry.includes('banking')))
         })
+        
+        if (match) {
+          console.log('✅ Industry match found:', { 
+            jobTitle: job.title, 
+            companyName: job.company.name, 
+            companyIndustry, 
+            selectedIndustries: filters.industryCategories 
+          })
+        }
+        
+        return match
       })
+      console.log(`🏭 Industry filter: ${beforeCount} → ${filtered.length} jobs`)
     }
 
     // Department Categories - Case insensitive matching with better logic
@@ -1090,7 +1732,7 @@ export default function JobsPage() {
         // Handle remote work variations
         if (q === 'remote' || q.includes('home')) {
           return wm.includes('remote') || 
-                 wm.includes('work from home') || 
+                 (wm.includes('work from home') || wm.includes('work-from-home')) || 
                  wm.includes('wfh') ||
                  jobLocation.includes('remote')
         }
@@ -1098,7 +1740,7 @@ export default function JobsPage() {
         // Handle on-site work (nearby companies)
         if (q === 'on-site' || q === 'onsite') {
           return !wm.includes('remote') && 
-                 !wm.includes('work from home') && 
+                 !wm.includes('work from home') && !wm.includes('work-from-home') && 
                  !wm.includes('wfh') &&
                  !jobLocation.includes('remote')
         }
@@ -1124,6 +1766,14 @@ export default function JobsPage() {
       const q = filters.companyName.toLowerCase()
       filtered = filtered.filter(job => job.company.name.toLowerCase().includes(q))
     }
+    
+    // Job Title (for exact matches)
+    if (filters.jobTitle) {
+      const q = filters.jobTitle.toLowerCase()
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(q) || q.includes(job.title.toLowerCase())
+      )
+    }
     if (filters.category) {
       filtered = filtered.filter(job => job.category === filters.category)
     }
@@ -1138,7 +1788,7 @@ export default function JobsPage() {
       (filters.search && filters.search.trim()) ||
       (filters.location && filters.location.trim()) ||
       filters.experienceLevels.length ||
-      filters.jobTypes.length ||
+      getVisibleJobTypesCount() > 0 ||
       (filters.salaryRange && filters.salaryRange.trim()) ||
       (filters.industry && filters.industry.trim()) ||
       (filters.department && filters.department.trim()) ||
@@ -1185,6 +1835,17 @@ export default function JobsPage() {
     }
 
     console.log('✅ Final filtered jobs:', filtered.length)
+    if (filtered.length === 0 && (filters.search || filters.industryCategories?.length || filters.departmentCategories?.length || filters.roleCategories?.length)) {
+      console.log('⚠️ No jobs found with current filters:', {
+        search: filters.search,
+        industryCategories: filters.industryCategories,
+        departmentCategories: filters.departmentCategories,
+        roleCategories: filters.roleCategories,
+        location: filters.location,
+        experienceLevels: filters.experienceLevels,
+        jobTypes: filters.jobTypes
+      })
+    }
     return filtered
   }, [allJobs, filters, sortBy])
 
@@ -1193,7 +1854,7 @@ export default function JobsPage() {
     (filters.search && filters.search.trim()) ||
     (filters.location && filters.location.trim()) ||
     filters.experienceLevels.length ||
-    filters.jobTypes.length ||
+    getVisibleJobTypesCount() > 0 ||
     (filters.salaryRange && filters.salaryRange.trim()) ||
     (filters.industry && filters.industry.trim()) ||
     (filters.department && filters.department.trim()) ||
@@ -1240,8 +1901,8 @@ export default function JobsPage() {
     console.log('🔍 Filter change:', filterType, value)
     setFilters(prev => {
       const newFilters = {
-        ...prev,
-        [filterType]: value
+      ...prev,
+      [filterType]: value
       }
       console.log('📊 New filters:', newFilters)
       return newFilters
@@ -1336,7 +1997,7 @@ export default function JobsPage() {
                 <Input
                   placeholder="Search jobs, companies, or keywords..."
                   value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 h-12 border-0 bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-600"
                 />
               </div>
@@ -1360,7 +2021,7 @@ export default function JobsPage() {
                 variant="outline"
                 className={`h-12 px-6 border-0 hover:bg-slate-100 dark:hover:bg-slate-600 ${
                   (filters.experienceLevels.length > 0 || 
-                   filters.jobTypes.length > 0 || 
+                   getVisibleJobTypesCount() > 0 || 
                    filters.salaryRange || 
                    (filters.industryCategories?.length ?? 0) > 0 || 
                    (filters.departmentCategories?.length ?? 0) > 0 || 
@@ -1378,7 +2039,7 @@ export default function JobsPage() {
                 <Filter className="w-4 h-4 mr-2" />
                 Filters
                 {((filters.experienceLevels.length > 0 || 
-                  filters.jobTypes.length > 0 || 
+                  getVisibleJobTypesCount() > 0 || 
                   filters.salaryRange || 
                   (filters.industryCategories?.length ?? 0) > 0 || 
                   (filters.departmentCategories?.length ?? 0) > 0 || 
@@ -1391,7 +2052,7 @@ export default function JobsPage() {
                   filters.recruiterType)) && (
                   <span className="ml-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {(filters.experienceLevels.length + 
-                      filters.jobTypes.length + 
+                      getVisibleJobTypesCount() + 
                       (filters.salaryRange ? 1 : 0) + 
                       (filters.industryCategories?.length ?? 0) + 
                       (filters.departmentCategories?.length ?? 0) + 
@@ -1578,6 +2239,7 @@ export default function JobsPage() {
                     <SelectItem value="midsize">Midsize</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
                     <SelectItem value="multinational">MNC</SelectItem>
+                    <SelectItem value="mnc">MNC (Alternative)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1593,7 +2255,8 @@ export default function JobsPage() {
                     <SelectItem value="on-site">On-site</SelectItem>
                     <SelectItem value="remote">Remote</SelectItem>
                     <SelectItem value="hybrid">Hybrid</SelectItem>
-                    <SelectItem value="work from home">Work from Home</SelectItem>
+                    <SelectItem value="work-from-home">Work from Home</SelectItem>
+                    <SelectItem value="work from home">Work from Home (Alternative)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

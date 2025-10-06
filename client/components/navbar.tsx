@@ -213,11 +213,56 @@ export function Navbar() {
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Explore categories</h4>
                       <div className="space-y-3">
-                        <Link href="/companies?type=unicorn" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Unicorn</Link>
-                        <Link href="/companies?type=mnc" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">MNC</Link>
-                        <Link href="/companies?type=startup" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Startup</Link>
-                        <Link href="/companies?type=product-based" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Product based</Link>
-                        <Link href="/companies?type=internet" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Internet</Link>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('companyType', 'unicorn')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Unicorn
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('companyType', 'mnc')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          MNC
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('companyType', 'startup')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Startup
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('companyType', 'product-based')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Product based
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('industry', 'Internet')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Internet
+                        </button>
                       </div>
                     </div>
 
@@ -225,11 +270,56 @@ export function Navbar() {
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Explore collections</h4>
                       <div className="space-y-3">
-                        <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Top companies</Link>
-                        <Link href="/companies?category=it" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">IT companies</Link>
-                        <Link href="/companies?category=fintech" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Fintech companies</Link>
-                        <Link href="/companies?type=sponsored" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Sponsored companies</Link>
-                        <Link href="/featured-companies" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Featured companies</Link>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('featured', 'true')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Top companies
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('industry', 'IT Services & Consulting')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          IT companies
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('industry', 'FinTech')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Fintech companies
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('companyType', 'sponsored')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Sponsored companies
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            params.set('featured', 'true')
+                            window.location.href = `/companies?${params.toString()}`
+                          }}
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                        >
+                          Featured companies
+                        </button>
                       </div>
                     </div>
                   </div>

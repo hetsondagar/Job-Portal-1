@@ -73,6 +73,188 @@ interface Company {
   urgent: boolean
 }
 
+// Utility functions for advanced search and filtering
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const longer = str1.length > str2.length ? str1 : str2
+  const shorter = str1.length > str2.length ? str2 : str1
+  if (longer.length === 0) return 1.0
+  const distance = levenshteinDistance(longer, shorter)
+  return (longer.length - distance) / longer.length
+}
+
+const levenshteinDistance = (str1: string, str2: string): number => {
+  const matrix = []
+  for (let i = 0; i <= str2.length; i++) { matrix[i] = [i] }
+  for (let j = 0; j <= str1.length; j++) { matrix[0][j] = j }
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1]
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        )
+      }
+    }
+  }
+  return matrix[str2.length][str1.length]
+}
+
+const processSearchQuery = (query: string, companies: Company[]) => {
+  const lowerQuery = query.toLowerCase().trim()
+  
+  if (!lowerQuery || companies.length === 0) {
+    return query.trim()
+  }
+  
+  // Extract all company names from the database
+  const companyNames = companies.map(company => ({
+    name: company.name,
+    industry: company.industry,
+    location: company.location
+  }))
+  
+  // Find exact matches first
+  const exactMatches = companyNames.filter(company => 
+    company.name.toLowerCase() === lowerQuery ||
+    company.industry.toLowerCase() === lowerQuery ||
+    company.location.toLowerCase() === lowerQuery
+  )
+  
+  if (exactMatches.length > 0) {
+    return exactMatches[0].name
+  }
+  
+  // Find contains matches
+  const containsMatches = companyNames.filter(company => 
+    company.name.toLowerCase().includes(lowerQuery) ||
+    lowerQuery.includes(company.name.toLowerCase()) ||
+    company.industry.toLowerCase().includes(lowerQuery) ||
+    lowerQuery.includes(company.industry.toLowerCase()) ||
+    company.location.toLowerCase().includes(lowerQuery) ||
+    lowerQuery.includes(company.location.toLowerCase())
+  )
+  
+  if (containsMatches.length > 0) {
+    // Sort by similarity score and return the best match
+    const bestMatch = containsMatches.reduce((best, current) => {
+      const currentScore = Math.max(
+        calculateSimilarity(lowerQuery, current.name.toLowerCase()),
+        calculateSimilarity(lowerQuery, current.industry.toLowerCase()),
+        calculateSimilarity(lowerQuery, current.location.toLowerCase())
+      )
+      const bestScore = Math.max(
+        calculateSimilarity(lowerQuery, best.name.toLowerCase()),
+        calculateSimilarity(lowerQuery, best.industry.toLowerCase()),
+        calculateSimilarity(lowerQuery, best.location.toLowerCase())
+      )
+      return currentScore > bestScore ? current : best
+    })
+    return bestMatch.name
+  }
+  
+  // Find fuzzy matches with similarity threshold
+  const fuzzyMatches = companyNames
+    .map(company => ({
+      ...company,
+      similarity: Math.max(
+        calculateSimilarity(lowerQuery, company.name.toLowerCase()),
+        calculateSimilarity(lowerQuery, company.industry.toLowerCase()),
+        calculateSimilarity(lowerQuery, company.location.toLowerCase())
+      )
+    }))
+    .filter(company => company.similarity > 0.6)
+    .sort((a, b) => b.similarity - a.similarity)
+  
+  if (fuzzyMatches.length > 0) {
+    return fuzzyMatches[0].name
+  }
+  
+  // Word-by-word matching
+  const queryWords = lowerQuery.split(/\s+/).filter(word => word.length > 2)
+  if (queryWords.length > 0) {
+    const wordMatches = companyNames
+      .map(company => {
+        const companyWords = [
+          ...company.name.toLowerCase().split(/\s+/),
+          ...company.industry.toLowerCase().split(/\s+/),
+          ...company.location.toLowerCase().split(/\s+/)
+        ]
+        
+        const wordSimilarities = queryWords.map(queryWord => 
+          Math.max(...companyWords.map(companyWord => 
+            calculateSimilarity(queryWord, companyWord)
+          ))
+        )
+        
+        const avgSimilarity = wordSimilarities.reduce((sum, sim) => sum + sim, 0) / wordSimilarities.length
+        
+        return {
+          ...company,
+          similarity: avgSimilarity
+        }
+      })
+      .filter(company => company.similarity > 0.7)
+      .sort((a, b) => b.similarity - a.similarity)
+    
+    if (wordMatches.length > 0) {
+      return wordMatches[0].name
+    }
+  }
+  
+  // Final fallback: Return original query
+  return query.trim()
+}
+
+// Function to get search suggestions based on database companies
+const getSearchSuggestions = (query: string, companies: Company[], limit: number = 10): string[] => {
+  const lowerQuery = query.toLowerCase().trim()
+  
+  if (!lowerQuery || companies.length === 0) {
+    return []
+  }
+  
+  // Get all unique company names, industries, and locations
+  const allTerms = new Set<string>()
+  companies.forEach(company => {
+    allTerms.add(company.name)
+    allTerms.add(company.industry)
+    allTerms.add(company.location)
+  })
+  
+  const suggestions = Array.from(allTerms)
+    .filter(term => {
+      const termLower = term.toLowerCase()
+      return (
+        termLower.includes(lowerQuery) ||
+        lowerQuery.includes(termLower) ||
+        calculateSimilarity(lowerQuery, termLower) > 0.6
+      )
+    })
+    .sort((a, b) => {
+      const aLower = a.toLowerCase()
+      const bLower = b.toLowerCase()
+      
+      // Prioritize exact matches
+      if (aLower === lowerQuery) return -1
+      if (bLower === lowerQuery) return 1
+      
+      // Prioritize starts with
+      if (aLower.startsWith(lowerQuery) && !bLower.startsWith(lowerQuery)) return -1
+      if (bLower.startsWith(lowerQuery) && !aLower.startsWith(lowerQuery)) return 1
+      
+      // Sort by similarity
+      const aSim = calculateSimilarity(lowerQuery, aLower)
+      const bSim = calculateSimilarity(lowerQuery, bLower)
+      return bSim - aSim
+    })
+    .slice(0, limit)
+  
+  return suggestions
+}
+
 export default function CompaniesPage() {
   const router = useRouter()
   const { user } = useAuth()
@@ -177,13 +359,103 @@ export default function CompaniesPage() {
     salaryRange: "",
   })
 
-  // Check URL parameters for featured filter
+  // Check URL parameters for filters
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
+      
+      // Handle featured filter
       const featured = urlParams.get('featured')
       if (featured === 'true') {
         setIsFeaturedFilter(true)
+      }
+      
+      // Handle company type filters
+      const companyType = urlParams.get('companyType')
+      if (companyType) {
+        // Map navbar values to filter values
+        const typeMapping: { [key: string]: string } = {
+          'unicorn': 'Unicorn',
+          'mnc': 'MNC',
+          'startup': 'Startup',
+          'product-based': 'Product Based',
+          'sponsored': 'Sponsored'
+        }
+        
+        const mappedType = typeMapping[companyType] || companyType
+        
+        // Map to industry card selection for company types
+        const companyTypeCardMapping: { [key: string]: string } = {
+          'Unicorn': 'Unicorn',
+          'MNC': 'MNCs',
+          'Startup': 'Startup',
+          'Product Based': 'Internet',
+          'Sponsored': 'Internet' // Default to Internet for sponsored
+        }
+        
+        const cardName = companyTypeCardMapping[mappedType]
+        if (cardName) {
+          setSelectedIndustry(cardName)
+        }
+        
+        setFilters(prev => ({
+          ...prev,
+          companyTypes: [mappedType]
+        }))
+        console.log('🏢 Setting company type from URL:', companyType, '→', mappedType, '→', cardName)
+      }
+      
+      // Handle industry filters
+      const industry = urlParams.get('industry')
+      if (industry) {
+        // Map navbar values to filter values
+        const industryMapping: { [key: string]: string } = {
+          'IT Services & Consulting': 'Technology',
+          'FinTech': 'Fintech',
+          'Internet': 'Technology'
+        }
+        
+        const mappedIndustry = industryMapping[industry] || industry
+        
+        // Map to industry card selection
+        const cardMapping: { [key: string]: string } = {
+          'Technology': 'Internet',
+          'Fintech': 'Fintech',
+          'Healthcare': 'Healthcare',
+          'EdTech': 'EdTech',
+          'E-commerce': 'E-commerce',
+          'Manufacturing': 'Manufacturing',
+          'Automotive': 'Automobile'
+        }
+        
+        const cardName = cardMapping[mappedIndustry] || mappedIndustry
+        setSelectedIndustry(cardName)
+        
+        setFilters(prev => ({
+          ...prev,
+          industries: [mappedIndustry]
+        }))
+        console.log('🏭 Setting industry from URL:', industry, '→', mappedIndustry, '→', cardName)
+      }
+      
+      // Handle search filters
+      const search = urlParams.get('search')
+      if (search) {
+        setFilters(prev => ({
+          ...prev,
+          search: search
+        }))
+        console.log('🔍 Setting search from URL:', search)
+      }
+      
+      // Handle location filters
+      const location = urlParams.get('location')
+      if (location) {
+        setFilters(prev => ({
+          ...prev,
+          location: location
+        }))
+        console.log('📍 Setting location from URL:', location)
       }
     }
   }, [])
@@ -510,7 +782,9 @@ export default function CompaniesPage() {
     handleIndustryCardSelection(null)
     setIsFeaturedFilter(false)
     setCurrentPage(1)
-  }, [handleIndustryCardSelection])
+    // Redirect to /companies page
+    router.push('/companies')
+  }, [handleIndustryCardSelection, router])
 
   // Transform backend company to UI model with graceful fallbacks
   const transformCompany = (c: any): Company => {
@@ -562,40 +836,208 @@ export default function CompaniesPage() {
   // Filter and sort companies
   const filteredCompanies = useMemo(() => {
     let filtered = allCompanies
+    console.log('🏢 Starting with', allCompanies.length, 'companies')
 
     // Featured filter (from URL parameter)
     if (isFeaturedFilter) {
       filtered = filtered.filter(company => company.featured)
+      console.log('⭐ Featured filter applied:', filtered.length, 'companies')
     }
 
-    // Search filter
+    // Enhanced Search filter with advanced matching
     if (filters.search) {
-      filtered = filtered.filter(company =>
-        company.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        company.industry.toLowerCase().includes(filters.search.toLowerCase()) ||
-        company.description.toLowerCase().includes(filters.search.toLowerCase())
-      )
+      const beforeCount = filtered.length
+      const processedSearch = processSearchQuery(filters.search, allCompanies)
+      
+      filtered = filtered.filter(company => {
+        const companyName = company.name.toLowerCase()
+        const companyIndustry = company.industry.toLowerCase()
+        const companyDescription = company.description.toLowerCase()
+        const companyLocation = company.location.toLowerCase()
+        const searchLower = processedSearch.toLowerCase().trim()
+        const originalSearchLower = filters.search.toLowerCase().trim()
+        
+        // Check for exact matches with processed search
+        const exactMatch = 
+          companyName.includes(searchLower) ||
+          companyIndustry.includes(searchLower) ||
+          companyDescription.includes(searchLower) ||
+          companyLocation.includes(searchLower)
+        
+        // Check for original search term as well
+        const originalMatch = 
+          companyName.includes(originalSearchLower) ||
+          companyIndustry.includes(originalSearchLower) ||
+          companyDescription.includes(originalSearchLower) ||
+          companyLocation.includes(originalSearchLower)
+        
+        // Check for partial word matches
+        const words = searchLower.split(/\s+/).filter(word => word.length > 2)
+        const originalWords = originalSearchLower.split(/\s+/).filter(word => word.length > 2)
+        
+        const wordMatch = words.some(word => 
+          companyName.includes(word) ||
+          companyIndustry.includes(word) ||
+          companyDescription.includes(word) ||
+          companyLocation.includes(word)
+        )
+        
+        const originalWordMatch = originalWords.some(word => 
+          companyName.includes(word) ||
+          companyIndustry.includes(word) ||
+          companyDescription.includes(word) ||
+          companyLocation.includes(word)
+        )
+        
+        // Check for fuzzy matches using similarity
+        const fuzzyMatch = 
+          calculateSimilarity(companyName, searchLower) > 0.6 ||
+          calculateSimilarity(companyIndustry, searchLower) > 0.6 ||
+          calculateSimilarity(companyDescription, searchLower) > 0.6 ||
+          calculateSimilarity(companyLocation, searchLower) > 0.6 ||
+          calculateSimilarity(companyName, originalSearchLower) > 0.6 ||
+          calculateSimilarity(companyIndustry, originalSearchLower) > 0.6 ||
+          calculateSimilarity(companyDescription, originalSearchLower) > 0.6 ||
+          calculateSimilarity(companyLocation, originalSearchLower) > 0.6
+        
+        const result = exactMatch || originalMatch || wordMatch || originalWordMatch || fuzzyMatch
+        
+        if (result) {
+          console.log('✅ Dynamic company search match found:', { 
+            companyName: company.name, 
+            processedSearch,
+            originalSearch: filters.search,
+            exactMatch, 
+            originalMatch, 
+            wordMatch, 
+            originalWordMatch, 
+            fuzzyMatch 
+          })
+        }
+        
+        return result
+      })
+      console.log('🔍 Enhanced search filter applied:', beforeCount, '→', filtered.length, 'companies')
     }
 
     // Location filter
     if (filters.location) {
+      const beforeCount = filtered.length
       filtered = filtered.filter(company =>
         company.location.toLowerCase().includes(filters.location.toLowerCase())
       )
+      console.log('📍 Location filter applied:', beforeCount, '→', filtered.length, 'companies')
     }
 
-    // Industry filter
+    // Industry filter - Enhanced with case-sensitive and typo-tolerant matching
     if (filters.industries.length > 0) {
-      filtered = filtered.filter(company =>
-        filters.industries.includes(company.industry)
-      )
+      const beforeCount = filtered.length
+      filtered = filtered.filter(company => {
+        const match = filters.industries.some(industry => {
+          const industryLower = industry.toLowerCase()
+          const companyIndustryLower = company.industry.toLowerCase()
+          
+          // Exact case-insensitive match
+          const exactMatch = companyIndustryLower === industryLower
+          
+          // Case-insensitive contains match
+          const containsMatch = companyIndustryLower.includes(industryLower) ||
+                               industryLower.includes(companyIndustryLower)
+          
+          // Fuzzy similarity match for typos
+          const fuzzyMatch = calculateSimilarity(companyIndustryLower, industryLower) > 0.7
+          
+          // Handle common abbreviations and variations
+          const abbreviationMatch = 
+            (industryLower === 'technology' && (companyIndustryLower.includes('tech') || companyIndustryLower.includes('it') || companyIndustryLower.includes('software'))) ||
+            (industryLower === 'fintech' && (companyIndustryLower.includes('fintech') || companyIndustryLower.includes('financial') || companyIndustryLower.includes('fintech'))) ||
+            (industryLower === 'healthcare' && (companyIndustryLower.includes('health') || companyIndustryLower.includes('medical') || companyIndustryLower.includes('pharma'))) ||
+            (industryLower === 'edtech' && (companyIndustryLower.includes('education') || companyIndustryLower.includes('learning') || companyIndustryLower.includes('edtech'))) ||
+            (industryLower === 'e-commerce' && (companyIndustryLower.includes('ecommerce') || companyIndustryLower.includes('online') || companyIndustryLower.includes('retail'))) ||
+            (industryLower === 'manufacturing' && (companyIndustryLower.includes('manufacturing') || companyIndustryLower.includes('production') || companyIndustryLower.includes('factory'))) ||
+            (industryLower === 'automotive' && (companyIndustryLower.includes('auto') || companyIndustryLower.includes('vehicle') || companyIndustryLower.includes('car'))) ||
+            (industryLower === 'banking & finance' && (companyIndustryLower.includes('bank') || companyIndustryLower.includes('finance') || companyIndustryLower.includes('financial'))) ||
+            (industryLower === 'consulting' && (companyIndustryLower.includes('consult') || companyIndustryLower.includes('advisory') || companyIndustryLower.includes('services'))) ||
+            (industryLower === 'energy & petrochemicals' && (companyIndustryLower.includes('energy') || companyIndustryLower.includes('petro') || companyIndustryLower.includes('oil') || companyIndustryLower.includes('gas'))) ||
+            (industryLower === 'pharmaceuticals' && (companyIndustryLower.includes('pharma') || companyIndustryLower.includes('drug') || companyIndustryLower.includes('medicine'))) ||
+            (industryLower === 'telecommunications' && (companyIndustryLower.includes('telecom') || companyIndustryLower.includes('communication') || companyIndustryLower.includes('network'))) ||
+            (industryLower === 'media & entertainment' && (companyIndustryLower.includes('media') || companyIndustryLower.includes('entertainment') || companyIndustryLower.includes('broadcast'))) ||
+            (industryLower === 'real estate' && (companyIndustryLower.includes('real') || companyIndustryLower.includes('property') || companyIndustryLower.includes('estate'))) ||
+            (industryLower === 'food & beverage' && (companyIndustryLower.includes('food') || companyIndustryLower.includes('beverage') || companyIndustryLower.includes('restaurant')))
+          
+          const result = exactMatch || containsMatch || fuzzyMatch || abbreviationMatch
+          
+          if (result) {
+            console.log('✅ Industry match found:', { 
+              companyName: company.name, 
+              companyIndustry: company.industry, 
+              selectedIndustry: industry,
+              exactMatch,
+              containsMatch,
+              fuzzyMatch,
+              abbreviationMatch
+            })
+          }
+          
+          return result
+        })
+        
+        return match
+      })
+      console.log('🏭 Enhanced industry filter applied:', beforeCount, '→', filtered.length, 'companies')
     }
 
-    // Company type filter
+    // Company type filter - Enhanced with case-sensitive and typo-tolerant matching
     if (filters.companyTypes.length > 0) {
-      filtered = filtered.filter(company =>
-        filters.companyTypes.includes(company.companyType)
-      )
+      const beforeCount = filtered.length
+      filtered = filtered.filter(company => {
+        const match = filters.companyTypes.some(type => {
+          const typeLower = type.toLowerCase()
+          const companyTypeLower = company.companyType.toLowerCase()
+          
+          // Exact case-insensitive match
+          const exactMatch = companyTypeLower === typeLower
+          
+          // Case-insensitive contains match
+          const containsMatch = companyTypeLower.includes(typeLower) ||
+                               typeLower.includes(companyTypeLower)
+          
+          // Fuzzy similarity match for typos
+          const fuzzyMatch = calculateSimilarity(companyTypeLower, typeLower) > 0.7
+          
+          // Handle common variations and abbreviations
+          const variationMatch = 
+            (typeLower === 'unicorn' && (companyTypeLower.includes('unicorn') || companyTypeLower.includes('billion') || companyTypeLower.includes('valuation'))) ||
+            (typeLower === 'mnc' && (companyTypeLower.includes('multinational') || companyTypeLower.includes('global') || companyTypeLower.includes('international'))) ||
+            (typeLower === 'indian mnc' && (companyTypeLower.includes('indian') && companyTypeLower.includes('mnc'))) ||
+            (typeLower === 'startup' && (companyTypeLower.includes('startup') || companyTypeLower.includes('emerging') || companyTypeLower.includes('early stage'))) ||
+            (typeLower === 'product based' && (companyTypeLower.includes('product') || companyTypeLower.includes('software') || companyTypeLower.includes('saas'))) ||
+            (typeLower === 'fortune 500' && (companyTypeLower.includes('fortune') || companyTypeLower.includes('500') || companyTypeLower.includes('fortune500'))) ||
+            (typeLower === 'government' && (companyTypeLower.includes('government') || companyTypeLower.includes('public') || companyTypeLower.includes('state'))) ||
+            (typeLower === 'non-profit' && (companyTypeLower.includes('non-profit') || companyTypeLower.includes('nonprofit') || companyTypeLower.includes('ngo'))) ||
+            (typeLower === 'consulting' && (companyTypeLower.includes('consulting') || companyTypeLower.includes('consultant') || companyTypeLower.includes('advisory'))) ||
+            (typeLower === 'sponsored' && company.featured)
+          
+          const result = exactMatch || containsMatch || fuzzyMatch || variationMatch
+          
+          if (result) {
+            console.log('✅ Company type match found:', { 
+              companyName: company.name, 
+              companyType: company.companyType, 
+              selectedType: type,
+              exactMatch,
+              containsMatch,
+              fuzzyMatch,
+              variationMatch
+            })
+          }
+          
+          return result
+        })
+        
+        return match
+      })
+      console.log('🏢 Enhanced company type filter applied:', beforeCount, '→', filtered.length, 'companies')
     }
 
     // Company size filter
@@ -705,9 +1147,44 @@ export default function CompaniesPage() {
   }
 
   const getHeaderText = () => {
+    // Check for industry filters from URL
+    if (filters.industries.length > 0) {
+      const industry = filters.industries[0]
+      if (industry === 'Technology') {
+        // Check if it came from IT Services & Consulting or Internet
+        const urlParams = new URLSearchParams(window.location.search)
+        const originalIndustry = urlParams.get('industry')
+        if (originalIndustry === 'IT Services & Consulting') {
+          return "Top IT services & consulting companies hiring now"
+        } else if (originalIndustry === 'Internet') {
+          return "Top internet companies hiring now"
+        }
+      }
+      if (industry === 'Fintech') return "Top fintech companies hiring now"
+      return `Top ${industry.toLowerCase()} companies hiring now`
+    }
+    
+    // Check for company type filters from URL
+    if (filters.companyTypes.length > 0) {
+      const type = filters.companyTypes[0]
+      if (type === 'Unicorn') return "Top unicorn companies hiring now"
+      if (type === 'MNC') return "Top MNC companies hiring now"
+      if (type === 'Startup') return "Top startup companies hiring now"
+      if (type === 'Product Based') return "Top product-based companies hiring now"
+      if (type === 'Sponsored') return "Top sponsored companies hiring now"
+      return `Top ${type.toLowerCase()} companies hiring now`
+    }
+    
+    // Check for featured filter
+    if (isFeaturedFilter) {
+      return "Top featured companies hiring now"
+    }
+    
+    // Check for selected industry from UI
     if (selectedIndustry) {
       return `Top ${selectedIndustry.toLowerCase()} companies hiring now`
     }
+    
     return "Top companies hiring now"
   }
 
@@ -768,6 +1245,7 @@ export default function CompaniesPage() {
     "Government",
     "Non-Profit",
     "Consulting",
+    "Sponsored",
   ]
 
   return (
@@ -815,7 +1293,16 @@ export default function CompaniesPage() {
                     placeholder="Search companies..."
                     value={filters.search}
                     onChange={(e) => handleFilterChange("search", e.target.value)}
-                    className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        // Scroll to companies section when search is performed
+                        const companiesSection = document.getElementById('companies-section')
+                        if (companiesSection) {
+                          companiesSection.scrollIntoView({ behavior: 'smooth' })
+                        }
+                      }
+                    }}
+                    className="pl-12 pr-4 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium"
                 />
               </div>
                 <div className="relative flex-1">
@@ -857,7 +1344,16 @@ export default function CompaniesPage() {
                 placeholder="Search companies..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Scroll to companies section when search is performed
+                    const companiesSection = document.getElementById('companies-section')
+                    if (companiesSection) {
+                      companiesSection.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }
+                }}
+                className="pl-10 pr-4 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
               />
             </div>
             <div className="relative flex-1">
@@ -900,7 +1396,7 @@ export default function CompaniesPage() {
       </div>
 
       {/* Industry Type Filters with Enhanced Hover Effects */}
-      <div className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 py-6 sm:py-8">
+      <div id="companies-section" className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 pt-12 pb-8 sm:pt-16 sm:pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{getHeaderText()}</h2>
