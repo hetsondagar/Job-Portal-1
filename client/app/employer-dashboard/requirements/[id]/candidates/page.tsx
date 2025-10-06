@@ -171,8 +171,8 @@ export default function CandidatesPage() {
       setCalculatingATS(true)
       
       const candidateCount = processAll ? 'all candidates' : candidates.length
-      toast.info('Starting ATS calculation...', {
-        description: `Processing ${candidateCount}. This may take a few minutes.`
+      toast.info('Starting STREAMING ATS calculation...', {
+        description: `Processing ${candidateCount} one by one for real-time updates.`
       })
       
       // Prepare request body based on processing mode
@@ -186,101 +186,89 @@ export default function CandidatesPage() {
             candidateIds: candidates.map(c => c.id) 
           }
       
-      console.log('🚀 ATS calculation request:', { processAll, requestBody })
+      console.log('🚀 STREAMING ATS calculation request:', { processAll, requestBody })
       
+      // Start streaming ATS calculation
       const response = await apiService.calculateATSScores(params.id as string, requestBody)
       
-      if (response.success) {
-        const { successful, errors, pagination: paginationData, verification } = response.data
+      if (response.success && response.data.streaming) {
+        const { candidateIds: targetCandidateIds, totalCandidates } = response.data
         
-        console.log('✅ ATS calculation response:', {
-          successful,
-          errors,
-          verification: verification?.verified,
-          total: verification?.total
+        console.log('✅ Streaming ATS started:', { targetCandidateIds: targetCandidateIds.length, totalCandidates })
+        
+        toast.success('ATS streaming started!', {
+          description: `Processing ${targetCandidateIds.length} candidates one by one...`
         })
         
-        // Check if all scores were verified in database
-        if (verification && verification.verified < verification.total) {
-          console.log(`⚠️ Only ${verification.verified}/${verification.total} scores verified. Polling for completion...`)
+        // Process candidates one by one with streaming updates
+        let completedCount = 0
+        let failedCount = 0
+        
+        for (let i = 0; i < targetCandidateIds.length; i++) {
+          const candidateId = targetCandidateIds[i]
           
-          // Implement smart polling to wait for database consistency
-          let attempts = 0
-          const maxAttempts = 10
-          let allVerified = false
-          
-          while (attempts < maxAttempts && !allVerified) {
-            attempts++
-            console.log(`🔄 Polling attempt ${attempts}/${maxAttempts}...`)
+          try {
+            console.log(`🎯 Processing candidate ${i + 1}/${targetCandidateIds.length}: ${candidateId}`)
             
-            // Wait before next poll
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            // Calculate ATS for individual candidate
+            const individualResponse = await apiService.calculateIndividualATS(params.id as string, candidateId)
             
-            // Check if scores are now available
-            const checkResponse = await apiService.getRequirementCandidates(params.id as string, {
-              page: pagination.page,
-              limit: parseInt(showCount),
-              search: searchQuery || undefined,
-              sortBy: 'ats'
-            })
-            
-            if (checkResponse.success && checkResponse.data?.candidates) {
-              const candidatesWithScores = checkResponse.data.candidates.filter(c => c.atsScore !== null && c.atsScore !== undefined)
-              console.log(`📊 Found ${candidatesWithScores.length} candidates with ATS scores`)
+            if (individualResponse.success) {
+              const { atsScore, candidate } = individualResponse.data
+              completedCount++
               
-              if (candidatesWithScores.length >= successful) {
-                allVerified = true
-                console.log('✅ All ATS scores are now available!')
+              console.log(`✅ ATS score calculated for ${candidate.name}: ${atsScore}`)
+              
+              // Update the specific candidate in the current list
+              setCandidates(prevCandidates => {
+                const updatedCandidates = prevCandidates.map(c => 
+                  c.id === candidateId 
+                    ? { ...c, atsScore: atsScore, atsCalculatedAt: new Date().toISOString() }
+                    : c
+                )
                 
-                setCandidates(checkResponse.data.candidates)
-                setSortBy('ats')
-                break
+                // Sort by ATS score (highest first) after each update
+                return updatedCandidates.sort((a, b) => {
+                  const scoreA = a.atsScore || 0
+                  const scoreB = b.atsScore || 0
+                  return scoreB - scoreA
+                })
+              })
+              
+              // Show progress toast for each completed candidate
+              if (completedCount % 2 === 0 || completedCount === targetCandidateIds.length) {
+                toast.success(`Progress: ${completedCount}/${targetCandidateIds.length} completed`, {
+                  description: `Latest: ${candidate.name} - ATS Score: ${atsScore}`
+                })
               }
+              
+            } else {
+              failedCount++
+              console.log(`❌ ATS calculation failed for candidate ${candidateId}: ${individualResponse.message}`)
             }
-          }
-          
-          if (!allVerified) {
-            console.log('⚠️ Polling timeout - proceeding with partial results')
+            
+            // Small delay between candidates to avoid overwhelming the server
+            if (i < targetCandidateIds.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 800))
+            }
+            
+          } catch (error) {
+            failedCount++
+            console.error(`❌ Error processing candidate ${candidateId}:`, error)
           }
         }
         
-        // Final refresh to ensure we have the latest data
-        console.log('🔄 Final refresh to get latest ATS scores...')
-        const refreshResponse = await apiService.getRequirementCandidates(params.id as string, {
-          page: pagination.page,
-          limit: parseInt(showCount),
-          search: searchQuery || undefined,
-          sortBy: 'ats'
+        // Final success message
+        toast.success('ATS streaming completed!', {
+          description: `Successfully processed ${completedCount} candidates. ${failedCount > 0 ? `${failedCount} failed.` : 'All candidates scored!'}`
         })
         
-        if (refreshResponse.success && refreshResponse.data) {
-          console.log('✅ Final candidates refresh:', refreshResponse.data.candidates?.length)
-          console.log('📊 ATS scores in final data:', refreshResponse.data.candidates?.map(c => ({ name: c.name, atsScore: c.atsScore })))
-          
-          setCandidates(refreshResponse.data.candidates || [])
-          setSortBy('ats')
-          
-          // Show success message with verification info
-          const verifiedCount = refreshResponse.data.candidates?.filter(c => c.atsScore !== null).length || 0
-          toast.success('ATS scores calculated successfully!', {
-            description: `Processed ${successful} candidates. ${verifiedCount} scores now visible.${processAll && paginationData?.hasMorePages ? ' More pages available.' : ''}`
-          })
-          
-          // Show pagination info if processing all
-          if (processAll && paginationData?.hasMorePages) {
-            toast.info('More candidates available', {
-              description: `Page ${paginationData.currentPage} of ${Math.ceil(paginationData.totalCandidates / paginationData.limit)} completed. Use pagination to process more candidates.`
-            })
-          }
-        } else {
-          console.log('❌ Failed to refresh candidates:', refreshResponse)
-          toast.error('ATS calculation completed but failed to refresh display', {
-            description: 'Please refresh the page to see updated scores'
-          })
-        }
+        // Set sort to ATS by default after completion
+        setSortBy('ats')
+        
       } else {
-        toast.error('ATS calculation failed', {
-          description: response.message
+        toast.error('Failed to start streaming ATS calculation', {
+          description: response.message || 'Unknown error occurred'
         })
       }
     } catch (error: any) {
@@ -372,7 +360,7 @@ export default function CandidatesPage() {
                 ) : (
                   <>
                     <Brain className="w-4 h-4" />
-                    <span>ATS (Current Page)</span>
+                    <span>{calculatingATS ? 'Streaming...' : 'Stream ATS (Current)'}</span>
                   </>
                 )}
               </Button>
@@ -391,7 +379,7 @@ export default function CandidatesPage() {
                 ) : (
                   <>
                     <Brain className="w-4 h-4" />
-                    <span>ATS (All Candidates)</span>
+                    <span>{calculatingATS ? 'Streaming...' : 'Stream ATS (All)'}</span>
                   </>
                 )}
               </Button>
@@ -582,24 +570,24 @@ export default function CandidatesPage() {
                             )}
                           </div>
 
-        {/* ATS Calculation Progress */}
+        {/* ATS Streaming Progress */}
         {calculatingATS && (
           <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                 <div>
-                  <h3 className="text-sm font-medium text-purple-900">Calculating ATS Scores</h3>
+                  <h3 className="text-sm font-medium text-purple-900">Streaming ATS Calculation</h3>
                   <p className="text-xs text-purple-700">
-                    Processing requirement-specific candidates with AI analysis. 
-                    Smart polling ensures scores are visible immediately when ready...
+                    Processing candidates one by one with real-time UI updates. 
+                    Each score appears immediately when calculated...
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs text-purple-500">Requirement-specific filtering</p>
-                <p className="text-xs text-purple-400">Smart polling enabled</p>
-                <p className="text-xs text-purple-300">Real-time verification</p>
+                <p className="text-xs text-purple-500">Real-time streaming</p>
+                <p className="text-xs text-purple-400">Individual processing</p>
+                <p className="text-xs text-purple-300">Live UI updates</p>
               </div>
             </div>
           </div>

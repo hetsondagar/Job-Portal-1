@@ -2309,7 +2309,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
   }
 });
 
-// ATS Calculate endpoint - Calculate ATS scores for candidates of a specific requirement
+// ATS Calculate endpoint - STREAMING VERSION - Calculate ATS scores one by one
 router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
   try {
     const requirementId = req.params.id;
@@ -2472,79 +2472,18 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
       });
     }
     
-    console.log(`📊 Processing ATS scores for ${targetCandidateIds.length} candidates`);
+    console.log(`📊 Starting STREAMING ATS calculation for ${targetCandidateIds.length} candidates`);
     
-    // Import ATS service
-    const atsService = require('../services/atsService');
-    
-    // Calculate ATS scores in batches with progress tracking
-    const batchResults = await atsService.calculateBatchATSScores(
-      targetCandidateIds,
-      requirementId,
-      (progress) => {
-        // Progress callback with detailed logging
-        console.log(`📈 Progress: ${progress.current}/${progress.total} - Candidate ${progress.candidateId}: ${progress.status}`);
-      }
-    );
-    
-    // Verify ATS scores were actually saved before responding
-    console.log('🔍 Verifying ATS scores were saved to database...');
-    
-    const verificationResults = await Promise.all(
-      batchResults.successful.map(async (result) => {
-        try {
-          const [verification] = await sequelize.query(`
-            SELECT ats_score, last_calculated 
-            FROM candidate_analytics 
-            WHERE user_id = :userId AND requirement_id = :requirementId
-          `, {
-            replacements: { 
-              userId: result.candidateId, 
-              requirementId: requirementId 
-            },
-            type: QueryTypes.SELECT
-          });
-          
-          return {
-            candidateId: result.candidateId,
-            expectedScore: result.atsScore,
-            actualScore: verification?.ats_score,
-            verified: verification?.ats_score === result.atsScore,
-            timestamp: verification?.last_calculated
-          };
-        } catch (error) {
-          return {
-            candidateId: result.candidateId,
-            error: error.message,
-            verified: false
-          };
-        }
-      })
-    );
-    
-    const verifiedCount = verificationResults.filter(r => r.verified).length;
-    console.log(`✅ Verified ${verifiedCount}/${batchResults.successful.length} ATS scores in database`);
-    
-    // Log any verification failures
-    const failedVerifications = verificationResults.filter(r => !r.verified);
-    if (failedVerifications.length > 0) {
-      console.log('❌ Failed verifications:', failedVerifications);
-    }
-    
+    // Return immediately with streaming configuration
     return res.status(200).json({
       success: true,
-      message: 'ATS calculation completed',
+      message: 'ATS calculation started - streaming mode',
       data: {
-        total: batchResults.total,
-        successful: batchResults.successful.length,
-        errors: batchResults.errors.length,
-        results: batchResults.successful,
-        errorDetails: batchResults.errors,
-        verification: {
-          verified: verifiedCount,
-          total: batchResults.successful.length,
-          results: verificationResults
-        },
+        streaming: true,
+        totalCandidates: targetCandidateIds.length,
+        candidateIds: targetCandidateIds,
+        requirementId: requirementId,
+        status: 'started',
         pagination: {
           currentPage: parseInt(page),
           limit: parseInt(limit),
@@ -2560,6 +2499,103 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'ATS calculation failed',
+      error: error.message
+    });
+  }
+});
+
+// Individual Candidate ATS Calculation Endpoint - For Streaming
+router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticateToken, async (req, res) => {
+  try {
+    const { requirementId, candidateId } = req.params;
+    
+    console.log(`🎯 Individual ATS calculation: ${candidateId} for requirement ${requirementId}`);
+    
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can calculate ATS scores.'
+      });
+    }
+    
+    // Verify requirement ownership
+    const requirement = await Requirement.findOne({
+      where: req.user.user_type === 'admin' 
+        ? { id: requirementId }
+        : { id: requirementId, companyId: req.user.companyId }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({
+        success: false,
+        message: 'Requirement not found or access denied'
+      });
+    }
+    
+    // Verify candidate exists and is active
+    const candidate = await User.findOne({
+      where: {
+        id: candidateId,
+        user_type: 'jobseeker',
+        account_status: 'active',
+        is_active: true
+      }
+    });
+    
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Candidate not found or inactive'
+      });
+    }
+    
+    // Import ATS service
+    const atsService = require('../services/atsService');
+    
+    // Calculate ATS score for this specific candidate
+    console.log(`🚀 Calculating ATS score for candidate ${candidateId}...`);
+    
+    const atsResult = await atsService.calculateATSScore(candidateId, requirementId);
+    
+    if (atsResult.success) {
+      console.log(`✅ ATS score calculated for ${candidateId}: ${atsResult.ats_score}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'ATS score calculated successfully',
+        data: {
+          candidateId: candidateId,
+          requirementId: requirementId,
+          atsScore: atsResult.ats_score,
+          atsAnalysis: atsResult.analysis,
+          calculatedAt: new Date().toISOString(),
+          candidate: {
+            id: candidate.id,
+            name: `${candidate.first_name} ${candidate.last_name}`,
+            designation: candidate.designation || candidate.headline || 'Job Seeker'
+          }
+        }
+      });
+    } else {
+      console.log(`❌ ATS calculation failed for ${candidateId}: ${atsResult.error}`);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'ATS calculation failed for this candidate',
+        data: {
+          candidateId: candidateId,
+          requirementId: requirementId,
+          error: atsResult.error
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Individual ATS calculation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Individual ATS calculation failed',
       error: error.message
     });
   }
