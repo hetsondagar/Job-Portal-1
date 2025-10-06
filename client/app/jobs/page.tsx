@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Search,
   MapPin,
@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
+import { RoleCategoryDropdown } from "@/components/ui/role-category-dropdown"
 
 // Types for state management
 interface FilterState {
@@ -59,6 +60,7 @@ interface FilterState {
   companyName?: string
   recruiterType?: string
   salaryMin?: number
+  roleCategories?: string[]
 }
 
 interface Job {
@@ -106,6 +108,8 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [preferredJobs, setPreferredJobs] = useState<Job[]>([])
   const [preferredJobsLoading, setPreferredJobsLoading] = useState(false)
+  const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
+  const roleCategoryDropdownRef = useRef<HTMLDivElement>(null)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -127,6 +131,7 @@ export default function JobsPage() {
     companyName: "",
     recruiterType: "",
     salaryMin: undefined,
+    roleCategories: [],
   })
 
   // Check URL parameters for filters
@@ -554,6 +559,23 @@ export default function JobsPage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Click outside handler for role category dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (roleCategoryDropdownRef.current && !roleCategoryDropdownRef.current.contains(event.target as Node)) {
+        setShowRoleCategoryDropdown(false)
+      }
+    }
+
+    if (showRoleCategoryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showRoleCategoryDropdown])
+
   const experienceLevels = [
     "0-1",
     "2-5",
@@ -679,6 +701,18 @@ export default function JobsPage() {
       filtered = filtered.filter(job => job.title.toLowerCase().includes(q))
     }
 
+    // Role Categories
+    if (filters.roleCategories && filters.roleCategories.length > 0) {
+      filtered = filtered.filter(job => {
+        const jobTitle = job.title.toLowerCase()
+        const jobCategory = job.category.toLowerCase()
+        return filters.roleCategories!.some(role => 
+          jobTitle.includes(role.toLowerCase()) || 
+          jobCategory.includes(role.toLowerCase())
+        )
+      })
+    }
+
     // Skills / Keywords
     if (filters.skills) {
       const parts = filters.skills.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
@@ -737,6 +771,7 @@ export default function JobsPage() {
       (filters.industry && filters.industry.trim()) ||
       (filters.department && filters.department.trim()) ||
       (filters.role && filters.role.trim()) ||
+      (filters.roleCategories && filters.roleCategories.length > 0) ||
       (filters.skills && filters.skills.trim()) ||
       (filters.companyType && filters.companyType.trim && filters.companyType.trim()) ||
       (filters.workMode && filters.workMode.trim && filters.workMode.trim()) ||
@@ -788,6 +823,7 @@ export default function JobsPage() {
     (filters.industry && filters.industry.trim()) ||
     (filters.department && filters.department.trim()) ||
     (filters.role && filters.role.trim()) ||
+    (filters.roleCategories && filters.roleCategories.length > 0) ||
     (filters.skills && filters.skills.trim()) ||
     (filters.companyType && (filters.companyType as any).trim && (filters.companyType as any).trim()) ||
     (filters.workMode && (filters.workMode as any).trim && (filters.workMode as any).trim()) ||
@@ -855,6 +891,7 @@ export default function JobsPage() {
       companyName: "",
       recruiterType: "",
       salaryMin: undefined,
+      roleCategories: [],
     })
   }, [])
 
@@ -1053,18 +1090,41 @@ export default function JobsPage() {
               </div>
 
               {/* Role / Designation */}
-              <div>
+              <div className="relative">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Role / Designation</h3>
-                <Select value={filters.role} onValueChange={(v) => handleFilterChange('role', v)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {commonRoles.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Select 
+                    value={filters.role} 
+                    onValueChange={(v) => handleFilterChange('role', v)}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setShowRoleCategoryDropdown(true)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                  </Select>
+                  
+                  {showRoleCategoryDropdown && (
+                    <div ref={roleCategoryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-50">
+                      <RoleCategoryDropdown
+                        selectedRoles={filters.roleCategories || []}
+                        onRoleChange={(roles) => handleFilterChange('roleCategories', roles)}
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowRoleCategoryDropdown(false)}
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Skills / Keywords */}
