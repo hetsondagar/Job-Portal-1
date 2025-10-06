@@ -365,8 +365,9 @@ This is an automated notification. Please do not reply to this email.
           const isMatchingEmployer = metadata.employerId === employerId;
           const isMatchingJob = jobId ? metadata.jobId === jobId : true;
           const isMatchingRequirement = requirementId ? metadata.requirementId === requirementId : true;
+          const isMatchingApplication = context?.applicationId ? metadata.applicationId === context.applicationId : true;
           
-          if (isMatchingEmployer && isMatchingJob && isMatchingRequirement) {
+          if (isMatchingEmployer && isMatchingJob && isMatchingRequirement && isMatchingApplication) {
             await notification.destroy();
             removedCount++;
             console.log(`✅ Removed shortlisting notification ${notification.id} for candidate ${candidateId}`);
@@ -416,7 +417,7 @@ This is an automated notification. Please do not reply to this email.
       const companyName = employer.company?.name || 'Unknown Company';
       const candidateName = `${candidate.first_name} ${candidate.last_name}`.trim();
 
-      // Create notification based on status
+      // Create notification based on status with de-duplication for shortlist
       let notificationData = {};
       
       if (newStatus === 'shortlisted') {
@@ -456,6 +457,38 @@ This is an automated notification. Please do not reply to this email.
             ...context
           }
         };
+
+        // De-duplicate existing unread shortlist notification for same employer+application
+        try {
+          const existing = await Notification.findOne({
+            where: {
+              userId: candidateId,
+              type: 'application_shortlisted',
+              isRead: false
+            },
+            order: [['createdAt', 'DESC']]
+          });
+          if (existing) {
+            const meta = typeof existing.metadata === 'string' ? JSON.parse(existing.metadata) : existing.metadata;
+            if (meta?.employerId === employerId && meta?.applicationId === applicationId) {
+              await existing.update({
+                title: notificationData.title,
+                message: notificationData.message,
+                shortMessage: notificationData.shortMessage,
+                priority: notificationData.priority,
+                actionUrl: notificationData.actionUrl,
+                actionText: notificationData.actionText,
+                icon: notificationData.icon,
+                metadata: { ...meta, ...notificationData.metadata },
+                updatedAt: new Date()
+              });
+              console.log('ℹ️ Updated existing shortlist notification instead of creating duplicate');
+              return { success: true, notificationId: existing.id, message: 'Shortlist notification updated' };
+            }
+          }
+        } catch (dedupeErr) {
+          console.warn('Shortlist notification de-duplication check failed:', dedupeErr?.message || dedupeErr);
+        }
       } else {
         notificationData = {
           userId: candidateId,
