@@ -2,7 +2,17 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('bulk_job_imports', {
+    // Skip creating table if it already exists (handles previous casing variants)
+    const [existsRows] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'bulk_job_imports'
+      ) AS exists;
+    `);
+    const tableExists = Array.isArray(existsRows) ? existsRows[0]?.exists : existsRows?.exists;
+    if (!tableExists) {
+      await queryInterface.createTable('bulk_job_imports', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -158,15 +168,33 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+      });
+    }
 
-    // Add indexes
-    await queryInterface.addIndex('bulk_job_imports', ['created_by']);
-    await queryInterface.addIndex('bulk_job_imports', ['company_id']);
-    await queryInterface.addIndex('bulk_job_imports', ['status']);
-    await queryInterface.addIndex('bulk_job_imports', ['import_type']);
-    await queryInterface.addIndex('bulk_job_imports', ['started_at']);
-    await queryInterface.addIndex('bulk_job_imports', ['scheduled_at']);
+    // Add indexes (idempotent, casing-aware)
+    const indexExists = async (name) => {
+      const [rows] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname = :idx`,
+        { replacements: { idx: name } }
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    };
+    const tryIndex = async (columnsVariants, name) => {
+      if (await indexExists(name)) return;
+      for (const cols of columnsVariants) {
+        try {
+          await queryInterface.addIndex('bulk_job_imports', cols, { name });
+          return;
+        } catch (e) {}
+      }
+    };
+
+    await tryIndex([['created_by'], ['createdBy']], 'bulk_job_imports_created_by');
+    await tryIndex([['company_id'], ['companyId']], 'bulk_job_imports_company_id');
+    await tryIndex([['status']], 'bulk_job_imports_status');
+    await tryIndex([['import_type'], ['importType']], 'bulk_job_imports_import_type');
+    await tryIndex([['started_at'], ['startedAt']], 'bulk_job_imports_started_at');
+    await tryIndex([['scheduled_at'], ['scheduledAt']], 'bulk_job_imports_scheduled_at');
   },
 
   async down(queryInterface, Sequelize) {

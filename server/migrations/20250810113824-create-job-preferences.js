@@ -2,20 +2,6 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Ensure users table exists (handle out-of-order execution on fresh DBs)
-    const [rows] = await queryInterface.sequelize.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public'
-          AND table_name = 'users'
-      ) AS exists;
-    `);
-    const hasUsers = Array.isArray(rows) ? rows[0]?.exists : rows?.exists;
-    if (!hasUsers) {
-      // Skip for now; this migration will run successfully once users is created
-      return;
-    }
-
     await queryInterface.createTable('job_preferences', {
       id: {
         type: Sequelize.UUID,
@@ -159,3 +145,5 @@ module.exports = {
     await queryInterface.dropTable('job_preferences');
   }
 };
+
+

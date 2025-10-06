@@ -10,6 +10,7 @@ const Notification = sequelize.define('Notification', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -44,7 +45,8 @@ const Notification = sequelize.define('Notification', {
   },
   isRead: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_read'
   },
   priority: {
     type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
@@ -53,27 +55,33 @@ const Notification = sequelize.define('Notification', {
   },
   shortMessage: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'short_message'
   },
   isEmailSent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_email_sent'
   },
   isSMSSent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_sms_sent'
   },
   isPushSent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_push_sent'
   },
   actionUrl: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'action_url'
   },
   actionText: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'action_text'
   },
   icon: {
     type: DataTypes.STRING,
@@ -89,23 +97,29 @@ const Notification = sequelize.define('Notification', {
   },
   readAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'read_at'
   },
   expiresAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'expires_at'
   },
   scheduledAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'scheduled_at'
   },
   sentAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'sent_at'
   }
 }, {
   tableName: 'notifications',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (notification) => {
       if (!notification.shortMessage) {

@@ -22,7 +22,7 @@ function getProductionConfig() {
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "https:"],
           scriptSrc: ["'self'"],
-          connectSrc: ["'self'", "https://api.render.com"]
+          connectSrc: ["'self'", "http://localhost:8000"]
         }
       } : false,
       crossOriginEmbedderPolicy: false
@@ -34,12 +34,10 @@ function getProductionConfig() {
         if (!origin) return callback(null, true);
         
         const allowedOrigins = [
-          process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app',
-          process.env.CORS_ORIGIN || 'https://job-portal-nine-rouge.vercel.app',
-          'https://job-portal-nine-rouge.vercel.app',
-          'https://job-portal-97q3.onrender.com',
-          /^https:\/\/.*\.vercel\.app$/,
-          /^https:\/\/.*\.onrender\.com$/
+          process.env.FRONTEND_URL || 'http://localhost:3000',
+          process.env.CORS_ORIGIN || 'http://localhost:3000',
+          'http://localhost:3000',
+          'http://localhost:3001'
         ];
         
         const isAllowed = allowedOrigins.some(allowedOrigin => {

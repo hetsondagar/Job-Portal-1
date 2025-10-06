@@ -315,7 +315,7 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log('🔍 Requirements API - Where clause:', whereClause);
     const rows = await Requirement.findAll({ 
       where: whereClause, 
-      order: [['createdAt', 'DESC']] 
+      order: [[sequelize.col('created_at'), 'DESC']] 
     });
     
     console.log('✅ Requirements API - Found requirements:', rows.length);
@@ -578,7 +578,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     console.log('🔍 Final where clause:', JSON.stringify(whereClause, null, 2));
     
     // Determine sort order - simplified
-    let orderClause = [['createdAt', 'DESC']]; // Default sort by creation date
+    let orderClause = [[sequelize.col('created_at'), 'DESC']]; // Default sort by creation date
     
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -596,7 +596,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
         'experience_years', 'preferred_locations', 'education', 'designation',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt'
+        'is_email_verified', 'is_phone_verified', [sequelize.col('created_at'), 'createdAt']
       ]
     });
     
@@ -609,7 +609,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       console.warn('⚠️ No candidates matched strict filters. Applying relaxed search fallback.');
       const relaxed = await User.findAndCountAll({
         where: { user_type: 'jobseeker', is_active: true, account_status: 'active' },
-        order: [['createdAt', 'DESC']],
+        order: [[sequelize.col('created_at'), 'DESC']],
         limit: limitNum,
         offset,
         attributes: [
@@ -618,7 +618,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
           'experience_years', 'preferred_locations', 'education', 'designation',
           'profile_completion', 'last_login_at', 'last_profile_update',
-          'is_email_verified', 'is_phone_verified', 'createdAt'
+          'is_email_verified', 'is_phone_verified', [sequelize.col('created_at'), 'createdAt']
         ]
       });
       finalCandidates = relaxed.rows;

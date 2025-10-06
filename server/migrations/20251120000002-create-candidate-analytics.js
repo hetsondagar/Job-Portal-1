@@ -2,7 +2,17 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('candidate_analytics', {
+    // If table already exists (with possibly different casing), skip creation
+    const [existsRows] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'candidate_analytics'
+      ) AS exists;
+    `);
+    const tableExists = Array.isArray(existsRows) ? existsRows[0]?.exists : existsRows?.exists;
+    if (!tableExists) {
+      await queryInterface.createTable('candidate_analytics', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -173,14 +183,32 @@ module.exports = {
         defaultValue: Sequelize.NOW
       }
     });
+    }
 
-    // Add indexes
-    await queryInterface.addIndex('candidate_analytics', ['employer_id']);
-    await queryInterface.addIndex('candidate_analytics', ['company_id']);
-    await queryInterface.addIndex('candidate_analytics', ['search_type']);
-    await queryInterface.addIndex('candidate_analytics', ['created_at']);
-    await queryInterface.addIndex('candidate_analytics', ['search_session_id']);
-    await queryInterface.addIndex('candidate_analytics', ['is_successful']);
+    // Add indexes (idempotent and casing-aware)
+    const indexExists = async (name) => {
+      const [rows] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname = :idx`,
+        { replacements: { idx: name } }
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    };
+    const tryIndex = async (columnsVariants, name) => {
+      if (await indexExists(name)) return;
+      for (const cols of columnsVariants) {
+        try {
+          await queryInterface.addIndex('candidate_analytics', cols, { name });
+          return;
+        } catch (e) {}
+      }
+    };
+
+    await tryIndex([['employer_id'], ['employerId']], 'candidate_analytics_employer_id');
+    await tryIndex([['company_id'], ['companyId']], 'candidate_analytics_company_id');
+    await tryIndex([['search_type'], ['searchType']], 'candidate_analytics_search_type');
+    await tryIndex([['created_at'], ['createdAt']], 'candidate_analytics_created_at');
+    await tryIndex([['search_session_id'], ['searchSessionId']], 'candidate_analytics_search_session_id');
+    await tryIndex([['is_successful'], ['isSuccessful']], 'candidate_analytics_is_successful');
   },
 
   async down(queryInterface, Sequelize) {

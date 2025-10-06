@@ -192,6 +192,21 @@ exports.createJob = async (req, res, next) => {
       resolvedValidTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
     }
 
+    // Normalize salary period to DB enum: per-year | per-month | per-hour
+    const normalizeSalaryPeriod = (period) => {
+      if (!period) return 'per-year';
+      const p = String(period).toLowerCase();
+      if (p === 'yearly' || p === 'annual' || p === 'per-year' || p === 'year') return 'per-year';
+      if (p === 'monthly' || p === 'per-month' || p === 'month') return 'per-month';
+      if (p === 'hourly' || p === 'per-hour' || p === 'hour') return 'per-hour';
+      // Map weekly/daily to month as a reasonable default to avoid enum errors
+      if (p === 'weekly' || p === 'per-week' || p === 'week') return 'per-month';
+      if (p === 'daily' || p === 'per-day' || p === 'day') return 'per-month';
+      return 'per-year';
+    };
+
+    const dbSalaryPeriod = normalizeSalaryPeriod(salaryPeriod);
+
     // Create record
     const jobData = {
       slug,
@@ -208,7 +223,7 @@ exports.createJob = async (req, res, next) => {
       salaryMin: safeSalaryMin,
       salaryMax: safeSalaryMax,
       salaryCurrency,
-      salaryPeriod,
+      salaryPeriod: dbSalaryPeriod,
       isSalaryVisible,
       department: department && department.trim() ? department : (region === 'gulf' ? 'General' : null),
       category,
@@ -463,7 +478,7 @@ exports.getAllJobs = async (req, res, next) => {
           required: false
         }
       ],
-      order: [[sortBy, sortOrder]],
+      order: [[sortBy === 'createdAt' ? 'created_at' : sortBy, sortOrder]],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -644,9 +659,8 @@ exports.getSimilarJobs = async (req, res, next) => {
         }
       ],
       order: [
-        // Prioritize by similarity factors
-        ['views', 'DESC'], // More viewed jobs first
-        ['createdAt', 'DESC'] // Recent jobs first
+        ['view_count', 'DESC'],
+        ['created_at', 'DESC']
       ],
       limit: parseInt(limit)
     });
@@ -674,8 +688,8 @@ exports.getSimilarJobs = async (req, res, next) => {
           }
         ],
         order: [
-          ['views', 'DESC'],
-          ['createdAt', 'DESC']
+          ['view_count', 'DESC'],
+          ['created_at', 'DESC']
         ],
         limit: parseInt(limit) - similarJobs.length
       });
@@ -905,14 +919,14 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     // Map camelCase sortBy to snake_case database columns
     const sortByMapping = {
-      'createdAt': 'createdAt',
+      'createdAt': 'created_at',
       'updatedAt': 'updated_at',
       'title': 'title',
       'status': 'status',
       'location': 'location'
     };
     
-    const dbSortBy = sortByMapping[sortBy] || 'createdAt';
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
 
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
@@ -993,7 +1007,7 @@ exports.getJobsByCompany = async (req, res, next) => {
           required: false // Make it optional since companyId can be NULL
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -1270,7 +1284,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
         ['views', 'DESC'], // More viewed jobs first
 
-        ['createdAt', 'DESC'] // Recent jobs first
+        ['created_at', 'DESC']
       ],
 
       limit: parseInt(limit)
@@ -1326,7 +1340,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
           ['views', 'DESC'],
 
-          ['createdAt', 'DESC']
+          ['created_at', 'DESC']
         ],
 
         limit: parseInt(limit) - similarJobs.length
@@ -1749,14 +1763,14 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     // Map camelCase sortBy to snake_case database columns
     const sortByMapping = {
-      'createdAt': 'createdAt',
+      'createdAt': 'created_at',
       'updatedAt': 'updated_at',
       'title': 'title',
       'status': 'status',
       'location': 'location'
     };
     
-    const dbSortBy = sortByMapping[sortBy] || 'createdAt';
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
 
 
     const { count, rows: jobs } = await Job.findAndCountAll({
@@ -1892,7 +1906,7 @@ exports.getJobsByCompany = async (req, res, next) => {
 
       ],
 
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
 
       offset: parseInt(offset)

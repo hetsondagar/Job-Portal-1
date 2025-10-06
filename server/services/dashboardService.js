@@ -225,7 +225,7 @@ class DashboardService {
       try {
         recentApplications = await JobApplication.findAll({
           where: { userId },
-          order: [['appliedAt', 'DESC']],
+          order: [[require('sequelize').col('applied_at'), 'DESC']],
           limit: 5,
           include: [{
             model: require('../models/Job'),

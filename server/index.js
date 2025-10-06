@@ -93,13 +93,10 @@ app.use(helmet());
 // Enhanced CORS configuration - MUST BE BEFORE ALL ROUTES
 const corsOptions = {
   origin: [
-    process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app',
-    process.env.CORS_ORIGIN || 'https://job-portal-nine-rouge.vercel.app',
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    process.env.CORS_ORIGIN || 'http://localhost:3000',
     'http://localhost:3000',
-    'http://localhost:3001',
-    'https://job-portal-nine-rouge.vercel.app',
-    'https://job-portal-dr834n32f-hetsondagar16-4175s-projects.vercel.app',
-    'https://job-portal-97q3.onrender.com'
+    'http://localhost:3001'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -341,6 +338,25 @@ const startServer = async () => {
   try {
     // Test database connection
     await testConnection();
+    // Optionally run migrations automatically in development or when forced
+    try {
+      const qi = sequelize.getQueryInterface();
+      const tables = await qi.showAllTables();
+      const normalized = Array.isArray(tables) ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase()) : [];
+      const shouldRunMigrations = (process.env.RUN_MIGRATIONS === 'true') || ((process.env.NODE_ENV || 'development') === 'development' && !normalized.includes('users'));
+      if (shouldRunMigrations) {
+        console.log('🔧 Running Sequelize migrations...');
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        await execAsync('npx --yes sequelize-cli db:migrate', { cwd: __dirname });
+        console.log('✅ Sequelize migrations completed');
+      } else {
+        console.log('ℹ️ Skipping migrations (either already migrated or not requested)');
+      }
+    } catch (migrateErr) {
+      console.warn('⚠️ Migration step skipped due to error:', migrateErr?.message || migrateErr);
+    }
     
     // Fix ALL database issues (missing columns, tables, constraints)
     if (process.env.NODE_ENV === 'production' || process.env.RUN_DB_FIXES === 'true') {
@@ -357,27 +373,60 @@ const startServer = async () => {
       }
     }
     
-    // Avoid global sync to prevent duplicate index creation on existing tables.
-    // Only ensure the new candidate_likes table exists.
-    try {
-      const qi = sequelize.getQueryInterface();
-      const tables = await qi.showAllTables();
-      const tableNames = Array.isArray(tables) ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase()) : [];
-      if (!tableNames.includes('candidate_likes')) {
-        await require('./models/CandidateLike').sync();
-        console.log('✅ candidate_likes table ensured');
-      } else {
-        console.log('ℹ️ candidate_likes table already exists');
+    // Optional non-destructive sync (alter) only if explicitly enabled
+    if ((process.env.NODE_ENV || 'development') === 'development' && process.env.RUN_SYNC === 'true') {
+      try {
+        const qiPre = sequelize.getQueryInterface();
+        const existing = await qiPre.showAllTables();
+        const has = (name) => {
+          const arr = Array.isArray(existing) ? existing : [];
+          return arr.map((t) => (typeof t === 'string' ? t : (t.tableName || t))).map((n) => String(n).toLowerCase()).includes(String(name).toLowerCase());
+        };
+
+        // Ordered ensures to avoid FK cyclic issues
+        const ensure = async (modelPath, tableName) => {
+          if (!has(tableName)) {
+            await require(modelPath).sync();
+            console.log(`✅ ${tableName} table ensured (ordered)`);
+          }
+        };
+
+        await ensure('./models/Conversation', 'conversations');
+        await ensure('./models/Message', 'messages');
+        await ensure('./models/Analytics', 'analytics');
+        await ensure('./models/Payment', 'payments');
+        // Some models are factory functions; use instances from config
+        const cfgModels = require('./config');
+        if (!has('bulk_job_imports') && cfgModels.BulkJobImport?.sync) {
+          await cfgModels.BulkJobImport.sync();
+          console.log('✅ bulk_job_imports table ensured (ordered via config)');
+        }
+        if (!has('candidate_analytics') && cfgModels.CandidateAnalytics?.sync) {
+          await cfgModels.CandidateAnalytics.sync();
+          console.log('✅ candidate_analytics table ensured (ordered via config)');
+        }
+        await ensure('./models/EmployerQuota', 'employer_quotas');
+        await ensure('./models/UserActivityLog', 'user_activity_logs');
+        await ensure('./models/UserDashboard', 'user_dashboard');
+        await ensure('./models/SearchHistory', 'search_history');
+        await ensure('./models/ViewTracking', 'view_tracking');
+        await ensure('./models/HotVacancyPhoto', 'hot_vacancy_photos');
+        await ensure('./models/SecureJobTap', 'secure_job_taps');
+
+        const { syncDatabase } = require('./config');
+        await syncDatabase({ alter: true });
+        // Log current tables after sync for verification
+        try {
+          const qiPost = sequelize.getQueryInterface();
+          const tablesPost = await qiPost.showAllTables();
+          const normalized = Array.isArray(tablesPost) ? tablesPost.map((t) => (typeof t === 'string' ? t : t.tableName || t)).sort() : [];
+          console.log(`✅ Local DB tables present (${normalized.length}):`, normalized);
+        } catch (listErr) {
+          console.warn('⚠️ Could not list tables after sync:', listErr?.message || listErr);
+        }
+      } catch (syncError) {
+        console.warn('⚠️ Global sync (alter) failed:', syncError?.message || syncError);
       }
-      // Ensure featured_jobs table exists
-      if (!tableNames.includes('featured_jobs')) {
-        await require('./models/FeaturedJob').sync();
-        console.log('✅ featured_jobs table ensured');
-      } else {
-        console.log('ℹ️ featured_jobs table already exists');
-      }
-    } catch (syncError) {
-      console.warn('⚠️ Skipping conditional sync due to error:', syncError?.message || syncError);
     }
 
     // Seed default public job templates for India and Gulf

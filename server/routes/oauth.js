@@ -36,7 +36,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:8000/api/oauth/google/callback",
+    callbackURL: (process.env.NODE_ENV === 'development')
+      ? "http://localhost:8000/api/oauth/google/callback"
+      : (process.env.GOOGLE_CALLBACK_URL || "http://localhost:8000/api/oauth/google/callback"),
     scope: ['profile', 'email', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
@@ -143,7 +145,9 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-    callbackURL: process.env.FACEBOOK_CALLBACK_URL || "http://localhost:8000/api/oauth/facebook/callback",
+    callbackURL: (process.env.NODE_ENV === 'development')
+      ? "http://localhost:8000/api/oauth/facebook/callback"
+      : (process.env.FACEBOOK_CALLBACK_URL || "http://localhost:8000/api/oauth/facebook/callback"),
     profileFields: ['id', 'displayName', 'photos', 'email']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
@@ -811,7 +815,10 @@ router.get('/urls', (req, res) => {
   const urls = {};
   
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    const googleUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/google`;
+    const baseBackendUrl = (process.env.NODE_ENV === 'development')
+      ? 'http://localhost:8000'
+      : (process.env.BACKEND_URL || 'http://localhost:8000');
+    const googleUrl = `${baseBackendUrl}/api/oauth/google`;
     
     // Build state parameter based on userType and additional state
     let stateParam = '';
@@ -832,7 +839,10 @@ router.get('/urls', (req, res) => {
   }
   
   if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
-    const facebookUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/oauth/facebook`;
+    const baseBackendUrl = (process.env.NODE_ENV === 'development')
+      ? 'http://localhost:8000'
+      : (process.env.BACKEND_URL || 'http://localhost:8000');
+    const facebookUrl = `${baseBackendUrl}/api/oauth/facebook`;
     
     // Build state parameter based on userType and additional state
     let stateParam = '';

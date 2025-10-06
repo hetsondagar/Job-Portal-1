@@ -93,6 +93,7 @@ const getGulfJobs = async (req, res) => {
       whereClause.companyId = companyId;
     }
 
+    const sortColumn = sortBy === 'createdAt' ? require('sequelize').col('created_at') : sortBy;
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
       include: [
@@ -107,7 +108,7 @@ const getGulfJobs = async (req, res) => {
           attributes: ['id', 'first_name', 'last_name', 'email']
         }
       ],
-      order: [[sortBy, sortOrder.toUpperCase()]],
+      order: [[sortColumn, sortOrder.toUpperCase()]],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -532,7 +533,17 @@ const getGulfJobBookmarks = async (req, res) => {
         {
           model: Job,
           as: 'job',
-          attributes: ['id', 'title', 'location', 'salary', 'salaryMin', 'salaryMax', 'salaryCurrency', 'experienceLevel', 'createdAt'],
+          attributes: [
+            'id',
+            'title',
+            'location',
+            'salary',
+            'salaryMin',
+            'salaryMax',
+            'salaryCurrency',
+            'experienceLevel',
+            [require('sequelize').literal('"job"."created_at"'), 'createdAt']
+          ],
           where: {
             [Op.or]: [
               { region: 'gulf' },

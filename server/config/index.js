@@ -53,8 +53,8 @@ User.hasMany(Requirement, { foreignKey: 'createdBy', as: 'requirements' });
 User.hasMany(RequirementApplication, { foreignKey: 'userId', as: 'requirementApplications' });
 User.hasMany(Resume, { foreignKey: 'userId', as: 'resumes' });
 User.hasMany(CoverLetter, { foreignKey: 'userId', as: 'coverLetters' });
-User.hasMany(WorkExperience, { foreignKey: 'userId', as: 'workExperiences' });
-User.hasMany(Education, { foreignKey: 'userId', as: 'educations' });
+User.hasMany(WorkExperience, { foreignKey: 'user_id', as: 'workExperiences' });
+User.hasMany(Education, { foreignKey: 'user_id', as: 'educations' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 User.hasOne(JobPreference, { foreignKey: 'userId', as: 'jobPreference' });
 User.hasMany(CompanyReview, { foreignKey: 'userId', as: 'companyReviews' });
@@ -134,11 +134,11 @@ Resume.hasMany(Education, { foreignKey: 'resumeId', as: 'resumeEducations' });
 CoverLetter.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // WorkExperience associations
-WorkExperience.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+WorkExperience.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 WorkExperience.belongsTo(Resume, { foreignKey: 'resumeId', as: 'workExperienceResume' });
 
 // Education associations
-Education.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Education.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 Education.belongsTo(Resume, { foreignKey: 'resumeId', as: 'educationResume' });
 
 // Notification associations
@@ -217,10 +217,13 @@ User.hasMany(SecureJobTap, { foreignKey: 'userId', as: 'secureJobTaps' });
 Job.hasMany(SecureJobTap, { foreignKey: 'jobId', as: 'secureJobTaps' });
 
 // Sync database function
-const syncDatabase = async (force = true) => {
+// In local development we prefer alter:true to create/update tables non-destructively
+const syncDatabase = async (options = {}) => {
+  const isDev = (process.env.NODE_ENV || 'development') === 'development';
+  const syncOptions = isDev ? { alter: true, ...options } : { ...options };
   try {
-    await sequelize.sync({ force });
-    console.log('✅ Database synchronized successfully');
+    await sequelize.sync(syncOptions);
+    console.log('✅ Database synchronized successfully', syncOptions);
   } catch (error) {
     console.error('❌ Database sync failed:', error);
     throw error;

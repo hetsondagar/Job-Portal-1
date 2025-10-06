@@ -23,6 +23,7 @@ const Job = sequelize.define('Job', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -31,6 +32,7 @@ const Job = sequelize.define('Job', {
   employerId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'posted_by',
     references: {
       model: 'users',
       key: 'id'
@@ -38,7 +40,8 @@ const Job = sequelize.define('Job', {
   },
   shortDescription: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'short_description'
   },
   location: {
     type: DataTypes.STRING,
@@ -81,273 +84,170 @@ const Job = sequelize.define('Job', {
   jobType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: false,
-    defaultValue: 'full-time'
+    defaultValue: 'full-time',
+    field: 'job_type'
   },
   experienceLevel: {
     type: DataTypes.ENUM('entry', 'junior', 'mid', 'senior', 'lead', 'executive'),
-    allowNull: true
+    allowNull: true,
+    field: 'experience_level'
   },
   experienceMin: {
     type: DataTypes.INTEGER, // in years
-    allowNull: true
+    allowNull: true,
+    field: 'experience_min'
   },
   experienceMax: {
     type: DataTypes.INTEGER, // in years
-    allowNull: true
+    allowNull: true,
+    field: 'experience_max'
   },
   salaryMin: {
     type: DataTypes.DECIMAL,
-    allowNull: true
+    allowNull: true,
+    field: 'salary_min'
   },
   salaryMax: {
     type: DataTypes.DECIMAL,
-    allowNull: true
+    allowNull: true,
+    field: 'salary_max'
   },
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'salary_currency'
   },
   salaryPeriod: {
-    type: DataTypes.ENUM('hourly', 'daily', 'weekly', 'monthly', 'yearly'),
+    type: DataTypes.ENUM('per-year', 'per-month', 'per-hour'),
     allowNull: true,
-    defaultValue: 'yearly'
+    defaultValue: 'per-year',
+    field: 'salary_type'
   },
   isSalaryVisible: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: true
+    type: DataTypes.VIRTUAL
   },
   department: {
-    type: DataTypes.STRING,
-    allowNull: true
+    type: DataTypes.VIRTUAL
   },
   category: {
-    type: DataTypes.STRING,
-    allowNull: true
+    type: DataTypes.VIRTUAL
   },
   skills: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   remoteWork: {
     type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
     allowNull: true,
-    defaultValue: 'on-site'
+    defaultValue: 'on-site',
+    field: 'location_type'
   },
   travelRequired: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
+    type: DataTypes.VIRTUAL
   },
   shiftTiming: {
-    type: DataTypes.ENUM('day', 'night', 'rotational', 'flexible'),
-    allowNull: true,
-    defaultValue: 'day'
+    type: DataTypes.VIRTUAL
   },
   noticePeriod: {
-    type: DataTypes.INTEGER,
-    allowNull: true
+    type: DataTypes.VIRTUAL
   },
   education: {
-    type: DataTypes.STRING,
-    allowNull: true
+    type: DataTypes.VIRTUAL
   },
   certifications: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   languages: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   isUrgent: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_urgent'
   },
   isFeatured: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_featured'
   },
   isPremium: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
+    type: DataTypes.VIRTUAL
   },
   views: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'view_count'
   },
   applications: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'application_count'
   },
   validTill: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'application_deadline'
   },
   publishedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'published_at'
   },
   closedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
+    type: DataTypes.VIRTUAL
   },
   tags: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   metadata: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: {}
+    type: DataTypes.VIRTUAL
   },
   isPrivate: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
+    type: DataTypes.VIRTUAL
   },
   visibilityType: {
-    type: DataTypes.ENUM('public', 'private', 'referral-only', 'invite-only'),
-    allowNull: true,
-    defaultValue: 'public'
+    type: DataTypes.VIRTUAL
   },
   allowedViewers: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
-  referralCode: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  scheduledPublishAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  scheduledExpiryAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  autoRenew: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
-  },
-  renewalPeriod: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  maxRenewals: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  currentRenewalCount: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    defaultValue: 0
-  },
-  templateId: {
-    type: DataTypes.UUID,
-    allowNull: true
-  },
-  bulkImportId: {
-    type: DataTypes.UUID,
-    allowNull: true
-  },
-  searchImpressions: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    defaultValue: 0
-  },
-  searchClicks: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    defaultValue: 0
-  },
-  applicationRate: {
-    type: DataTypes.DECIMAL,
-    allowNull: true,
-    defaultValue: 0
-  },
-  qualityScore: {
-    type: DataTypes.DECIMAL,
-    allowNull: true,
-    defaultValue: 0
-  },
-  seoScore: {
-    type: DataTypes.DECIMAL,
-    allowNull: true,
-    defaultValue: 0
-  },
-  isATSEnabled: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false
-  },
-  atsKeywords: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
-  },
-  targetAudience: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: {}
-  },
-  promotionSettings: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: {}
-  },
-  bookmarkCount: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    defaultValue: 0
-  },
-  salary: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  duration: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  startDate: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  workMode: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  learningObjectives: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  mentorship: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  region: {
-    type: DataTypes.ENUM('india', 'gulf', 'other'),
-    allowNull: true,
-    defaultValue: 'india'
-  }
+  referralCode: { type: DataTypes.VIRTUAL },
+  scheduledPublishAt: { type: DataTypes.VIRTUAL },
+  scheduledExpiryAt: { type: DataTypes.VIRTUAL },
+  autoRenew: { type: DataTypes.VIRTUAL },
+  renewalPeriod: { type: DataTypes.VIRTUAL },
+  maxRenewals: { type: DataTypes.VIRTUAL },
+  currentRenewalCount: { type: DataTypes.VIRTUAL },
+  templateId: { type: DataTypes.VIRTUAL },
+  bulkImportId: { type: DataTypes.VIRTUAL },
+  searchImpressions: { type: DataTypes.VIRTUAL },
+  searchClicks: { type: DataTypes.VIRTUAL },
+  applicationRate: { type: DataTypes.VIRTUAL },
+  qualityScore: { type: DataTypes.VIRTUAL },
+  seoScore: { type: DataTypes.VIRTUAL },
+  isATSEnabled: { type: DataTypes.VIRTUAL },
+  atsKeywords: { type: DataTypes.VIRTUAL },
+  targetAudience: { type: DataTypes.VIRTUAL },
+  promotionSettings: { type: DataTypes.VIRTUAL },
+  bookmarkCount: { type: DataTypes.VIRTUAL },
+  salary: { type: DataTypes.VIRTUAL },
+  duration: { type: DataTypes.VIRTUAL },
+  startDate: { type: DataTypes.VIRTUAL },
+  workMode: { type: DataTypes.VIRTUAL },
+  learningObjectives: { type: DataTypes.VIRTUAL },
+  mentorship: { type: DataTypes.VIRTUAL },
+  region: { type: DataTypes.VIRTUAL }
 }, {
   sequelize,
   modelName: 'Job',
   tableName: 'jobs',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   paranoid: false
 });
 

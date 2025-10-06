@@ -85,8 +85,9 @@ class DatabaseConnection {
   }
 
   getDatabaseConfig() {
-    // Parse DATABASE_URL if provided (Render.com style)
-    const dbUrl = process.env.DATABASE_URL || process.env.DB_URL;
+    // Use DATABASE_URL only in production; otherwise prefer local envs
+    const useDatabaseUrl = (process.env.NODE_ENV === 'production');
+    const dbUrl = useDatabaseUrl ? (process.env.DATABASE_URL || process.env.DB_URL) : null;
     
     if (dbUrl) {
       try {
@@ -122,12 +123,12 @@ class DatabaseConnection {
       }
     }
     
-    // Fallback to individual environment variables
+    // Fallback to individual environment variables (local defaults)
     return {
-      username: process.env.DB_USER || 'jobportal_dev_0u1u_user',
-      password: process.env.DB_PASSWORD || 'yK9WCII787btQrSqZJVdq0Cx61rZoTsc',
-      database: process.env.DB_NAME || 'jobportal_dev_0u1u',
-      host: process.env.DB_HOST || 'dpg-d372gajuibrs738lnm5g-a.singapore-postgres.render.com',
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'password',
+      database: process.env.DB_NAME || 'jobportal_dev',
+      host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT) || 5432,
       dialect: 'postgres',
       logging: false,
@@ -142,12 +143,7 @@ class DatabaseConnection {
         underscored: false,
         freezeTableName: true
       },
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      }
+      dialectOptions: {}
     };
   }
 

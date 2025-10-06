@@ -860,7 +860,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     // Correct field mapping: model uses camelCase userId
     const notifications = await Notification.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      order: [[require('sequelize').col('created_at'), 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
 
@@ -1174,7 +1174,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
     const { JobApplication, Job, Company, User, Resume } = require('../config/index');
     
     const applications = await JobApplication.findAll({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
       include: [
         {
           model: Job,
@@ -1198,7 +1198,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
           attributes: ['id', 'title', 'summary', 'isDefault', 'views', 'downloads']
         }
       ],
-      order: [['applied_at', 'DESC']]
+      order: [[require('sequelize').col('applied_at'), 'DESC']]
     });
 
     res.json({
@@ -1249,8 +1249,8 @@ router.post('/applications', authenticateToken, async (req, res) => {
     // Check if user already applied for this job
     const existingApplication = await JobApplication.findOne({
       where: { 
-        job_id: jobId, 
-        user_id: req.user.id 
+        jobId: jobId, 
+        userId: req.user.id 
       }
     });
 
@@ -1469,7 +1469,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     // First, let's check if there are any applications at all
     console.log('🔍 Fetching all applications...');
     const allApplications = await JobApplication.findAll({
-      attributes: ['id', 'job_id', 'user_id', 'status', 'applied_at'],
+      attributes: ['id', 'job_id', 'applicant_id', 'status', 'applied_at'],
       limit: 10
     });
     console.log('📊 All applications in database (first 10):', allApplications.map(app => ({
@@ -1577,7 +1577,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     if (applicantIds.length > 0) {
       // Use raw queries to avoid column name casing issues
       const [wxRows] = await sequelize.query(
-        'SELECT * FROM work_experiences WHERE "userId" IN (:ids)',
+        'SELECT * FROM work_experiences WHERE user_id IN (:ids)',
         { replacements: { ids: applicantIds }, raw: true }
       );
       wxRows.forEach(row => {
@@ -1586,7 +1586,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         experiencesByUser.set(row.userId, arr);
       });
       const [edRows] = await sequelize.query(
-        'SELECT * FROM educations WHERE "userId" IN (:ids)',
+        'SELECT * FROM educations WHERE user_id IN (:ids)',
         { replacements: { ids: applicantIds }, raw: true }
       );
       edRows.forEach(row => {
@@ -2635,8 +2635,8 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
              u.first_name, u.last_name, u.email, u.headline, u.current_location, u.skills
       FROM job_applications ja
       JOIN jobs j ON ja.job_id = j.id
-      JOIN users u ON ja.user_id = u.id
-      WHERE j."employerId" = :userId
+      JOIN users u ON ja.applicant_id = u.id
+      WHERE j.posted_by = :userId
     `, {
       replacements: { userId: req.user.id },
       type: sequelize.QueryTypes.SELECT
@@ -2897,7 +2897,7 @@ router.get('/resumes', authenticateToken, async (req, res) => {
   try {
     const resumes = await Resume.findAll({
       where: { userId: req.user.id },
-      order: [['isDefault', 'DESC'], ['createdAt', 'DESC']]
+      order: [[require('sequelize').col('is_primary'), 'DESC'], [require('sequelize').col('created_at'), 'DESC']]
     });
 
     res.json({
@@ -2926,15 +2926,15 @@ router.get('/resumes/stats', authenticateToken, async (req, res) => {
 
     const recentResumes = await Resume.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      order: [[require('sequelize').col('created_at'), 'DESC']],
       limit: 3
     });
 
-    const totalViews = await Resume.sum('views', {
+    const totalViews = await Resume.sum(require('sequelize').col('view_count'), {
       where: { userId: req.user.id }
     }) || 0;
 
-    const totalDownloads = await Resume.sum('downloads', {
+    const totalDownloads = await Resume.sum(require('sequelize').col('download_count'), {
       where: { userId: req.user.id }
     }) || 0;
 
@@ -3239,9 +3239,15 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
 
     if (!filename) {
       console.log('❌ No filename in resume metadata');
+      // Fallback: try redirecting to stored public path if present
+      if (metadata.filePath) {
+        console.log('↪️ Redirecting to stored public filePath');
+        return res.redirect(metadata.filePath);
+      }
       return res.status(404).json({
         success: false,
-        message: 'Resume file not found - no filename in metadata'
+        message: 'Resume file not found. Please re-upload your resume.',
+        code: 'MISSING_FILENAME'
       });
     }
 
@@ -4104,15 +4110,21 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
     const resume = application.jobResume;
     const metadata = resume.metadata || {};
     const filename = metadata.filename;
-    const originalName = metadata.originalName;
+    const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
 
     console.log('🔍 Resume metadata:', { filename, originalName, metadata });
 
     if (!filename) {
       console.log('❌ No filename in resume metadata');
+      // Fallback: try redirecting to stored public path if present
+      if (metadata.filePath) {
+        console.log('↪️ Redirecting to stored public filePath');
+        return res.redirect(metadata.filePath);
+      }
       return res.status(404).json({
         success: false,
-        message: 'Resume file not found'
+        message: 'Resume file not found. Please ask the candidate to re-upload.',
+        code: 'MISSING_FILENAME'
       });
     }
 

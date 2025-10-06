@@ -5,6 +5,29 @@ module.exports = {
     try {
       console.log('🔄 Creating conversations and messages tables...');
 
+      // helper to add index only if it doesn't already exist
+      const addIndexIfMissing = async (table, columns, options = {}) => {
+        const idxName = options.name || `${table}_${(Array.isArray(columns)?columns:[columns]).map(c=>c).join('_')}`;
+        const [rows] = await queryInterface.sequelize.query(`SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname = :idx`, { replacements: { idx: idxName } });
+        if (!Array.isArray(rows) || rows.length === 0) {
+          await queryInterface.addIndex(table, columns, options);
+          console.log(`✅ Created index ${idxName}`);
+        } else {
+          console.log(`ℹ️ Index ${idxName} already exists, skipping`);
+        }
+      };
+
+      // helper to pick existing column name between snake_case and camelCase
+      const pickExistingColumn = async (table, snake, camel) => {
+        const [cols] = await queryInterface.sequelize.query(`
+          SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=:t
+        `, { replacements: { t: table } });
+        const names = Array.isArray(cols) ? cols.map(r => String(r.column_name)) : [];
+        if (names.includes(snake)) return snake;
+        if (names.includes(camel)) return camel;
+        return snake; // default
+      };
+
       // Create conversations table first (referenced by messages)
       await queryInterface.createTable('conversations', {
         id: {
@@ -241,35 +264,61 @@ module.exports = {
 
       console.log('✅ Messages table created');
 
-      // Now add the foreign key constraint for lastMessageId in conversations
-      await queryInterface.addConstraint('conversations', {
-        fields: ['last_message_id'],
-        type: 'foreign key',
-        name: 'conversations_last_message_fkey',
-        references: {
-          table: 'messages',
-          field: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      });
-
-      console.log('✅ Added foreign key constraint for last_message_id');
+      // Now add the foreign key constraint for lastMessageId in conversations (idempotent)
+      const [constraintRows] = await queryInterface.sequelize.query(`
+        SELECT 1 FROM pg_constraint WHERE conname = 'conversations_last_message_fkey'
+      `);
+      if (!Array.isArray(constraintRows) || constraintRows.length === 0) {
+        await queryInterface.addConstraint('conversations', {
+          fields: ['last_message_id'],
+          type: 'foreign key',
+          name: 'conversations_last_message_fkey',
+          references: {
+            table: 'messages',
+            field: 'id'
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'SET NULL'
+        });
+        console.log('✅ Added foreign key constraint for last_message_id');
+      } else {
+        console.log('ℹ️ Foreign key conversations_last_message_fkey already exists, skipping');
+      }
 
       // Create indexes
-      await queryInterface.addIndex('conversations', ['participant1_id']);
-      await queryInterface.addIndex('conversations', ['participant2_id']);
-      await queryInterface.addIndex('conversations', ['job_application_id']);
-      await queryInterface.addIndex('conversations', ['job_id']);
-      await queryInterface.addIndex('conversations', ['last_message_at']);
-      await queryInterface.addIndex('conversations', ['is_active']);
+      await addIndexIfMissing('conversations', ['participant1_id'], { name: 'conversations_participant1_id' });
+      await addIndexIfMissing('conversations', ['participant2_id'], { name: 'conversations_participant2_id' });
+      const tryAddIndexWithCandidates = async (table, candidates, name) => {
+        // Skip if index already exists
+        const [existsRows] = await queryInterface.sequelize.query(`SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname = :idx`, { replacements: { idx: name } });
+        if (Array.isArray(existsRows) && existsRows.length > 0) {
+          console.log(`ℹ️ Index ${name} already exists, skipping`);
+          return;
+        }
+        // Try each candidate column set in order
+        for (const cols of candidates) {
+          try {
+            await queryInterface.addIndex(table, cols, { name });
+            console.log(`✅ Created index ${name} on columns ${cols.join(',')}`);
+            return;
+          } catch (e) {
+            console.log(`ℹ️ Failed to create index ${name} on ${cols.join(',')}: ${e.message}`);
+          }
+        }
+        console.log(`⚠️ Skipping index ${name} - no matching column variant found`);
+      };
 
-      await queryInterface.addIndex('messages', ['conversation_id']);
-      await queryInterface.addIndex('messages', ['sender_id']);
-      await queryInterface.addIndex('messages', ['receiver_id']);
-      await queryInterface.addIndex('messages', ['is_read']);
-      await queryInterface.addIndex('messages', ['created_at']);
-      await queryInterface.addIndex('messages', ['reply_to_message_id']);
+      await tryAddIndexWithCandidates('conversations', [['job_application_id'], ['jobApplicationId']], 'conversations_job_application_id');
+      await tryAddIndexWithCandidates('conversations', [['job_id'], ['jobId']], 'conversations_job_id');
+      await tryAddIndexWithCandidates('conversations', [['last_message_at'], ['lastMessageAt']], 'conversations_last_message_at');
+      await tryAddIndexWithCandidates('conversations', [['is_active'], ['isActive']], 'conversations_is_active');
+
+      await tryAddIndexWithCandidates('messages', [['conversation_id'], ['conversationId']], 'messages_conversation_id');
+      await tryAddIndexWithCandidates('messages', [['sender_id'], ['senderId']], 'messages_sender_id');
+      await tryAddIndexWithCandidates('messages', [['receiver_id'], ['receiverId']], 'messages_receiver_id');
+      await tryAddIndexWithCandidates('messages', [['is_read'], ['isRead']], 'messages_is_read');
+      await tryAddIndexWithCandidates('messages', [['created_at'], ['createdAt']], 'messages_created_at');
+      await tryAddIndexWithCandidates('messages', [['reply_to_message_id'], ['replyToMessageId']], 'messages_reply_to_message_id');
 
       console.log('✅ Conversations and messages tables created successfully');
     } catch (error) {

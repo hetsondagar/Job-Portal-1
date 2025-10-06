@@ -99,7 +99,7 @@ class RobustDatabaseConnection {
   }
 
   getDatabaseConfig() {
-    const databaseUrl = process.env.DATABASE_URL;
+    const databaseUrl = process.env.NODE_ENV === 'production' ? process.env.DATABASE_URL : null;
     
     if (databaseUrl) {
       // Parse DATABASE_URL
@@ -133,9 +133,9 @@ class RobustDatabaseConnection {
       return {
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT) || 5432,
-        database: process.env.DB_NAME || 'jobportal',
+        database: process.env.DB_NAME || 'jobportal_dev',
         username: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || '',
+        password: process.env.DB_PASSWORD || 'password',
         dialect: 'postgres',
         pool: {
           max: 10,
@@ -147,12 +147,7 @@ class RobustDatabaseConnection {
           timestamps: true,
           underscored: true
         },
-        dialectOptions: {
-          ssl: process.env.NODE_ENV === 'production' ? {
-            require: true,
-            rejectUnauthorized: false
-          } : false
-        }
+        dialectOptions: {}
       };
     }
   }

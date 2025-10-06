@@ -2,6 +2,19 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // If table already exists (possibly with snake_case columns), skip creation to avoid column name conflicts
+    const [existsRows] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'job_templates'
+      ) AS exists;
+    `);
+    const tableExists = Array.isArray(existsRows) ? existsRows[0]?.exists : existsRows?.exists;
+    if (tableExists) {
+      console.log('ℹ️ job_templates already exists; skipping table creation and seeding');
+      return;
+    }
     await queryInterface.createTable('job_templates', {
       id: {
         type: Sequelize.UUID,
@@ -87,37 +100,36 @@ module.exports = {
       }
     });
 
-    // Add indexes for better performance
-    try {
-      await queryInterface.addIndex('job_templates', ['createdBy'], { name: 'job_templates_created_by' });
-    } catch (error) {
-      // Index might already exist, continue
-      console.log('Index job_templates_created_by might already exist, skipping...');
-    }
-    
-    try {
-      await queryInterface.addIndex('job_templates', ['isPublic'], { name: 'job_templates_is_public' });
-    } catch (error) {
-      console.log('Index job_templates_is_public might already exist, skipping...');
-    }
-    
-    try {
-      await queryInterface.addIndex('job_templates', ['category'], { name: 'job_templates_category' });
-    } catch (error) {
-      console.log('Index job_templates_category might already exist, skipping...');
-    }
-    
-    try {
-      await queryInterface.addIndex('job_templates', ['isActive'], { name: 'job_templates_is_active' });
-    } catch (error) {
-      console.log('Index job_templates_is_active might already exist, skipping...');
-    }
-    
-    try {
-      await queryInterface.addIndex('job_templates', ['createdAt'], { name: 'job_templates_created_at' });
-    } catch (error) {
-      console.log('Index job_templates_created_at might already exist, skipping...');
-    }
+    // Add indexes for better performance (idempotent and column-name variant aware)
+    const indexExists = async (name) => {
+      const [rows] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname = :idx`,
+        { replacements: { idx: name } }
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    };
+    const tryIndex = async (columnsVariants, name) => {
+      if (await indexExists(name)) {
+        console.log(`ℹ️ Index ${name} already exists, skipping`);
+        return;
+      }
+      for (const cols of columnsVariants) {
+        try {
+          await queryInterface.addIndex('job_templates', cols, { name });
+          console.log(`✅ Created index ${name} on ${cols.join(',')}`);
+          return;
+        } catch (e) {
+          console.log(`ℹ️ Could not create ${name} on ${cols.join(',')}: ${e.message}`);
+        }
+      }
+      console.log(`⚠️ Skipping index ${name} - no matching column variant found`);
+    };
+
+    await tryIndex([['createdBy'], ['created_by']], 'job_templates_created_by');
+    await tryIndex([['isPublic'], ['is_public']], 'job_templates_is_public');
+    await tryIndex([['category']], 'job_templates_category');
+    await tryIndex([['isActive'], ['is_active']], 'job_templates_is_active');
+    await tryIndex([['createdAt'], ['created_at']], 'job_templates_created_at');
 
     // Insert some default templates only if users exist
     const [users] = await queryInterface.sequelize.query('SELECT id FROM "users" LIMIT 1');

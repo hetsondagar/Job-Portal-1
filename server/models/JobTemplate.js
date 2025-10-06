@@ -11,6 +11,7 @@ const JobTemplate = sequelize.define('JobTemplate', {
       type: DataTypes.UUID,
       allowNull: true,
       comment: 'Company this template belongs to'
+      // DB column added as camelCase via migration: companyId
     },
     name: {
       type: DataTypes.STRING(255),
@@ -30,6 +31,7 @@ const JobTemplate = sequelize.define('JobTemplate', {
     templateData: {
       type: DataTypes.JSONB,
       allowNull: true,
+      field: 'template_data',
       comment: 'Template data structure'
     },
     tags: {
@@ -37,34 +39,34 @@ const JobTemplate = sequelize.define('JobTemplate', {
       allowNull: true,
       comment: 'Template tags'
     },
-    isActive: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-      comment: 'Whether template is active'
-    },
     isPublic: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      field: 'is_public',
       comment: 'Whether template is public'
     },
     isDefault: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      field: 'is_default',
       comment: 'Whether template is default'
     },
     createdBy: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'created_by',
       comment: 'User who created this template'
     },
     lastUsedAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'last_used_at',
       comment: 'When template was last used'
     },
     usageCount: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
+      field: 'usage_count',
       comment: 'Number of times template was used'
     },
     version: {
@@ -75,12 +77,13 @@ const JobTemplate = sequelize.define('JobTemplate', {
 }, {
   tableName: 'job_templates',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
-    { fields: ['createdBy'] },
+    { fields: ['created_by'] },
     { fields: ['companyId'] },
     { fields: ['category'] },
-    { fields: ['isPublic'] },
-    { fields: ['isActive'] }
+    { fields: ['is_public'] }
   ]
 });
 
