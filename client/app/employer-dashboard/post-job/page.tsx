@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle } from "lucide-react"
+import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -19,6 +19,7 @@ import { EmployerFooter } from "@/components/employer-footer"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import DepartmentDropdown from "@/components/ui/department-dropdown"
 
 export default function PostJobPage() {
   const router = useRouter()
@@ -49,6 +50,7 @@ export default function PostJobPage() {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [postedJobId, setPostedJobId] = useState<string | null>(null)
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
 
   const steps = [
     { id: 1, title: "Job Details", description: "Basic job information" },
@@ -699,18 +701,29 @@ export default function PostJobPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Department*</label>
-                <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="engineering">Engineering</SelectItem>
-                    <SelectItem value="product">Product</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="sales">Sales</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => setShowDepartmentDropdown(true)}
+                >
+                  <span>{formData.department || "Select department"}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                {showDepartmentDropdown && (
+                  <DepartmentDropdown
+                    selectedDepartments={formData.department ? [formData.department] : []}
+                    onDepartmentChange={(departments: string[]) => {
+                      // For job posting, we only allow single selection
+                      if (departments.length > 0) {
+                        setFormData({ ...formData, department: departments[0] })
+                      } else {
+                        setFormData({ ...formData, department: "" })
+                      }
+                    }}
+                    onClose={() => setShowDepartmentDropdown(false)}
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Location*</label>

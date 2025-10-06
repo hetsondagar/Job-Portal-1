@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Building2, Edit, Save, X, Loader2, Globe, MapPin, Phone, Mail, Users, Calendar } from "lucide-react"
+import { Building2, Edit, Save, X, Loader2, Globe, MapPin, Phone, Mail, Users, Calendar, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
 
 interface CompanyManagementProps {
   companyId: string
@@ -28,16 +29,14 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photos, setPhotos] = useState<any[]>([])
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
   const auth = useAuth() as any
 
   const companySizes = [
     "1-50", "51-200", "201-500", "500-1000", "1000+"
   ]
 
-  const industries = [
-    "Technology", "Healthcare", "Finance", "Education", "Manufacturing",
-    "Retail", "Consulting", "Marketing", "Real Estate", "Other"
-  ]
+  // Remove the old industries array - we'll use the custom dropdown
 
   useEffect(() => {
     loadCompanyData()
@@ -243,18 +242,29 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               
               <div className="space-y-2">
                 <Label htmlFor="industry">Industry</Label>
-                <Select value={formData.industry || ""} onValueChange={(value) => handleInputChange("industry", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {industries.map((industry) => (
-                      <SelectItem key={industry} value={industry}>
-                        {industry}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => setShowIndustryDropdown(true)}
+                >
+                  <span>{formData.industry || "Select industry"}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                {showIndustryDropdown && (
+                  <IndustryDropdown
+                    selectedIndustries={formData.industry ? [formData.industry] : []}
+                    onIndustryChange={(industries: string[]) => {
+                      // For company settings, we only allow single selection
+                      if (industries.length > 0) {
+                        handleInputChange("industry", industries[0])
+                      } else {
+                        handleInputChange("industry", "")
+                      }
+                    }}
+                    onClose={() => setShowIndustryDropdown(false)}
+                  />
+                )}
               </div>
               
               <div className="space-y-2">

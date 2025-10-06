@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Save, X, Plus } from "lucide-react"
+import { ArrowLeft, Save, X, Plus, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,8 @@ import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { useToast } from "@/hooks/use-toast"
 import { apiService } from "@/lib/api"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
+import DepartmentDropdown from "@/components/ui/department-dropdown"
 
 export default function CreateRequirementPage() {
   const params = useParams()
@@ -25,6 +27,8 @@ export default function CreateRequirementPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [currentSkill, setCurrentSkill] = useState("")
   const [currentBenefit, setCurrentBenefit] = useState("")
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
 
   // Initialize form data - same structure as edit page
   const [formData, setFormData] = useState({
@@ -210,19 +214,7 @@ export default function CreateRequirementPage() {
 
   const commonSkills = ["React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "MongoDB", "PostgreSQL", "AWS", "Docker", "Kubernetes"]
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
-  const industries = [
-    'Information Technology', 'Banking', 'Financial Services', 'Insurance', 'Healthcare', 'Pharmaceuticals',
-    'Education', 'E-Learning', 'Manufacturing', 'Automotive', 'Aerospace', 'Telecommunications', 'Retail',
-    'E-Commerce', 'FMCG', 'Hospitality', 'Travel & Tourism', 'Construction', 'Real Estate', 'Energy', 'Oil & Gas',
-    'Media & Entertainment', 'Logistics & Supply Chain', 'Consulting', 'Government', 'Non-Profit', 'Agriculture'
-  ]
-  const departments = [
-    'Engineering', 'Information Technology', 'Product Management', 'Design', 'Data Science', 'Analytics', 'Quality Assurance',
-    'DevOps', 'Cloud', 'Cybersecurity', 'Human Resources', 'Talent Acquisition', 'Learning & Development', 'Finance',
-    'Accounting', 'Legal', 'Compliance', 'Sales', 'Business Development', 'Marketing', 'Digital Marketing', 'Content',
-    'Operations', 'Administration', 'Customer Support', 'Technical Support', 'Supply Chain', 'Procurement', 'Logistics',
-    'Research & Development', 'Project Management', 'Strategy', 'Corporate Communications'
-  ]
+  // Removed industries and departments arrays - using custom dropdowns now
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
@@ -494,30 +486,56 @@ export default function CreateRequirementPage() {
 
                   <div>
                     <Label htmlFor="industry">Industry</Label>
-                    <Select value={formData.industry} onValueChange={(value) => handleInputChange('industry', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select industry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map(ind => (
-                          <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => setShowIndustryDropdown(true)}
+                    >
+                      <span>{formData.industry || "Select industry"}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                    
+                    {showIndustryDropdown && (
+                      <IndustryDropdown
+                        selectedIndustries={formData.industry ? [formData.industry] : []}
+                        onIndustryChange={(industries: string[]) => {
+                          // For requirements, we only allow single selection
+                          if (industries.length > 0) {
+                            handleInputChange('industry', industries[0])
+                          } else {
+                            handleInputChange('industry', '')
+                          }
+                        }}
+                        onClose={() => setShowIndustryDropdown(false)}
+                      />
+                    )}
                   </div>
 
                   <div>
                     <Label htmlFor="department">Department</Label>
-                    <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departments.map(dep => (
-                          <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => setShowDepartmentDropdown(true)}
+                    >
+                      <span>{formData.department || "Select department"}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                    
+                    {showDepartmentDropdown && (
+                      <DepartmentDropdown
+                        selectedDepartments={formData.department ? [formData.department] : []}
+                        onDepartmentChange={(departments: string[]) => {
+                          // For requirements, we only allow single selection
+                          if (departments.length > 0) {
+                            handleInputChange('department', departments[0])
+                          } else {
+                            handleInputChange('department', '')
+                          }
+                        }}
+                        onClose={() => setShowDepartmentDropdown(false)}
+                      />
+                    )}
                   </div>
 
                   <div>
