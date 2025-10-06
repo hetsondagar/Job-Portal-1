@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { useSearchParams } from 'next/navigation'
 import {
   Search,
   MapPin,
@@ -100,6 +101,7 @@ interface Job {
 }
 
 export default function JobsPage() {
+  const searchParams = useSearchParams()
   const { user, loading } = useAuth()
   const [showFilters, setShowFilters] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
@@ -146,21 +148,282 @@ export default function JobsPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
+      
+      // Extract all filter parameters
       const category = urlParams.get('category')
       const type = urlParams.get('type')
       const location = urlParams.get('location')
+      const industry = urlParams.get('industry')
+      const department = urlParams.get('department')
+      const roleCategory = urlParams.get('roleCategory')
+      const industries = urlParams.get('industries') // New multi-value parameter
+      const departments = urlParams.get('departments') // New multi-value parameter
+      const roleCategories = urlParams.get('roleCategories') // New multi-value parameter
+      const experience = urlParams.get('experience')
+      const experienceLevels = urlParams.get('experienceLevels')
+      const companyType = urlParams.get('companyType')
+      const workMode = urlParams.get('workMode')
+      const jobType = urlParams.get('jobType')
+      const jobTypes = urlParams.get('jobTypes')
 
-      if (category || type || location) {
-        setFilters(prev => ({
-          ...prev,
-          category: category || "",
-          type: type || "",
-          location: location || "",
-        }))
+      // Build new filter state
+      const newFilters: Partial<FilterState> = {}
+      
+      if (category) newFilters.category = category
+      if (type) newFilters.type = type
+      if (location) newFilters.location = location
+      if (experienceLevels) newFilters.experienceLevels = [experienceLevels]
+      else if (experience) newFilters.experienceLevels = [experience]
+      if (companyType) newFilters.companyType = companyType
+      if (workMode) newFilters.workMode = workMode
+      if (jobTypes) newFilters.jobTypes = [jobTypes]
+      else if (jobType) newFilters.jobTypes = [jobType]
+      
+      // Handle filter categories (prioritize multi-value parameters)
+      if (industries) {
+        // Split comma-separated values and clean them
+        const industryList = industries.split(',').map(i => i.trim()).filter(i => i)
+        newFilters.industryCategories = industryList
+      } else if (industry) {
+        newFilters.industryCategories = [industry]
+      }
+      
+      if (departments) {
+        // Split comma-separated values and clean them
+        const departmentList = departments.split(',').map(d => d.trim()).filter(d => d)
+        newFilters.departmentCategories = departmentList
+      } else if (department) {
+        newFilters.departmentCategories = [department]
+      }
+      
+      if (roleCategories) {
+        // Split comma-separated values and clean them
+        const roleList = roleCategories.split(',').map(r => r.trim()).filter(r => r)
+        newFilters.roleCategories = roleList
+      } else if (roleCategory) {
+        newFilters.roleCategories = [roleCategory]
+      }
+
+      // Apply filters if any are present - clear previous filters first
+      if (Object.keys(newFilters).length > 0) {
+        setFilters({
+          search: "",
+          location: "",
+          experienceLevels: [],
+          jobTypes: [],
+          locations: [],
+          salaryRange: "",
+          category: "",
+          type: "",
+          industry: "",
+          department: "",
+          role: "",
+          skills: "",
+          companyType: "",
+          workMode: "",
+          education: "",
+          companyName: "",
+          recruiterType: "",
+          salaryMin: undefined,
+          roleCategories: [],
+          industryCategories: [],
+          departmentCategories: [],
+          ...newFilters
+        })
       }
     }
-  }, [])
+  }, []) // Run only once on component mount
 
+  // Listen for searchParams changes (for navbar clicks)
+  useEffect(() => {
+    if (searchParams) {
+      // Extract all filter parameters from searchParams
+      const category = searchParams.get('category')
+      const type = searchParams.get('type')
+      const location = searchParams.get('location')
+      const industry = searchParams.get('industry')
+      const department = searchParams.get('department')
+      const roleCategory = searchParams.get('roleCategory')
+      const industries = searchParams.get('industries')
+      const departments = searchParams.get('departments')
+      const roleCategories = searchParams.get('roleCategories')
+      const experience = searchParams.get('experience')
+      const experienceLevels = searchParams.get('experienceLevels')
+      const companyType = searchParams.get('companyType')
+      const workMode = searchParams.get('workMode')
+      const jobType = searchParams.get('jobType')
+      const jobTypes = searchParams.get('jobTypes')
+
+      // Build new filter state
+      const newFilters: Partial<FilterState> = {}
+      
+      if (category) newFilters.category = category
+      if (type) newFilters.type = type
+      if (location) newFilters.location = location
+      if (experienceLevels) newFilters.experienceLevels = [experienceLevels]
+      else if (experience) newFilters.experienceLevels = [experience]
+      if (companyType) newFilters.companyType = companyType
+      if (workMode) newFilters.workMode = workMode
+      if (jobTypes) newFilters.jobTypes = [jobTypes]
+      else if (jobType) newFilters.jobTypes = [jobType]
+      
+      // Handle filter categories (prioritize multi-value parameters)
+      if (industries) {
+        const industryList = industries.split(',').map(i => i.trim()).filter(i => i)
+        newFilters.industryCategories = industryList
+      } else if (industry) {
+        newFilters.industryCategories = [industry]
+      }
+      
+      if (departments) {
+        const departmentList = departments.split(',').map(d => d.trim()).filter(d => d)
+        newFilters.departmentCategories = departmentList
+      } else if (department) {
+        newFilters.departmentCategories = [department]
+      }
+      
+      if (roleCategories) {
+        const roleList = roleCategories.split(',').map(r => r.trim()).filter(r => r)
+        newFilters.roleCategories = roleList
+      } else if (roleCategory) {
+        newFilters.roleCategories = [roleCategory]
+      }
+
+      // Apply filters if any are present - clear previous filters first
+      if (Object.keys(newFilters).length > 0) {
+        setFilters({
+          search: "",
+          location: "",
+          experienceLevels: [],
+          jobTypes: [],
+          locations: [],
+          salaryRange: "",
+          category: "",
+          type: "",
+          industry: "",
+          department: "",
+          role: "",
+          skills: "",
+          companyType: "",
+          workMode: "",
+          education: "",
+          companyName: "",
+          recruiterType: "",
+          salaryMin: undefined,
+          roleCategories: [],
+          industryCategories: [],
+          departmentCategories: [],
+          ...newFilters
+        })
+      }
+    }
+  }, [searchParams])
+
+  // Listen for URL changes (for navbar clicks and browser navigation)
+  useEffect(() => {
+    const handleUrlChange = () => {
+      // Re-parse URL parameters when URL changes
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search)
+        
+        // Extract all filter parameters
+        const category = urlParams.get('category')
+        const type = urlParams.get('type')
+        const location = urlParams.get('location')
+        const industry = urlParams.get('industry')
+        const department = urlParams.get('department')
+        const roleCategory = urlParams.get('roleCategory')
+        const industries = urlParams.get('industries')
+        const departments = urlParams.get('departments')
+        const roleCategories = urlParams.get('roleCategories')
+        const experience = urlParams.get('experience')
+        const experienceLevelsParam = urlParams.get('experienceLevels')
+        const companyType = urlParams.get('companyType')
+        const workMode = urlParams.get('workMode')
+        const jobType = urlParams.get('jobType')
+        const jobTypesParam = urlParams.get('jobTypes')
+
+        // Build new filter state
+        const newFilters: Partial<FilterState> = {}
+        
+        if (category) newFilters.category = category
+        if (type) newFilters.type = type
+        if (location) newFilters.location = location
+        if (experienceLevelsParam) newFilters.experienceLevels = experienceLevelsParam.split(',').map((e: string) => e.trim()).filter((e: string) => e)
+        else if (experience) newFilters.experienceLevels = [experience]
+        if (companyType) newFilters.companyType = companyType
+        if (workMode) newFilters.workMode = workMode
+        if (jobTypesParam) newFilters.jobTypes = jobTypesParam.split(',').map((j: string) => j.trim()).filter((j: string) => j)
+        else if (jobType) newFilters.jobTypes = [jobType]
+        
+        // Handle filter categories (prioritize multi-value parameters)
+        if (industries) {
+          const industryList = industries.split(',').map(i => i.trim()).filter(i => i)
+          newFilters.industryCategories = industryList
+        } else if (industry) {
+          newFilters.industryCategories = [industry]
+        }
+        
+        if (departments) {
+          const departmentList = departments.split(',').map(d => d.trim()).filter(d => d)
+          newFilters.departmentCategories = departmentList
+        } else if (department) {
+          newFilters.departmentCategories = [department]
+        }
+        
+        if (roleCategories) {
+          const roleList = roleCategories.split(',').map(r => r.trim()).filter(r => r)
+          newFilters.roleCategories = roleList
+        } else if (roleCategory) {
+          newFilters.roleCategories = [roleCategory]
+        }
+
+        // Apply filters if any are present - clear previous filters first
+        if (Object.keys(newFilters).length > 0) {
+          setFilters({
+            search: "",
+            location: "",
+            experienceLevels: [],
+            jobTypes: [],
+            locations: [],
+            salaryRange: "",
+            category: "",
+            type: "",
+            industry: "",
+            department: "",
+            role: "",
+            skills: "",
+            companyType: "",
+            workMode: "",
+            education: "",
+            companyName: "",
+            recruiterType: "",
+            salaryMin: undefined,
+            roleCategories: [],
+            industryCategories: [],
+            departmentCategories: [],
+            ...newFilters
+          })
+        }
+      }
+    }
+    
+    // Listen for popstate events (back/forward buttons)
+    window.addEventListener('popstate', handleUrlChange)
+    
+    // Also listen for navigation events (for programmatic navigation)
+    const handleNavigation = () => {
+      setTimeout(handleUrlChange, 100) // Small delay to ensure URL is updated
+    }
+    
+    // Listen for route changes
+    window.addEventListener('beforeunload', handleNavigation)
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange)
+      window.removeEventListener('beforeunload', handleNavigation)
+    }
+  }, [])
 
   // Fetch jobs from backend and user data
   useEffect(() => {
@@ -179,7 +442,7 @@ export default function JobsPage() {
     if (filters.search) params.set('search', filters.search)
     if (filters.location) params.set('location', filters.location)
     if (filters.jobTypes.length === 1) params.set('jobType', filters.jobTypes[0].toLowerCase())
-    if (filters.experienceLevels.length > 0) params.set('experienceRange', filters.experienceLevels.join(','))
+    if (filters.experienceLevels.length > 0) params.set('experience', filters.experienceLevels[0])
     if (filters.salaryRange) params.set('salaryRange', filters.salaryRange)
     if (filters.industry) params.set('industry', filters.industry)
     if (filters.department) params.set('department', filters.department)
@@ -190,6 +453,29 @@ export default function JobsPage() {
     if (filters.education) params.set('education', filters.education)
     if (filters.companyName) params.set('companyName', filters.companyName)
     if (filters.recruiterType) params.set('recruiterType', filters.recruiterType)
+    
+    // Add new filter categories to URL (use multi-value parameters for better UX)
+    if (filters.industryCategories && filters.industryCategories.length > 0) {
+      if (filters.industryCategories.length === 1) {
+        params.set('industry', filters.industryCategories[0])
+      } else {
+        params.set('industries', filters.industryCategories.join(','))
+      }
+    }
+    if (filters.departmentCategories && filters.departmentCategories.length > 0) {
+      if (filters.departmentCategories.length === 1) {
+        params.set('department', filters.departmentCategories[0])
+      } else {
+        params.set('departments', filters.departmentCategories.join(','))
+      }
+    }
+    if (filters.roleCategories && filters.roleCategories.length > 0) {
+      if (filters.roleCategories.length === 1) {
+        params.set('roleCategory', filters.roleCategories[0])
+      } else {
+        params.set('roleCategories', filters.roleCategories.join(','))
+      }
+    }
 
     const qs = params.toString()
     const url = qs ? `/jobs?${qs}` : '/jobs'

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun, User, LogOut, Settings, Bell, Bookmark, FileText, Zap, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -17,6 +17,12 @@ export function Navbar() {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
+
+  // Handle navbar filter clicks with programmatic navigation
+  const handleFilterClick = (filterUrl: string) => {
+    router.push(filterUrl)
+  }
 
   const getEmployerServices = (userRegion: string) => [
     { name: "Post a Job", href: userRegion === 'gulf' ? "/gulf-dashboard/post-job" : "/employer-dashboard/post-job" },
@@ -65,12 +71,48 @@ export function Navbar() {
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Popular categories</h4>
                       <div className="space-y-3">
-                        <Link href="/jobs?category=it" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">IT jobs</Link>
-                        <Link href="/jobs?category=sales" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Sales jobs</Link>
-                        <Link href="/jobs?category=marketing" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Marketing jobs</Link>
-                        <Link href="/jobs?category=data-science" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Data Science jobs</Link>
-                        <Link href="/jobs?category=hr" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">HR jobs</Link>
-                        <Link href="/jobs?category=engineering" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Engineering jobs</Link>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('industries', 'IT Services & Consulting (2378),Software Product (532),Internet (246),Electronics Manufacturing (74),Electronic Components (61),Hardware & Networking (54),Emerging Technology (44)')
+                          params.set('departments', 'Engineering - Software & QA,IT & Information Security,Data Science & Analytics,Quality Assurance,Product Management,Project & Program Management,UX, Design & Architecture')
+                          params.set('roleCategories', 'Software Development,IT & Information Security,IT Consulting,IT Network,IT Support,IT Infrastructure Services,IT Security,DevOps,Technology / IT,Engineering - Software & QA,Quality Assurance and Testing,Data Science & Machine Learning,Product Management,Project & Program Management,UX, Design & Architecture')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">IT jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('industries', 'Retail (142),FMCG / Foods / Beverage (204),Consumer Electronics (67),Real Estate (182),Travel / Tourism (67),Hotels / Restaurants (45),Automobile (72),Auto Components (67),Banking / Lending (219),Insurance (156),FinTech (76)')
+                          params.set('departments', 'Sales & Business Development,Customer Success Service & Operations,Marketing & Communication,Merchandising Retail & eCommerce')
+                          params.set('roleCategories', 'Sales & Business Development,Retail & B2C Sales,BD / Pre Sales,Enterprise & B2B Sales,Sales Support & Operations,After Sales Service & Repair,Customer Success, Service,Customer Success')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Sales jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('industries', 'Media / Entertainment / Broadcasting (156),Advertising / Marketing / PR (78),Gaming (89),Publishing (45),E-commerce / Internet (156),Online Services (89),Marketplace (67),Internet (246),Telecom / ISP (28)')
+                          params.set('departments', 'Marketing & Communication,Content Editorial & Journalism,UX Design & Architecture,Product Management')
+                          params.set('roleCategories', 'Marketing & Communication,Marketing,Digital Marketing,Marketing and Communications,Recruitment Marketing & Branding,Content, Editorial & Journalism,Media Production & Entertainment,UX, Design & Architecture')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Marketing jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('industries', 'IT Services & Consulting (2378),Software Product (532),Internet (246),Medical Services (264),Pharmaceutical & Life Sciences (252),Biotechnology (40),Clinical Research (33),Market Research (32),Market Research / Business Intelligence (28)')
+                          params.set('departments', 'Data Science & Analytics,IT & Information Security,Healthcare & Life Sciences,Research & Development')
+                          params.set('roleCategories', 'Data Science & Analytics,Data Science & Machine Learning,DBA / Data warehousing,IT & Information Security,Healthcare & Life Sciences,Research & Development,IT Consulting')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Data Science jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('industries', 'Education / Training (297),E-Learning / EdTech (165),Medical Services (264),Recruitment / Staffing (38),Consulting (142),Legal Services (45),Market Research (32),NGO / Social Services (45)')
+                          params.set('departments', 'Human Resources,Teaching & Training,Administration & Facilities')
+                          params.set('roleCategories', 'Human Resources,Human Resources - Other,Recruitment & Talent Acquisition,Teaching & Training,Administration & Facilities,Consulting,Legal & Regulatory')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">HR jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('industries', 'Industrial Equipment (270),Auto Components (155),Chemicals (112),Building Material (74),Automobile (72),Electrical Equipment (70),Industrial Automation (52),Iron & Steel (38),Construction / Infrastructure (258),Real Estate (182),Electronics Manufacturing (74),Electronic Components (61),Hardware & Networking (54),Power / Energy (89),Oil & Gas (67),Renewable Energy (45)')
+                          params.set('departments', 'Engineering - Software & QA,Engineering - Hardware & Networks,Production Manufacturing & Maintenance,Construction & Site Engineering,Quality Assurance,Project & Program Management')
+                          params.set('roleCategories', 'Engineering - Software & QA,Engineering - Hardware & Networks,Construction & Site Engineering,Engineering,Construction Engineering,Engineering & Manufacturing,Aviation Engineering,Shipping Engineering & Technology,Production, Manufacturing & Maintenance,Quality Assurance and Testing,Project & Program Management,IT & Information Security,IT Consulting')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Engineering jobs</button>
                       </div>
                     </div>
 
@@ -78,12 +120,36 @@ export function Navbar() {
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Jobs in demand</h4>
                       <div className="space-y-3">
-                        <Link href="/jobs?type=fresher" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Fresher jobs</Link>
-                        <Link href="/jobs?type=mnc" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">MNC jobs</Link>
-                        <Link href="/jobs?type=remote" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Remote jobs</Link>
-                        <Link href="/jobs?type=work-from-home" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Work from home jobs</Link>
-                        <Link href="/jobs?type=walk-in" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Walk-in jobs</Link>
-                        <Link href="/jobs?type=part-time" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Part-time jobs</Link>
+                         <button onClick={() => {
+                           const params = new URLSearchParams()
+                           params.set('experienceLevels', '0-1')
+                           handleFilterClick(`/jobs?${params.toString()}`)
+                         }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Fresher jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('companyType', 'mnc')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">MNC jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('workMode', 'remote')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Remote jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('workMode', 'work-from-home')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Work from home jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('jobTypes', 'walk-in')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Walk-in jobs</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('jobTypes', 'part-time')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Part-time jobs</button>
                       </div>
                     </div>
 
@@ -91,17 +157,41 @@ export function Navbar() {
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Jobs by location</h4>
                       <div className="space-y-3">
-                        <Link href="/jobs?location=Delhi" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Delhi</Link>
-                        <Link href="/jobs?location=Mumbai" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Mumbai</Link>
-                        <Link href="/jobs?location=Bangalore" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Bangalore</Link>
-                        <Link href="/jobs?location=Hyderabad" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Hyderabad</Link>
-                        <Link href="/jobs?location=Chennai" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Chennai</Link>
-                        <Link href="/jobs?location=Pune" className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">Jobs in Pune</Link>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('location', 'Delhi')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Jobs in Delhi</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('location', 'Mumbai')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Jobs in Mumbai</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('location', 'Bangalore')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Jobs in Bangalore</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('location', 'Hyderabad')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Jobs in Hyderabad</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('location', 'Chennai')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Jobs in Chennai</button>
+                        <button onClick={() => {
+                          const params = new URLSearchParams()
+                          params.set('location', 'Pune')
+                          handleFilterClick(`/jobs?${params.toString()}`)
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Jobs in Pune</button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+                    </div>
             </div>
 
             {/* Companies Dropdown */}
@@ -144,7 +234,7 @@ export function Navbar() {
                     </div>
                   </div>
                 </div>
-              </div>
+                    </div>
             </div>
 
             {/* Job at Pace - Premium Link */}
