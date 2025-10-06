@@ -66,6 +66,77 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }: any) {
+      const newUtilities = {
+        '.scrollbar-thin': {
+          'scrollbar-width': 'thin',
+          'scrollbar-color': '#cbd5e1 #f1f5f9',
+        },
+        '.scrollbar-thumb-slate-300': {
+          'scrollbar-color': '#cbd5e1 #f1f5f9',
+        },
+        '.scrollbar-track-slate-100': {
+          'scrollbar-color': '#cbd5e1 #f1f5f9',
+        },
+        '.scrollbar-thumb-slate-600': {
+          'scrollbar-color': '#475569 #1e293b',
+        },
+        '.scrollbar-track-slate-800': {
+          'scrollbar-color': '#475569 #1e293b',
+        },
+        '.scrollbar-thin::-webkit-scrollbar': {
+          width: '6px',
+          height: '6px',
+        },
+        '.scrollbar-thin::-webkit-scrollbar-track': {
+          background: '#f1f5f9',
+          borderRadius: '3px',
+        },
+        '.scrollbar-thin::-webkit-scrollbar-thumb': {
+          background: '#cbd5e1',
+          borderRadius: '3px',
+        },
+        '.scrollbar-thin::-webkit-scrollbar-thumb:hover': {
+          background: '#94a3b8',
+        },
+        '.dark .scrollbar-thin::-webkit-scrollbar-track': {
+          background: '#1e293b',
+        },
+        '.dark .scrollbar-thin::-webkit-scrollbar-thumb': {
+          background: '#475569',
+        },
+        '.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover': {
+          background: '#64748b',
+        },
+        '.custom-scrollbar::-webkit-scrollbar': {
+          width: '8px',
+          height: '8px',
+        },
+        '.custom-scrollbar::-webkit-scrollbar-track': {
+          background: '#f1f5f9',
+          borderRadius: '4px',
+        },
+        '.custom-scrollbar::-webkit-scrollbar-thumb': {
+          background: '#cbd5e1',
+          borderRadius: '4px',
+        },
+        '.custom-scrollbar::-webkit-scrollbar-thumb:hover': {
+          background: '#94a3b8',
+        },
+        '.dark .custom-scrollbar::-webkit-scrollbar-track': {
+          background: '#1e293b',
+        },
+        '.dark .custom-scrollbar::-webkit-scrollbar-thumb': {
+          background: '#475569',
+        },
+        '.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover': {
+          background: '#64748b',
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 }
 export default config

@@ -38,9 +38,9 @@ import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
-import { RoleCategoryDropdown } from "@/components/ui/role-category-dropdown"
-import { IndustryDropdown } from "@/components/ui/industry-dropdown"
-import { DepartmentDropdown } from "@/components/ui/department-dropdown"
+import RoleCategoryDropdown from "@/components/ui/role-category-dropdown"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
+import DepartmentDropdown from "@/components/ui/department-dropdown"
 
 // Types for state management
 interface FilterState {
@@ -241,6 +241,10 @@ export default function JobsPage() {
         education: filters.education || undefined,
         companyName: filters.companyName || undefined,
         recruiterType: filters.recruiterType || undefined,
+        // Add new filter categories
+        roleCategories: filters.roleCategories?.length ? filters.roleCategories.join(',') : undefined,
+        industryCategories: filters.industryCategories?.length ? filters.industryCategories.join(',') : undefined,
+        departmentCategories: filters.departmentCategories?.length ? filters.departmentCategories.join(',') : undefined,
       }
 
       const response = await apiService.getJobs(params)
@@ -686,21 +690,29 @@ export default function JobsPage() {
 
   const filteredJobs = useMemo(() => {
     let filtered = [...allJobs]
+    console.log('🔄 Starting with', allJobs.length, 'jobs')
 
-    // Search filter
+    // Search filter - Case insensitive with better matching
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
+      console.log('🔍 Applying search filter:', filters.search)
+      const searchLower = filters.search.toLowerCase().trim()
       filtered = filtered.filter(job =>
         job.title.toLowerCase().includes(searchLower) ||
         job.company.name.toLowerCase().includes(searchLower) ||
-        job.skills.some(skill => skill.toLowerCase().includes(searchLower))
+        job.skills.some(skill => skill.toLowerCase().includes(searchLower)) ||
+        job.description.toLowerCase().includes(searchLower) ||
+        job.category.toLowerCase().includes(searchLower)
       )
     }
 
-    // Location filter
+    // Location filter - Case insensitive with better matching
     if (filters.location) {
+      const locationLower = filters.location.toLowerCase().trim()
       filtered = filtered.filter(job =>
-        job.location.toLowerCase().includes(filters.location.toLowerCase())
+        job.location.toLowerCase().includes(locationLower) ||
+        locationLower.includes(job.location.toLowerCase()) ||
+        // Handle common location variations
+        (locationLower.includes('remote') && (job.remote || job.workMode?.toLowerCase().includes('remote')))
       )
     }
 
@@ -745,35 +757,63 @@ export default function JobsPage() {
       filtered = filtered.filter(job => job.title.toLowerCase().includes(q))
     }
 
-    // Role Categories
+    // Role Categories - Case insensitive matching with better logic
     if (filters.roleCategories && filters.roleCategories.length > 0) {
+      console.log('🎯 Applying role categories filter:', filters.roleCategories)
       filtered = filtered.filter(job => {
-        const jobTitle = job.title.toLowerCase()
-        const jobCategory = job.category.toLowerCase()
-        return filters.roleCategories!.some(role => 
-          jobTitle.includes(role.toLowerCase()) || 
-          jobCategory.includes(role.toLowerCase())
-        )
+        const jobTitle = job.title.toLowerCase().trim()
+        const jobCategory = job.category.toLowerCase().trim()
+        const jobSkills = job.skills.join(' ').toLowerCase().trim()
+        
+        return filters.roleCategories!.some(role => {
+          const roleLower = role.toLowerCase().trim()
+          return jobTitle.includes(roleLower) || 
+                 jobCategory.includes(roleLower) ||
+                 jobSkills.includes(roleLower) ||
+                 // Partial matching for common terms
+                 roleLower.includes(jobTitle.split(' ')[0]) ||
+                 jobTitle.includes(roleLower.split(' ')[0])
+        })
       })
     }
 
-    // Industry Categories
+    // Industry Categories - Case insensitive matching with better logic
     if (filters.industryCategories && filters.industryCategories.length > 0) {
+      console.log('🏭 Applying industry categories filter:', filters.industryCategories)
       filtered = filtered.filter(job => {
-        const companyIndustry = (job as any).company?.industry?.toLowerCase() || ''
-        return filters.industryCategories!.some(industry => 
-          companyIndustry.includes(industry.toLowerCase())
-        )
+        const companyIndustry = ((job as any).company?.industry || '').toLowerCase().trim()
+        const companyName = job.company.name.toLowerCase().trim()
+        
+        return filters.industryCategories!.some(industry => {
+          const industryLower = industry.toLowerCase().trim()
+          return companyIndustry.includes(industryLower) ||
+                 industryLower.includes(companyIndustry) ||
+                 companyName.includes(industryLower) ||
+                 // Handle common abbreviations
+                 (industryLower === 'it' && (companyIndustry.includes('information technology') || companyIndustry.includes('software'))) ||
+                 (industryLower === 'fintech' && (companyIndustry.includes('financial') || companyIndustry.includes('banking')))
+        })
       })
     }
 
-    // Department Categories
+    // Department Categories - Case insensitive matching with better logic
     if (filters.departmentCategories && filters.departmentCategories.length > 0) {
+      console.log('🏢 Applying department categories filter:', filters.departmentCategories)
       filtered = filtered.filter(job => {
-        const jobDepartment = (job as any).department?.toLowerCase() || job.category.toLowerCase()
-        return filters.departmentCategories!.some(department => 
-          jobDepartment.includes(department.toLowerCase())
-        )
+        const jobDepartment = ((job as any).department || '').toLowerCase().trim()
+        const jobCategory = job.category.toLowerCase().trim()
+        const jobTitle = job.title.toLowerCase().trim()
+        
+        return filters.departmentCategories!.some(department => {
+          const deptLower = department.toLowerCase().trim()
+          return jobDepartment.includes(deptLower) ||
+                 deptLower.includes(jobDepartment) ||
+                 jobCategory.includes(deptLower) ||
+                 jobTitle.includes(deptLower) ||
+                 // Handle common synonyms
+                 (deptLower.includes('hr') && (jobCategory.includes('human resources') || jobTitle.includes('hr'))) ||
+                 (deptLower.includes('it') && (jobCategory.includes('information technology') || jobTitle.includes('software')))
+        })
       })
     }
 
@@ -785,22 +825,55 @@ export default function JobsPage() {
       }
     }
 
-    // Company Type
+    // Company Type - Case insensitive with better matching
     if (filters.companyType) {
-      const q = filters.companyType.toLowerCase()
+      const q = filters.companyType.toLowerCase().trim()
       filtered = filtered.filter(job => {
         const ct = (job as any).company?.companyType
-        return ct ? String(ct).toLowerCase() === q : false
+        if (!ct) return false
+        
+        const ctLower = String(ct).toLowerCase().trim()
+        return ctLower === q ||
+               ctLower.includes(q) ||
+               q.includes(ctLower) ||
+               // Handle common synonyms
+               (q === 'mnc' && (ctLower.includes('multinational') || ctLower.includes('global'))) ||
+               (q === 'startup' && (ctLower.includes('startup') || ctLower.includes('early stage'))) ||
+               (q === 'enterprise' && (ctLower.includes('enterprise') || ctLower.includes('large')))
       })
     }
 
-    // Work Mode
+    // Work Mode - Case insensitive with better matching for nearby companies
     if (filters.workMode) {
-      const q = filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode.toLowerCase()
+      const q = filters.workMode.toLowerCase().trim()
       filtered = filtered.filter(job => {
-        const wm = String(job.workMode || (job as any).remoteWork || '').toLowerCase()
+        const wm = String(job.workMode || (job as any).remoteWork || '').toLowerCase().trim()
+        const jobLocation = job.location.toLowerCase().trim()
+        
         if (!wm) return false
-        if (q === 'remote') return wm.includes('remote') || wm.includes('work from home')
+        
+        // Handle remote work variations
+        if (q === 'remote' || q.includes('home')) {
+          return wm.includes('remote') || 
+                 wm.includes('work from home') || 
+                 wm.includes('wfh') ||
+                 jobLocation.includes('remote')
+        }
+        
+        // Handle on-site work (nearby companies)
+        if (q === 'on-site' || q === 'onsite') {
+          return !wm.includes('remote') && 
+                 !wm.includes('work from home') && 
+                 !wm.includes('wfh') &&
+                 !jobLocation.includes('remote')
+        }
+        
+        // Handle hybrid work
+        if (q === 'hybrid') {
+          return wm.includes('hybrid') || wm.includes('flexible')
+        }
+        
+        // General matching
         return wm.includes(q)
       })
     }
@@ -876,6 +949,7 @@ export default function JobsPage() {
       filtered.sort(sortSecondary)
     }
 
+    console.log('✅ Final filtered jobs:', filtered.length)
     return filtered
   }, [allJobs, filters, sortBy])
 
@@ -928,10 +1002,15 @@ export default function JobsPage() {
 
   // Filter functions
   const handleFilterChange = useCallback((filterType: keyof FilterState, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value
-    }))
+    console.log('🔍 Filter change:', filterType, value)
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        [filterType]: value
+      }
+      console.log('📊 New filters:', newFilters)
+      return newFilters
+    })
 
     // Record search when search query changes
     if (filterType === 'search' && value && user) {
@@ -1044,10 +1123,52 @@ export default function JobsPage() {
               <Button
                 onClick={() => setShowFilters(!showFilters)}
                 variant="outline"
-                className="h-12 px-6 border-0 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                className={`h-12 px-6 border-0 hover:bg-slate-100 dark:hover:bg-slate-600 ${
+                  (filters.experienceLevels.length > 0 || 
+                   filters.jobTypes.length > 0 || 
+                   filters.salaryRange || 
+                   (filters.industryCategories?.length ?? 0) > 0 || 
+                   (filters.departmentCategories?.length ?? 0) > 0 || 
+                   (filters.roleCategories?.length ?? 0) > 0 || 
+                   filters.skills || 
+                   filters.companyType || 
+                   filters.workMode || 
+                   filters.education || 
+                   filters.companyName || 
+                   filters.recruiterType) 
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                    : 'bg-slate-50 dark:bg-slate-700'
+                }`}
               >
                 <Filter className="w-4 h-4 mr-2" />
                 Filters
+                {((filters.experienceLevels.length > 0 || 
+                  filters.jobTypes.length > 0 || 
+                  filters.salaryRange || 
+                  (filters.industryCategories?.length ?? 0) > 0 || 
+                  (filters.departmentCategories?.length ?? 0) > 0 || 
+                  (filters.roleCategories?.length ?? 0) > 0 || 
+                  filters.skills || 
+                  filters.companyType || 
+                  filters.workMode || 
+                  filters.education || 
+                  filters.companyName || 
+                  filters.recruiterType)) && (
+                  <span className="ml-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {(filters.experienceLevels.length + 
+                      filters.jobTypes.length + 
+                      (filters.salaryRange ? 1 : 0) + 
+                      (filters.industryCategories?.length ?? 0) + 
+                      (filters.departmentCategories?.length ?? 0) + 
+                      (filters.roleCategories?.length ?? 0) + 
+                      (filters.skills ? 1 : 0) + 
+                      (filters.companyType ? 1 : 0) + 
+                      (filters.workMode ? 1 : 0) + 
+                      (filters.education ? 1 : 0) + 
+                      (filters.companyName ? 1 : 0) + 
+                      (filters.recruiterType ? 1 : 0))}
+                  </span>
+                )}
               </Button>
             </div>
           </div>
@@ -1059,7 +1180,7 @@ export default function JobsPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8"
+            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8 relative z-50"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Experience Level */}
@@ -1142,19 +1263,20 @@ export default function JobsPage() {
                       }
                     }}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select industry" />
+                    <SelectTrigger className={`w-full ${(filters.industryCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <SelectValue placeholder={`Select industry${(filters.industryCategories?.length ?? 0) > 0 ? ` (${filters.industryCategories?.length} selected)` : ''}`} />
                     </SelectTrigger>
                   </Select>
                   
                   {showIndustryDropdown && (
-                    <div ref={industryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-[9999]">
-                      <IndustryDropdown
-                        selectedIndustries={filters.industryCategories || []}
-                        onIndustryChange={(industries) => handleFilterChange('industryCategories', industries)}
-                        onClose={() => setShowIndustryDropdown(false)}
-                      />
-                    </div>
+                    <IndustryDropdown
+                      selectedIndustries={filters.industryCategories || []}
+                      onIndustryChange={(industries: string[]) => {
+                        handleFilterChange('industryCategories', industries)
+                        setShowIndustryDropdown(false)
+                      }}
+                      onClose={() => setShowIndustryDropdown(false)}
+                    />
                   )}
                 </div>
               </div>
@@ -1172,19 +1294,20 @@ export default function JobsPage() {
                       }
                     }}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select department" />
+                    <SelectTrigger className={`w-full ${(filters.departmentCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <SelectValue placeholder={`Select department${(filters.departmentCategories?.length ?? 0) > 0 ? ` (${filters.departmentCategories?.length} selected)` : ''}`} />
                     </SelectTrigger>
                   </Select>
                   
                   {showDepartmentDropdown && (
-                    <div ref={departmentDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-[9999]">
-                      <DepartmentDropdown
-                        selectedDepartments={filters.departmentCategories || []}
-                        onDepartmentChange={(departments) => handleFilterChange('departmentCategories', departments)}
-                        onClose={() => setShowDepartmentDropdown(false)}
-                      />
-                    </div>
+                    <DepartmentDropdown
+                      selectedDepartments={filters.departmentCategories || []}
+                      onDepartmentChange={(departments: string[]) => {
+                        handleFilterChange('departmentCategories', departments)
+                        setShowDepartmentDropdown(false)
+                      }}
+                      onClose={() => setShowDepartmentDropdown(false)}
+                    />
                   )}
                 </div>
               </div>
@@ -1202,27 +1325,19 @@ export default function JobsPage() {
                       }
                     }}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select role" />
+                    <SelectTrigger className={`w-full ${(filters.roleCategories?.length ?? 0) > 0 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <SelectValue placeholder={`Select role${(filters.roleCategories?.length ?? 0) > 0 ? ` (${filters.roleCategories?.length ?? 0} selected)` : ''}`} />
                     </SelectTrigger>
                   </Select>
                   
                   {showRoleCategoryDropdown && (
-                    <div ref={roleCategoryDropdownRef} className="absolute top-full left-0 right-0 mt-2 z-[9999]">
-                      <RoleCategoryDropdown
-                        selectedRoles={filters.roleCategories || []}
-                        onRoleChange={(roles) => handleFilterChange('roleCategories', roles)}
-                      />
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowRoleCategoryDropdown(false)}
-                        >
-                          Close
-                        </Button>
-                      </div>
-                    </div>
+                    <RoleCategoryDropdown
+                      selectedRoles={filters.roleCategories || []}
+                      onRoleChange={(roles: string[]) => {
+                        handleFilterChange('roleCategories', roles)
+                        setShowRoleCategoryDropdown(false)
+                      }}
+                    />
                   )}
                 </div>
               </div>

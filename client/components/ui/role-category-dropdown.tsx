@@ -3,16 +3,76 @@
 import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Search, X } from "lucide-react"
 
 interface RoleCategoryDropdownProps {
   selectedRoles: string[]
   onRoleChange: (roles: string[]) => void
 }
 
-// All role categories extracted from the images (names only, no numbers)
+// All role categories extracted from the images + department data merged
 const roleCategories = [
-  // From the images - exact order and names
+  // Department categories (merged from department dropdown)
+  "Engineering - Software & QA",
+  "Sales & Business Development",
+  "Customer Success, Service & Operations",
+  "Finance & Accounting",
+  "Production, Manufacturing & Maintenance",
+  "BFSI, Investments & Trading",
+  "Human Resources",
+  "IT & Information Security",
+  "Marketing & Communication",
+  "Consulting",
+  "Data Science & Analytics",
+  "Healthcare & Life Sciences",
+  "Procurement & Supply Chain",
+  "Engineering - Hardware & Networks",
+  "Other",
+  "Project & Program Management",
+  "Construction & Site Engineering",
+  "UX, Design & Architecture",
+  "Teaching & Training",
+  "Administration & Facilities",
+  "Quality Assurance",
+  "Food, Beverage & Hospitality",
+  "Research & Development",
+  "Content, Editorial & Journalism",
+  "Product Management",
+  "Legal & Regulatory",
+  "Merchandising, Retail & eCommerce",
+  "Risk Management & Compliance",
+  "Strategic & Top Management",
+  "Media Production & Entertainment",
+  "Environment Health & Safety",
+  "Security Services",
+  "Sports, Fitness & Personal Care",
+  "Aviation & Aerospace",
+  "CSR & Social Service",
+  "Energy & Mining",
+  "Shipping & Maritime",
+  // Original role categories (numbers removed)
+  "Software Development",
+  "Retail & B2C Sales",
+  "BD / Pre Sales",
+  "Enterprise & B2B Sales",
+  "Voice / Blended",
+  "Quality Assurance and Testing",
+  "Accounting & Taxation",
+  "IT Consulting",
+  "Engineering",
+  "DBA / Data warehousing",
+  "Recruitment & Talent Acquisition",
+  "Finance",
+  "Customer Success, Service",
+  "Construction Engineering",
+  "Business Intelligence & Analytics",
+  "Operations, Maintenance",
+  "IT Network",
+  "Operations",
+  "Customer Success",
   "HR Operations",
   "DevOps",
   "Marketing",
@@ -33,46 +93,21 @@ const roleCategories = [
   "Other Design",
   "SCM & Logistics",
   "Production & Manufacturing",
-  "Software Development",
-  "Retail & B2C Sales",
-  "BD / Pre Sales",
-  "Enterprise & B2B Sales",
-  "Voice / Blended",
-  "Quality Assurance and Testing",
-  "Accounting & Taxation",
-  "IT Consulting",
-  "Engineering",
-  "DBA / Data warehousing",
-  "Recruitment & Talent Acquisition",
-  "Finance",
-  "Other",
-  "Customer Success, Service Operations",
-  "Construction Engineering",
-  "Business Intelligence & Analytics",
-  "Operations, Maintenance & Support",
-  "IT Network",
-  "Operations",
-  "Customer Success",
   "Lending",
   "Content Management (Print)",
   "Engineering & Manufacturing",
-  "Production & Manufacturing",
   "Architecture & Interior Design",
   "Technology / IT",
   "Health Informatics",
-  "IT & Information Security",
   "Trading, Asset & Wealth Management",
   "Human Resources - Other",
   "General Insurance",
-  "Healthcare & Life Sciences",
   "Operations Support",
   "Management Consulting",
   "Business Process Quality",
-  "BFSI, Investments & Trading",
   "Other Consulting",
   "Quality Assurance - Other",
   "Back Office",
-  "Data Science & Analytics",
   "Management",
   "Facility Management",
   "Product Management - Technology",
@@ -87,20 +122,16 @@ const roleCategories = [
   "Front Office & Guest Services",
   "Teaching & Training - Other",
   "After Sales Service & Repair",
-  "Content, Editorial & Journalism",
   "Other Hospital Staff",
   "Nursing",
   "Corporate Communication",
   "F&B Service",
   "Subject / Specialization Teaching",
-  "Research & Development",
   "UI / UX",
   "Investment Banking, Private Equity",
   "Employee Relations",
-  "Food, Beverage & Hospitality",
   "Retail Store Operations",
   "Construction / Manufacturing",
-  "Risk Management & Compliance",
   "University Level Educator",
   "Administration & Staff",
   "Marketing and Communications",
@@ -128,12 +159,10 @@ const roleCategories = [
   "Occupational Health & Safety",
   "eCommerce Operations",
   "HR Business Advisory",
-  "Hardware and Networks - Operations",
+  "Hardware and Networks - Other",
   "Surveying",
   "Fashion & Accessories",
-  "Procurement & Supply Chain",
   "Market Research & Insights",
-  "Strategic & Top Management",
   "Security / Fraud",
   "Health & Fitness",
   "Life Skills / ECA Teacher",
@@ -142,12 +171,10 @@ const roleCategories = [
   "Artists",
   "Category Management & Operations",
   "Beauty & Personal Care",
-  "Media Production & Entertainment",
   "CSR & Sustainability",
   "Operations / Strategy",
   "Events & Banquet",
   "Flight & Airport Operations",
-  "Merchandising, Retail & eCommerce",
   "Security Services - Other",
   "Business",
   "Animation / Effects",
@@ -168,123 +195,126 @@ const roleCategories = [
   "Power Supply and Distribution",
   "Sound / Light / Technical Support",
   "Sports Staff and Management",
-  "Sports, Fitness & Personal Care",
   "Upstream",
   "Shipping Engineering & Technology",
   "Pilot",
   "Downstream"
 ]
 
-export function RoleCategoryDropdown({ selectedRoles, onRoleChange }: RoleCategoryDropdownProps) {
+export default function RoleCategoryDropdown({ selectedRoles, onRoleChange }: RoleCategoryDropdownProps) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [tempSelectedRoles, setTempSelectedRoles] = useState(selectedRoles)
 
-  // Filter role categories based on search term
+  // Filter roles based on search term
   const filteredRoles = roleCategories.filter(role =>
     role.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Split roles into two columns
-  const leftColumn = filteredRoles.filter((_, index) => index % 2 === 0)
-  const rightColumn = filteredRoles.filter((_, index) => index % 2 === 1)
-
-  const handleRoleToggle = (role: string) => {
-    if (selectedRoles.includes(role)) {
-      onRoleChange(selectedRoles.filter(r => r !== role))
+  const handleCheckboxChange = (role: string, checked: boolean) => {
+    if (checked) {
+      setTempSelectedRoles([...tempSelectedRoles, role])
     } else {
-      onRoleChange([...selectedRoles, role])
+      setTempSelectedRoles(tempSelectedRoles.filter(r => r !== role))
     }
   }
 
+  const handleSelectAll = () => {
+    setTempSelectedRoles([...roleCategories])
+  }
+
+  const handleClearAll = () => {
+    setTempSelectedRoles([])
+  }
+
+  const handleApply = () => {
+    onRoleChange(tempSelectedRoles)
+  }
+
+  const handleCancel = () => {
+    setTempSelectedRoles(selectedRoles)
+    // Close the dialog by calling onRoleChange with current selections
+    onRoleChange(selectedRoles)
+  }
+
   return (
-    <div className="w-full max-w-5xl bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 z-[9999]">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Role Category</h3>
-      </div>
+    <Dialog open={true} onOpenChange={(open) => {
+      if (!open) {
+        handleCancel()
+      }
+    }}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Select Role Categories</span>
+            {tempSelectedRoles.length > 0 && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                {tempSelectedRoles.length} selected
+              </Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
 
-      {/* Search Bar */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <Input
-            placeholder="Search Role category"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full"
-          />
-        </div>
-      </div>
-
-      {/* Role Categories */}
-      <div className="p-4 max-h-96 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-2">
-            {leftColumn.map((role, index) => {
-              const isSelected = selectedRoles.includes(role)
-              
-              return (
-                <div key={index} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`role-${index}`}
-                    checked={isSelected}
-                    onCheckedChange={() => handleRoleToggle(role)}
-                  />
-                  <label 
-                    htmlFor={`role-${index}`}
-                    className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer flex-1"
-                  >
-                    {role}
-                  </label>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-2">
-            {rightColumn.map((role, index) => {
-              const isSelected = selectedRoles.includes(role)
-              
-              return (
-                <div key={index + 1000} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`role-${index + 1000}`}
-                    checked={isSelected}
-                    onCheckedChange={() => handleRoleToggle(role)}
-                  />
-                  <label 
-                    htmlFor={`role-${index + 1000}`}
-                    className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer flex-1"
-                  >
-                    {role}
-                  </label>
-                </div>
-              )
-            })}
+        {/* Search Bar */}
+        <div className="px-6 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search role categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Horizontal scrollbar styling */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .overflow-y-auto::-webkit-scrollbar {
-            height: 8px;
-          }
-          .overflow-y-auto::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-          }
-          .overflow-y-auto::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-          }
-          .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `
-      }} />
-    </div>
+        {/* Role Categories */}
+        <div 
+          className="flex-1 overflow-y-auto px-6 custom-scrollbar"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#cbd5e1 #f1f5f9',
+            maxHeight: '400px'
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-4">
+            {filteredRoles.map((role) => (
+              <div key={role} className="flex items-center space-x-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors">
+                <Checkbox
+                  id={`role-${role}`}
+                  checked={tempSelectedRoles.includes(role)}
+                  onCheckedChange={(checked) => handleCheckboxChange(role, checked as boolean)}
+                />
+                <label
+                  htmlFor={`role-${role}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300 cursor-pointer flex-1"
+                >
+                  {role}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between p-6 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleSelectAll}>
+              Select All
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClearAll}>
+              Clear All
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleApply} className="bg-blue-600 hover:bg-blue-700">
+              Apply {tempSelectedRoles.length > 0 && `(${tempSelectedRoles.length})`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

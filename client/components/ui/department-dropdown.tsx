@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import { Search, X } from "lucide-react"
 
 interface DepartmentDropdownProps {
@@ -56,141 +58,120 @@ const departmentCategories = [
   "Shipping & Maritime"
 ]
 
-export function DepartmentDropdown({ selectedDepartments, onDepartmentChange, onClose }: DepartmentDropdownProps) {
+export default function DepartmentDropdown({ selectedDepartments, onDepartmentChange, onClose }: DepartmentDropdownProps) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [tempSelectedDepartments, setTempSelectedDepartments] = useState(selectedDepartments)
 
   // Filter departments based on search term
-  const filteredDepartments = departmentCategories.filter(department =>
-    department.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDepartments = departmentCategories.filter(dept =>
+    dept.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Split departments into two columns
-  const leftColumn = filteredDepartments.filter((_, index) => index % 2 === 0)
-  const rightColumn = filteredDepartments.filter((_, index) => index % 2 === 1)
-
-  const handleDepartmentToggle = (department: string) => {
-    const departmentName = department.split(' (')[0] // Extract department name without count
-    if (selectedDepartments.includes(departmentName)) {
-      onDepartmentChange(selectedDepartments.filter(d => d !== departmentName))
+  const handleCheckboxChange = (department: string, checked: boolean) => {
+    if (checked) {
+      setTempSelectedDepartments([...tempSelectedDepartments, department])
     } else {
-      onDepartmentChange([...selectedDepartments, departmentName])
+      setTempSelectedDepartments(tempSelectedDepartments.filter(d => d !== department))
     }
   }
 
+  const handleSelectAll = () => {
+    setTempSelectedDepartments([...departmentCategories])
+  }
+
+  const handleClearAll = () => {
+    setTempSelectedDepartments([])
+  }
+
   const handleApply = () => {
+    onDepartmentChange(tempSelectedDepartments)
+    onClose()
+  }
+
+  const handleCancel = () => {
+    setTempSelectedDepartments(selectedDepartments)
     onClose()
   }
 
   return (
-    <div className="w-full max-w-4xl bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 z-[9999]">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Department</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="h-8 w-8 p-0"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+    <Dialog open={true} onOpenChange={(open) => {
+      if (!open) {
+        handleCancel()
+      }
+    }}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Select Departments</span>
+            {tempSelectedDepartments.length > 0 && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                {tempSelectedDepartments.length} selected
+              </Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
 
-      {/* Search Bar */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <Input
-            placeholder="Search Department"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full"
-          />
-        </div>
-      </div>
-
-      {/* Department Categories */}
-      <div className="p-4 max-h-96 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-2">
-            {leftColumn.map((department, index) => {
-              const departmentName = department.split(' (')[0]
-              const isSelected = selectedDepartments.includes(departmentName)
-              
-              return (
-                <div key={index} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`dept-${index}`}
-                    checked={isSelected}
-                    onCheckedChange={() => handleDepartmentToggle(department)}
-                  />
-                  <label 
-                    htmlFor={`dept-${index}`}
-                    className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer flex-1"
-                  >
-                    {department}
-                  </label>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-2">
-            {rightColumn.map((department, index) => {
-              const departmentName = department.split(' (')[0]
-              const isSelected = selectedDepartments.includes(departmentName)
-              
-              return (
-                <div key={index + 1000} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`dept-${index + 1000}`}
-                    checked={isSelected}
-                    onCheckedChange={() => handleDepartmentToggle(department)}
-                  />
-                  <label 
-                    htmlFor={`dept-${index + 1000}`}
-                    className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer flex-1"
-                  >
-                    {department}
-                  </label>
-                </div>
-              )
-            })}
+        {/* Search Bar */}
+        <div className="px-6 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search departments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Apply Button */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-        <Button
-          onClick={handleApply}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+        {/* Department List */}
+        <div 
+          className="flex-1 overflow-y-auto px-6 custom-scrollbar"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#cbd5e1 #f1f5f9',
+            maxHeight: '400px'
+          }}
         >
-          Apply
-        </Button>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pb-4">
+            {filteredDepartments.map((department) => (
+              <div key={department} className="flex items-center space-x-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors">
+                <Checkbox
+                  id={`department-${department}`}
+                  checked={tempSelectedDepartments.includes(department)}
+                  onCheckedChange={(checked) => handleCheckboxChange(department, checked as boolean)}
+                />
+                <label
+                  htmlFor={`department-${department}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300 cursor-pointer flex-1"
+                >
+                  {department}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
 
-      {/* Horizontal scrollbar styling */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .overflow-y-auto::-webkit-scrollbar {
-            height: 8px;
-          }
-          .overflow-y-auto::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-          }
-          .overflow-y-auto::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-          }
-          .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `
-      }} />
-    </div>
+        {/* Actions */}
+        <div className="flex items-center justify-between p-6 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleSelectAll}>
+              Select All
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClearAll}>
+              Clear All
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleApply} className="bg-blue-600 hover:bg-blue-700">
+              Apply {tempSelectedDepartments.length > 0 && `(${tempSelectedDepartments.length})`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
