@@ -37,80 +37,101 @@ const getGulfJobs = async (req, res) => {
       salaryMin,
       salaryMax,
       companyId,
+      experienceRange,
+      industry,
+      department,
+      role,
+      skills,
+      companyType,
+      workMode,
+      education,
+      companyName,
+      recruiterType,
       sortBy = 'createdAt',
       sortOrder = 'DESC'
     } = req.query;
 
     const offset = (page - 1) * limit;
-    const whereClause = {
-      status: 'active',
-      [Op.or]: [
-        { region: 'gulf' },
-        { 
-          location: {
-            [Op.iLike]: {
-              [Op.any]: GULF_LOCATIONS.map(loc => `%${loc}%`)
-            }
-          }
-        }
-      ]
-    };
+    const whereClause = { status: 'active' };
+    const And = Op.and; const Or = Op.or; const OpLike = Op.iLike; const OpIn = Op.in; const OpGte = Op.gte; const OpLte = Op.lte;
+    const andGroups = [];
+    andGroups.push({ [Or]: [ { region: 'gulf' }, { location: { [OpLike]: { [Op.any]: GULF_LOCATIONS.map(loc => `%${loc}%`) } } } ] });
 
     // Add search filter
     if (search) {
-      whereClause[Op.or] = [
-        { title: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } },
-        { requirements: { [Op.iLike]: `%${search}%` } }
-      ];
+      andGroups.push({ [Or]: [
+        { title: { [OpLike]: `%${search}%` } },
+        { description: { [OpLike]: `%${search}%` } },
+        { requirements: { [OpLike]: `%${search}%` } }
+      ]});
     }
 
     // Add location filter
     if (location) {
-      whereClause.location = { [Op.iLike]: `%${location}%` };
+      andGroups.push({ [Or]: [
+        { location: { [OpLike]: `%${location}%` } },
+        { city: { [OpLike]: `%${location}%` } },
+        { state: { [OpLike]: `%${location}%` } },
+        { country: { [OpLike]: `%${location}%` } }
+      ]});
     }
 
     // Add job type filter
     if (jobType) {
-      whereClause.jobType = jobType;
+      const types = String(jobType).split(',').map(s=>s.trim().toLowerCase()).filter(Boolean)
+      if (types.length === 1) whereClause.jobType = types[0];
+      if (types.length > 1) whereClause.jobType = { [OpIn]: types };
     }
 
     // Add experience level filter
-    if (experienceLevel) {
-      whereClause.experienceLevel = experienceLevel;
+    if (experienceLevel) whereClause.experienceLevel = experienceLevel;
+    if (experienceRange) {
+      const ranges = String(experienceRange).split(',').map(s=>s.trim()).filter(Boolean).map(r=>{
+        const [minStr,maxStr] = r.replace('+','-100').split('-');
+        const min = parseInt(minStr,10); const max = parseInt(maxStr,10);
+        if (!isNaN(min) && !isNaN(max)) return { [And]: [{ experienceMin: { [OpGte]: min } }, { experienceMax: { [OpLte]: max } }] };
+        if (!isNaN(min) && isNaN(max)) return { experienceMin: { [OpGte]: min } };
+        return null;
+      }).filter(Boolean);
+      if (ranges.length) andGroups.push({ [Or]: ranges });
     }
 
     // Add salary filters
-    if (salaryMin) {
-      whereClause.salaryMin = { [Op.gte]: parseFloat(salaryMin) };
-    }
-    if (salaryMax) {
-      whereClause.salaryMax = { [Op.lte]: parseFloat(salaryMax) };
-    }
+    if (salaryMin) whereClause.salaryMin = { [OpGte]: parseFloat(salaryMin) };
+    if (salaryMax) whereClause.salaryMax = { [OpLte]: parseFloat(salaryMax) };
 
     // Add company filter
-    if (companyId) {
-      whereClause.companyId = companyId;
+    if (companyId) whereClause.companyId = companyId;
+    if (department) whereClause.department = { [OpLike]: `%${department}%` };
+    if (role) whereClause.title = { [OpLike]: `%${role}%` };
+    if (skills) {
+      const skillTerms = String(skills).split(',').map(s=>s.trim()).filter(Boolean)
+      if (skillTerms.length) {
+        const jsonbLowerContains = skillTerms.map(term =>
+          Job.sequelize.where(
+            Job.sequelize.fn('LOWER', Job.sequelize.cast(Job.sequelize.col('skills'), 'text')),
+            { [Op.like]: `%${term.toLowerCase()}%` }
+          )
+        );
+        andGroups.push({ [Or]: [ { skills: { [Op.contains]: skillTerms } }, ...jsonbLowerContains, { requirements: { [OpLike]: `%${skills}%` } }, { description: { [OpLike]: `%${skills}%` } }, { title: { [OpLike]: `%${skills}%` } } ] });
+      }
     }
+    if (workMode) {
+      const normalized = String(workMode).toLowerCase().includes('home') ? 'remote' : String(workMode).toLowerCase();
+      andGroups.push({ [Or]: [ { remoteWork: normalized }, { workMode: { [OpLike]: `%${normalized}%` } }, ...(normalized==='remote'?[{ workMode: { [OpLike]: `%work from home%` } }]:[]) ] });
+    }
+    if (education) whereClause.education = { [OpLike]: `%${education}%` };
 
-    const { count, rows: jobs } = await Job.findAndCountAll({
-      where: whereClause,
-      include: [
-        {
-          model: Company,
-          as: 'company',
-          attributes: ['id', 'name', 'logo', 'industry', 'region']
-        },
-        {
-          model: User,
-          as: 'employer',
-          attributes: ['id', 'first_name', 'last_name', 'email']
-        }
-      ],
-      order: [[sortBy, sortOrder.toUpperCase()]],
-      limit: parseInt(limit),
-      offset: parseInt(offset)
-    });
+    const include = [
+      { model: Company, as: 'company', attributes: ['id','name','logo','industry','region','companyType'], required: Boolean(industry||companyType||companyName)||false,
+        where: (()=>{ const w = {}; const Or = Op.or; const OpLike = Op.iLike; if (industry){ const ind=String(industry).toLowerCase(); const terms = ind.includes('information technology')||ind==='it'?['information technology','technology','tech','software','it']:[ind]; w[Or]=terms.map(t=>({ industry:{[OpLike]:`%${t}%`} })); } if (companyType) w.companyType = String(companyType).toLowerCase(); if (companyName) w.name = { [OpLike]: `%${String(companyName).toLowerCase()}%` }; return w; })() },
+      { model: User, as: 'employer', attributes: ['id','first_name','last_name','email','companyId'], required: Boolean(recruiterType)||false }
+    ];
+    if (recruiterType === 'company') include[1] = { ...include[1], where: { companyId: { [Op.ne]: null } }, required: true };
+    else if (recruiterType === 'consultant') include[1] = { ...include[1], where: { companyId: null }, required: true };
+
+    const finalWhere = andGroups.length ? { [And]: [ whereClause, ...andGroups ] } : whereClause;
+    const { count, rows: jobs } = await Job.findAndCountAll({ where: finalWhere, include, order: [[sortBy, String(sortOrder||'DESC').toUpperCase()]], limit: parseInt(limit), offset: parseInt(offset) });
 
     res.json({
       success: true,

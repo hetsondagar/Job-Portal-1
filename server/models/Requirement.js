@@ -77,6 +77,14 @@ const Requirement = sequelize.define('Requirement', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  industry: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  department: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   validTill: {
     type: DataTypes.DATE,
     allowNull: true,
@@ -84,6 +92,18 @@ const Requirement = sequelize.define('Requirement', {
   noticePeriod: {
     type: DataTypes.STRING,
     allowNull: true,
+  },
+  institute: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  resumeFreshness: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  currentCompany: {
+    type: DataTypes.STRING,
+    allowNull: true
   },
   remoteWork: {
     type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),

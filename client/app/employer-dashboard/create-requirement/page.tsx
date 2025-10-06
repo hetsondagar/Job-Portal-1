@@ -55,6 +55,10 @@ export default function CreateRequirementPage() {
     currentSalaryMax: "",
     currency: "INR",
     includeNotMentioned: false,
+    // Newly added fields
+    institute: "",
+    resumeFreshness: "",
+    currentCompany: "",
   })
 
   const handleInputChange = (field: string, value: string | string[] | boolean) => {
@@ -206,6 +210,19 @@ export default function CreateRequirementPage() {
 
   const commonSkills = ["React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "MongoDB", "PostgreSQL", "AWS", "Docker", "Kubernetes"]
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
+  const industries = [
+    'Information Technology', 'Banking', 'Financial Services', 'Insurance', 'Healthcare', 'Pharmaceuticals',
+    'Education', 'E-Learning', 'Manufacturing', 'Automotive', 'Aerospace', 'Telecommunications', 'Retail',
+    'E-Commerce', 'FMCG', 'Hospitality', 'Travel & Tourism', 'Construction', 'Real Estate', 'Energy', 'Oil & Gas',
+    'Media & Entertainment', 'Logistics & Supply Chain', 'Consulting', 'Government', 'Non-Profit', 'Agriculture'
+  ]
+  const departments = [
+    'Engineering', 'Information Technology', 'Product Management', 'Design', 'Data Science', 'Analytics', 'Quality Assurance',
+    'DevOps', 'Cloud', 'Cybersecurity', 'Human Resources', 'Talent Acquisition', 'Learning & Development', 'Finance',
+    'Accounting', 'Legal', 'Compliance', 'Sales', 'Business Development', 'Marketing', 'Digital Marketing', 'Content',
+    'Operations', 'Administration', 'Customer Support', 'Technical Support', 'Supply Chain', 'Procurement', 'Logistics',
+    'Research & Development', 'Project Management', 'Strategy', 'Corporate Communications'
+  ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
@@ -482,11 +499,9 @@ export default function CreateRequirementPage() {
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Technology">Technology</SelectItem>
-                        <SelectItem value="Healthcare">Healthcare</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                        {industries.map(ind => (
+                          <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -498,11 +513,9 @@ export default function CreateRequirementPage() {
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Engineering">Engineering</SelectItem>
-                        <SelectItem value="Product">Product</SelectItem>
-                        <SelectItem value="Design">Design</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Sales">Sales</SelectItem>
+                        {departments.map(dep => (
+                          <SelectItem key={dep} value={dep}>{dep}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -531,6 +544,36 @@ export default function CreateRequirementPage() {
                         <SelectItem value="90 days">90 days</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="institute">Institute / University</Label>
+                    <Input
+                      id="institute"
+                      value={formData.institute}
+                      onChange={(e) => handleInputChange('institute', e.target.value)}
+                      placeholder="e.g., IIT Bombay, IIM Ahmedabad"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="resumeFreshness">Resume Freshness / Last Updated Date</Label>
+                    <Input
+                      id="resumeFreshness"
+                      type="date"
+                      value={formData.resumeFreshness}
+                      onChange={(e) => handleInputChange('resumeFreshness', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="currentCompany">Current Company</Label>
+                    <Input
+                      id="currentCompany"
+                      value={formData.currentCompany}
+                      onChange={(e) => handleInputChange('currentCompany', e.target.value)}
+                      placeholder="e.g., Infosys, TCS"
+                    />
                   </div>
                 </CardContent>
               </Card>

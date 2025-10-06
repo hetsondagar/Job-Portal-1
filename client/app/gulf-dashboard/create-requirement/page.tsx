@@ -61,7 +61,10 @@ function GulfCreateRequirementContent({ user }: { user: any }) {
     includeWillingToRelocate: false,
     includeNotMentioned: false,
     benefits: [] as string[],
-    region: "gulf"
+    region: "gulf",
+    institute: "",
+    resumeFreshness: "",
+    currentCompany: "",
   })
 
   const [currentSkill, setCurrentSkill] = useState("")
@@ -544,6 +547,40 @@ function GulfCreateRequirementContent({ user }: { user: any }) {
                         ))}
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Additional Fields */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Additional Filters</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="institute">Institute / University</Label>
+                      <Input
+                        id="institute"
+                        value={formData.institute}
+                        onChange={(e) => handleInputChange('institute', e.target.value)}
+                        placeholder="e.g., IIT Bombay, KAUST"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="resumeFreshness">Resume Freshness / Last Updated Date</Label>
+                      <Input
+                        id="resumeFreshness"
+                        type="date"
+                        value={formData.resumeFreshness}
+                        onChange={(e) => handleInputChange('resumeFreshness', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currentCompany">Current Company</Label>
+                      <Input
+                        id="currentCompany"
+                        value={formData.currentCompany}
+                        onChange={(e) => handleInputChange('currentCompany', e.target.value)}
+                        placeholder="e.g., Emirates, Aramco"
+                      />
+                    </div>
                   </div>
                 </div>
 

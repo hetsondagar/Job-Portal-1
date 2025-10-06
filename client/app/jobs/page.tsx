@@ -89,6 +89,7 @@ interface Job {
   workMode?: string
   learningObjectives?: string
   mentorship?: string
+  isPreferred?: boolean
 }
 
 export default function JobsPage() {
@@ -200,15 +201,28 @@ export default function JobsPage() {
         limit: 100,
         search: filters.search || undefined,
         location: filters.location || undefined,
-        jobType: filters.jobTypes.length === 1 ? filters.jobTypes[0].toLowerCase() : undefined,
-        experienceRange: filters.experienceLevels.join(',') || undefined,
-        salaryMin: filters.salaryMin || (filters.salaryRange ? parseInt(filters.salaryRange.split('-')[0]) * 100000 : undefined),
+        jobType: filters.jobTypes.length > 0 ? filters.jobTypes.map(t => t.toLowerCase().replace(/\s+/g, '-')).join(',') : undefined,
+        experienceRange: filters.experienceLevels.length > 0 ? filters.experienceLevels.map(r => r.includes('+') ? r.replace('+','-100') : r).join(',') : undefined,
+        ...(filters.salaryRange ? (() => {
+          const sr = filters.salaryRange;
+          if (sr.includes('+')) {
+            const min = parseInt(sr);
+            return { salaryMin: min * 100000 };
+          }
+          const [minStr, maxStr] = sr.split('-');
+          const min = parseInt(minStr);
+          const max = parseInt(maxStr);
+          return {
+            salaryMin: isNaN(min) ? undefined : min * 100000,
+            salaryMax: isNaN(max) ? undefined : max * 100000,
+          };
+        })() : {}),
         industry: filters.industry || undefined,
         department: filters.department || undefined,
         role: filters.role || undefined,
         skills: filters.skills || undefined,
         companyType: filters.companyType || undefined,
-        workMode: filters.workMode || undefined,
+        workMode: filters.workMode ? (filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode) : undefined,
         education: filters.education || undefined,
         companyName: filters.companyName || undefined,
         recruiterType: filters.recruiterType || undefined,
@@ -226,8 +240,11 @@ export default function JobsPage() {
           title: job.title,
           company: {
             id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company'
-          },
+            name: job.company?.name || 'Unknown Company',
+            // enrich for filtering
+            industry: job.company?.industry,
+            companyType: job.company?.companyType,
+          } as any,
           location: job.location,
           experience: job.experienceLevel || job.experience || 'Not specified',
           salary: job.salary || (job.salaryMin && job.salaryMax 
@@ -248,7 +265,7 @@ export default function JobsPage() {
           // Internship-specific fields
           duration: job.duration,
           startDate: job.startDate,
-          workMode: job.workMode,
+          workMode: job.workMode || job.remoteWork,
           learningObjectives: job.learningObjectives,
           mentorship: job.mentorship
         }))
@@ -331,8 +348,10 @@ export default function JobsPage() {
           title: job.title,
           company: {
             id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company'
-          },
+            name: job.company?.name || 'Unknown Company',
+            industry: job.company?.industry,
+            companyType: job.company?.companyType,
+          } as any,
           location: job.location,
           experience: job.experienceLevel || job.experience || 'Not specified',
           salary: job.salary || (job.salaryMin && job.salaryMax 
@@ -352,7 +371,7 @@ export default function JobsPage() {
           photos: job.photos || [],
           duration: job.duration,
           startDate: job.startDate,
-          workMode: job.workMode,
+          workMode: job.workMode || job.remoteWork,
           learningObjectives: job.learningObjectives,
           mentorship: job.mentorship,
           isPreferred: true
@@ -548,8 +567,7 @@ export default function JobsPage() {
     "Part-time",
     "Contract",
     "Internship",
-    "Remote",
-    "Work from home",
+    "Freelance",
   ]
 
   const locations = [
@@ -592,8 +610,16 @@ export default function JobsPage() {
   ]
 
   // Filter and sort jobs
+  const allJobs = useMemo(() => {
+    // Merge jobs and preferredJobs, de-duplicate by id, mark preferred
+    const byId: Record<string, Job> = {}
+    jobs.forEach(j => { byId[j.id] = j })
+    preferredJobs.forEach(pj => { byId[pj.id] = { ...pj, isPreferred: true } as Job })
+    return Object.values(byId)
+  }, [jobs, preferredJobs])
+
   const filteredJobs = useMemo(() => {
-    let filtered = [...jobs]
+    let filtered = [...allJobs]
 
     // Search filter
     if (filters.search) {
@@ -627,7 +653,71 @@ export default function JobsPage() {
       )
     }
 
-    // Category filter
+    // Industry (company industry) client-side safeguard
+    if (filters.industry) {
+      const q = filters.industry.toLowerCase()
+      const synonyms = q.includes('information technology') || q === 'it'
+        ? ['information technology','technology','tech','software','it']
+        : [q]
+      filtered = filtered.filter(job => {
+        const ind = (job as any).company?.industry
+        if (!ind) return false
+        const low = String(ind).toLowerCase()
+        return synonyms.some(s => low.includes(s))
+      })
+    }
+
+    // Department
+    if (filters.department) {
+      const q = filters.department.toLowerCase()
+      filtered = filtered.filter(job => String((job as any).department || job.category || '').toLowerCase().includes(q))
+    }
+
+    // Role / Designation
+    if (filters.role) {
+      const q = filters.role.toLowerCase()
+      filtered = filtered.filter(job => job.title.toLowerCase().includes(q))
+    }
+
+    // Skills / Keywords
+    if (filters.skills) {
+      const parts = filters.skills.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      if (parts.length) {
+        filtered = filtered.filter(job => parts.some(p => job.skills.some(s => s.toLowerCase().includes(p)) || job.description.toLowerCase().includes(p)))
+      }
+    }
+
+    // Company Type
+    if (filters.companyType) {
+      const q = filters.companyType.toLowerCase()
+      filtered = filtered.filter(job => {
+        const ct = (job as any).company?.companyType
+        return ct ? String(ct).toLowerCase() === q : false
+      })
+    }
+
+    // Work Mode
+    if (filters.workMode) {
+      const q = filters.workMode.toLowerCase().includes('home') ? 'remote' : filters.workMode.toLowerCase()
+      filtered = filtered.filter(job => {
+        const wm = String(job.workMode || (job as any).remoteWork || '').toLowerCase()
+        if (!wm) return false
+        if (q === 'remote') return wm.includes('remote') || wm.includes('work from home')
+        return wm.includes(q)
+      })
+    }
+
+    // Education
+    if (filters.education) {
+      const q = filters.education.toLowerCase()
+      filtered = filtered.filter(job => String((job as any).education || '').toLowerCase().includes(q))
+    }
+
+    // Company Name
+    if (filters.companyName) {
+      const q = filters.companyName.toLowerCase()
+      filtered = filtered.filter(job => job.company.name.toLowerCase().includes(q))
+    }
     if (filters.category) {
       filtered = filtered.filter(job => job.category === filters.category)
     }
@@ -637,28 +727,74 @@ export default function JobsPage() {
       filtered = filtered.filter(job => job.type.toLowerCase() === filters.type.toLowerCase())
     }
 
-    // Sort jobs
-    switch (sortBy) {
-      case "recent":
-        filtered.sort((a, b) => new Date(b.posted).getTime() - new Date(a.posted).getTime())
-        break
-      case "salary":
-        filtered.sort((a, b) => {
-          const salaryA = parseInt(a.salary.split('-')[0].replace(/\D/g, ''))
-          const salaryB = parseInt(b.salary.split('-')[0].replace(/\D/g, ''))
+    // Determine if any filters are active
+    const hasActiveFilters = Boolean(
+      (filters.search && filters.search.trim()) ||
+      (filters.location && filters.location.trim()) ||
+      filters.experienceLevels.length ||
+      filters.jobTypes.length ||
+      (filters.salaryRange && filters.salaryRange.trim()) ||
+      (filters.industry && filters.industry.trim()) ||
+      (filters.department && filters.department.trim()) ||
+      (filters.role && filters.role.trim()) ||
+      (filters.skills && filters.skills.trim()) ||
+      (filters.companyType && filters.companyType.trim && filters.companyType.trim()) ||
+      (filters.workMode && filters.workMode.trim && filters.workMode.trim()) ||
+      (filters.education && filters.education.trim()) ||
+      (filters.companyName && filters.companyName.trim()) ||
+      (filters.recruiterType && filters.recruiterType.trim && filters.recruiterType.trim())
+    )
+
+    // Sort jobs: if no filters, preferred first; otherwise normal selected sort
+    const sortSecondary = (a: Job, b: Job) => {
+      switch (sortBy) {
+        case "recent":
+          return new Date(b.posted).getTime() - new Date(a.posted).getTime()
+        case "salary": {
+          const salaryA = parseInt((a.salary || '').split('-')[0]?.replace(/\D/g, '') || '0')
+          const salaryB = parseInt((b.salary || '').split('-')[0]?.replace(/\D/g, '') || '0')
           return salaryB - salaryA
-        })
-        break
-      case "applicants":
-        filtered.sort((a, b) => b.applicants - a.applicants)
-        break
-      case "rating":
-        filtered.sort((a, b) => b.companyRating - a.companyRating)
-        break
+        }
+        case "applicants":
+          return (b.applicants || 0) - (a.applicants || 0)
+        case "rating":
+          return (b.companyRating || 0) - (a.companyRating || 0)
+        default:
+          return 0
+      }
+    }
+    
+    if (!hasActiveFilters) {
+      filtered.sort((a, b) => {
+        const aPref = a.isPreferred ? 1 : 0
+        const bPref = b.isPreferred ? 1 : 0
+        if (aPref !== bPref) return bPref - aPref
+        return sortSecondary(a, b)
+      })
+    } else {
+      filtered.sort(sortSecondary)
     }
 
     return filtered
-  }, [jobs, filters, sortBy])
+  }, [allJobs, filters, sortBy])
+
+  // Determine if any filters are active (for preferred tag display)
+  const hasActiveFilters = useMemo(() => Boolean(
+    (filters.search && filters.search.trim()) ||
+    (filters.location && filters.location.trim()) ||
+    filters.experienceLevels.length ||
+    filters.jobTypes.length ||
+    (filters.salaryRange && filters.salaryRange.trim()) ||
+    (filters.industry && filters.industry.trim()) ||
+    (filters.department && filters.department.trim()) ||
+    (filters.role && filters.role.trim()) ||
+    (filters.skills && filters.skills.trim()) ||
+    (filters.companyType && (filters.companyType as any).trim && (filters.companyType as any).trim()) ||
+    (filters.workMode && (filters.workMode as any).trim && (filters.workMode as any).trim()) ||
+    (filters.education && filters.education.trim()) ||
+    (filters.companyName && filters.companyName.trim()) ||
+    (filters.recruiterType && (filters.recruiterType as any).trim && (filters.recruiterType as any).trim())
+  ), [filters])
 
   // Record search in database
   const recordSearch = useCallback(async (searchQuery: string) => {
@@ -1036,119 +1172,7 @@ export default function JobsPage() {
           </div>
         </div>
 
-        {/* Preferred Jobs Section */}
-        {user && preferredJobs.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center space-x-2 mb-4">
-              <Star className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                Jobs Matching Your Preferences
-              </h2>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                {preferredJobs.length}
-              </Badge>
-            </div>
-            <div className="space-y-4">
-              {preferredJobs.slice(0, 3).map((job, index) => (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Link href={`/jobs/${job.id}`}>
-                    <Card className="group cursor-pointer border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-l-4 border-l-blue-500">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-4 flex-1">
-                            <Avatar className="w-12 h-12 ring-2 ring-blue-200 group-hover:ring-4 transition-all duration-300">
-                              <AvatarImage src={job.logo} alt={job.company.name} />
-                              <AvatarFallback className="text-sm font-bold">{job.company.name[0]}</AvatarFallback>
-                            </Avatar>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
-                                    {job.title}
-                                  </h3>
-                                  <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-                                    {job.company.name}
-                                  </p>
-                                </div>
-                                <div className="flex items-center space-x-2 ml-4">
-                                  <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                                    <Star className="w-3 h-3 mr-1" />
-                                    Preferred
-                                  </Badge>
-                                  {job.urgent && (
-                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                                      Urgent
-                                    </Badge>
-                                  )}
-                                  {job.featured && (
-                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
-                                      Featured
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-3">
-                                <div className="flex items-center space-x-1">
-                                  <MapPin className="w-4 h-4" />
-                                  <span>{job.location}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Briefcase className="w-4 h-4" />
-                                  <span>{job.experience}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <IndianRupee className="w-4 h-4" />
-                                  <span>{job.salary}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Clock className="w-4 h-4" />
-                                  <span>{job.posted}</span>
-                                </div>
-                              </div>
-
-                              {job.skills && job.skills.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                  {job.skills.slice(0, 3).map((skill, skillIndex) => (
-                                    <Badge key={skillIndex} variant="outline" className="text-xs">
-                                      {skill}
-                                    </Badge>
-                                  ))}
-                                  {job.skills.length > 3 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{job.skills.length - 3} more
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-
-                              <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2">
-                                {job.description}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-            {preferredJobs.length > 3 && (
-              <div className="text-center mt-4">
-                <Button variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                  View All {preferredJobs.length} Preferred Jobs
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Preferred jobs are merged into main list and sorted to top when no filters */}
 
         {/* Jobs Grid */}
         <div className="space-y-6">
@@ -1219,6 +1243,12 @@ export default function JobsPage() {
                                   </p>
                                 </div>
                                 <div className="flex items-center space-x-2 ml-4">
+                                  {!hasActiveFilters && job.isPreferred && (
+                                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                      <Star className="w-3 h-3 mr-1" />
+                                      Preferred
+                                    </Badge>
+                                  )}
                                   {job.urgent && (
                                     <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
                                       Urgent
