@@ -540,7 +540,7 @@ exports.getAllJobs = async (req, res, next) => {
     if (workMode) {
       const normalized = String(workMode).toLowerCase().includes('home') ? 'remote' : String(workMode).toLowerCase();
       const Or = Job.sequelize.Op.or;
-      const OpLike = Job.sequelize.Op.iLike;
+      const OpLike = Op.iLike;
       andGroups.push({
         [Or]: [
           { remoteWork: normalized },
@@ -572,7 +572,7 @@ exports.getAllJobs = async (req, res, next) => {
         required: Boolean(industry || companyType || companyName) || false,
         where: (() => {
           const where = {};
-          const OpLike = Job.sequelize.Op.iLike;
+          const OpLike = Op.iLike;
           const Or = Job.sequelize.Op.or;
           if (industry) {
             const ind = String(industry).toLowerCase();
@@ -753,7 +753,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       const locationParts = currentJob.location.toLowerCase().split(',').map(part => part.trim());
       if (locationParts.length > 0) {
         whereClause.location = {
-          [require('sequelize').Op.iLike]: `%${locationParts[0]}%`
+          [Op.iLike]: `%${locationParts[0]}%`
         };
       }
     }
@@ -771,7 +771,7 @@ exports.getSimilarJobs = async (req, res, next) => {
     // Add department/category similarity
     if (currentJob.department) {
       whereClause.department = {
-        [require('sequelize').Op.iLike]: `%${currentJob.department}%`
+        [Op.iLike]: `%${currentJob.department}%`
       };
     }
 
@@ -1045,10 +1045,10 @@ exports.getJobsByEmployer = async (req, res, next) => {
     console.log('🔍 Final where clause:', whereClause);
     if (search) {
       whereClause[Job.sequelize.Op.or] = [
-        { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
-        { description: { [Job.sequelize.Op.iLike]: `%${search}%` } },
-        { location: { [Job.sequelize.Op.iLike]: `%${search}%` } },
-        { department: { [Job.sequelize.Op.iLike]: `%${search}%` } }
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+        { location: { [Op.iLike]: `%${search}%` } },
+        { department: { [Op.iLike]: `%${search}%` } }
       ];
     }
 
@@ -1336,7 +1336,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
         whereClause.location = {
 
-          [require('sequelize').Op.iLike]: `%${locationParts[0]}%`
+          [Op.iLike]: `%${locationParts[0]}%`
 
         };
 
@@ -1372,7 +1372,7 @@ exports.getSimilarJobs = async (req, res, next) => {
 
       whereClause.department = {
 
-        [require('sequelize').Op.iLike]: `%${currentJob.department}%`
+        [Op.iLike]: `%${currentJob.department}%`
 
       };
 
@@ -1883,13 +1883,13 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
       whereClause[Job.sequelize.Op.or] = [
 
-        { title: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+        { title: { [Op.iLike]: `%${search}%` } },
 
-        { description: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
 
-        { location: { [Job.sequelize.Op.iLike]: `%${search}%` } },
+        { location: { [Op.iLike]: `%${search}%` } },
 
-        { department: { [Job.sequelize.Op.iLike]: `%${search}%` } }
+        { department: { [Op.iLike]: `%${search}%` } }
 
       ];
 
