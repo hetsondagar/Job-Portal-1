@@ -855,10 +855,10 @@ router.put('/change-password', authenticateToken, [
 // Get user notifications
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
-    const { Notification } = require('../config/index');
+    const { Notification, JobApplication, User, Company, Job } = require('../config/index');
     
     // Correct field mapping: model uses camelCase userId
-    const notifications = await Notification.findAll({
+    let notifications = await Notification.findAll({
       where: { userId: req.user.id },
       order: [['createdAt', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
@@ -875,6 +875,53 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         createdAt: n.createdAt
       }))
     });
+
+    // Backfill: ensure a shortlist notification exists if any application is shortlisted
+    try {
+      const shortlistedApps = await JobApplication.findAll({
+        where: { userId: req.user.id, status: 'shortlisted' },
+        order: [['updatedAt', 'DESC']],
+        limit: 5
+      });
+      for (const app of shortlistedApps) {
+        const existingShortlist = notifications.find(n => 
+          (n.type === 'application_shortlisted' || (n.type === 'application_status' && n.metadata?.fallback && n.metadata?.originalType === 'application_shortlisted'))
+        );
+        if (!existingShortlist) {
+          // Fetch employer/company/job for richer message (best-effort)
+          let companyName = 'Company';
+          let jobTitle = 'a position';
+          try {
+            const employer = await User.findByPk(app.employerId, { include: [{ model: Company, as: 'company', attributes: ['name'] }] });
+            const job = await Job.findByPk(app.jobId, { attributes: ['title'] });
+            if (employer?.company?.name) companyName = employer.company.name;
+            if (job?.title) jobTitle = job.title;
+          } catch {}
+
+          const created = await Notification.create({
+            userId: req.user.id,
+            type: 'application_status',
+            title: `Application Status Update: Shortlisted`,
+            message: `You have been shortlisted for ${jobTitle} at ${companyName}.`,
+            shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
+            priority: 'high',
+            actionUrl: '/applications',
+            actionText: 'View Applications',
+            icon: 'user-check',
+            metadata: {
+              employerId: app.employerId,
+              applicationId: app.id,
+              jobId: app.jobId,
+              originalType: 'application_shortlisted',
+              fallback: true
+            }
+          });
+          notifications.unshift(created);
+        }
+      }
+    } catch (bfErr) {
+      console.warn('Shortlist backfill skipped:', bfErr?.message || bfErr);
+    }
 
     if (!notifications || notifications.length === 0) {
       // Bootstrap a friendly welcome notification for first-time users
