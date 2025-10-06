@@ -24,6 +24,7 @@ import {
   ArrowUp
 } from 'lucide-react'
 import { apiService } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 
 interface Notification {
   id: string
@@ -52,12 +53,21 @@ export function RecentNotifications({
   const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const [latestSeenCreatedAt, setLatestSeenCreatedAt] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchNotifications()
+    fetchNotifications(false)
+
+    // Poll for new notifications periodically to simulate push updates
+    const intervalId = setInterval(() => {
+      fetchNotifications(true)
+    }, 30000)
+
+    return () => clearInterval(intervalId)
   }, [])
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (isBackground: boolean) => {
     try {
       setLoading(true)
       console.log('🔔 Fetching notifications...')
@@ -79,6 +89,38 @@ export function RecentNotifications({
           shortlisted: sortedNotifications.filter(n => n.type === 'application_shortlisted' || n.type === 'candidate_shortlisted')
         })
         
+        // Detect and surface new shortlist notifications when polling in background
+        if (isBackground) {
+          const newestCreatedAt = sortedNotifications[0]?.createdAt || null
+          if (newestCreatedAt && newestCreatedAt !== latestSeenCreatedAt) {
+            const newlyCreated = sortedNotifications.filter(n => !latestSeenCreatedAt || new Date(n.createdAt) > new Date(latestSeenCreatedAt))
+            const newShortlists = newlyCreated.filter(n => n.type === 'candidate_shortlisted' || n.type === 'application_shortlisted')
+            if (newShortlists.length > 0) {
+              const first = newShortlists[0]
+              toast({
+                title: 'Shortlisted!',
+                description: first.message,
+              })
+
+              if (typeof window !== 'undefined' && 'Notification' in window) {
+                if (Notification.permission === 'granted') {
+                  new Notification(first.title, { body: first.message })
+                } else if (Notification.permission !== 'denied') {
+                  Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                      new Notification(first.title, { body: first.message })
+                    }
+                  })
+                }
+              }
+            }
+            setLatestSeenCreatedAt(newestCreatedAt)
+          }
+        } else {
+          const newestCreatedAt = sortedNotifications[0]?.createdAt || null
+          if (newestCreatedAt) setLatestSeenCreatedAt(newestCreatedAt)
+        }
+
         setNotifications(sortedNotifications)
       } else {
         console.log('🔔 No notifications found or error:', response)
