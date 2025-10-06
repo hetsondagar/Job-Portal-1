@@ -102,7 +102,7 @@ function extractCandidateProfile(user) {
 /**
  * Calculate rule-based ATS score (fallback when Gemini AI is not available)
  */
-function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement) {
+function calculateRuleBasedATSScore(candidate, resumeContent, requirement) {
   console.log('🧮 Calculating rule-based ATS score...');
   
   let score = 0;
@@ -111,8 +111,11 @@ function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement
   const gaps = [];
   
   // Extract requirement skills from the requirement object directly
-  const requirementSkills = requirement.keySkills || requirement.skills || [];
-  const candidateSkills = candidateProfile.skills || [];
+  // Use skills field if keySkills is empty, as skills contains the actual requirements
+  const requirementSkills = (requirement.keySkills && requirement.keySkills.length > 0) 
+    ? requirement.keySkills 
+    : (requirement.skills || []);
+  const candidateSkills = candidate.skills || [];
   
   // Skills matching (40 points)
   if (requirementSkills.length > 0 && candidateSkills.length > 0) {
@@ -140,25 +143,38 @@ function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement
   // Experience matching (25 points)
   const requiredExpMin = requirement.experienceMin || 0;
   const requiredExpMax = requirement.experienceMax || 10;
-  const candidateExp = candidateProfile.experience_years || 0;
+  const candidateExp = candidate.experience_years || 0;
   
-  if (candidateExp >= requiredExpMin && candidateExp <= requiredExpMax) {
-    score += 25;
-    matchingPoints.push(`Experience matches requirement (${candidateExp} years)`);
-  } else if (candidateExp > requiredExpMax) {
-    score += 20;
-    matchingPoints.push(`Experience exceeds requirement (${candidateExp} years)`);
-  } else if (candidateExp > 0) {
-    score += Math.max(0, 25 * (candidateExp / requiredExpMin));
-    gaps.push(`Experience below requirement (${candidateExp} vs ${requiredExpMin}+ years)`);
+  // Only give full experience points if there's actually an experience requirement
+  if (requiredExpMin > 0 || requiredExpMax < 10) {
+    if (candidateExp >= requiredExpMin && candidateExp <= requiredExpMax) {
+      score += 25;
+      matchingPoints.push(`Experience matches requirement (${candidateExp} years)`);
+    } else if (candidateExp > requiredExpMax) {
+      score += 20;
+      matchingPoints.push(`Experience exceeds requirement (${candidateExp} years)`);
+    } else if (candidateExp > 0) {
+      const expScore = Math.max(0, 25 * (candidateExp / requiredExpMin));
+      score += expScore;
+      matchingPoints.push(`Experience partially matches (${candidateExp} years)`);
+      gaps.push(`Experience below requirement (${candidateExp} vs ${requiredExpMin}+ years)`);
+    } else {
+      gaps.push('No experience specified');
+    }
   } else {
-    gaps.push('No experience specified');
+    // No specific experience requirement - give partial points for any experience
+    if (candidateExp > 0) {
+      score += 15; // Reduced points when no specific requirement
+      matchingPoints.push(`Has experience (${candidateExp} years)`);
+    } else {
+      gaps.push('No experience specified');
+    }
   }
   
   // Location matching (15 points)
   const requiredLocations = requirement.candidateLocations || [];
-  const candidateLocation = candidateProfile.current_location || '';
-  const candidatePreferredLocations = candidateProfile.preferred_locations || [];
+  const candidateLocation = candidate.current_location || '';
+  const candidatePreferredLocations = candidate.preferred_locations || [];
   
   if (requiredLocations.length > 0) {
     const locationMatches = requiredLocations.some(reqLoc => 
@@ -177,17 +193,17 @@ function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement
   }
   
   // Education matching (10 points)
-  if (candidateProfile.education && candidateProfile.education.length > 0) {
-    score += 10;
-    matchingPoints.push('Education information available');
-  } else {
-    gaps.push('No education information provided');
-  }
+  // For now, assume no education data is available in the user model
+  // This could be enhanced to check resume education data
+  gaps.push('No education information provided');
   
   // Resume content quality (10 points)
-  if (resumeContent && resumeContent.length > 100) {
+  if (resumeContent && resumeContent.length > 200) {
     score += 10;
     matchingPoints.push('Detailed resume content available');
+  } else if (resumeContent && resumeContent.length > 50) {
+    score += 5; // Partial points for some content
+    matchingPoints.push('Basic resume content available');
   } else {
     gaps.push('Limited resume content');
   }
@@ -372,7 +388,8 @@ Provide ONLY the JSON response, no additional text.
       console.log('⚠️ Gemini AI failed, using rule-based scoring:', geminiError.message);
       
       // Fallback: Use rule-based ATS scoring
-      atsData = calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement);
+      // Pass the actual candidate object, not the extracted text
+      atsData = calculateRuleBasedATSScore(candidate, resumeContent, requirement);
     }
     
     // Store the ATS score in the database with explicit transaction

@@ -702,9 +702,13 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     
     if (candidateIds.length > 0) {
       try {
+        console.log('🔍 Fetching ATS scores for requirement:', id);
+        console.log('🔍 Candidate IDs:', candidateIds);
+        
         const atsScores = await sequelize.query(`
           SELECT 
             user_id as "userId",
+            requirement_id as "requirementId",
             ats_score as "atsScore",
             last_calculated as "lastCalculated"
           FROM candidate_analytics
@@ -718,11 +722,12 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         atsScores.forEach(score => {
           atsScoresMap[score.userId] = {
             score: score.atsScore,
-            lastCalculated: score.lastCalculated
+            lastCalculated: score.lastCalculated,
+            requirementId: score.requirementId
           };
         });
         
-        console.log('🔍 ATS scores fetched:', {
+        console.log('🔍 ATS scores fetched for requirement', id, ':', {
           totalCandidates: candidateIds.length,
           atsScoresFound: atsScores.length,
           atsScoresMap: Object.keys(atsScoresMap).length
@@ -731,8 +736,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         // Debug: Log specific ATS scores for known candidates
         console.log('🔍 ATS scores details for debugging:');
         atsScores.forEach(score => {
-          console.log(`  - User ${score.userId}: Score ${score.atsScore} (${score.lastCalculated})`);
+          console.log(`  - User ${score.userId}: Score ${score.atsScore} for requirement ${score.requirementId} (${score.lastCalculated})`);
         });
+        
+        // Verify all scores match the current requirement
+        const mismatchedScores = atsScores.filter(score => score.requirementId !== id);
+        if (mismatchedScores.length > 0) {
+          console.log('⚠️ Found ATS scores for different requirements:', mismatchedScores);
+        }
+        
       } catch (atsError) {
         console.log('⚠️ Could not fetch ATS scores:', atsError.message);
         console.log('🔍 ATS Error details:', atsError);
@@ -744,12 +756,18 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
       const atsData = atsScoresMap[candidate.id];
       
+      // Only include ATS score if it matches the current requirement
+      const validAtsData = atsData && atsData.requirementId === id ? atsData : null;
+      
       // Debug: Log ATS data for specific candidates
       if (candidate.id === '4200f403-25dc-4aa6-bcc9-1363adf0ee7b' || candidate.id === '10994ba4-1e33-45c3-b522-2f56a873e1e2') {
         console.log(`🔍 Candidate ${candidate.id} (${candidate.first_name} ${candidate.last_name}) ATS data:`, {
           atsData: atsData,
-          atsScore: atsData ? atsData.score : null,
-          atsCalculatedAt: atsData ? atsData.lastCalculated : null
+          validAtsData: validAtsData,
+          currentRequirementId: id,
+          atsRequirementId: atsData ? atsData.requirementId : 'none',
+          atsScore: validAtsData ? validAtsData.score : null,
+          atsCalculatedAt: validAtsData ? validAtsData.lastCalculated : null
         });
       }
       
@@ -780,8 +798,8 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         profileCompletion: candidate.profile_completion || 0,
         relevanceScore: score,
         matchReasons: matchReasons,
-        atsScore: atsData ? atsData.score : null,
-        atsCalculatedAt: atsData ? atsData.lastCalculated : null
+        atsScore: validAtsData ? validAtsData.score : null,
+        atsCalculatedAt: validAtsData ? validAtsData.lastCalculated : null
       };
     });
     

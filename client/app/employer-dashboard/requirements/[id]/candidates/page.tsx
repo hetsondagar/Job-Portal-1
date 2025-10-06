@@ -101,6 +101,7 @@ export default function CandidatesPage() {
         setError(null)
         
         console.log('🔍 Fetching candidates for requirement:', params.id)
+        console.log('🔍 Previous candidates count:', candidates.length)
         
         const response = await apiService.getRequirementCandidates(params.id as string, {
           page: pagination.page,
@@ -112,12 +113,27 @@ export default function CandidatesPage() {
         console.log('🔍 Candidates API response:', response)
         
         if (response.success && response.data) {
-          console.log('📊 Initial candidates data with ATS scores:', response.data.candidates?.map(c => ({ name: c.name, atsScore: c.atsScore })))
-          console.log('🔍 Full initial candidate data structure:', response.data.candidates?.[0])
-          setCandidates(response.data.candidates || [])
+          const newCandidates = response.data.candidates || []
+          console.log('📊 New candidates data with ATS scores:', newCandidates.map(c => ({ 
+            name: c.name, 
+            atsScore: c.atsScore,
+            requirementId: params.id 
+          })))
+          
+          // Verify no old ATS scores are persisting
+          const candidatesWithOldScores = newCandidates.filter(c => 
+            c.atsScore !== null && c.atsCalculatedAt && 
+            new Date(c.atsCalculatedAt).getTime() < Date.now() - 60000 // More than 1 minute old
+          )
+          
+          if (candidatesWithOldScores.length > 0) {
+            console.log('⚠️ Found candidates with potentially old ATS scores:', candidatesWithOldScores.length)
+          }
+          
+          setCandidates(newCandidates)
           setRequirement(response.data.requirement)
           setPagination(response.data.pagination || pagination)
-          console.log('✅ Successfully fetched candidates:', response.data.candidates?.length || 0)
+          console.log('✅ Successfully fetched candidates:', newCandidates.length)
         } else {
           console.error('❌ Failed to fetch candidates:', response.message)
           setError(response.message || 'Failed to load candidates')
@@ -131,6 +147,10 @@ export default function CandidatesPage() {
     }
 
     if (params.id) {
+      console.log('🔄 Requirement changed, clearing candidates and fetching new data')
+      // Clear any existing ATS scores when requirement changes
+      setCandidates([])
+      setRequirement(null)
       fetchCandidates()
     }
   }, [params.id, pagination.page, showCount, searchQuery, sortBy])
@@ -282,7 +302,7 @@ export default function CandidatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+    <div key={params.id} className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <EmployerNavbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -383,7 +403,7 @@ export default function CandidatesPage() {
                   </>
                 )}
               </Button>
-            </div>
+          </div>
 
             {/* Filter Toggle */}
             <Button
