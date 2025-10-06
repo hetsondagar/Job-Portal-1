@@ -710,7 +710,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           FROM candidate_analytics
           WHERE user_id IN (:candidateIds) AND requirement_id = :requirementId
         `, {
-          replacements: { candidateIds, requirementId: requirementId },
+          replacements: { candidateIds, requirementId: id },
           type: QueryTypes.SELECT
         });
         
