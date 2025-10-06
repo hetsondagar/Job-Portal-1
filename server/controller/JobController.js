@@ -419,6 +419,7 @@ exports.getAllJobs = async (req, res, next) => {
     const OpIn = Job.sequelize.Op.in;
     const OpGte = Job.sequelize.Op.gte;
     const OpLte = Job.sequelize.Op.lte;
+    const OpNe = Job.sequelize.Op.ne;
     const andGroups = [];
 
     // Add region filtering to ensure proper job visibility
@@ -427,7 +428,7 @@ exports.getAllJobs = async (req, res, next) => {
     } else {
       // Default behavior: exclude Gulf jobs from regular job listings
       // This ensures Gulf jobs are only visible through Gulf-specific endpoints
-      whereClause.region = { [Op.ne]: 'gulf' };
+      whereClause.region = { [OpNe]: 'gulf' };
     }
 
     // Add filters
@@ -435,7 +436,7 @@ exports.getAllJobs = async (req, res, next) => {
       if (status === 'active') {
         whereClause.status = 'active';
       } else if (status === 'inactive') {
-        whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
+        whereClause.status = { [OpIn]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
       // Default public listing: only active jobs that are not expired by date
@@ -1124,11 +1125,11 @@ exports.getJobsByCompany = async (req, res, next) => {
       } else if (status === 'expired') {
         whereClause.status = 'expired';
       } else if (status === 'inactive') {
-        whereClause.status = { [Op.in]: ['draft', 'paused', 'closed', 'expired'] };
+        whereClause.status = { [OpIn]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
       // Public company page: include active (regardless of validTill) and expired
-      whereClause.status = { [Op.in]: ['active', 'expired'] };
+      whereClause.status = { [OpIn]: ['active', 'expired'] };
     }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
