@@ -884,15 +884,30 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         limit: 50
       });
 
-      // Index existing notifications by applicationId and type
+      // Helper to parse metadata safely
+      const getMeta = (n) => n.metadata && (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata);
+
+      // Build lookup maps for quick checks
       const notifByAppAndType = new Map();
       for (const n of notifications) {
-        const meta = n.metadata && (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata);
+        const meta = getMeta(n);
         const appId = meta?.applicationId;
         if (!appId) continue;
         const key = `${appId}|${n.type}`;
         if (!notifByAppAndType.has(key)) notifByAppAndType.set(key, n);
       }
+
+      // Find existing shortlist-like notification for an application
+      const findShortlistNotifForApp = (appId) => {
+        for (const n of notifications) {
+          const meta = getMeta(n);
+          const nAppId = meta?.applicationId;
+          if (nAppId !== appId) continue;
+          if (n.type === 'application_shortlisted') return n;
+          if (n.type === 'application_status' && (meta?.originalType === 'application_shortlisted' || /shortlisted/i.test(n.message || ''))) return n;
+        }
+        return null;
+      };
 
       const createdNotifs = [];
       const removedNotifIds = [];
@@ -910,15 +925,15 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 
         const shortlistKey = `${app.id}|application_shortlisted`;
         const statusKey = `${app.id}|application_status`;
-        const hasShortlistNotif = notifByAppAndType.has(shortlistKey);
+        const hasShortlistNotif = !!findShortlistNotifForApp(app.id);
         const hasStatusNotif = notifByAppAndType.has(statusKey);
 
         if (app.status === 'shortlisted') {
-          // Ensure shortlist notification exists
+          // Ensure shortlist notification exists (use application_status to avoid enum issues)
           if (!hasShortlistNotif) {
             const created = await Notification.create({
               userId: req.user.id,
-              type: 'application_shortlisted',
+              type: 'application_status',
               title: `🎉 Congratulations! You've been shortlisted!`,
               message: `Great news! You've been shortlisted for ${jobTitle} at ${companyName}.`,
               shortMessage: `Shortlisted for ${jobTitle} at ${companyName}`,
@@ -930,21 +945,21 @@ router.get('/notifications', authenticateToken, async (req, res) => {
                 employerId: app.employerId,
                 applicationId: app.id,
                 jobId: app.jobId,
-                originalType: 'application_shortlisted'
+                originalType: 'application_shortlisted',
+                fallback: true
               }
             });
             createdNotifs.push(created);
-            notifByAppAndType.set(shortlistKey, created);
+            notifByAppAndType.set(statusKey, created);
           }
           // Optionally remove stale application_status for shortlist to avoid clutter
         } else {
-          // If not shortlisted anymore, remove any existing shortlist notification
-          if (hasShortlistNotif) {
+          // If not shortlisted anymore, remove any existing shortlist notification (either type)
+          const existingShort = findShortlistNotifForApp(app.id);
+          if (existingShort) {
             try {
-              const toRemove = notifByAppAndType.get(shortlistKey);
-              await toRemove.destroy();
-              removedNotifIds.push(toRemove.id);
-              notifByAppAndType.delete(shortlistKey);
+              await existingShort.destroy();
+              removedNotifIds.push(existingShort.id);
             } catch {}
           }
           // Ensure a status notification exists reflecting current tag
