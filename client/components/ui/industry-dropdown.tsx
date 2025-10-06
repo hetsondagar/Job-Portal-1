@@ -271,13 +271,20 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
     onClose()
   }
 
+  const handleClose = () => {
+    // When dialog is closed (by clicking X or outside), apply the current selections
+    console.log('🏭 Industry - Applying selections on close:', tempSelectedIndustries)
+    onIndustryChange(tempSelectedIndustries)
+    onClose()
+  }
+
   return (
     <Dialog open={true} onOpenChange={(open) => {
       if (!open) {
-        handleCancel()
+        handleClose()
       }
     }}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Select Industries</span>
@@ -308,7 +315,8 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: '#cbd5e1 #f1f5f9',
-            maxHeight: '400px'
+            minHeight: '300px',
+            maxHeight: '500px'
           }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
@@ -319,7 +327,7 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
                   {categoryGroup.category}
                 </h4>
                 <div 
-                  className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar"
+                  className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar"
                   style={{
                     scrollbarWidth: 'thin',
                     scrollbarColor: '#cbd5e1 #f1f5f9'
@@ -328,15 +336,16 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
                   {categoryGroup.industries.map((industry) => {
                     const cleanName = cleanIndustryName(industry)
                     return (
-                      <div key={cleanName} className="flex items-center space-x-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors">
+                      <div key={cleanName} className="flex items-start space-x-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors min-h-[48px]">
                         <Checkbox
                           id={`industry-${cleanName}`}
                           checked={tempSelectedIndustries.includes(cleanName)}
                           onCheckedChange={(checked) => handleCheckboxChange(industry, checked as boolean)}
+                          className="mt-0.5"
                         />
                         <label
                           htmlFor={`industry-${cleanName}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300 cursor-pointer flex-1"
+                          className="text-sm font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300 cursor-pointer flex-1 break-words"
                         >
                           {cleanName}
                         </label>

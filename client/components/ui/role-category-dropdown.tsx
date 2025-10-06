@@ -237,13 +237,20 @@ export default function RoleCategoryDropdown({ selectedRoles, onRoleChange, onCl
     onClose()
   }
 
+  const handleClose = () => {
+    // When dialog is closed (by clicking X or outside), apply the current selections
+    console.log('🎯 Role Category - Applying selections on close:', tempSelectedRoles)
+    onRoleChange(tempSelectedRoles)
+    onClose()
+  }
+
   return (
     <Dialog open={true} onOpenChange={(open) => {
       if (!open) {
-        handleCancel()
+        handleClose()
       }
     }}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Select Role Categories</span>
@@ -274,20 +281,22 @@ export default function RoleCategoryDropdown({ selectedRoles, onRoleChange, onCl
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: '#cbd5e1 #f1f5f9',
-            maxHeight: '400px'
+            minHeight: '300px',
+            maxHeight: '500px'
           }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-6">
             {filteredRoles.map((role) => (
-              <div key={role} className="flex items-center space-x-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors">
+              <div key={role} className="flex items-start space-x-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors min-h-[48px]">
                 <Checkbox
                   id={`role-${role}`}
                   checked={tempSelectedRoles.includes(role)}
                   onCheckedChange={(checked) => handleCheckboxChange(role, checked as boolean)}
+                  className="mt-0.5"
                 />
                 <label
                   htmlFor={`role-${role}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300 cursor-pointer flex-1"
+                  className="text-sm font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300 cursor-pointer flex-1 break-words"
                 >
                   {role}
                 </label>

@@ -111,28 +111,38 @@ const config: Config = {
           background: '#64748b',
         },
         '.custom-scrollbar::-webkit-scrollbar': {
-          width: '8px',
-          height: '8px',
+          width: '10px',
+          height: '10px',
         },
         '.custom-scrollbar::-webkit-scrollbar-track': {
           background: '#f1f5f9',
-          borderRadius: '4px',
+          borderRadius: '6px',
         },
         '.custom-scrollbar::-webkit-scrollbar-thumb': {
           background: '#cbd5e1',
-          borderRadius: '4px',
+          borderRadius: '6px',
+          border: '2px solid #f1f5f9',
         },
         '.custom-scrollbar::-webkit-scrollbar-thumb:hover': {
           background: '#94a3b8',
+          border: '2px solid #e2e8f0',
+        },
+        '.custom-scrollbar::-webkit-scrollbar-corner': {
+          background: '#f1f5f9',
         },
         '.dark .custom-scrollbar::-webkit-scrollbar-track': {
           background: '#1e293b',
         },
         '.dark .custom-scrollbar::-webkit-scrollbar-thumb': {
           background: '#475569',
+          border: '2px solid #1e293b',
         },
         '.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover': {
           background: '#64748b',
+          border: '2px solid #334155',
+        },
+        '.dark .custom-scrollbar::-webkit-scrollbar-corner': {
+          background: '#1e293b',
         },
       }
       addUtilities(newUtilities)
