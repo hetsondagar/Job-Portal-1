@@ -2556,10 +2556,23 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
     // Calculate ATS score for this specific candidate
     console.log(`🚀 Calculating ATS score for candidate ${candidateId}...`);
     
-    const atsResult = await atsService.calculateATSScore(candidateId, requirementId);
+    let atsResult;
+    try {
+      atsResult = await atsService.calculateATSScore(candidateId, requirementId);
+      console.log(`📊 ATS service returned:`, {
+        hasResult: !!atsResult,
+        candidateId: atsResult?.candidateId,
+        requirementId: atsResult?.requirementId,
+        atsScore: atsResult?.atsScore,
+        hasAnalysis: !!atsResult?.analysis
+      });
+    } catch (atsError) {
+      console.error('❌ ATS service error:', atsError);
+      throw atsError;
+    }
     
-    if (atsResult.success) {
-      console.log(`✅ ATS score calculated for ${candidateId}: ${atsResult.ats_score}`);
+    if (atsResult && atsResult.atsScore !== undefined) {
+      console.log(`✅ ATS score calculated for ${candidateId}: ${atsResult.atsScore}`);
       
       return res.status(200).json({
         success: true,
@@ -2567,9 +2580,9 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
         data: {
           candidateId: candidateId,
           requirementId: requirementId,
-          atsScore: atsResult.ats_score,
+          atsScore: atsResult.atsScore,
           atsAnalysis: atsResult.analysis,
-          calculatedAt: new Date().toISOString(),
+          calculatedAt: atsResult.calculatedAt || new Date().toISOString(),
           candidate: {
             id: candidate.id,
             name: `${candidate.first_name} ${candidate.last_name}`,
@@ -2578,7 +2591,7 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
         }
       });
     } else {
-      console.log(`❌ ATS calculation failed for ${candidateId}: ${atsResult.error}`);
+      console.log(`❌ ATS calculation failed for ${candidateId}: Invalid result structure`);
       
       return res.status(500).json({
         success: false,
@@ -2586,7 +2599,7 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
         data: {
           candidateId: candidateId,
           requirementId: requirementId,
-          error: atsResult.error
+          error: 'Invalid ATS calculation result'
         }
       });
     }

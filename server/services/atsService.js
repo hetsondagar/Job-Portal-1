@@ -102,7 +102,7 @@ function extractCandidateProfile(user) {
 /**
  * Calculate rule-based ATS score (fallback when Gemini AI is not available)
  */
-function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirementDetails) {
+function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement) {
   console.log('🧮 Calculating rule-based ATS score...');
   
   let score = 0;
@@ -110,8 +110,8 @@ function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement
   const matchingPoints = [];
   const gaps = [];
   
-  // Extract requirement skills
-  const requirementSkills = requirementDetails.keySkills || requirementDetails.skills || [];
+  // Extract requirement skills from the requirement object directly
+  const requirementSkills = requirement.keySkills || requirement.skills || [];
   const candidateSkills = candidateProfile.skills || [];
   
   // Skills matching (40 points)
@@ -138,8 +138,8 @@ function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement
   }
   
   // Experience matching (25 points)
-  const requiredExpMin = requirementDetails.experienceMin || 0;
-  const requiredExpMax = requirementDetails.experienceMax || 10;
+  const requiredExpMin = requirement.experienceMin || 0;
+  const requiredExpMax = requirement.experienceMax || 10;
   const candidateExp = candidateProfile.experience_years || 0;
   
   if (candidateExp >= requiredExpMin && candidateExp <= requiredExpMax) {
@@ -156,7 +156,7 @@ function calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement
   }
   
   // Location matching (15 points)
-  const requiredLocations = requirementDetails.candidateLocations || [];
+  const requiredLocations = requirement.candidateLocations || [];
   const candidateLocation = candidateProfile.current_location || '';
   const candidatePreferredLocations = candidateProfile.preferred_locations || [];
   
@@ -243,8 +243,11 @@ function extractRequirementDetails(requirement) {
   if (requirement.location) parts.push(`Location: ${requirement.location}`);
   
   // Skills and qualifications
-  if (requirement.skills_required && Array.isArray(requirement.skills_required) && requirement.skills_required.length > 0) {
-    parts.push(`Required Skills: ${requirement.skills_required.join(', ')}`);
+  if (requirement.keySkills && Array.isArray(requirement.keySkills) && requirement.keySkills.length > 0) {
+    parts.push(`Required Skills: ${requirement.keySkills.join(', ')}`);
+  }
+  if (requirement.skills && Array.isArray(requirement.skills) && requirement.skills.length > 0) {
+    parts.push(`Additional Skills: ${requirement.skills.join(', ')}`);
   }
   if (requirement.qualifications && Array.isArray(requirement.qualifications) && requirement.qualifications.length > 0) {
     parts.push(`Qualifications: ${requirement.qualifications.join(', ')}`);
@@ -369,7 +372,7 @@ Provide ONLY the JSON response, no additional text.
       console.log('⚠️ Gemini AI failed, using rule-based scoring:', geminiError.message);
       
       // Fallback: Use rule-based ATS scoring
-      atsData = calculateRuleBasedATSScore(candidateProfile, resumeContent, requirementDetails);
+      atsData = calculateRuleBasedATSScore(candidateProfile, resumeContent, requirement);
     }
     
     // Store the ATS score in the database with explicit transaction
