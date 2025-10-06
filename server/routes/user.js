@@ -999,6 +999,113 @@ router.get('/notifications', authenticateToken, async (req, res) => {
       console.warn('Notification sync from application tags skipped:', syncErr?.message || syncErr);
     }
 
+    // Backfill preferred-job notifications for newly posted matching jobs
+    try {
+      const { JobPreference, Job, Company } = require('../config/index');
+      const preference = await JobPreference.findOne({ where: { userId: req.user.id, isActive: true } });
+      if (preference) {
+        const whereClause = { status: 'active', region: preference.region || req.user.region || 'india' };
+        const { Op } = require('sequelize');
+        if (preference.preferredJobTitles && preference.preferredJobTitles.length > 0) {
+          whereClause.title = { [Op.iLike]: { [Op.any]: preference.preferredJobTitles.map(t => `%${t}%`) } };
+        }
+        if (preference.preferredLocations && preference.preferredLocations.length > 0) {
+          whereClause.location = { [Op.iLike]: { [Op.any]: preference.preferredLocations.map(l => `%${l}%`) } };
+        }
+        if (preference.preferredJobTypes && preference.preferredJobTypes.length > 0) {
+          whereClause.jobType = { [Op.in]: preference.preferredJobTypes };
+        }
+        if (preference.preferredExperienceLevels && preference.preferredExperienceLevels.length > 0) {
+          whereClause.experienceLevel = { [Op.in]: preference.preferredExperienceLevels };
+        }
+        if (preference.preferredWorkMode && preference.preferredWorkMode.length > 0) {
+          whereClause.remoteWork = { [Op.in]: preference.preferredWorkMode };
+        }
+
+        // Only consider recent jobs (last 14 days) to avoid spamming
+        const fourteenDaysAgo = new Date();
+        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+        whereClause.createdAt = { [Op.gte]: fourteenDaysAgo };
+
+        const recentMatchingJobs = await Job.findAll({
+          where: whereClause,
+          include: [{ model: Company, as: 'company', attributes: ['name'] }],
+          order: [['createdAt', 'DESC']],
+          limit: 20
+        });
+
+        const existingByJobId = new Set(
+          notifications
+            .filter(n => n.type === 'preferred_job_posted')
+            .map(n => {
+              const meta = n.metadata && (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata);
+              return meta?.jobId;
+            })
+            .filter(Boolean)
+        );
+
+        const preferredCreates = [];
+        for (const job of recentMatchingJobs) {
+          if (existingByJobId.has(job.id)) continue;
+          const companyName = job.company?.name || 'Company';
+          const jobTitle = job.title || 'a position';
+          try {
+            const n = await Notification.create({
+              userId: req.user.id,
+              type: 'preferred_job_posted',
+              title: `🎯 New Job Matching Your Preferences!`,
+              message: `A new job "${jobTitle}" at ${companyName} in ${job.location || ''} matches your preferences.`,
+              shortMessage: `New job: ${jobTitle} at ${companyName}`,
+              priority: 'high',
+              actionUrl: `/jobs/${job.id}`,
+              actionText: 'View Job',
+              icon: 'star',
+              metadata: {
+                jobId: job.id,
+                jobTitle,
+                companyName,
+                location: job.location,
+                isPreferred: true
+              }
+            });
+            preferredCreates.push(n);
+          } catch (e) {
+            // Fallback to application_status if enum is problematic
+            await Notification.create({
+              userId: req.user.id,
+              type: 'application_status',
+              title: `New Preferred Job Posted`,
+              message: `A new job "${jobTitle}" at ${companyName} matches your preferences.`,
+              shortMessage: `New job: ${jobTitle} at ${companyName}`,
+              priority: 'high',
+              actionUrl: `/jobs/${job.id}`,
+              actionText: 'View Job',
+              icon: 'star',
+              metadata: {
+                jobId: job.id,
+                jobTitle,
+                companyName,
+                location: job.location,
+                isPreferred: true,
+                fallback: true,
+                originalType: 'preferred_job_posted'
+              }
+            });
+          }
+        }
+
+        if (preferredCreates.length > 0) {
+          notifications = await Notification.findAll({
+            where: { userId: req.user.id },
+            order: [['createdAt', 'DESC']],
+            limit: 50
+          });
+        }
+      }
+    } catch (prefErr) {
+      console.warn('Preferred jobs backfill skipped:', prefErr?.message || prefErr);
+    }
+
     if (!notifications || notifications.length === 0) {
       // Bootstrap a friendly welcome notification for first-time users
       try {
