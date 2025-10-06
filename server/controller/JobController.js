@@ -520,13 +520,13 @@ exports.getAllJobs = async (req, res, next) => {
         const jsonbLowerContains = skillTerms.map(term =>
           sequelize.where(
             sequelize.fn('LOWER', sequelize.cast(sequelize.col('skills'), 'text')),
-            { [Job.sequelize.Op.like]: `%${term.toLowerCase()}%` }
+            { [Op.like]: `%${term.toLowerCase()}%` }
           )
         );
 
         andGroups.push({
           [Or]: [
-            { skills: { [Job.sequelize.Op.contains]: skillTerms } },
+            { skills: { [Op.contains]: skillTerms } },
             ...jsonbLowerContains,
             { requirements: { [OpLike]: `%${skills}%` } },
             { description: { [OpLike]: `%${skills}%` } },
@@ -539,7 +539,7 @@ exports.getAllJobs = async (req, res, next) => {
     // Work mode (remoteWork enum on jobs: on-site, remote, hybrid) with fallback to workMode text
     if (workMode) {
       const normalized = String(workMode).toLowerCase().includes('home') ? 'remote' : String(workMode).toLowerCase();
-      const Or = Job.sequelize.Op.or;
+      const Or = Op.or;
       const OpLike = Op.iLike;
       andGroups.push({
         [Or]: [
@@ -573,7 +573,7 @@ exports.getAllJobs = async (req, res, next) => {
         where: (() => {
           const where = {};
           const OpLike = Op.iLike;
-          const Or = Job.sequelize.Op.or;
+          const Or = Op.or;
           if (industry) {
             const ind = String(industry).toLowerCase();
             const terms = ind.includes('information technology') || ind === 'it'
@@ -603,7 +603,7 @@ exports.getAllJobs = async (req, res, next) => {
 
     // Recruiter type: company (employer has companyId) or consultant (no companyId)
     if (recruiterType === 'company') {
-      include[1] = { ...include[1], where: { companyId: { [Job.sequelize.Op.ne]: null } }, required: true };
+      include[1] = { ...include[1], where: { companyId: { [OpNe]: null } }, required: true };
     } else if (recruiterType === 'consultant') {
       include[1] = { ...include[1], where: { companyId: null }, required: true };
     }
@@ -1044,7 +1044,7 @@ exports.getJobsByEmployer = async (req, res, next) => {
     
     console.log('🔍 Final where clause:', whereClause);
     if (search) {
-      whereClause[Job.sequelize.Op.or] = [
+      whereClause[Or] = [
         { title: { [Op.iLike]: `%${search}%` } },
         { description: { [Op.iLike]: `%${search}%` } },
         { location: { [Op.iLike]: `%${search}%` } },
@@ -1853,7 +1853,7 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
         // For active jobs, show jobs with 'active' status OR null/undefined status (legacy jobs)
 
-        whereClause[Job.sequelize.Op.or] = [
+        whereClause[Or] = [
 
           { status: 'active' },
 
@@ -1881,7 +1881,7 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     if (search) {
 
-      whereClause[Job.sequelize.Op.or] = [
+      whereClause[Or] = [
 
         { title: { [Op.iLike]: `%${search}%` } },
 
