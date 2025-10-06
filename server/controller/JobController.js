@@ -413,13 +413,13 @@ exports.getAllJobs = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
     const whereClause = {};
-    const And = Job.sequelize.Op.and;
-    const Or = Job.sequelize.Op.or;
-    const OpLike = Job.sequelize.Op.iLike;
-    const OpIn = Job.sequelize.Op.in;
-    const OpGte = Job.sequelize.Op.gte;
-    const OpLte = Job.sequelize.Op.lte;
-    const OpNe = Job.sequelize.Op.ne;
+    const And = Op.and;
+    const Or = Op.or;
+    const OpLike = Op.iLike;
+    const OpIn = Op.in;
+    const OpGte = Op.gte;
+    const OpLte = Op.lte;
+    const OpNe = Op.ne;
     const andGroups = [];
 
     // Add region filtering to ensure proper job visibility
