@@ -300,11 +300,10 @@ router.get('/', async (req, res) => {
       where,
       attributes: [
         'id', 'name', 'slug', 'logo', 'industry', 'companySize', 'website', 
-        'city', 'state', 'country', 'region', 'description', 'founded', 
-        'headquarters', 'revenue', 'companyType', 'employees', 'featured', 
-        'isVerified', 'createdAt', 'updatedAt'
+        'city', 'state', 'country', 'region', 'description', 'foundedYear', 
+        'revenue', 'companyType', 'isFeatured', 'isVerified', 'createdAt', 'updatedAt'
       ],
-      order: [['featured', 'DESC'], ['name', 'ASC']],
+      order: [['isFeatured', 'DESC'], ['name', 'ASC']],
       limit: Math.min(parseInt(limit, 10) || 20, 100),
       offset: parseInt(offset, 10) || 0
     });
@@ -330,16 +329,17 @@ router.get('/', async (req, res) => {
         // Additional computed fields for frontend compatibility
         location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
         sector: company.industry, // Map industry to sector for compatibility
-        employees: company.employees || company.companySize,
-        headquarters: company.headquarters || `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+        employees: company.companySize,
+        headquarters: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+        founded: company.foundedYear, // Map foundedYear to founded for compatibility
         // Default values for missing fields
         rating: 0,
         reviews: 0,
         openings: activeJobsCount,
         benefits: company.benefits || [],
-        workCulture: company.workCulture || '',
+        workCulture: company.culture || '',
         salaryRange: '',
-        featured: company.featured || false,
+        featured: company.isFeatured || false,
         isVerified: company.isVerified || false
       };
 
@@ -708,11 +708,11 @@ router.get('/:id', async (req, res) => {
       state: company.state,
       country: company.country,
       logo: company.logo,
-      founded: company.founded,
-      headquarters: company.headquarters || `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+      founded: company.foundedYear, // Map foundedYear to founded for compatibility
+      headquarters: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
       revenue: company.revenue,
       companyType: company.companyType,
-      employees: company.employees || company.companySize,
+      employees: company.companySize,
       profileViews: companyStats.profileViews,
       totalApplications: companyStats.totalApplications,
       averageRating: companyStats.averageRating,
@@ -723,8 +723,8 @@ router.get('/:id', async (req, res) => {
       location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
       sector: company.industry, // Map industry to sector for compatibility
       benefits: company.benefits || [],
-      workCulture: company.workCulture || '',
-      featured: company.featured || false,
+      workCulture: company.culture || '',
+      featured: company.isFeatured || false,
       isVerified: company.isVerified || false,
       createdAt: company.createdAt,
       updatedAt: company.updatedAt
