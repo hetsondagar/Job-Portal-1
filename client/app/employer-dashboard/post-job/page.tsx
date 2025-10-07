@@ -65,7 +65,7 @@ export default function PostJobPage() {
 
   const steps = [
     { id: 1, title: "Basic Info", description: "Basic job information" },
-    { id: 2, title: "Job Details", description: "Role, industry, department, and requirements" },
+    { id: 2, title: "Job Details", description: "Role, industry, and requirements" },
     { id: 3, title: "Benefits & Perks", description: "What you offer" },
     { id: 4, title: "Photos", description: "Showcase your workplace" },
     { id: 5, title: "Review & Post", description: "Final review" },
@@ -877,33 +877,6 @@ export default function PostJobPage() {
               )}
             </div>
 
-            {/* Department */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Department*
-              </label>
-              <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="IT & Information Security">IT & Information Security</SelectItem>
-                  <SelectItem value="Engineering">Engineering</SelectItem>
-                  <SelectItem value="Sales & Marketing">Sales & Marketing</SelectItem>
-                  <SelectItem value="Human Resources">Human Resources</SelectItem>
-                  <SelectItem value="Finance & Accounting">Finance & Accounting</SelectItem>
-                  <SelectItem value="Operations">Operations</SelectItem>
-                  <SelectItem value="Customer Service">Customer Service</SelectItem>
-                  <SelectItem value="Research & Development">Research & Development</SelectItem>
-                  <SelectItem value="Legal">Legal</SelectItem>
-                  <SelectItem value="Administration">Administration</SelectItem>
-                  <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
-                  <SelectItem value="Product Management">Product Management</SelectItem>
-                  <SelectItem value="Business Development">Business Development</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* Employment Type */}
             <div>

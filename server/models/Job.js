@@ -342,6 +342,23 @@ const Job = sequelize.define('Job', {
     type: DataTypes.ENUM('india', 'gulf', 'other'),
     allowNull: true,
     defaultValue: 'india'
+  },
+  // New fields from step 2
+  role: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  industryType: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  roleCategory: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  employmentType: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   sequelize,

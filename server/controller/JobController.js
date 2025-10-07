@@ -62,7 +62,12 @@ exports.createJob = async (req, res, next) => {
       longitude,
       requirements,
       responsibilities,
-      region
+      region,
+      // New fields from step 2
+      role,
+      industryType,
+      roleCategory,
+      employmentType
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
@@ -224,6 +229,11 @@ exports.createJob = async (req, res, next) => {
       status,
       isUrgent: Boolean(isUrgent),
       isFeatured: Boolean(isFeatured),
+      // New fields from step 2
+      role: role && role.trim() ? role.trim() : null,
+      industryType: industryType && industryType.trim() ? industryType.trim() : null,
+      roleCategory: roleCategory && roleCategory.trim() ? roleCategory.trim() : null,
+      employmentType: employmentType && employmentType.trim() ? employmentType.trim() : null,
       isPremium: Boolean(isPremium),
       validTill: resolvedValidTill,
       publishedAt,
