@@ -7,6 +7,7 @@ import { Navbar } from '@/components/navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { apiService } from '@/lib/api'
+import { GulfJobseekerAuthGuard } from '@/components/gulf-jobseeker-auth-guard'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -182,7 +183,8 @@ export default function GulfApplicationsPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <GulfJobseekerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
       <div className="pt-16 pb-12">
@@ -330,7 +332,8 @@ export default function GulfApplicationsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </GulfJobseekerAuthGuard>
   )
 }
 

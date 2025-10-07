@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Upload, FileText, Eye, Download, ArrowLeft, Trash2, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiService, CoverLetter } from '@/lib/api'
+import { GulfJobseekerAuthGuard } from '@/components/gulf-jobseeker-auth-guard'
 
 export default function GulfCoverLettersPage() {
   const { user, loading } = useAuth()
@@ -151,7 +152,8 @@ export default function GulfCoverLettersPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <GulfJobseekerAuthGuard>
+      <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -213,7 +215,8 @@ export default function GulfCoverLettersPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </GulfJobseekerAuthGuard>
   )
 }
 

@@ -23,6 +23,7 @@ import {
 import { Navbar } from "@/components/navbar"
 import { toast } from "sonner"
 import Link from "next/link"
+import { JobseekerAuthGuard } from "@/components/jobseeker-auth-guard"
 
 export default function InterviewsPage() {
   const { user, loading: authLoading } = useAuth()
@@ -161,7 +162,8 @@ export default function InterviewsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <JobseekerAuthGuard>
+      <div className="min-h-screen bg-gray-50">
       <Navbar />
       
       <div className="container mx-auto px-4 py-8">
@@ -364,6 +366,7 @@ export default function InterviewsPage() {
           </Tabs>
         )}
       </div>
-    </div>
+      </div>
+    </JobseekerAuthGuard>
   )
 }

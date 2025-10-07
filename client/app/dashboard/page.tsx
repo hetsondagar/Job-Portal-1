@@ -34,6 +34,7 @@ import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RecentNotifications } from '@/components/recent-notifications'
+import { JobseekerAuthGuard } from '@/components/jobseeker-auth-guard'
 
 export default function DashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -447,7 +448,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <JobseekerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
       
       <div className="pt-16 pb-12">
@@ -1362,6 +1364,7 @@ export default function DashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </JobseekerAuthGuard>
   )
 }

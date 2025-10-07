@@ -26,6 +26,7 @@ import {
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
 import { apiService, JobAlert } from '@/lib/api'
+import { JobseekerAuthGuard } from '@/components/jobseeker-auth-guard'
 
 export default function JobAlertsPage() {
   const { user, loading } = useAuth()
@@ -272,7 +273,8 @@ export default function JobAlertsPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <JobseekerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
       
       <div className="pt-16 pb-12">
@@ -605,7 +607,8 @@ export default function JobAlertsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </JobseekerAuthGuard>
   )
 }
 

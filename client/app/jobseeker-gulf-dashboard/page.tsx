@@ -37,6 +37,7 @@ import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RecentNotifications } from '@/components/recent-notifications'
+import { GulfJobseekerAuthGuard } from '@/components/gulf-jobseeker-auth-guard'
 
 export default function JobseekerGulfDashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -557,7 +558,8 @@ export default function JobseekerGulfDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <GulfJobseekerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
       
       <div className="pt-16 pb-12">
@@ -1578,6 +1580,7 @@ export default function JobseekerGulfDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </GulfJobseekerAuthGuard>
   )
 }
