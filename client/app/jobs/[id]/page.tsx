@@ -1097,8 +1097,8 @@ export default function JobDetailPage() {
                   </CardHeader>
                   <CardContent>
                     {similarJobsLoading ? (
-                      <div className="space-y-4">
-                        {[1,2,3].map((n) => (
+                    <div className="space-y-4">
+                      {[1,2,3].map((n) => (
                           <div key={n} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg animate-pulse">
                             <div className="flex items-start space-x-3">
                               <div className="w-10 h-10 bg-slate-200 dark:bg-slate-600 rounded-lg flex-shrink-0" />
@@ -1108,9 +1108,9 @@ export default function JobDetailPage() {
                                 <div className="h-3 w-2/3 bg-slate-200 dark:bg-slate-600 rounded" />
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
+                    </div>
                     ) : similarJobs.length > 0 ? (
                       <div className="space-y-4">
                         {similarJobs.map((similarJob, index) => (
