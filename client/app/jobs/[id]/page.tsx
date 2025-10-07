@@ -36,6 +36,13 @@ import { sampleJobManager } from '@/lib/sampleJobManager'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 
+// Interface for similar jobs API response
+interface SimilarJobsResponse {
+  success: boolean;
+  data: any[];
+  message?: string;
+}
+
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -268,15 +275,16 @@ export default function JobDetailPage() {
         console.log('📋 Similar jobs response:', res)
         
         if (isMounted) {
-          if (res && res.success && Array.isArray(res.data)) {
+          const response = res as SimilarJobsResponse;
+          if (response && response.success && Array.isArray(response.data)) {
             // Validate and sanitize the response data
-            const validJobs = res.data.filter(job => 
+            const validJobs = response.data.filter((job: any) => 
               job && 
               job.id && 
               job.title && 
               typeof job.title === 'string' &&
               job.title.trim().length > 0
-            ).map(job => ({
+            ).map((job: any) => ({
               ...job,
               // Ensure all required fields have fallback values
               title: job.title?.trim() || 'Untitled Job',
@@ -983,9 +991,11 @@ export default function JobDetailPage() {
                                       Premium
                                     </Badge>
                                   )}
-                                  {similarJob.similarityScore && (
+                                  {similarJob.similarityScore && 
+                                   !isNaN(parseFloat(similarJob.similarityScore)) && 
+                                   parseFloat(similarJob.similarityScore) > 0 && (
                                     <Badge variant="outline" className="text-xs">
-                                      {similarJob.similarityScore}% match
+                                      {Math.round(parseFloat(similarJob.similarityScore))}% match
                                     </Badge>
                                   )}
                                 </div>
@@ -1016,7 +1026,7 @@ export default function JobDetailPage() {
                               
                               {similarJob.skills && similarJob.skills.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-2">
-                                  {similarJob.skills.slice(0, 3).map((skill, skillIndex) => (
+                                  {similarJob.skills.slice(0, 3).map((skill: string, skillIndex: number) => (
                                     <Badge key={skillIndex} variant="secondary" className="text-xs px-2 py-0.5">
                                       {skill}
                                     </Badge>
@@ -1030,12 +1040,12 @@ export default function JobDetailPage() {
                               )}
                               
                               <div className="flex items-center justify-between text-xs text-slate-400">
-                                <span>Posted {similarJob.posted}</span>
+                                <span>Posted {similarJob.posted || 'Recently'}</span>
                                 <div className="flex items-center space-x-2">
-                                  {similarJob.views > 0 && (
+                                  {similarJob.views && typeof similarJob.views === 'number' && similarJob.views > 0 && (
                                     <span>{similarJob.views} views</span>
                                   )}
-                                  {similarJob.applications > 0 && (
+                                  {similarJob.applications && typeof similarJob.applications === 'number' && similarJob.applications > 0 && (
                                     <span>{similarJob.applications} applications</span>
                                   )}
                                 </div>

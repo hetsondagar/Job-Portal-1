@@ -1020,29 +1020,29 @@ exports.getSimilarJobs = async (req, res, next) => {
 
     // Fetch candidate jobs with comprehensive filtering
     const candidateJobs = await Job.findAll({
-      where: {
+        where: {
         id: { [Op.ne]: id },
-        status: 'active',
+          status: 'active',
         region: currentJob.region || 'india',
         [Op.or]: [
           { validTill: null },
           { validTill: { [Op.gte]: new Date() } }
         ]
-      },
-      include: [
-        {
-          model: Company,
-          as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'isFeatured', 'rating', 'totalReviews'],
-          required: false
         },
-        {
-          model: User,
-          as: 'employer',
-          attributes: ['id', 'first_name', 'last_name', 'email'],
-          required: false
-        }
-      ],
+        include: [
+          {
+            model: Company,
+            as: 'company',
+          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'isFeatured', 'rating', 'totalReviews'],
+            required: false
+          },
+          {
+            model: User,
+            as: 'employer',
+            attributes: ['id', 'first_name', 'last_name', 'email'],
+            required: false
+          }
+        ],
       limit: 200, // Increased for better selection
       order: [['createdAt', 'DESC']] // Start with recent jobs
     });

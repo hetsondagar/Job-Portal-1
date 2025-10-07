@@ -138,6 +138,9 @@ function CompanyDetailPage() {
     experience: 'all',
     salary: 'all'
   })
+
+  // Tab state management
+  const [activeTab, setActiveTab] = useState('overview')
   const [filteredJobs, setFilteredJobs] = useState<any[]>([])
   
   const [appliedJobs, setAppliedJobs] = useState<Set<number>>(new Set())
@@ -516,7 +519,12 @@ function CompanyDetailPage() {
     const newFilters = { ...filters, [filterType]: value }
     setFilters(newFilters)
     fetchCompanyJobs(newFilters)
-  }, [filters, fetchCompanyJobs])
+    
+    // Ensure we stay on the jobs tab when filtering
+    if (activeTab !== 'jobs') {
+      setActiveTab('jobs')
+    }
+  }, [filters, fetchCompanyJobs, activeTab])
 
   useEffect(() => {
     if (companyId) {
@@ -1060,7 +1068,7 @@ function CompanyDetailPage() {
 
       {/* Company Details Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        <Tabs defaultValue="overview" className="space-y-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="grid w-full grid-cols-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               Overview
@@ -1088,7 +1096,7 @@ function CompanyDetailPage() {
                         <Calendar className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Founded</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.founded) || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.founded) || 'Not mentioned'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -1104,14 +1112,14 @@ function CompanyDetailPage() {
                         <Globe className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Website</div>
-                          <div className="text-blue-600">{toDisplayText(company.website) || '—'}</div>
+                          <div className="text-blue-600">{toDisplayText(company.website) || 'Not mentioned'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Building2 className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Headquarters</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.headquarters) || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.headquarters) || 'Not mentioned'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -1119,7 +1127,7 @@ function CompanyDetailPage() {
                         <div>
                           <div className="font-medium">Profile Views</div>
                           <div className="text-slate-600 dark:text-slate-400">
-                            {companyStats?.profileViews ?? (toDisplayText(company.profileViews) || '—')}
+                            {companyStats?.profileViews ?? (toDisplayText(company.profileViews) || 'Not mentioned')}
                           </div>
                         </div>
                       </div>
@@ -1127,7 +1135,7 @@ function CompanyDetailPage() {
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Revenue</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.revenue) || '—'}</div>
+                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.revenue) || 'Not mentioned'}</div>
                         </div>
                       </div>
                     </div>
@@ -1269,15 +1277,35 @@ function CompanyDetailPage() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Company Size</span>
-                      <span className="font-medium">{toDisplayText(company.employees) || '—'}</span>
+                      <span className="font-medium">{toDisplayText(company.employees) || 'Not mentioned'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Founded</span>
-                      <span className="font-medium">{toDisplayText(company.founded) || '—'}</span>
+                      <span className="font-medium">{toDisplayText(company.founded) || 'Not mentioned'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Industry</span>
+                      <span className="font-medium">{toDisplayText(company.industry) || 'Not mentioned'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Headquarters</span>
+                      <span className="font-medium">{toDisplayText(company.headquarters) || 'Not mentioned'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Website</span>
-                      <span className="font-medium text-blue-600">{toDisplayText(company.website) || '—'}</span>
+                      <span className="font-medium text-blue-600">{toDisplayText(company.website) || 'Not mentioned'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Revenue</span>
+                      <span className="font-medium">{toDisplayText(company.revenue) || 'Not mentioned'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Company Type</span>
+                      <span className="font-medium">{toDisplayText(company.companyType) || 'Not mentioned'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Total Jobs</span>
+                      <span className="font-medium">{companyJobs.length} active positions</span>
                     </div>
                   </CardContent>
                 </Card>

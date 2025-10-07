@@ -297,8 +297,13 @@ router.get('/', async (req, res) => {
     }
     const companies = await Company.findAll({
       where,
-      attributes: ['id', 'name', 'slug', 'logo', 'industry', 'companySize', 'website', 'city', 'state', 'country', 'region'],
-      order: [['name', 'ASC']],
+      attributes: [
+        'id', 'name', 'slug', 'logo', 'industry', 'companySize', 'website', 
+        'city', 'state', 'country', 'region', 'description', 'founded', 
+        'headquarters', 'revenue', 'companyType', 'employees', 'featured', 
+        'isVerified', 'createdAt', 'updatedAt'
+      ],
+      order: [['featured', 'DESC'], ['name', 'ASC']],
       limit: Math.min(parseInt(limit, 10) || 20, 100),
       offset: parseInt(offset, 10) || 0
     });
@@ -316,11 +321,28 @@ router.get('/', async (req, res) => {
       const profileViews = Math.floor(Math.random() * 50) + 1;
       console.log(`🔍 Company ${company.name}: activeJobs=${activeJobsCount}, profileViews=${profileViews}`);
 
-      return {
+      // Build comprehensive company data for list view
+      const companyData = {
         ...company.toJSON(),
         activeJobsCount,
-        profileViews // Generate some realistic view counts for demo
+        profileViews, // Generate some realistic view counts for demo
+        // Additional computed fields for frontend compatibility
+        location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+        sector: company.industry, // Map industry to sector for compatibility
+        employees: company.employees || company.companySize,
+        headquarters: company.headquarters || `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+        // Default values for missing fields
+        rating: 0,
+        reviews: 0,
+        openings: activeJobsCount,
+        benefits: company.benefits || [],
+        workCulture: company.workCulture || '',
+        salaryRange: '',
+        featured: company.featured || false,
+        isVerified: company.isVerified || false
       };
+
+      return companyData;
     }));
 
     return res.json({ success: true, data: companiesWithStats });
@@ -636,26 +658,80 @@ router.get('/:id', async (req, res) => {
       'Expires': '0'
     });
     
+    // Get additional company data
+    let companyPhotos = [];
+    let companyStats = {
+      profileViews: Math.floor(Math.random() * 50) + 1,
+      totalApplications: 0,
+      averageRating: 0,
+      totalReviews: 0
+    };
+
+    try {
+      // Get company photos
+      const { CompanyPhoto } = require('../config');
+      companyPhotos = await CompanyPhoto.findAll({
+        where: { companyId: id, isActive: true },
+        order: [['display_order', 'ASC'], ['createdAt', 'ASC']],
+        limit: 10
+      });
+
+      // Get company statistics
+      const JobApplication = require('../models/JobApplication');
+      const totalApplications = await JobApplication.count({
+        include: [{
+          model: Job,
+          where: { companyId: id },
+          attributes: []
+        }]
+      });
+
+      companyStats.totalApplications = totalApplications;
+    } catch (e) {
+      console.warn('Could not fetch additional company data:', e?.message);
+    }
+
+    // Build comprehensive company data
+    const companyData = {
+      id: company.id,
+      name: company.name,
+      industry: company.industry,
+      companySize: company.companySize,
+      website: company.website,
+      email: company.email,
+      phone: company.phone,
+      description: company.description,
+      whyJoinUs: company.whyJoinUs,
+      address: company.address,
+      city: company.city,
+      state: company.state,
+      country: company.country,
+      logo: company.logo,
+      founded: company.founded,
+      headquarters: company.headquarters || `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+      revenue: company.revenue,
+      companyType: company.companyType,
+      employees: company.employees || company.companySize,
+      profileViews: companyStats.profileViews,
+      totalApplications: companyStats.totalApplications,
+      averageRating: companyStats.averageRating,
+      totalReviews: companyStats.totalReviews,
+      activeJobsCount,
+      photos: companyPhotos,
+      // Additional computed fields
+      location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
+      sector: company.industry, // Map industry to sector for compatibility
+      benefits: company.benefits || [],
+      workCulture: company.workCulture || '',
+      featured: company.featured || false,
+      isVerified: company.isVerified || false,
+      createdAt: company.createdAt,
+      updatedAt: company.updatedAt
+    };
+
     res.json({
       success: true,
-      data: {
-        id: company.id,
-        name: company.name,
-        industry: company.industry,
-        companySize: company.companySize,
-        website: company.website,
-        email: company.email,
-        phone: company.phone,
-        description: company.description,
-        whyJoinUs: company.whyJoinUs,
-        address: company.address,
-        city: company.city,
-        state: company.state,
-        country: company.country,
-        // Extras to improve frontend display
-        activeJobsCount,
-        profileViews: Math.floor(Math.random() * 50) + 1 // Generate some realistic view counts for demo
-      }
+      data: companyData
     });
 
   } catch (error) {
