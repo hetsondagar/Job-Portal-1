@@ -20,6 +20,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
+import RoleCategoryDropdown from "@/components/ui/role-category-dropdown"
 
 export default function PostJobPage() {
   const router = useRouter()
@@ -41,6 +43,11 @@ export default function PostJobPage() {
     requirements: "",
     benefits: "",
     skills: [] as string[],
+    role: "",
+    industryType: "",
+    roleCategory: "",
+    education: "",
+    employmentType: "",
   })
   const [jobPhotos, setJobPhotos] = useState<any[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
@@ -51,10 +58,14 @@ export default function PostJobPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [postedJobId, setPostedJobId] = useState<string | null>(null)
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
+  const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
 
   const steps = [
-    { id: 1, title: "Job Details", description: "Basic job information" },
-    { id: 2, title: "Requirements", description: "Job requirements and skills" },
+    { id: 1, title: "Basic Info", description: "Basic job information" },
+    { id: 2, title: "Job Details", description: "Role, industry, department, and requirements" },
     { id: 3, title: "Benefits & Perks", description: "What you offer" },
     { id: 4, title: "Photos", description: "Showcase your workplace" },
     { id: 5, title: "Review & Post", description: "Final review" },
@@ -116,6 +127,11 @@ export default function PostJobPage() {
               requirements: jobData.requirements || '',
               benefits: jobData.benefits || '',
               skills: jobData.skills || [],
+              role: jobData.role || '',
+              industryType: jobData.industryType || '',
+              roleCategory: jobData.roleCategory || '',
+              education: jobData.education || '',
+              employmentType: jobData.employmentType || ''
             });
             
             // Load existing job photos
@@ -161,6 +177,11 @@ export default function PostJobPage() {
             requirements: templateData.requirements || '',
             benefits: templateData.benefits || '',
             skills: Array.isArray(templateData.skills) ? templateData.skills : (typeof templateData.skills === 'string' ? templateData.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+            role: templateData.role || '',
+            industryType: templateData.industryType || '',
+            roleCategory: templateData.roleCategory || '',
+            education: templateData.education || '',
+            employmentType: templateData.employmentType || ''
           });
           
           toast.success(`Template "${decodeURIComponent(templateName || '')}" applied successfully! Customize the fields as needed.`);
@@ -220,6 +241,11 @@ export default function PostJobPage() {
           requirements: template.templateData.requirements || '',
           benefits: template.templateData.benefits || '',
           skills: Array.isArray(template.templateData.skills) ? template.templateData.skills : [],
+          role: template.templateData.role || '',
+          industryType: template.templateData.industryType || '',
+          roleCategory: template.templateData.roleCategory || '',
+          education: template.templateData.education || '',
+          employmentType: template.templateData.employmentType || ''
         };
         
         console.log('📝 Setting form data:', newFormData);
@@ -440,6 +466,11 @@ export default function PostJobPage() {
              requirements: "",
              benefits: "",
              skills: [],
+             role: "",
+             industryType: "",
+             roleCategory: "",
+             education: "",
+             employmentType: ""
            })
            setCurrentStep(1)
          }
@@ -642,6 +673,11 @@ export default function PostJobPage() {
                           requirements: "",
                           benefits: "",
                           skills: [],
+                          role: "",
+                          industryType: "",
+                          roleCategory: "",
+                          education: "",
+                          employmentType: ""
                         });
                         toast.info("Template cleared. Form has been reset.");
                       }}
@@ -790,6 +826,169 @@ export default function PostJobPage() {
       case 2:
         return (
           <div className="space-y-6">
+            {/* Role Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Role*
+              </label>
+              <Input
+                placeholder="e.g. Security Administrator, Software Engineer, Data Analyst"
+                value={formData.role}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Capitalize first letter of each word
+                  const capitalized = value.replace(/\b\w/g, l => l.toUpperCase());
+                  setFormData({ ...formData, role: capitalized });
+                }}
+              />
+              <p className="text-sm text-gray-500 mt-1">Enter the specific role title</p>
+            </div>
+
+            {/* Industry Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Industry Type*
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between"
+                onClick={() => setShowIndustryDropdown(true)}
+              >
+                {selectedIndustries.length > 0 
+                  ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
+                  : "Select industry type"
+                }
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+              {selectedIndustries.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {selectedIndustries.slice(0, 3).map((industry, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {industry.replace(/\s*\(\d+\)\s*$/, '')}
+                    </Badge>
+                  ))}
+                  {selectedIndustries.length > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{selectedIndustries.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Department */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Department*
+              </label>
+              <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IT & Information Security">IT & Information Security</SelectItem>
+                  <SelectItem value="Engineering">Engineering</SelectItem>
+                  <SelectItem value="Sales & Marketing">Sales & Marketing</SelectItem>
+                  <SelectItem value="Human Resources">Human Resources</SelectItem>
+                  <SelectItem value="Finance & Accounting">Finance & Accounting</SelectItem>
+                  <SelectItem value="Operations">Operations</SelectItem>
+                  <SelectItem value="Customer Service">Customer Service</SelectItem>
+                  <SelectItem value="Research & Development">Research & Development</SelectItem>
+                  <SelectItem value="Legal">Legal</SelectItem>
+                  <SelectItem value="Administration">Administration</SelectItem>
+                  <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
+                  <SelectItem value="Product Management">Product Management</SelectItem>
+                  <SelectItem value="Business Development">Business Development</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Employment Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Employment Type*
+              </label>
+              <Select value={formData.employmentType} onValueChange={(value) => setFormData({ ...formData, employmentType: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Full Time, Permanent">Full Time, Permanent</SelectItem>
+                  <SelectItem value="Part Time, Permanent">Part Time, Permanent</SelectItem>
+                  <SelectItem value="Full Time, Contract">Full Time, Contract</SelectItem>
+                  <SelectItem value="Part Time, Contract">Part Time, Contract</SelectItem>
+                  <SelectItem value="Internship">Internship</SelectItem>
+                  <SelectItem value="Freelance">Freelance</SelectItem>
+                  <SelectItem value="Temporary">Temporary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Role Category */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Role Category*
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between"
+                onClick={() => setShowRoleCategoryDropdown(true)}
+              >
+                {selectedRoleCategories.length > 0 
+                  ? `${selectedRoleCategories.length} role${selectedRoleCategories.length > 1 ? 's' : ''} selected`
+                  : "Select role category"
+                }
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+              {selectedRoleCategories.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {selectedRoleCategories.slice(0, 3).map((role, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {role}
+                    </Badge>
+                  ))}
+                  {selectedRoleCategories.length > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{selectedRoleCategories.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Education */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Education*
+              </label>
+              <Select value={formData.education} onValueChange={(value) => setFormData({ ...formData, education: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select education requirement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any Graduate">Any Graduate</SelectItem>
+                  <SelectItem value="B.Tech/B.E.">B.Tech/B.E.</SelectItem>
+                  <SelectItem value="B.Sc">B.Sc</SelectItem>
+                  <SelectItem value="B.Com">B.Com</SelectItem>
+                  <SelectItem value="BBA">BBA</SelectItem>
+                  <SelectItem value="BCA">BCA</SelectItem>
+                  <SelectItem value="M.Tech/M.E.">M.Tech/M.E.</SelectItem>
+                  <SelectItem value="M.Sc">M.Sc</SelectItem>
+                  <SelectItem value="MBA">MBA</SelectItem>
+                  <SelectItem value="MCA">MCA</SelectItem>
+                  <SelectItem value="M.Com">M.Com</SelectItem>
+                  <SelectItem value="Ph.D">Ph.D</SelectItem>
+                  <SelectItem value="Diploma">Diploma</SelectItem>
+                  <SelectItem value="12th Pass">12th Pass</SelectItem>
+                  <SelectItem value="10th Pass">10th Pass</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Requirements */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
                 Requirements*
@@ -804,22 +1003,24 @@ export default function PostJobPage() {
                 onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
               />
             </div>
+
+            {/* Key Skills */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Key Skills (Optional)
+                Key Skills*
                 {selectedTemplate && formData.skills && formData.skills.length > 0 && (
                   <span className="ml-2 text-xs text-green-600">✨ Pre-filled from template</span>
                 )}
               </label>
               <Input 
-                placeholder="e.g. React, Node.js, JavaScript (separate with commas)"
+                placeholder="e.g. SAP Security, SAP GRC, JavaScript, React (separate with commas)"
                 value={Array.isArray(formData.skills) ? formData.skills.join(', ') : formData.skills || ''}
                 onChange={(e) => {
                   const skillsArray = e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill);
                   setFormData({ ...formData, skills: skillsArray });
                 }}
               />
-              <p className="text-sm text-gray-500 mt-1">Add relevant skills to help candidates find this job</p>
+              <p className="text-sm text-gray-500 mt-1">Skills highlighted with '' are preferred key skills</p>
             </div>
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Additional Requirements</h3>
@@ -1016,11 +1217,64 @@ export default function PostJobPage() {
                 <div>
                   <h4 className="text-xl font-bold text-gray-900">{formData.title || "Job Title"}</h4>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    <Badge variant="secondary">Full-time</Badge>
-                    <Badge variant="secondary">Engineering</Badge>
-                    <Badge variant="secondary">Bangalore</Badge>
+                    <Badge variant="secondary">{formData.type || "Full-time"}</Badge>
+                    <Badge variant="secondary">{formData.department || "Department"}</Badge>
+                    <Badge variant="secondary">{formData.location || "Location"}</Badge>
                   </div>
                 </div>
+                
+                {/* Job Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Role</h5>
+                    <p className="text-gray-700 mt-1">{formData.role || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Industry Type</h5>
+                    <div className="text-gray-700 mt-1">
+                      {selectedIndustries.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {selectedIndustries.map((industry, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {industry.replace(/\s*\(\d+\)\s*$/, '')}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>Not provided</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Department</h5>
+                    <p className="text-gray-700 mt-1">{formData.department || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Employment Type</h5>
+                    <p className="text-gray-700 mt-1">{formData.employmentType || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Role Category</h5>
+                    <div className="text-gray-700 mt-1">
+                      {selectedRoleCategories.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {selectedRoleCategories.map((role, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>Not provided</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Education</h5>
+                    <p className="text-gray-700 mt-1">{formData.education || "Not provided"}</p>
+                  </div>
+                </div>
+
                 <div>
                   <h5 className="font-semibold text-gray-900">Description</h5>
                   <p className="text-gray-700 mt-1">{formData.description || "No description provided"}</p>
@@ -1029,6 +1283,18 @@ export default function PostJobPage() {
                   <h5 className="font-semibold text-gray-900">Requirements</h5>
                   <p className="text-gray-700 mt-1">{formData.requirements || "No requirements provided"}</p>
                 </div>
+                {formData.skills && formData.skills.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Key Skills</h5>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {formData.skills.map((skill, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {jobPhotos.length > 0 && (
                   <div>
                     <h5 className="font-semibold text-gray-900 mb-2">Job Showcase</h5>
@@ -1400,6 +1666,32 @@ export default function PostJobPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Industry Dropdown */}
+      {showIndustryDropdown && (
+        <IndustryDropdown
+          selectedIndustries={selectedIndustries}
+          onIndustryChange={(industries) => {
+            setSelectedIndustries(industries)
+            setFormData({ ...formData, industryType: industries.join(', ') })
+          }}
+          onClose={() => setShowIndustryDropdown(false)}
+          hideSelectAllButtons={true}
+        />
+      )}
+
+      {/* Role Category Dropdown */}
+      {showRoleCategoryDropdown && (
+        <RoleCategoryDropdown
+          selectedRoles={selectedRoleCategories}
+          onRoleChange={(roles) => {
+            setSelectedRoleCategories(roles)
+            setFormData({ ...formData, roleCategory: roles.join(', ') })
+          }}
+          onClose={() => setShowRoleCategoryDropdown(false)}
+          hideSelectAllButtons={true}
+        />
+      )}
     </div>
   )
 }

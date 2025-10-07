@@ -20,6 +20,9 @@ import {
   MessageCircle,
   X,
   Calendar,
+  Users,
+  GraduationCap,
+  Zap,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -722,6 +725,152 @@ export default function JobDetailPage() {
                         <X className="w-4 h-4 mr-2" />
                         Withdraw Application
                       </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Comprehensive Job Details */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.6 }}
+              >
+                <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Job Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Left Column */}
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Role</div>
+                            <div className="text-slate-600 dark:text-slate-400 capitalize">
+                              {job?.title || 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Industry Type</div>
+                            <div className="text-slate-600 dark:text-slate-400 capitalize">
+                              {job?.companyInfo?.industry || job?.industry || 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Department</div>
+                            <div className="text-slate-600 dark:text-slate-400 capitalize">
+                              {job?.department || 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Employment Type</div>
+                            <div className="text-slate-600 dark:text-slate-400 capitalize">
+                              {job?.type ? `${job.type.replace('-', ' ')}${job?.remoteWork ? `, ${job.remoteWork}` : ''}` : 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column */}
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Star className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Role Category</div>
+                            <div className="text-slate-600 dark:text-slate-400 capitalize">
+                              {job?.category || job?.department || 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Award className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Experience Level</div>
+                            <div className="text-slate-600 dark:text-slate-400 capitalize">
+                              {job?.experienceLevel || 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <GraduationCap className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Education</div>
+                            <div className="text-slate-600 dark:text-slate-400">
+                              {job?.education || 'Any Graduate'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-slate-100">Location</div>
+                            <div className="text-slate-600 dark:text-slate-400">
+                              {job?.location || 'Not provided'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Key Skills Section */}
+                    {job?.skills && job.skills.length > 0 && (
+                      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                            <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Key Skills</h3>
+                        </div>
+                        <div className="mb-3">
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Skills highlighted with <span className="font-medium text-blue-600">''</span> are preferred key skills
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {job.skills.map((skill: string, index: number) => (
+                            <Badge 
+                              key={index} 
+                              variant="secondary" 
+                              className="px-3 py-1 text-sm bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800"
+                            >
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

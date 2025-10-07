@@ -1,6 +1,7 @@
 const express = require('express');
 const Company = require('../models/Company');
 const User = require('../models/User');
+const Job = require('../models/Job');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
@@ -312,10 +313,10 @@ router.get('/', async (req, res) => {
     const companiesWithStats = await Promise.all(companies.map(async (company) => {
       let activeJobsCount = 0;
       try {
-        const Job = require('../models/Job');
         activeJobsCount = await Job.count({ where: { companyId: company.id, status: 'active' } });
       } catch (e) {
         console.warn('Could not compute activeJobsCount for company', company.id, e?.message);
+        activeJobsCount = 0; // Default to 0 if there's an error
       }
 
       const profileViews = Math.floor(Math.random() * 50) + 1;

@@ -1265,8 +1265,8 @@ exports.getSimilarJobs = async (req, res, next) => {
       remoteWork: job.remoteWork,
       posted: new Date(job.createdAt).toLocaleDateString(),
       postedDate: job.createdAt,
-      applications: job.applications || 0,
-      views: job.views || 0,
+      applications: typeof job.applications === 'number' && job.applications > 0 ? job.applications : 0,
+      views: typeof job.views === 'number' && job.views > 0 ? job.views : 0,
       isFeatured: job.isFeatured,
       isPremium: job.isPremium,
       description: job.description?.substring(0, 150) + (job.description?.length > 150 ? '...' : ''),
@@ -1278,7 +1278,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         rating: job.company?.rating,
         totalReviews: job.company?.totalReviews
       },
-      similarityScore: (score * 100).toFixed(1),
+      similarityScore: isNaN(score) || !isFinite(score) ? '0.0' : (score * 100).toFixed(1),
       factorScores: debug ? factorScores : undefined
     }));
 
