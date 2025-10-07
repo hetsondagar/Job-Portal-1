@@ -350,15 +350,18 @@ const Job = sequelize.define('Job', {
   },
   industryType: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'industrytype' // Map to lowercase database column
   },
   roleCategory: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'rolecategory' // Map to lowercase database column
   },
   employmentType: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'employmenttype' // Map to lowercase database column
   }
 }, {
   sequelize,
