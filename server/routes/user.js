@@ -4592,6 +4592,16 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
 
     console.log('✅ Job photo created successfully:', jobPhoto.id);
 
+    // If job is currently a draft, auto-activate it after first successful photo upload
+    try {
+      if (job.status === 'draft') {
+        await job.update({ status: 'active' });
+        console.log('✅ Draft job auto-published due to photo upload:', job.id);
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to auto-publish draft after photo upload:', e?.message || e);
+    }
+
     res.status(201).json({
       success: true,
       data: {
@@ -4604,9 +4614,10 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
         altText: jobPhoto.altText,
         caption: jobPhoto.caption,
         isPrimary: jobPhoto.isPrimary,
-        displayOrder: jobPhoto.displayOrder
+        displayOrder: jobPhoto.displayOrder,
+        jobStatus: job.status
       },
-      message: 'Job photo uploaded successfully'
+      message: job.status === 'active' ? 'Job photo uploaded and job published' : 'Job photo uploaded successfully'
     });
   } catch (error) {
     console.error('❌ Error uploading job photo:', error);
