@@ -105,13 +105,15 @@ export default function JobDetailPage() {
                 website: res.data.company?.website || res.data.employer?.website || '',
                 aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
                 photos: res.data.photos || [],
-                // Hot Vacancy Premium Features
-                isHotVacancy: res.data.isHotVacancy || false,
-                externalApplyUrl: res.data.externalApplyUrl || '',
-                whyWorkWithUs: res.data.whyWorkWithUs || '',
-                videoBanner: res.data.videoBanner || '',
-                companyProfile: res.data.companyProfile || ''
-              }
+              // Hot Vacancy Premium Features
+              isHotVacancy: res.data.isHotVacancy || false,
+              externalApplyUrl: res.data.externalApplyUrl || '',
+              whyWorkWithUs: res.data.whyWorkWithUs || '',
+              videoBanner: res.data.videoBanner || '',
+              companyProfile: res.data.companyProfile || '',
+              officeImages: res.data.officeImages || [],
+              attachmentFiles: res.data.attachmentFiles || []
+            }
               
               console.log('✅ Transformed job data:', transformedJob)
               console.log('📸 Job photos for jobseeker:', res.data.photos)
@@ -166,7 +168,9 @@ export default function JobDetailPage() {
               externalApplyUrl: res.data.externalApplyUrl || '',
               whyWorkWithUs: res.data.whyWorkWithUs || '',
               videoBanner: res.data.videoBanner || '',
-              companyProfile: res.data.companyProfile || ''
+              companyProfile: res.data.companyProfile || '',
+              officeImages: res.data.officeImages || [],
+              attachmentFiles: res.data.attachmentFiles || []
             }
             
             console.log('✅ Transformed job data (fallback):', transformedJob)
@@ -1239,6 +1243,51 @@ export default function JobDetailPage() {
                             )}
                           </div>
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Company Branding Media (from Step 4) */}
+              {(Array.isArray(job?.officeImages) && job.officeImages.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.48, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Building2 className="h-6 w-6 text-indigo-600" />
+                        Company Branding
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {job.officeImages.map((media: any, index: number) => (
+                          <div key={index} className="relative group rounded-lg overflow-hidden">
+                            {typeof media === 'string' && (media.endsWith('.mp4') || media.endsWith('.webm')) ? (
+                              <video
+                                src={media}
+                                className="w-full h-64 object-cover"
+                                controls
+                                preload="metadata"
+                              />
+                            ) : (
+                              <img
+                                src={typeof media === 'string' ? media : media.url}
+                                alt={`Company branding ${index + 1}`}
+                                className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            )}
+                            <div className="absolute top-2 left-2">
+                              <Badge variant="secondary" className="bg-white/90 backdrop-blur">
+                                {typeof media === 'string' && (media.endsWith('.mp4') || media.endsWith('.webm')) ? '🎥 Video' : '📸 Photo'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>

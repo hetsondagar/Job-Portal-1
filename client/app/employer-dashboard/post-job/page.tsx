@@ -682,7 +682,41 @@ export default function PostJobPage() {
         benefits: formData.benefits,
         skills: formData.skills,
         department: formData.department,
-        status: 'active' // Explicitly set status to active for publishing
+        role: formData.role,
+        industryType: formData.industryType,
+        roleCategory: formData.roleCategory,
+        education: formData.education,
+        employmentType: formData.employmentType,
+        status: 'active', // Explicitly set status to active for publishing
+        // Include hot vacancy fields if enabled
+        ...(formData.isHotVacancy && {
+          isHotVacancy: true,
+          urgencyLevel: formData.urgencyLevel,
+          hiringTimeline: formData.hiringTimeline,
+          maxApplications: formData.maxApplications,
+          applicationDeadline: formData.applicationDeadline,
+          pricingTier: formData.pricingTier,
+          hotVacancyPrice: formData.price || formData.hotVacancyPrice,
+          hotVacancyCurrency: formData.currency || formData.hotVacancyCurrency,
+          priorityListing: formData.priorityListing,
+          featuredBadge: formData.featuredBadge,
+          unlimitedApplications: formData.unlimitedApplications,
+          advancedAnalytics: formData.advancedAnalytics,
+          candidateMatching: formData.candidateMatching,
+          directContact: formData.directContact,
+          urgentHiring: formData.urgentHiring,
+          multipleEmailIds: formData.multipleEmailIds,
+          boostedSearch: formData.boostedSearch,
+          searchBoostLevel: formData.searchBoostLevel,
+          citySpecificBoost: formData.citySpecificBoost,
+          videoBanner: formData.videoBanner,
+          whyWorkWithUs: formData.whyWorkWithUs,
+          companyProfile: formData.companyProfile,
+          proactiveAlerts: formData.proactiveAlerts,
+          superFeatured: formData.superFeatured,
+          tierLevel: formData.tierLevel,
+          externalApplyUrl: formData.externalApplyUrl
+        })
       }
 
              let response;
@@ -2551,10 +2585,10 @@ export default function PostJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-x-hidden">
       <EmployerNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
