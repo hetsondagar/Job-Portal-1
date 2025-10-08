@@ -19,7 +19,7 @@ import {
   Clock, 
   DollarSign,
   Crown,
-  Fire,
+  Flame,
   Target,
   MapPin,
   Calendar,
