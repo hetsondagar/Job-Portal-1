@@ -405,6 +405,61 @@ exports.createJob = async (req, res, next) => {
         console.error('❌ Error sending preferred job notifications:', notificationError);
         // Don't fail the job creation if notifications fail
       }
+
+      // Send notifications to company followers
+      try {
+        console.log('🔔 Checking for company followers...');
+        const CompanyFollow = require('../models/CompanyFollow');
+        const Notification = require('../models/Notification');
+        
+        const followers = await CompanyFollow.findAll({
+          where: { companyId: userCompany.id },
+          attributes: ['userId', 'notificationPreferences']
+        });
+
+        if (followers && followers.length > 0) {
+          console.log(`📢 Found ${followers.length} followers for company ${userCompany.name}`);
+          
+          let notificationsSent = 0;
+          for (const follower of followers) {
+            // Check if user wants job notifications
+            const prefs = follower.notificationPreferences || {};
+            if (prefs.newJobs !== false) {
+              try {
+                await Notification.create({
+                  userId: follower.userId,
+                  type: 'company_update',
+                  title: `${userCompany.name} posted a new job!`,
+                  message: `New position: "${job.title}" at ${userCompany.name} in ${job.location}. Apply now!`,
+                  shortMessage: `New job: ${job.title}`,
+                  priority: 'medium',
+                  actionUrl: `/jobs/${job.id}`,
+                  actionText: 'View Job',
+                  icon: 'briefcase',
+                  metadata: {
+                    jobId: job.id,
+                    companyId: userCompany.id,
+                    companyName: userCompany.name,
+                    jobTitle: job.title,
+                    location: job.location,
+                    fromFollowedCompany: true
+                  }
+                });
+                notificationsSent++;
+              } catch (notifError) {
+                console.error(`⚠️ Failed to send notification to follower ${follower.userId}:`, notifError.message);
+              }
+            }
+          }
+          
+          console.log(`✅ Sent ${notificationsSent} notifications to company followers`);
+        } else {
+          console.log('📝 No followers found for this company');
+        }
+      } catch (followError) {
+        console.error('❌ Error sending notifications to followers:', followError);
+        // Don't fail the job creation if notifications fail
+      }
     }
 
     return res.status(201).json({

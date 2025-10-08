@@ -63,6 +63,8 @@ export default function DashboardPage() {
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null)
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [followedCompaniesCount, setFollowedCompaniesCount] = useState(0)
+  const [followedCompaniesLoading, setFollowedCompaniesLoading] = useState(true)
 
   useEffect(() => {
     if (loading) return;
@@ -101,7 +103,8 @@ export default function DashboardPage() {
             fetchResumes(),
             fetchJobAlerts(),
             fetchCoverLetters(),
-            fetchInterviews()
+            fetchInterviews(),
+            fetchFollowedCompanies()
           ])
           
           setDataLoaded(true)
@@ -211,7 +214,8 @@ export default function DashboardPage() {
         fetchResumes(),
         fetchJobAlerts(),
         fetchCoverLetters(),
-        fetchInterviews()
+        fetchInterviews(),
+        fetchFollowedCompanies()
       ])
       
       setDataLoaded(true)
@@ -279,6 +283,20 @@ export default function DashboardPage() {
       console.error('Error fetching cover letters:', error)
     } finally {
       setCoverLettersLoading(false)
+    }
+  }
+
+  const fetchFollowedCompanies = async () => {
+    try {
+      setFollowedCompaniesLoading(true)
+      const response = await apiService.getFollowedCompanies()
+      if (response.success && response.data) {
+        setFollowedCompaniesCount(response.data.length)
+      }
+    } catch (error) {
+      console.error('Error fetching followed companies:', error)
+    } finally {
+      setFollowedCompaniesLoading(false)
     }
   }
 
@@ -811,6 +829,24 @@ export default function DashboardPage() {
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Notifications</h3>
                       <p className="text-sm text-slate-600 dark:text-slate-300">Stay updated</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/followed-companies">
+              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-6 h-full flex flex-col justify-center">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Building2 className="w-6 h-6 text-pink-600 dark:text-pink-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white text-base">Followed Companies</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {followedCompaniesLoading ? 'Loading...' : `${followedCompaniesCount} ${followedCompaniesCount === 1 ? 'company' : 'companies'} following`}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
