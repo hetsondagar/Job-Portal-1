@@ -1091,15 +1091,17 @@ function CompanyDetailPage() {
       {/* Company Details Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700">
+          <TabsList className={`grid w-full ${company?.whyJoinUs || company?.why_join_us ? 'grid-cols-3' : 'grid-cols-2'} bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700`}>
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               Overview
             </TabsTrigger>
+            {(company?.whyJoinUs || company?.why_join_us) && (
+              <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                Why Join Us
+              </TabsTrigger>
+            )}
             <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               Jobs ({companyJobs.length})
-            </TabsTrigger>
-            <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              Why Join Us
             </TabsTrigger>
           </TabsList>
 
@@ -1161,56 +1163,6 @@ function CompanyDetailPage() {
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Workplace Photos */}
-                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Workplace Photos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {companyPhotos.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {companyPhotos.map((p:any) => (
-                          <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 group">
-                            <img
-                              src={p.fileUrl}
-                              alt={p.altText || company.name}
-                              className="w-full h-32 md:h-40 object-cover"
-                              loading="lazy"
-                              onLoad={() => {
-                                console.log('✅ Image loaded successfully:', p.fileUrl);
-                              }}
-                              onError={(e) => {
-                                console.error('❌ Image failed to load:', p.fileUrl);
-                                console.error('❌ Error details:', e);
-                                console.log('🔍 Photo data:', p);
-                              }}
-                            />
-                            {p.caption ? (
-                              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
-                            ) : null}
-                            {/* Delete button for company owners/admins */}
-                            {user && (user.userType === 'employer' || user.userType === 'admin') && user.companyId === companyId && (
-                              <button
-                                onClick={() => handlePhotoDelete(p.id)}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                title="Delete photo"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-slate-600 dark:text-slate-300">
-                        No photos uploaded yet. 
-                        <br />
-                        <small className="text-xs">Debug: Photos count = {companyPhotos.length}</small>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
@@ -1778,6 +1730,56 @@ function CompanyDetailPage() {
                 </Card>
               </div>
             )}
+            
+            {/* Workplace Photos - MOVED FROM OVERVIEW TAB */}
+            <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-2xl">Workplace Photos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {companyPhotos.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {companyPhotos.map((p:any) => (
+                      <div key={p.id} className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 group">
+                        <img
+                          src={p.fileUrl}
+                          alt={p.altText || company.name}
+                          className="w-full h-32 md:h-40 object-cover"
+                          loading="lazy"
+                          onLoad={() => {
+                            console.log('✅ Image loaded successfully:', p.fileUrl);
+                          }}
+                          onError={(e) => {
+                            console.error('❌ Image failed to load:', p.fileUrl);
+                            console.error('❌ Error details:', e);
+                            console.log('🔍 Photo data:', p);
+                          }}
+                        />
+                        {p.caption ? (
+                          <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 truncate">{p.caption}</div>
+                        ) : null}
+                        {/* Delete button for company owners/admins */}
+                        {user && (user.userType === 'employer' || user.userType === 'admin') && user.companyId === companyId && (
+                          <button
+                            onClick={() => handlePhotoDelete(p.id)}
+                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            title="Delete photo"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-slate-600 dark:text-slate-300 text-center py-8">
+                    <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No workplace photos available yet.</p>
+                    <p className="text-sm mt-1">Check back later to see our office and culture!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -699,7 +699,7 @@ export default function HomePage() {
             color: getSectorColor(((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')),
             location: [c.city, c.state, c.country].filter(Boolean).join(', '),
             employees: c.companySize || '',
-            logo: '/placeholder.svg?height=40&width=40',
+            logo: c.logo || '/placeholder.svg?height=40&width=40',
             sector: ((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')
           }))
           // Fetch openings count per company using public jobs-by-company endpoint
@@ -712,7 +712,14 @@ export default function HomePage() {
               return { ...co, openings: 0 }
             }
           }))
-          setTopCompanies(withCounts)
+          
+          // Add industry-based colors for top companies
+          const withColors = withCounts.map((co: any) => ({
+            ...co,
+            color: getSectorColor(co.sector || 'other')
+          }))
+          
+          setTopCompanies(withColors)
           setFeaturedCompanies(withCounts)
         } else {
           setTopCompanies([])
@@ -1055,9 +1062,12 @@ export default function HomePage() {
                       
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-4">
-                          <div className="w-12 h-12 bg-black/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <span className="text-2xl">{company.icon}</span>
-                </div>
+                          <Avatar className="w-12 h-12 bg-white/90 p-2 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                            <AvatarImage src={company.logo} alt={company.name} className="object-contain" />
+                            <AvatarFallback className="text-lg font-bold bg-white text-slate-700">
+                              {company.name ? company.name.substring(0, 2).toUpperCase() : '??'}
+                            </AvatarFallback>
+                          </Avatar>
                           <Badge className="bg-black/30 text-white border-0 backdrop-blur-sm">
                             {company.industry}
                           </Badge>

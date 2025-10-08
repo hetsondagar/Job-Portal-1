@@ -758,7 +758,13 @@ export default function JobDetailPage() {
                       <div className="w-full mb-3 text-center text-red-600 font-medium">Applications closed</div>
                     )}
                     <Button
-                      onClick={job?.externalApplyUrl ? () => window.open(job.externalApplyUrl, '_blank') : handleApply}
+                      onClick={job?.externalApplyUrl ? () => {
+                        if (!user) {
+                          setShowAuthDialog(true)
+                          return
+                        }
+                        window.open(job.externalApplyUrl, '_blank')
+                      } : handleApply}
                       className={`w-full ${
                         hasApplied
                           ? 'bg-green-600 hover:bg-green-700 cursor-default'
@@ -1152,55 +1158,31 @@ export default function JobDetailPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2, duration: 0.6 }}
                 >
-                  <Card className="border-0 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-xl shadow-xl border-red-200 dark:border-red-800">
+                  <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-xl shadow-xl border-blue-200 dark:border-blue-800">
                     <CardHeader>
                       <CardTitle className="text-2xl flex items-center gap-2">
-                        🔥 Hot Vacancy Premium Features
-                        <Badge variant="destructive" className="animate-pulse">
-                          Premium
-                        </Badge>
+                        <Building2 className="h-6 w-6 text-blue-600" />
+                        About the Company
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-6">
-                        {job?.whyWorkWithUs && (
+                        {/* Company Description */}
+                        {job?.aboutCompany && (
                           <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                              <Star className="w-4 h-4 text-yellow-500" />
-                              Why Work With Us
-                            </h4>
-                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                              {job.whyWorkWithUs}
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Company Overview</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                              {job.aboutCompany}
                             </p>
                           </div>
                         )}
                         
                         {job?.companyProfile && (
                           <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-blue-500" />
-                              Company Profile
-                            </h4>
-                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Company Profile</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                               {job.companyProfile}
                             </p>
-                          </div>
-                        )}
-                        
-                        {job?.videoBanner && (
-                          <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                              <Zap className="w-4 h-4 text-purple-500" />
-                              Company Culture Video
-                            </h4>
-                            <div className="aspect-video rounded-lg overflow-hidden">
-                              <iframe
-                                src={job.videoBanner}
-                                title="Company Culture Video"
-                                className="w-full h-full"
-                                allowFullScreen
-                              />
-                            </div>
                           </div>
                         )}
                         
