@@ -368,8 +368,10 @@ export default function PostJobPage() {
           urgentHiring: true,
           boostedSearch: true
         }));
-        // Navigate to Step 4 (Hot Vacancy Features)
-        setCurrentStep(4);
+        // Keep user at Step 1 to fill basic info first
+        // Step 4 will be automatically accessible in the stepper
+        setCurrentStep(1);
+        toast.info('🔥 Hot Vacancy mode enabled! Fill basic info and configure premium features in Step 4.');
       }
     }
   }, [user, loading]);
@@ -699,48 +701,48 @@ export default function PostJobPage() {
          setShowSuccessDialog(true)
          
          if (!editingJobId) {
-          // Only reset form for new jobs, not when editing
-          setFormData({
-            title: "",
-            department: "",
-            location: "",
-            type: "",
-            experience: "",
-            salary: "",
-            description: "",
-            requirements: "",
-            benefits: "",
-            skills: [],
-            role: "",
-            industryType: "",
-            roleCategory: "",
-            education: "",
-            employmentType: "",
-            // Hot Vacancy Premium Features
-            isHotVacancy: false,
-            urgentHiring: false,
-            multipleEmailIds: [],
-            boostedSearch: false,
-            searchBoostLevel: "standard",
-            citySpecificBoost: [],
-            videoBanner: "",
-            whyWorkWithUs: "",
-            companyReviews: [],
-            autoRefresh: false,
-            refreshDiscount: 0,
-            attachmentFiles: [],
-            officeImages: [],
-            companyProfile: "",
-            proactiveAlerts: false,
-            alertRadius: 50,
-            alertFrequency: "immediate",
-            featuredKeywords: [],
-            customBranding: {},
-            superFeatured: false,
-            tierLevel: "basic",
-            externalApplyUrl: "",
-            hotVacancyPrice: 0,
-            hotVacancyCurrency: "INR",
+           // Only reset form for new jobs, not when editing
+           setFormData({
+             title: "",
+             department: "",
+             location: "",
+             type: "",
+             experience: "",
+             salary: "",
+             description: "",
+             requirements: "",
+             benefits: "",
+             skills: [],
+             role: "",
+             industryType: "",
+             roleCategory: "",
+             education: "",
+             employmentType: "",
+             // Hot Vacancy Premium Features
+             isHotVacancy: false,
+             urgentHiring: false,
+             multipleEmailIds: [],
+             boostedSearch: false,
+             searchBoostLevel: "standard",
+             citySpecificBoost: [],
+             videoBanner: "",
+             whyWorkWithUs: "",
+             companyReviews: [],
+             autoRefresh: false,
+             refreshDiscount: 0,
+             attachmentFiles: [],
+             officeImages: [],
+             companyProfile: "",
+             proactiveAlerts: false,
+             alertRadius: 50,
+             alertFrequency: "immediate",
+             featuredKeywords: [],
+             customBranding: {},
+             superFeatured: false,
+             tierLevel: "basic",
+             externalApplyUrl: "",
+             hotVacancyPrice: 0,
+             hotVacancyCurrency: "INR",
             hotVacancyPaymentStatus: "pending",
             // CRITICAL PREMIUM HOT VACANCY FEATURES
             urgencyLevel: "high",
@@ -763,7 +765,7 @@ export default function PostJobPage() {
             keywords: [],
             impressions: 0,
             clicks: 0
-          })
+           })
            setCurrentStep(1)
          }
        } else {
@@ -982,47 +984,47 @@ export default function PostJobPage() {
                       size="sm"
                       onClick={() => {
                         setSelectedTemplate("");
-                      setFormData({
-                        title: "",
-                        department: "",
-                        location: "",
-                        type: "",
-                        experience: "",
-                        salary: "",
-                        description: "",
-                        requirements: "",
-                        benefits: "",
-                        skills: [],
-                        role: "",
-                        industryType: "",
-                        roleCategory: "",
-                        education: "",
-                        employmentType: "",
-                        // Hot Vacancy Premium Features
-                        isHotVacancy: false,
-                        urgentHiring: false,
-                        multipleEmailIds: [],
-                        boostedSearch: false,
-                        searchBoostLevel: "standard",
-                        citySpecificBoost: [],
-                        videoBanner: "",
-                        whyWorkWithUs: "",
-                        companyReviews: [],
-                        autoRefresh: false,
-                        refreshDiscount: 0,
-                        attachmentFiles: [],
-                        officeImages: [],
-                        companyProfile: "",
-                        proactiveAlerts: false,
-                        alertRadius: 50,
-                        alertFrequency: "immediate",
-                        featuredKeywords: [],
-                        customBranding: {},
-                        superFeatured: false,
-                        tierLevel: "basic",
-                        externalApplyUrl: "",
-                        hotVacancyPrice: 0,
-                        hotVacancyCurrency: "INR",
+                        setFormData({
+                          title: "",
+                          department: "",
+                          location: "",
+                          type: "",
+                          experience: "",
+                          salary: "",
+                          description: "",
+                          requirements: "",
+                          benefits: "",
+                          skills: [],
+                          role: "",
+                          industryType: "",
+                          roleCategory: "",
+                          education: "",
+                          employmentType: "",
+                          // Hot Vacancy Premium Features
+                          isHotVacancy: false,
+                          urgentHiring: false,
+                          multipleEmailIds: [],
+                          boostedSearch: false,
+                          searchBoostLevel: "standard",
+                          citySpecificBoost: [],
+                          videoBanner: "",
+                          whyWorkWithUs: "",
+                          companyReviews: [],
+                          autoRefresh: false,
+                          refreshDiscount: 0,
+                          attachmentFiles: [],
+                          officeImages: [],
+                          companyProfile: "",
+                          proactiveAlerts: false,
+                          alertRadius: 50,
+                          alertFrequency: "immediate",
+                          featuredKeywords: [],
+                          customBranding: {},
+                          superFeatured: false,
+                          tierLevel: "basic",
+                          externalApplyUrl: "",
+                          hotVacancyPrice: 0,
+                          hotVacancyCurrency: "INR",
                         hotVacancyPaymentStatus: "pending",
                         // CRITICAL PREMIUM HOT VACANCY FEATURES
                         urgencyLevel: "high",
@@ -1045,8 +1047,8 @@ export default function PostJobPage() {
                         keywords: [],
                         impressions: 0,
                         clicks: 0
-                      });
-                      toast.info("Template cleared. Form has been reset.");
+                        });
+                        toast.info("Template cleared. Form has been reset.");
                       }}
                     >
                       Clear Template
@@ -1494,7 +1496,7 @@ export default function PostJobPage() {
                     {/* Urgency & Timeline Settings */}
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <h4 className="font-semibold text-gray-900 mb-4">⏰ Urgency & Timeline</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-900 mb-2">
                             Urgency Level
@@ -1614,52 +1616,52 @@ export default function PostJobPage() {
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <h4 className="font-semibold text-gray-900 mb-4">🚀 Visibility Boosters</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="urgentHiring"
-                            checked={formData.urgentHiring}
-                            onCheckedChange={(checked) => setFormData({ ...formData, urgentHiring: checked as boolean })}
-                          />
-                          <label htmlFor="urgentHiring" className="text-sm flex items-center gap-1">
-                            <AlertCircle className="h-4 w-4 text-red-500" />
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="urgentHiring"
+                          checked={formData.urgentHiring}
+                          onCheckedChange={(checked) => setFormData({ ...formData, urgentHiring: checked as boolean })}
+                        />
+                        <label htmlFor="urgentHiring" className="text-sm flex items-center gap-1">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
                             Urgent Hiring Badge
-                          </label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="boostedSearch"
-                            checked={formData.boostedSearch}
-                            onCheckedChange={(checked) => setFormData({ ...formData, boostedSearch: checked as boolean })}
-                          />
-                          <label htmlFor="boostedSearch" className="text-sm flex items-center gap-1">
-                            <TrendingUp className="h-4 w-4 text-blue-500" />
-                            Boosted Search
-                          </label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="proactiveAlerts"
-                            checked={formData.proactiveAlerts}
-                            onCheckedChange={(checked) => setFormData({ ...formData, proactiveAlerts: checked as boolean })}
-                          />
-                          <label htmlFor="proactiveAlerts" className="text-sm flex items-center gap-1">
-                            <Zap className="h-4 w-4 text-green-500" />
-                            Proactive Alerts
-                          </label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="superFeatured"
-                            checked={formData.superFeatured}
-                            onCheckedChange={(checked) => setFormData({ ...formData, superFeatured: checked as boolean })}
-                          />
-                          <label htmlFor="superFeatured" className="text-sm flex items-center gap-1">
-                            <Star className="h-4 w-4 text-purple-500" />
-                            Super Featured
-                          </label>
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="boostedSearch"
+                          checked={formData.boostedSearch}
+                          onCheckedChange={(checked) => setFormData({ ...formData, boostedSearch: checked as boolean })}
+                        />
+                        <label htmlFor="boostedSearch" className="text-sm flex items-center gap-1">
+                          <TrendingUp className="h-4 w-4 text-blue-500" />
+                          Boosted Search
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="proactiveAlerts"
+                          checked={formData.proactiveAlerts}
+                          onCheckedChange={(checked) => setFormData({ ...formData, proactiveAlerts: checked as boolean })}
+                        />
+                        <label htmlFor="proactiveAlerts" className="text-sm flex items-center gap-1">
+                          <Zap className="h-4 w-4 text-green-500" />
+                          Proactive Alerts
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="superFeatured"
+                          checked={formData.superFeatured}
+                          onCheckedChange={(checked) => setFormData({ ...formData, superFeatured: checked as boolean })}
+                        />
+                        <label htmlFor="superFeatured" className="text-sm flex items-center gap-1">
+                          <Star className="h-4 w-4 text-purple-500" />
+                          Super Featured
+                        </label>
                         </div>
                       </div>
                     </div>
