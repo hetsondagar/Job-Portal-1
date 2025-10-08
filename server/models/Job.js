@@ -367,122 +367,147 @@ const Job = sequelize.define('Job', {
   isHotVacancy: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    field: 'ishotvacancy' // Map to lowercase database column
   },
   urgentHiring: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    field: 'urgenthiring' // Map to lowercase database column
   },
   multipleEmailIds: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'multipleemailids' // Map to lowercase database column
   },
   boostedSearch: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    field: 'boostedsearch' // Map to lowercase database column
   },
   searchBoostLevel: {
     type: DataTypes.ENUM('standard', 'premium', 'super', 'city-specific'),
     allowNull: true,
-    defaultValue: 'standard'
+    defaultValue: 'standard',
+    field: 'searchboostlevel' // Map to lowercase database column
   },
   citySpecificBoost: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'cityspecificboost' // Map to lowercase database column
   },
   videoBanner: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'videobanner' // Map to lowercase database column
   },
   whyWorkWithUs: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'whyworkwithus' // Map to lowercase database column
   },
   companyReviews: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'companyreviews' // Map to lowercase database column
   },
   autoRefresh: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    field: 'autorefresh' // Map to lowercase database column
   },
   refreshDiscount: {
     type: DataTypes.DECIMAL,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'refreshdiscount' // Map to lowercase database column
   },
   attachmentFiles: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'attachmentfiles' // Map to lowercase database column
   },
   officeImages: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'officeimages' // Map to lowercase database column
   },
   companyProfile: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'companyprofile' // Map to lowercase database column
   },
   proactiveAlerts: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    field: 'proactivealerts' // Map to lowercase database column
   },
   alertRadius: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 50
+    defaultValue: 50,
+    field: 'alertradius' // Map to lowercase database column
   },
   alertFrequency: {
     type: DataTypes.ENUM('immediate', 'daily', 'weekly'),
     allowNull: true,
-    defaultValue: 'immediate'
+    defaultValue: 'immediate',
+    field: 'alertfrequency' // Map to lowercase database column
   },
   featuredKeywords: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'featuredkeywords' // Map to lowercase database column
   },
   customBranding: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'custombranding' // Map to lowercase database column
   },
   superFeatured: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
+    field: 'superfeatured' // Map to lowercase database column
   },
   tierLevel: {
     type: DataTypes.ENUM('basic', 'premium', 'enterprise', 'super-premium'),
     allowNull: true,
-    defaultValue: 'basic'
+    defaultValue: 'basic',
+    field: 'tierlevel' // Map to lowercase database column
   },
   externalApplyUrl: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'externalapplyurl' // Map to lowercase database column
   },
   hotVacancyPrice: {
     type: DataTypes.DECIMAL,
-    allowNull: true
+    allowNull: true,
+    field: 'hotvacancyprice' // Map to lowercase database column
   },
   hotVacancyCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'hotvacancycurrency' // Map to lowercase database column
   },
   hotVacancyPaymentStatus: {
     type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
     allowNull: true,
-    defaultValue: 'pending'
+    defaultValue: 'pending',
+    field: 'hotvacancypaymentstatus' // Map to lowercase database column
   }
 }, {
   sequelize,
