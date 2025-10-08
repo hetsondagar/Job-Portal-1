@@ -333,6 +333,104 @@ const HotVacancy = sequelize.define('HotVacancy', {
     type: DataTypes.DECIMAL,
     allowNull: false,
     defaultValue: 0
+  },
+  // Premium Hot Vacancy Features
+  urgentHiring: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  multipleEmailIds: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  boostedSearch: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
+  searchBoostLevel: {
+    type: DataTypes.ENUM('standard', 'premium', 'super', 'city-specific'),
+    allowNull: false,
+    defaultValue: 'premium'
+  },
+  citySpecificBoost: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  videoBanner: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  whyWorkWithUs: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  companyReviews: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  autoRefresh: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  refreshDiscount: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    defaultValue: 0
+  },
+  attachmentFiles: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  officeImages: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  companyProfile: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  proactiveAlerts: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
+  alertRadius: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 50 // km
+  },
+  alertFrequency: {
+    type: DataTypes.ENUM('immediate', 'daily', 'weekly'),
+    allowNull: false,
+    defaultValue: 'immediate'
+  },
+  featuredKeywords: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  customBranding: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  superFeatured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  tierLevel: {
+    type: DataTypes.ENUM('basic', 'premium', 'enterprise', 'super-premium'),
+    allowNull: false,
+    defaultValue: 'premium'
   }
 }, {
   sequelize,

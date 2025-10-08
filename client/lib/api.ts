@@ -141,6 +141,48 @@ export interface Job {
   salaryMin?: number;
   salaryMax?: number;
   company?: Company;
+  // New fields from step 2
+  role?: string;
+  industryType?: string;
+  roleCategory?: string;
+  employmentType?: string;
+  department?: string;
+  education?: string;
+  // Hot Vacancy Premium Features
+  isHotVacancy?: boolean;
+  urgentHiring?: boolean;
+  multipleEmailIds?: string[];
+  boostedSearch?: boolean;
+  searchBoostLevel?: 'standard' | 'premium' | 'super' | 'city-specific';
+  citySpecificBoost?: string[];
+  videoBanner?: string;
+  whyWorkWithUs?: string;
+  companyReviews?: string[];
+  autoRefresh?: boolean;
+  refreshDiscount?: number;
+  attachmentFiles?: string[];
+  officeImages?: string[];
+  companyProfile?: string;
+  proactiveAlerts?: boolean;
+  alertRadius?: number;
+  alertFrequency?: 'immediate' | 'daily' | 'weekly';
+  featuredKeywords?: string[];
+  customBranding?: any;
+  superFeatured?: boolean;
+  tierLevel?: 'basic' | 'premium' | 'enterprise' | 'super-premium';
+  externalApplyUrl?: string;
+  hotVacancyPrice?: number;
+  hotVacancyCurrency?: string;
+  hotVacancyPaymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
+  // Additional fields
+  status?: string;
+  experience?: string;
+  skills?: string[];
+  views?: number;
+  applications?: number;
+  similarityScore?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface JobApplication {
@@ -3762,6 +3804,125 @@ class ApiService {
 
   async getJobDetails(jobId: string): Promise<ApiResponse<any>> {
     return this.get(`/admin/jobs/${jobId}/details`);
+  }
+
+  // Hot Vacancy endpoints
+  async createHotVacancy(data: any): Promise<ApiResponse<any>> {
+    console.log('🔥 createHotVacancy - Sending data:', data);
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancies(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<any>> {
+    const query = params
+      ? '?' + Object.entries(params)
+          .filter(([, v]) => v !== undefined && v !== null && v !== '')
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+          .join('&')
+      : '';
+    
+    return this.makeRequest(`/hot-vacancies${query}`, async () => {
+      const response = await fetch(`${this.baseURL}/hot-vacancies${query}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return this.handleResponse<any>(response);
+    });
+  }
+
+  async getHotVacancyById(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async updateHotVacancy(id: string, data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async deleteHotVacancy(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancyPricingTiers(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/pricing`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getPublicHotVacancies(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<any>> {
+    const query = params
+      ? '?' + Object.entries(params)
+          .filter(([, v]) => v !== undefined && v !== null && v !== '')
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+          .join('&')
+      : '';
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/hot-vacancies/public${query}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error in getPublicHotVacancies:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch hot vacancies. Please try again later.'
+      };
+    }
+  }
+
+  async uploadHotVacancyPhoto(hotVacancyId: string, file: File, metadata?: any): Promise<ApiResponse<any>> {
+    const formData = new FormData();
+    formData.append('photo', file);
+    if (metadata) {
+      Object.keys(metadata).forEach(key => {
+        formData.append(key, metadata[key]);
+      });
+    }
+
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': this.getAuthHeaders().Authorization,
+      },
+      body: formData,
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getHotVacancyPhotos(hotVacancyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async deleteHotVacancyPhoto(photoId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/hot-vacancies/photos/${photoId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
   }
 
 }

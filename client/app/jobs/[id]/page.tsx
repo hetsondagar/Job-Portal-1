@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
   ArrowLeft,
+  ArrowRight,
   MapPin,
   Briefcase,
   Clock,
@@ -544,6 +545,31 @@ export default function JobDetailPage() {
                             <span className="font-semibold">{job?.companyRating || 0}</span>
                             <span className="text-slate-500 text-sm">({job?.companyReviews || 0} reviews)</span>
                           </div>
+                          <div className="flex items-center space-x-2 mb-4">
+                            {job?.isHotVacancy && (
+                              <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse">
+                                🔥 Hot Vacancy
+                              </Badge>
+                            )}
+                            {job?.urgentHiring && (
+                              <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                URGENT HIRING
+                              </Badge>
+                            )}
+                            {job?.superFeatured && (
+                              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                                <Star className="w-3 h-3 mr-1" />
+                                Super Featured
+                              </Badge>
+                            )}
+                            {job?.boostedSearch && (
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                                <Zap className="w-3 h-3 mr-1" />
+                                Boosted
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -689,13 +715,15 @@ export default function JobDetailPage() {
                       <div className="w-full mb-3 text-center text-red-600 font-medium">Applications closed</div>
                     )}
                     <Button
-                      onClick={handleApply}
+                      onClick={job?.externalApplyUrl ? () => window.open(job.externalApplyUrl, '_blank') : handleApply}
                       className={`w-full ${
                         hasApplied
                           ? 'bg-green-600 hover:bg-green-700 cursor-default'
                           : isExpired
                             ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                            : job?.isHotVacancy
+                              ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700'
+                              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                       }`}
                       disabled={hasApplied || isExpired}
                     >
@@ -704,8 +732,13 @@ export default function JobDetailPage() {
                           <CheckCircle className="w-4 h-4 mr-2" />
                           Applied
                         </>
+                      ) : job?.externalApplyUrl ? (
+                        <>
+                          🔥 Apply on Company Website
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
                       ) : (
-                        'Apply Now'
+                        job?.isHotVacancy ? '🔥 Apply to Hot Vacancy' : 'Apply Now'
                       )}
                     </Button>
 
@@ -891,6 +924,117 @@ export default function JobDetailPage() {
                       <div className="prose prose-slate dark:prose-invert max-w-none">
                         <div className="whitespace-pre-line text-slate-700 dark:text-slate-300 leading-relaxed">
                           {job.description}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Hot Vacancy Premium Features */}
+              {job?.isHotVacancy && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-xl shadow-xl border-red-200 dark:border-red-800">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        🔥 Hot Vacancy Premium Features
+                        <Badge variant="destructive" className="animate-pulse">
+                          Premium
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {job?.whyWorkWithUs && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                              <Star className="w-4 h-4 text-yellow-500" />
+                              Why Work With Us
+                            </h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                              {job.whyWorkWithUs}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {job?.companyProfile && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-blue-500" />
+                              Company Profile
+                            </h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                              {job.companyProfile}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {job?.videoBanner && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                              <Zap className="w-4 h-4 text-purple-500" />
+                              Company Culture Video
+                            </h4>
+                            <div className="aspect-video rounded-lg overflow-hidden">
+                              <iframe
+                                src={job.videoBanner}
+                                title="Company Culture Video"
+                                className="w-full h-full"
+                                allowFullScreen
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {Array.isArray(job?.companyReviews) && job.companyReviews.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                              <Star className="w-4 h-4 text-yellow-500" />
+                              Company Reviews
+                            </h4>
+                            <div className="space-y-3">
+                              {job.companyReviews.map((review: string, index: number) => (
+                                <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Employee Review</span>
+                                  </div>
+                                  <p className="text-gray-700 dark:text-gray-300 italic">"{review}"</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {job?.proactiveAlerts && (
+                            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <Zap className="w-5 h-5 text-green-600" />
+                              <span className="text-sm font-medium text-green-800 dark:text-green-200">Proactive Candidate Alerts</span>
+                            </div>
+                          )}
+                          {job?.boostedSearch && (
+                            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                              <Zap className="w-5 h-5 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Boosted Search Visibility</span>
+                            </div>
+                          )}
+                          {job?.urgentHiring && (
+                            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                              <AlertCircle className="w-5 h-5 text-red-600" />
+                              <span className="text-sm font-medium text-red-800 dark:text-red-200">Urgent Hiring Priority</span>
+                            </div>
+                          )}
+                          {job?.superFeatured && (
+                            <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                              <Star className="w-5 h-5 text-purple-600" />
+                              <span className="text-sm font-medium text-purple-800 dark:text-purple-200">Super Featured Status</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>

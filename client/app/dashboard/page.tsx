@@ -27,6 +27,8 @@ import {
   Star,
   ThumbsUp,
   Calendar,
+  Zap,
+  CheckCircle,
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 
@@ -831,6 +833,139 @@ export default function DashboardPage() {
               </Card>
             </Link>
           </div>
+
+          {/* Hot Vacancy Section */}
+          <Card className="mb-8 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-xl border-red-200 dark:border-red-800">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                    <span className="text-lg">🔥</span>
+                  </div>
+                  <span>Hot Vacancy Jobs</span>
+                  <Badge variant="destructive" className="animate-pulse">Premium</Badge>
+                </CardTitle>
+                <Link href="/jobs?hot=true">
+                  <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20">
+                    View All Hot Jobs
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Sample Hot Vacancy Cards */}
+                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-red-200 dark:border-red-800 hover:shadow-lg transition-all duration-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
+                          🔥 Hot
+                        </Badge>
+                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
+                          URGENT
+                        </Badge>
+                      </div>
+                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                    </div>
+                    <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Senior Software Engineer</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">TechCorp Solutions</p>
+                    <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span>📍 Mumbai</span>
+                      <span>💼 3-5 years</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-green-600">₹8-12 LPA</span>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                        Apply Now
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-red-200 dark:border-red-800 hover:shadow-lg transition-all duration-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
+                          🔥 Hot
+                        </Badge>
+                        <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                          Super Featured
+                        </Badge>
+                      </div>
+                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                    </div>
+                    <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Product Manager</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">InnovateTech</p>
+                    <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span>📍 Bangalore</span>
+                      <span>💼 5-7 years</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-green-600">₹12-18 LPA</span>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                        Apply Now
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-red-200 dark:border-red-800 hover:shadow-lg transition-all duration-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
+                          🔥 Hot
+                        </Badge>
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                          Boosted
+                        </Badge>
+                      </div>
+                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                    </div>
+                    <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Data Scientist</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">AnalyticsPro</p>
+                    <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span>📍 Delhi</span>
+                      <span>💼 2-4 years</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-green-600">₹6-10 LPA</span>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                        Apply Now
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Zap className="w-4 h-4 text-red-600" />
+                  <span className="font-medium text-red-800 dark:text-red-200">Hot Vacancy Benefits</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-red-700 dark:text-red-300">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Priority visibility in search results</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Proactive candidate alerts</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Enhanced company branding</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Faster hiring process</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Upcoming Interviews Section */}
           {upcomingInterviews.length > 0 && (

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown } from "lucide-react"
+import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown, TrendingUp, Zap, Star, Plus, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -48,6 +48,32 @@ export default function PostJobPage() {
     roleCategory: "",
     education: "",
     employmentType: "",
+    // Hot Vacancy Premium Features
+    isHotVacancy: false,
+    urgentHiring: false,
+    multipleEmailIds: [] as string[],
+    boostedSearch: false,
+    searchBoostLevel: "standard",
+    citySpecificBoost: [] as string[],
+    videoBanner: "",
+    whyWorkWithUs: "",
+    companyReviews: [] as string[],
+    autoRefresh: false,
+    refreshDiscount: 0,
+    attachmentFiles: [] as string[],
+    officeImages: [] as string[],
+    companyProfile: "",
+    proactiveAlerts: false,
+    alertRadius: 50,
+    alertFrequency: "immediate",
+    featuredKeywords: [] as string[],
+    customBranding: {},
+    superFeatured: false,
+    tierLevel: "basic",
+    externalApplyUrl: "",
+    hotVacancyPrice: 0,
+    hotVacancyCurrency: "INR",
+    hotVacancyPaymentStatus: "pending"
   })
   const [jobPhotos, setJobPhotos] = useState<any[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
@@ -62,13 +88,15 @@ export default function PostJobPage() {
   const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
+  const [currentEmail, setCurrentEmail] = useState("")
 
   const steps = [
     { id: 1, title: "Basic Info", description: "Basic job information" },
     { id: 2, title: "Job Details", description: "Role, industry, and requirements" },
     { id: 3, title: "Benefits & Perks", description: "What you offer" },
-    { id: 4, title: "Photos", description: "Showcase your workplace" },
-    { id: 5, title: "Review & Post", description: "Final review" },
+    { id: 4, title: "Hot Vacancy Features", description: "Premium features and options" },
+    { id: 5, title: "Photos", description: "Showcase your workplace" },
+    { id: 6, title: "Review & Post", description: "Final review" },
   ]
 
   // Load job photos when uploadedJobId changes
@@ -131,7 +159,33 @@ export default function PostJobPage() {
               industryType: jobData.industryType || '',
               roleCategory: jobData.roleCategory || '',
               education: jobData.education || '',
-              employmentType: jobData.employmentType || ''
+              employmentType: jobData.employmentType || '',
+              // Hot Vacancy Premium Features
+              isHotVacancy: jobData.isHotVacancy || false,
+              urgentHiring: jobData.urgentHiring || false,
+              multipleEmailIds: jobData.multipleEmailIds || [],
+              boostedSearch: jobData.boostedSearch || false,
+              searchBoostLevel: jobData.searchBoostLevel || "standard",
+              citySpecificBoost: jobData.citySpecificBoost || [],
+              videoBanner: jobData.videoBanner || "",
+              whyWorkWithUs: jobData.whyWorkWithUs || "",
+              companyReviews: jobData.companyReviews || [],
+              autoRefresh: jobData.autoRefresh || false,
+              refreshDiscount: jobData.refreshDiscount || 0,
+              attachmentFiles: jobData.attachmentFiles || [],
+              officeImages: jobData.officeImages || [],
+              companyProfile: jobData.companyProfile || "",
+              proactiveAlerts: jobData.proactiveAlerts || false,
+              alertRadius: jobData.alertRadius || 50,
+              alertFrequency: jobData.alertFrequency || "immediate",
+              featuredKeywords: jobData.featuredKeywords || [],
+              customBranding: jobData.customBranding || {},
+              superFeatured: jobData.superFeatured || false,
+              tierLevel: jobData.tierLevel || "basic",
+              externalApplyUrl: jobData.externalApplyUrl || "",
+              hotVacancyPrice: jobData.hotVacancyPrice || 0,
+              hotVacancyCurrency: jobData.hotVacancyCurrency || "INR",
+              hotVacancyPaymentStatus: jobData.hotVacancyPaymentStatus || "pending"
             });
             
             // Load existing job photos
@@ -181,7 +235,33 @@ export default function PostJobPage() {
             industryType: templateData.industryType || '',
             roleCategory: templateData.roleCategory || '',
             education: templateData.education || '',
-            employmentType: templateData.employmentType || ''
+            employmentType: templateData.employmentType || '',
+            // Hot Vacancy Premium Features
+            isHotVacancy: templateData.isHotVacancy || false,
+            urgentHiring: templateData.urgentHiring || false,
+            multipleEmailIds: templateData.multipleEmailIds || [],
+            boostedSearch: templateData.boostedSearch || false,
+            searchBoostLevel: templateData.searchBoostLevel || "standard",
+            citySpecificBoost: templateData.citySpecificBoost || [],
+            videoBanner: templateData.videoBanner || "",
+            whyWorkWithUs: templateData.whyWorkWithUs || "",
+            companyReviews: templateData.companyReviews || [],
+            autoRefresh: templateData.autoRefresh || false,
+            refreshDiscount: templateData.refreshDiscount || 0,
+            attachmentFiles: templateData.attachmentFiles || [],
+            officeImages: templateData.officeImages || [],
+            companyProfile: templateData.companyProfile || "",
+            proactiveAlerts: templateData.proactiveAlerts || false,
+            alertRadius: templateData.alertRadius || 50,
+            alertFrequency: templateData.alertFrequency || "immediate",
+            featuredKeywords: templateData.featuredKeywords || [],
+            customBranding: templateData.customBranding || {},
+            superFeatured: templateData.superFeatured || false,
+            tierLevel: templateData.tierLevel || "basic",
+            externalApplyUrl: templateData.externalApplyUrl || "",
+            hotVacancyPrice: templateData.hotVacancyPrice || 0,
+            hotVacancyCurrency: templateData.hotVacancyCurrency || "INR",
+            hotVacancyPaymentStatus: templateData.hotVacancyPaymentStatus || "pending"
           });
           
           toast.success(`Template "${decodeURIComponent(templateName || '')}" applied successfully! Customize the fields as needed.`);
@@ -245,7 +325,33 @@ export default function PostJobPage() {
           industryType: template.templateData.industryType || '',
           roleCategory: template.templateData.roleCategory || '',
           education: template.templateData.education || '',
-          employmentType: template.templateData.employmentType || ''
+          employmentType: template.templateData.employmentType || '',
+          // Hot Vacancy Premium Features
+          isHotVacancy: template.templateData.isHotVacancy || false,
+          urgentHiring: template.templateData.urgentHiring || false,
+          multipleEmailIds: template.templateData.multipleEmailIds || [],
+          boostedSearch: template.templateData.boostedSearch || false,
+          searchBoostLevel: template.templateData.searchBoostLevel || "standard",
+          citySpecificBoost: template.templateData.citySpecificBoost || [],
+          videoBanner: template.templateData.videoBanner || "",
+          whyWorkWithUs: template.templateData.whyWorkWithUs || "",
+          companyReviews: template.templateData.companyReviews || [],
+          autoRefresh: template.templateData.autoRefresh || false,
+          refreshDiscount: template.templateData.refreshDiscount || 0,
+          attachmentFiles: template.templateData.attachmentFiles || [],
+          officeImages: template.templateData.officeImages || [],
+          companyProfile: template.templateData.companyProfile || "",
+          proactiveAlerts: template.templateData.proactiveAlerts || false,
+          alertRadius: template.templateData.alertRadius || 50,
+          alertFrequency: template.templateData.alertFrequency || "immediate",
+          featuredKeywords: template.templateData.featuredKeywords || [],
+          customBranding: template.templateData.customBranding || {},
+          superFeatured: template.templateData.superFeatured || false,
+          tierLevel: template.templateData.tierLevel || "basic",
+          externalApplyUrl: template.templateData.externalApplyUrl || "",
+          hotVacancyPrice: template.templateData.hotVacancyPrice || 0,
+          hotVacancyCurrency: template.templateData.hotVacancyCurrency || "INR",
+          hotVacancyPaymentStatus: template.templateData.hotVacancyPaymentStatus || "pending"
         };
         
         console.log('📝 Setting form data:', newFormData);
@@ -470,7 +576,33 @@ export default function PostJobPage() {
              industryType: "",
              roleCategory: "",
              education: "",
-             employmentType: ""
+             employmentType: "",
+             // Hot Vacancy Premium Features
+             isHotVacancy: false,
+             urgentHiring: false,
+             multipleEmailIds: [],
+             boostedSearch: false,
+             searchBoostLevel: "standard",
+             citySpecificBoost: [],
+             videoBanner: "",
+             whyWorkWithUs: "",
+             companyReviews: [],
+             autoRefresh: false,
+             refreshDiscount: 0,
+             attachmentFiles: [],
+             officeImages: [],
+             companyProfile: "",
+             proactiveAlerts: false,
+             alertRadius: 50,
+             alertFrequency: "immediate",
+             featuredKeywords: [],
+             customBranding: {},
+             superFeatured: false,
+             tierLevel: "basic",
+             externalApplyUrl: "",
+             hotVacancyPrice: 0,
+             hotVacancyCurrency: "INR",
+             hotVacancyPaymentStatus: "pending"
            })
            setCurrentStep(1)
          }
@@ -597,6 +729,23 @@ export default function PostJobPage() {
     }
   }
 
+  const handleEmailAdd = () => {
+    if (currentEmail.trim() && !formData.multipleEmailIds.includes(currentEmail.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        multipleEmailIds: [...prev.multipleEmailIds, currentEmail.trim()]
+      }))
+      setCurrentEmail("")
+    }
+  }
+
+  const handleEmailRemove = (email: string) => {
+    setFormData(prev => ({
+      ...prev,
+      multipleEmailIds: prev.multipleEmailIds.filter(e => e !== email)
+    }))
+  }
+
   // Navigation handlers
   const goToNextStep = () => {
     if (currentStep < steps.length) {
@@ -677,7 +826,33 @@ export default function PostJobPage() {
                           industryType: "",
                           roleCategory: "",
                           education: "",
-                          employmentType: ""
+                          employmentType: "",
+                          // Hot Vacancy Premium Features
+                          isHotVacancy: false,
+                          urgentHiring: false,
+                          multipleEmailIds: [],
+                          boostedSearch: false,
+                          searchBoostLevel: "standard",
+                          citySpecificBoost: [],
+                          videoBanner: "",
+                          whyWorkWithUs: "",
+                          companyReviews: [],
+                          autoRefresh: false,
+                          refreshDiscount: 0,
+                          attachmentFiles: [],
+                          officeImages: [],
+                          companyProfile: "",
+                          proactiveAlerts: false,
+                          alertRadius: 50,
+                          alertFrequency: "immediate",
+                          featuredKeywords: [],
+                          customBranding: {},
+                          superFeatured: false,
+                          tierLevel: "basic",
+                          externalApplyUrl: "",
+                          hotVacancyPrice: 0,
+                          hotVacancyCurrency: "INR",
+                          hotVacancyPaymentStatus: "pending"
                         });
                         toast.info("Template cleared. Form has been reset.");
                       }}
@@ -1066,6 +1241,173 @@ export default function PostJobPage() {
           </div>
         )
       case 4:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  🔥 Hot Vacancy Premium Features
+                </h3>
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Premium
+                </Badge>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Make your job posting stand out with premium features for maximum visibility and faster hiring.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isHotVacancy"
+                    checked={formData.isHotVacancy}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isHotVacancy: checked as boolean })}
+                  />
+                  <label htmlFor="isHotVacancy" className="text-sm font-medium">
+                    Make this a Hot Vacancy (Premium Job Posting)
+                  </label>
+                </div>
+                
+                {formData.isHotVacancy && (
+                  <div className="ml-6 space-y-4 border-l-2 border-red-200 pl-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="urgentHiring"
+                          checked={formData.urgentHiring}
+                          onCheckedChange={(checked) => setFormData({ ...formData, urgentHiring: checked as boolean })}
+                        />
+                        <label htmlFor="urgentHiring" className="text-sm flex items-center gap-1">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                          Urgent Hiring
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="boostedSearch"
+                          checked={formData.boostedSearch}
+                          onCheckedChange={(checked) => setFormData({ ...formData, boostedSearch: checked as boolean })}
+                        />
+                        <label htmlFor="boostedSearch" className="text-sm flex items-center gap-1">
+                          <TrendingUp className="h-4 w-4 text-blue-500" />
+                          Boosted Search
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="proactiveAlerts"
+                          checked={formData.proactiveAlerts}
+                          onCheckedChange={(checked) => setFormData({ ...formData, proactiveAlerts: checked as boolean })}
+                        />
+                        <label htmlFor="proactiveAlerts" className="text-sm flex items-center gap-1">
+                          <Zap className="h-4 w-4 text-green-500" />
+                          Proactive Alerts
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="superFeatured"
+                          checked={formData.superFeatured}
+                          onCheckedChange={(checked) => setFormData({ ...formData, superFeatured: checked as boolean })}
+                        />
+                        <label htmlFor="superFeatured" className="text-sm flex items-center gap-1">
+                          <Star className="h-4 w-4 text-purple-500" />
+                          Super Featured
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        External Application URL (Optional)
+                      </label>
+                      <Input
+                        placeholder="https://company.com/careers/apply"
+                        value={formData.externalApplyUrl}
+                        onChange={(e) => setFormData({ ...formData, externalApplyUrl: e.target.value })}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        If provided, applicants will be redirected to your external application page
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        Additional Email IDs for Applications
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="hr@company.com"
+                          value={currentEmail}
+                          onChange={(e) => setCurrentEmail(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleEmailAdd()}
+                        />
+                        <Button type="button" onClick={handleEmailAdd} size="sm">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.multipleEmailIds.map((email, index) => (
+                          <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {email}
+                            <X 
+                              className="h-3 w-3 cursor-pointer" 
+                              onClick={() => handleEmailRemove(email)}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        Why Work With Us
+                      </label>
+                      <Textarea
+                        placeholder="Tell candidates why they should choose your company..."
+                        className="min-h-20"
+                        value={formData.whyWorkWithUs}
+                        onChange={(e) => setFormData({ ...formData, whyWorkWithUs: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        Company Profile
+                      </label>
+                      <Textarea
+                        placeholder="Detailed company profile and culture..."
+                        className="min-h-20"
+                        value={formData.companyProfile}
+                        onChange={(e) => setFormData({ ...formData, companyProfile: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        Video Banner URL (Optional)
+                      </label>
+                      <Input
+                        placeholder="https://youtube.com/watch?v=..."
+                        value={formData.videoBanner}
+                        onChange={(e) => setFormData({ ...formData, videoBanner: e.target.value })}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Add a video to showcase your company culture
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      case 5:
         return (
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">

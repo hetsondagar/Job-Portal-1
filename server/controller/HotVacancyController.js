@@ -61,7 +61,28 @@ exports.createHotVacancy = async (req, res, next) => {
       // SEO
       seoTitle,
       seoDescription,
-      keywords = []
+      keywords = [],
+      // Premium Hot Vacancy Features
+      urgentHiring = false,
+      multipleEmailIds = [],
+      boostedSearch = true,
+      searchBoostLevel = 'premium',
+      citySpecificBoost = [],
+      videoBanner,
+      whyWorkWithUs,
+      companyReviews = [],
+      autoRefresh = false,
+      refreshDiscount = 0,
+      attachmentFiles = [],
+      officeImages = [],
+      companyProfile,
+      proactiveAlerts = true,
+      alertRadius = 50,
+      alertFrequency = 'immediate',
+      featuredKeywords = [],
+      customBranding = {},
+      superFeatured = false,
+      tierLevel = 'premium'
     } = req.body;
 
     // Validate required fields
@@ -173,12 +194,54 @@ exports.createHotVacancy = async (req, res, next) => {
       seoDescription,
       keywords,
       validTill,
-      status: 'draft' // Start as draft until payment is confirmed
+      status: 'draft', // Start as draft until payment is confirmed
+      // Premium Hot Vacancy Features
+      urgentHiring,
+      multipleEmailIds,
+      boostedSearch,
+      searchBoostLevel,
+      citySpecificBoost,
+      videoBanner,
+      whyWorkWithUs,
+      companyReviews,
+      autoRefresh,
+      refreshDiscount,
+      attachmentFiles,
+      officeImages,
+      companyProfile,
+      proactiveAlerts,
+      alertRadius,
+      alertFrequency,
+      featuredKeywords,
+      customBranding,
+      superFeatured,
+      tierLevel
     };
 
     const hotVacancy = await HotVacancy.create(hotVacancyData);
 
     console.log('✅ Hot vacancy created successfully:', hotVacancy.id);
+
+    // Send proactive alerts if enabled
+    if (proactiveAlerts) {
+      try {
+        const HotVacancyAlertService = require('../services/hotVacancyAlertService');
+        const company = await Company.findByPk(companyId, {
+          attributes: ['name']
+        });
+        
+        const hotVacancyData = {
+          ...hotVacancy.toJSON(),
+          companyName: company?.name || 'Company'
+        };
+        
+        await HotVacancyAlertService.sendProactiveAlerts(hotVacancy.id, hotVacancyData);
+        console.log('🔥 Proactive alerts sent for hot vacancy:', hotVacancy.id);
+      } catch (alertError) {
+        console.error('❌ Error sending proactive alerts:', alertError);
+        // Don't fail the main request if alerts fail
+      }
+    }
 
     // Consume job posting quota for hot vacancy
     try {
@@ -594,9 +657,11 @@ exports.getPricingTiers = async (req, res, next) => {
           '7 days listing',
           'Up to 25 applications',
           'Basic analytics',
-          'Standard visibility'
+          'Standard visibility',
+          'Basic job alerts'
         ],
-        duration: 7
+        duration: 7,
+        tierLevel: 'basic'
       },
       premium: {
         name: 'Premium Hot Vacancy',
@@ -608,9 +673,14 @@ exports.getPricingTiers = async (req, res, next) => {
           'Advanced analytics',
           'Priority listing',
           'Featured badge',
-          'Candidate matching'
+          'Candidate matching',
+          'Proactive job alerts',
+          'Boosted search visibility',
+          'Multiple email support',
+          'Office images upload'
         ],
-        duration: 14
+        duration: 14,
+        tierLevel: 'premium'
       },
       enterprise: {
         name: 'Enterprise Hot Vacancy',
@@ -624,9 +694,45 @@ exports.getPricingTiers = async (req, res, next) => {
           'Featured badge',
           'Candidate matching',
           'Direct contact access',
-          'Custom branding'
+          'Custom branding',
+          'Video banner support',
+          'Company profile showcase',
+          'Why work with us section',
+          'Auto-refresh option',
+          'City-specific boost',
+          'Super featured status'
         ],
-        duration: 30
+        duration: 30,
+        tierLevel: 'enterprise'
+      },
+      'super-premium': {
+        name: 'Super Premium Hot Vacancy',
+        price: 19999,
+        currency: 'INR',
+        features: [
+          '60 days listing',
+          'Unlimited applications',
+          'Advanced analytics',
+          'Top priority listing',
+          'Featured badge',
+          'Candidate matching',
+          'Direct contact access',
+          'Custom branding',
+          'Video banner support',
+          'Company profile showcase',
+          'Why work with us section',
+          'Auto-refresh option',
+          'City-specific boost',
+          'Super featured status',
+          'Urgent hiring badge',
+          'Company reviews showcase',
+          'Attachment files support',
+          'Custom alert radius',
+          'Featured keywords boost',
+          'Refresh discount (20%)'
+        ],
+        duration: 60,
+        tierLevel: 'super-premium'
       }
     };
 

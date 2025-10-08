@@ -22,6 +22,7 @@ import {
   Camera,
   Calendar,
   ChevronDown,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,6 +100,12 @@ interface Job {
   learningObjectives?: string
   mentorship?: string
   isPreferred?: boolean
+  // Hot Vacancy Premium Features
+  isHotVacancy?: boolean
+  urgentHiring?: boolean
+  superFeatured?: boolean
+  boostedSearch?: boolean
+  externalApplyUrl?: string
 }
 
 export default function JobsPage() {
@@ -2399,6 +2406,23 @@ export default function JobsPage() {
                                   </p>
                                 </div>
                                 <div className="flex items-center space-x-2 ml-4">
+                                  {job.isHotVacancy && (
+                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs animate-pulse">
+                                      🔥 Hot
+                                    </Badge>
+                                  )}
+                                  {job.urgentHiring && (
+                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs animate-pulse">
+                                      <AlertCircle className="w-3 h-3 mr-1" />
+                                      URGENT
+                                    </Badge>
+                                  )}
+                                  {job.superFeatured && (
+                                    <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                                      <Star className="w-3 h-3 mr-1" />
+                                      Super Featured
+                                    </Badge>
+                                  )}
                                   {!hasActiveFilters && job.isPreferred && (
                                     <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
                                       <Star className="w-3 h-3 mr-1" />

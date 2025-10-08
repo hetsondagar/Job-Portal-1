@@ -362,6 +362,127 @@ const Job = sequelize.define('Job', {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'employmenttype' // Map to lowercase database column
+  },
+  // Hot Vacancy Premium Features
+  isHotVacancy: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  urgentHiring: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  multipleEmailIds: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  boostedSearch: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  searchBoostLevel: {
+    type: DataTypes.ENUM('standard', 'premium', 'super', 'city-specific'),
+    allowNull: true,
+    defaultValue: 'standard'
+  },
+  citySpecificBoost: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  videoBanner: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  whyWorkWithUs: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  companyReviews: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  autoRefresh: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  refreshDiscount: {
+    type: DataTypes.DECIMAL,
+    allowNull: true,
+    defaultValue: 0
+  },
+  attachmentFiles: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  officeImages: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  companyProfile: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  proactiveAlerts: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  alertRadius: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 50
+  },
+  alertFrequency: {
+    type: DataTypes.ENUM('immediate', 'daily', 'weekly'),
+    allowNull: true,
+    defaultValue: 'immediate'
+  },
+  featuredKeywords: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: []
+  },
+  customBranding: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  },
+  superFeatured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  tierLevel: {
+    type: DataTypes.ENUM('basic', 'premium', 'enterprise', 'super-premium'),
+    allowNull: true,
+    defaultValue: 'basic'
+  },
+  externalApplyUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  hotVacancyPrice: {
+    type: DataTypes.DECIMAL,
+    allowNull: true
+  },
+  hotVacancyCurrency: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'INR'
+  },
+  hotVacancyPaymentStatus: {
+    type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
+    allowNull: true,
+    defaultValue: 'pending'
   }
 }, {
   sequelize,

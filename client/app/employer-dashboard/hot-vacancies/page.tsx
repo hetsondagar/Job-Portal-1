@@ -2,254 +2,227 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Flame, Clock, Users, Eye, Edit, Trash2, Filter, Search, DollarSign, Star, Zap } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  MoreVertical, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  AlertCircle, 
+  Star, 
+  Zap, 
+  TrendingUp, 
+  Users, 
+  Clock, 
+  DollarSign,
+  Crown,
+  Fire,
+  Target,
+  MapPin,
+  Calendar,
+  Loader2
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { motion } from "framer-motion"
-import { Navbar } from "@/components/navbar"
-import { apiService } from '@/lib/api'
-import { useAuth } from '@/hooks/useAuth'
-import { toast } from 'sonner'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerFooter } from "@/components/employer-footer"
+import { apiService } from "@/lib/api"
+import { toast } from "sonner"
 
 interface HotVacancy {
-  id: string
-  title: string
-  location: string
-  urgencyLevel: 'high' | 'critical' | 'immediate'
-  hiringTimeline: 'immediate' | '1-week' | '2-weeks' | '1-month'
-  status: 'draft' | 'active' | 'paused' | 'closed' | 'expired'
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
-  price: number
-  currency: string
-  pricingTier: 'basic' | 'premium' | 'enterprise'
-  views: number
-  applications: number
-  maxApplications: number
-  validTill: string
-  applicationDeadline: string
-  createdAt: string
-  company?: {
-    name: string
-    industry: string
-  }
-  photos?: Array<{
-    id: string
-    fileUrl: string
-    isPrimary: boolean
-  }>
-}
-
-interface PricingTier {
-  name: string
-  price: number
-  currency: string
-  features: string[]
-  duration: number
+  id: string;
+  title: string;
+  location: string;
+  jobType: string;
+  experienceLevel: string;
+  salary: string;
+  status: 'draft' | 'active' | 'paused' | 'closed';
+  urgencyLevel: 'high' | 'critical' | 'immediate';
+  tierLevel: 'basic' | 'premium' | 'enterprise' | 'super-premium';
+  pricingTier: string;
+  price: number;
+  currency: string;
+  views: number;
+  applications: number;
+  createdAt: string;
+  publishedAt?: string;
+  validTill: string;
+  urgentHiring: boolean;
+  boostedSearch: boolean;
+  proactiveAlerts: boolean;
+  superFeatured: boolean;
+  featuredBadge: boolean;
+  companyName?: string;
 }
 
 export default function HotVacanciesPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const [hotVacancies, setHotVacancies] = useState<HotVacancy[]>([])
-  const [pricingTiers, setPricingTiers] = useState<Record<string, PricingTier>>({})
-  const [loadingData, setLoadingData] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [urgencyFilter, setUrgencyFilter] = useState("all")
-  const [showPricingModal, setShowPricingModal] = useState(false)
+  const [loadingVacancies, setLoadingVacancies] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [tierFilter, setTierFilter] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<string>("newest")
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       loadHotVacancies()
-      loadPricingTiers()
     }
-  }, [user, loading])
+  }, [user])
 
   const loadHotVacancies = async () => {
     try {
-      setLoadingData(true)
-      const response = await apiService.getHotVacancies()
+      setLoadingVacancies(true)
+      const response = await apiService.getHotVacancies({
+        search: searchQuery,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        tier: tierFilter !== 'all' ? tierFilter : undefined,
+        sort: sortBy
+      })
+      
       if (response.success) {
         setHotVacancies(response.data || [])
       } else {
-        toast.error('Failed to load hot vacancies')
+        toast.error(response.message || "Failed to load hot vacancies")
       }
     } catch (error) {
-      console.error('Failed to load hot vacancies:', error)
-      toast.error('Failed to load hot vacancies')
+      console.error('Error loading hot vacancies:', error)
+      toast.error("Failed to load hot vacancies")
     } finally {
-      setLoadingData(false)
+      setLoadingVacancies(false)
     }
   }
 
-  const loadPricingTiers = async () => {
-    try {
-      const response = await apiService.getHotVacancyPricing()
-      if (response.success) {
-        setPricingTiers(response.data || {})
-      }
-    } catch (error) {
-      console.error('Failed to load pricing tiers:', error)
-    }
-  }
+  useEffect(() => {
+    loadHotVacancies()
+  }, [searchQuery, statusFilter, tierFilter, sortBy])
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'immediate': return 'bg-red-600 text-white'
-      case 'critical': return 'bg-orange-600 text-white'
-      case 'high': return 'bg-yellow-600 text-white'
-      default: return 'bg-gray-600 text-white'
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-600 text-white'
-      case 'draft': return 'bg-gray-600 text-white'
-      case 'paused': return 'bg-yellow-600 text-white'
-      case 'closed': return 'bg-red-600 text-white'
-      case 'expired': return 'bg-gray-500 text-white'
-      default: return 'bg-gray-600 text-white'
-    }
-  }
-
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-600 text-white'
-      case 'pending': return 'bg-yellow-600 text-white'
-      case 'failed': return 'bg-red-600 text-white'
-      case 'refunded': return 'bg-gray-600 text-white'
-      default: return 'bg-gray-600 text-white'
-    }
-  }
-
-  const filteredHotVacancies = hotVacancies.filter(vacancy => {
-    const matchesSearch = vacancy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vacancy.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || vacancy.status === statusFilter
-    const matchesUrgency = urgencyFilter === 'all' || vacancy.urgencyLevel === urgencyFilter
-    return matchesSearch && matchesStatus && matchesUrgency
-  })
-
-  const handleCreateHotVacancy = () => {
-    router.push('/employer-dashboard/hot-vacancies/create')
-  }
-
-  const handleViewHotVacancy = (id: string) => {
-    router.push(`/employer-dashboard/hot-vacancies/${id}`)
-  }
-
-  const handleEditHotVacancy = (id: string) => {
-    router.push(`/employer-dashboard/hot-vacancies/${id}/edit`)
-  }
-
-  const handleDeleteHotVacancy = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this hot vacancy?')) return
-
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this hot vacancy?")) return
+    
     try {
       const response = await apiService.deleteHotVacancy(id)
       if (response.success) {
-        toast.success('Hot vacancy deleted successfully')
+        toast.success("Hot vacancy deleted successfully")
         loadHotVacancies()
       } else {
-        toast.error('Failed to delete hot vacancy')
+        toast.error(response.message || "Failed to delete hot vacancy")
       }
     } catch (error) {
-      console.error('Failed to delete hot vacancy:', error)
-      toast.error('Failed to delete hot vacancy')
+      console.error('Error deleting hot vacancy:', error)
+      toast.error("Failed to delete hot vacancy")
     }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { color: "bg-gray-100 text-gray-800", icon: Edit },
+      active: { color: "bg-green-100 text-green-800", icon: Eye },
+      paused: { color: "bg-yellow-100 text-yellow-800", icon: Clock },
+      closed: { color: "bg-red-100 text-red-800", icon: Trash2 }
+    }
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft
+    const Icon = config.icon
+    
+    return (
+      <Badge className={`${config.color} flex items-center gap-1`}>
+        <Icon className="h-3 w-3" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    )
+  }
+
+  const getTierBadge = (tier: string) => {
+    const tierConfig = {
+      basic: { color: "bg-blue-100 text-blue-800", icon: Star },
+      premium: { color: "bg-purple-100 text-purple-800", icon: Crown },
+      enterprise: { color: "bg-orange-100 text-orange-800", icon: TrendingUp },
+      'super-premium': { color: "bg-red-100 text-red-800", icon: Fire }
+    }
+    
+    const config = tierConfig[tier as keyof typeof tierConfig] || tierConfig.premium
+    const Icon = config.icon
+    
+    return (
+      <Badge className={`${config.color} flex items-center gap-1`}>
+        <Icon className="h-3 w-3" />
+        {tier.replace('-', ' ').toUpperCase()}
+      </Badge>
+    )
+  }
+
+  const getUrgencyBadge = (urgency: string) => {
+    if (urgency === 'critical' || urgency === 'immediate') {
+      return (
+        <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          URGENT
+        </Badge>
+      )
+    }
+    return null
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency || 'INR',
+      minimumFractionDigits: 0
+    }).format(amount)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="pt-16 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      <EmployerNavbar />
       
-      <div className="pt-16 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <Flame className="h-8 w-8 text-red-600" />
+              <h1 className="text-3xl font-bold flex items-center gap-2">
                   Hot Vacancies
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <Fire className="h-3 w-3" />
+                  Premium
+                </Badge>
                 </h1>
-                <p className="mt-2 text-gray-600">
-                  Premium urgent hiring solutions for immediate recruitment needs
+              <p className="text-gray-600 mt-2">
+                Manage your premium hot vacancy listings with advanced features
                 </p>
               </div>
-              <div className="flex gap-3">
-                <Dialog open={showPricingModal} onOpenChange={setShowPricingModal}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      View Pricing
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Star className="h-5 w-5 text-yellow-500" />
-                        Hot Vacancy Pricing Plans
-                      </DialogTitle>
-                      <DialogDescription>
-                        Choose the perfect plan for your urgent hiring needs
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {Object.entries(pricingTiers).map(([tier, plan]) => (
-                        <Card key={tier} className={`relative ${tier === 'premium' ? 'ring-2 ring-blue-500' : ''}`}>
-                          {tier === 'premium' && (
-                            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                              <Badge className="bg-blue-600 text-white">Most Popular</Badge>
-                            </div>
-                          )}
-                          <CardHeader className="text-center">
-                            <CardTitle className="text-xl">{plan.name}</CardTitle>
-                            <div className="text-3xl font-bold text-blue-600">
-                              ₹{plan.price.toLocaleString()}
-                            </div>
-                            <p className="text-sm text-gray-600">{plan.duration} days listing</p>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="space-y-2">
-                              {plan.features.map((feature, index) => (
-                                <li key={index} className="flex items-center gap-2 text-sm">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  {feature}
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <Button onClick={handleCreateHotVacancy} className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
+            <Button 
+              onClick={() => router.push('/employer-dashboard/hot-vacancies/create')}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
                   Create Hot Vacancy
                 </Button>
-              </div>
             </div>
           </div>
 
@@ -257,59 +230,54 @@ export default function HotVacanciesPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <Flame className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div className="ml-4">
+              <div className="flex items-center justify-between">
+                <div>
                     <p className="text-sm font-medium text-gray-600">Total Hot Vacancies</p>
-                    <p className="text-2xl font-bold text-gray-900">{hotVacancies.length}</p>
+                  <p className="text-2xl font-bold">{hotVacancies.length}</p>
                   </div>
+                <Fire className="h-8 w-8 text-red-500" />
                 </div>
               </CardContent>
             </Card>
+          
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Zap className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="ml-4">
+              <div className="flex items-center justify-between">
+                <div>
                     <p className="text-sm font-medium text-gray-600">Active</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-2xl font-bold">
                       {hotVacancies.filter(v => v.status === 'active').length}
                     </p>
                   </div>
+                <Eye className="h-8 w-8 text-green-500" />
                 </div>
               </CardContent>
             </Card>
+          
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Applications</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {hotVacancies.reduce((sum, v) => sum + v.applications, 0)}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Views</p>
+                  <p className="text-2xl font-bold">
+                    {hotVacancies.reduce((sum, v) => sum + v.views, 0).toLocaleString()}
                     </p>
                   </div>
+                <TrendingUp className="h-8 w-8 text-blue-500" />
                 </div>
               </CardContent>
             </Card>
+          
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Eye className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Views</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {hotVacancies.reduce((sum, v) => sum + v.views, 0)}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Applications</p>
+                  <p className="text-2xl font-bold">
+                    {hotVacancies.reduce((sum, v) => sum + v.applications, 0).toLocaleString()}
                     </p>
                   </div>
+                <Users className="h-8 w-8 text-purple-500" />
                 </div>
               </CardContent>
             </Card>
@@ -318,40 +286,55 @@ export default function HotVacanciesPage() {
           {/* Filters */}
           <Card className="mb-6">
             <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
                       placeholder="Search hot vacancies..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10"
                     />
                   </div>
                 </div>
+              
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
+                <SelectTrigger>
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="paused">Paused</SelectItem>
                     <SelectItem value="closed">Closed</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={tierFilter} onValueChange={setTierFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tiers</SelectItem>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  <SelectItem value="super-premium">Super Premium</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filter by urgency" />
+              
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Urgency</SelectItem>
-                    <SelectItem value="immediate">Immediate</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="views">Most Views</SelectItem>
+                  <SelectItem value="applications">Most Applications</SelectItem>
+                  <SelectItem value="price">Price (High to Low)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -359,132 +342,147 @@ export default function HotVacanciesPage() {
           </Card>
 
           {/* Hot Vacancies List */}
-          {loadingData ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading hot vacancies...</p>
+        {loadingVacancies ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <span className="ml-2">Loading hot vacancies...</span>
             </div>
-          ) : filteredHotVacancies.length === 0 ? (
+        ) : hotVacancies.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Hot Vacancies Found</h3>
+              <Fire className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Hot Vacancies Yet</h3>
                 <p className="text-gray-600 mb-6">
-                  {hotVacancies.length === 0 
-                    ? "Create your first hot vacancy to start urgent hiring"
-                    : "No hot vacancies match your current filters"
-                  }
-                </p>
-                {hotVacancies.length === 0 && (
-                  <Button onClick={handleCreateHotVacancy} className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
+                Create your first hot vacancy to get premium visibility and attract top candidates.
+              </p>
+              <Button 
+                onClick={() => router.push('/employer-dashboard/hot-vacancies/create')}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
                     Create Hot Vacancy
                   </Button>
-                )}
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredHotVacancies.map((vacancy) => (
-                <motion.div
-                  key={vacancy.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
+          <div className="space-y-4">
+            {hotVacancies.map((vacancy) => (
+              <Card key={vacancy.id} className="hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-lg line-clamp-2 mb-2">
-                            {vacancy.title}
-                          </CardTitle>
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                            <span>{vacancy.location}</span>
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900">{vacancy.title}</h3>
+                        {getStatusBadge(vacancy.status)}
+                        {getTierBadge(vacancy.tierLevel)}
+                        {getUrgencyBadge(vacancy.urgencyLevel)}
+                        {vacancy.featuredBadge && (
+                          <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+                            <Star className="h-3 w-3" />
+                            Featured
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <MapPin className="h-4 w-4" />
+                          {vacancy.location}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock className="h-4 w-4" />
+                          {vacancy.jobType}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Users className="h-4 w-4" />
+                          {vacancy.experienceLevel}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <DollarSign className="h-4 w-4" />
+                          {vacancy.salary || 'Not specified'}
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge className={getUrgencyColor(vacancy.urgencyLevel)}>
-                            {vacancy.urgencyLevel}
-                          </Badge>
-                          <Badge className={getStatusColor(vacancy.status)}>
-                            {vacancy.status}
-                          </Badge>
+                      
+                      <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
+                        <div className="flex items-center gap-1">
+                          <Eye className="h-4 w-4" />
+                          {vacancy.views.toLocaleString()} views
                         </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          {vacancy.applications.toLocaleString()} applications
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          Created {formatDate(vacancy.createdAt)}
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Hiring Timeline:</span>
-                          <span className="font-medium">{vacancy.hiringTimeline}</span>
+                        <div className="flex items-center gap-1">
+                          <Target className="h-4 w-4" />
+                          Valid till {formatDate(vacancy.validTill)}
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Applications:</span>
-                          <span className="font-medium">
-                            {vacancy.applications}/{vacancy.maxApplications}
-                          </span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Views:</span>
-                          <span className="font-medium">{vacancy.views}</span>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Premium Features:</span>
+                        {vacancy.boostedSearch && (
+                          <Badge variant="outline" className="text-xs">Boosted Search</Badge>
+                        )}
+                        {vacancy.proactiveAlerts && (
+                          <Badge variant="outline" className="text-xs">Proactive Alerts</Badge>
+                        )}
+                        {vacancy.urgentHiring && (
+                          <Badge variant="outline" className="text-xs">Urgent Hiring</Badge>
+                        )}
+                        {vacancy.superFeatured && (
+                          <Badge variant="outline" className="text-xs">Super Featured</Badge>
+                        )}
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Price:</span>
-                          <span className="font-medium text-green-600">
-                            ₹{vacancy.price.toLocaleString()}
-                          </span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Payment:</span>
-                          <Badge className={getPaymentStatusColor(vacancy.paymentStatus)}>
-                            {vacancy.paymentStatus}
-                          </Badge>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-gray-900">
+                          {formatCurrency(vacancy.price, vacancy.currency)}
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Valid Till:</span>
-                          <span className="font-medium">
-                            {new Date(vacancy.validTill).toLocaleDateString()}
-                          </span>
+                        <div className="text-sm text-gray-600">
+                          {vacancy.pricingTier} tier
                         </div>
                       </div>
                       
-                      <div className="flex gap-2 mt-4 pt-4 border-t">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewHotVacancy(vacancy.id)}
-                          className="flex-1"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditHotVacancy(vacancy.id)}
-                          className="flex-1"
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteHotVacancy(vacancy.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/employer-dashboard/hot-vacancies/${vacancy.id}`)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/employer-dashboard/hot-vacancies/${vacancy.id}/edit`)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDelete(vacancy.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
               ))}
             </div>
           )}
         </div>
-      </div>
+      
+      <EmployerFooter />
     </div>
   )
 }

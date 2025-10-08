@@ -67,7 +67,33 @@ exports.createJob = async (req, res, next) => {
       role,
       industryType,
       roleCategory,
-      employmentType
+      employmentType,
+      // Hot Vacancy Premium Features
+      isHotVacancy = false,
+      urgentHiring = false,
+      multipleEmailIds = [],
+      boostedSearch = false,
+      searchBoostLevel = 'standard',
+      citySpecificBoost = [],
+      videoBanner,
+      whyWorkWithUs,
+      companyReviews = [],
+      autoRefresh = false,
+      refreshDiscount = 0,
+      attachmentFiles = [],
+      officeImages = [],
+      companyProfile,
+      proactiveAlerts = false,
+      alertRadius = 50,
+      alertFrequency = 'immediate',
+      featuredKeywords = [],
+      customBranding = {},
+      superFeatured = false,
+      tierLevel = 'basic',
+      externalApplyUrl,
+      hotVacancyPrice,
+      hotVacancyCurrency = 'INR',
+      hotVacancyPaymentStatus = 'pending'
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
@@ -235,6 +261,32 @@ exports.createJob = async (req, res, next) => {
       roleCategory: roleCategory && roleCategory.trim() ? roleCategory.trim() : null,
       employmentType: employmentType && employmentType.trim() ? employmentType.trim() : null,
       isPremium: Boolean(isPremium),
+      // Hot Vacancy Premium Features
+      isHotVacancy: Boolean(isHotVacancy),
+      urgentHiring: Boolean(urgentHiring),
+      multipleEmailIds: Array.isArray(multipleEmailIds) ? multipleEmailIds : [],
+      boostedSearch: Boolean(boostedSearch),
+      searchBoostLevel: searchBoostLevel || 'standard',
+      citySpecificBoost: Array.isArray(citySpecificBoost) ? citySpecificBoost : [],
+      videoBanner: videoBanner && videoBanner.trim() ? videoBanner.trim() : null,
+      whyWorkWithUs: whyWorkWithUs && whyWorkWithUs.trim() ? whyWorkWithUs.trim() : null,
+      companyReviews: Array.isArray(companyReviews) ? companyReviews : [],
+      autoRefresh: Boolean(autoRefresh),
+      refreshDiscount: refreshDiscount || 0,
+      attachmentFiles: Array.isArray(attachmentFiles) ? attachmentFiles : [],
+      officeImages: Array.isArray(officeImages) ? officeImages : [],
+      companyProfile: companyProfile && companyProfile.trim() ? companyProfile.trim() : null,
+      proactiveAlerts: Boolean(proactiveAlerts),
+      alertRadius: alertRadius || 50,
+      alertFrequency: alertFrequency || 'immediate',
+      featuredKeywords: Array.isArray(featuredKeywords) ? featuredKeywords : [],
+      customBranding: customBranding || {},
+      superFeatured: Boolean(superFeatured),
+      tierLevel: tierLevel || 'basic',
+      externalApplyUrl: externalApplyUrl && externalApplyUrl.trim() ? externalApplyUrl.trim() : null,
+      hotVacancyPrice: hotVacancyPrice || null,
+      hotVacancyCurrency: hotVacancyCurrency || 'INR',
+      hotVacancyPaymentStatus: hotVacancyPaymentStatus || 'pending',
       validTill: resolvedValidTill,
       publishedAt,
       tags: Array.isArray(tags) ? tags : [],
@@ -285,6 +337,27 @@ exports.createJob = async (req, res, next) => {
     }
 
     console.log('✅ Job created successfully:', job.id);
+
+    // Send proactive alerts for hot vacancies
+    if (job.isHotVacancy && job.proactiveAlerts && job.status === 'active') {
+      try {
+        const HotVacancyAlertService = require('../services/hotVacancyAlertService');
+        const company = await Company.findByPk(finalCompanyId, {
+          attributes: ['name']
+        });
+        
+        const hotVacancyData = {
+          ...job.toJSON(),
+          companyName: company?.name || 'Company'
+        };
+        
+        await HotVacancyAlertService.sendProactiveAlerts(job.id, hotVacancyData);
+        console.log('🔥 Proactive alerts sent for hot vacancy job:', job.id);
+      } catch (alertError) {
+        console.error('❌ Error sending proactive alerts for hot vacancy:', alertError);
+        // Don't fail the main request if alerts fail
+      }
+    }
 
     // Send notifications to users with matching preferences (only for active jobs)
     if (job.status === 'active') {
