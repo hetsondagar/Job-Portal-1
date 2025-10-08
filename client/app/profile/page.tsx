@@ -71,8 +71,8 @@ export default function ProfilePage() {
         summary: user.summary || '',
         skills: Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || '',
         languages: Array.isArray(user.languages) ? user.languages.join(', ') : user.languages || '',
-        expectedSalary: user.expectedSalary || '',
-        noticePeriod: user.noticePeriod || '',
+        expectedSalary: user.expectedSalary?.toString() || '',
+        noticePeriod: user.noticePeriod?.toString() || '',
         willingToRelocate: user.willingToRelocate || false
       })
       calculateProfileCompletion()
@@ -194,8 +194,8 @@ export default function ProfilePage() {
         ...formData,
         skills: formData.skills ? formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '') : [],
         languages: formData.languages ? formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang !== '') : [],
-        expectedSalary: formData.expectedSalary ? parseFloat(formData.expectedSalary.replace(/[^0-9.]/g, '')) || null : null,
-        noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) || null : null
+        expectedSalary: formData.expectedSalary ? parseFloat(formData.expectedSalary.replace(/[^0-9.]/g, '')) || undefined : undefined,
+        noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) || undefined : undefined
       }
       
       console.log('🔍 Saving profile data:', profileData)

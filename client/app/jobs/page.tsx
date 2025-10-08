@@ -886,6 +886,14 @@ export default function JobsPage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Auth check - redirect employers to employer dashboard
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on jobs page, redirecting to employer dashboard')
+      window.location.href = user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+    }
+  }, [user])
+
   // Removed click outside handlers since we're using Dialog components which handle this automatically
 
   // Helper function to get visible job types count (excluding walk-in)

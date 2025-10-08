@@ -36,7 +36,6 @@ import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
-import { JobseekerAuthGuard } from "@/components/jobseeker-auth-guard"
 
 // Types for state management
 interface FilterState {
@@ -521,6 +520,14 @@ export default function CompaniesPage() {
       fetchFollowedCompanies()
     }
   }, [user, fetchFollowedCompanies])
+
+  // Auth check - redirect employers to employer dashboard
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on companies page, redirecting to employer dashboard')
+      router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+    }
+  }, [user, router])
 
   const getSectorColor = (sector: string) => {
     const colors = {
@@ -1250,8 +1257,7 @@ export default function CompaniesPage() {
   ]
 
   return (
-    <JobseekerAuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <Navbar />
 
       {/* Hero Section */}
@@ -2200,6 +2206,5 @@ export default function CompaniesPage() {
         </div>
       </footer>
     </div>
-    </JobseekerAuthGuard>
   )
 }

@@ -39,7 +39,6 @@ import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { toast } from "sonner"
 import React from "react"
-import { JobseekerAuthGuard } from "@/components/jobseeker-auth-guard"
 
 // Simple error boundary component
 class CompanyErrorBoundary extends React.Component<
@@ -596,6 +595,14 @@ function CompanyDetailPage() {
     setFilteredJobs(companyJobs)
   }, [companyJobs])
 
+  // Auth check - redirect employers to employer dashboard
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on company detail page, redirecting to employer dashboard')
+      router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+    }
+  }, [user, router])
+
   const handleApply = useCallback(async (jobId: number) => {
     if (!user) {
       setShowAuthDialog(true)
@@ -952,9 +959,8 @@ function CompanyDetailPage() {
   }
 
   return (
-    <JobseekerAuthGuard>
-      <CompanyErrorBoundary>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <CompanyErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
       {/* Company Header */}
@@ -1925,8 +1931,7 @@ function CompanyDetailPage() {
         </div>
       </footer>
     </div>
-      </CompanyErrorBoundary>
-    </JobseekerAuthGuard>
+    </CompanyErrorBoundary>
   )
 }
 

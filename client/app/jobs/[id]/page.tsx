@@ -374,6 +374,14 @@ export default function JobDetailPage() {
     }
   }, [jobIdFromParams, job, jobLoading])
 
+  // Auth check - redirect employers to employer dashboard
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on job detail page, redirecting to employer dashboard')
+      window.location.href = user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+    }
+  }, [user])
+
   const hasApplied = useMemo(() => sampleJobManager.hasApplied(jobIdFromParams), [jobIdFromParams, forceUpdate])
 
   const handleApply = async () => {

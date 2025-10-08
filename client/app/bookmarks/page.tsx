@@ -111,7 +111,7 @@ export default function BookmarksPage() {
 
     try {
       // Check if this is a sample bookmark
-      if (editingBookmark.isSample) {
+      if ((editingBookmark as any).isSample) {
         const success = sampleJobManager.updateBookmark(editingBookmark.id, formData)
         if (success) {
           toast.success('Bookmark updated successfully')
@@ -142,7 +142,7 @@ export default function BookmarksPage() {
     try {
       // Check if this is a sample bookmark
       const bookmark = bookmarks.find(b => b.id === bookmarkId)
-      if (bookmark?.isSample) {
+      if ((bookmark as any)?.isSample) {
         const success = sampleJobManager.deleteBookmark(bookmarkId)
         if (success) {
           toast.success('Bookmark deleted successfully')
@@ -330,7 +330,7 @@ export default function BookmarksPage() {
                   <SelectContent>
                     <SelectItem value="all">All Folders</SelectItem>
                     {folders.map(folder => (
-                      <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                      <SelectItem key={folder} value={folder || 'default'}>{folder || 'Default'}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -520,18 +520,18 @@ export default function BookmarksPage() {
                             <div className="flex items-center space-x-1">
                               <DollarSign className="w-4 h-4" />
                               <span>
-                                {jobDetails?.salaryMin && jobDetails?.salaryMax 
-                                  ? `${jobDetails.salaryMin} - ${jobDetails.salaryMax} ${jobDetails.salaryCurrency || 'INR'}`
-                                  : jobDetails?.salary || 'Salary'
+                                {(jobDetails as any)?.salaryMin && (jobDetails as any)?.salaryMax 
+                                  ? `${(jobDetails as any).salaryMin} - ${(jobDetails as any).salaryMax} ${(jobDetails as any).salaryCurrency || 'INR'}`
+                                  : (jobDetails as any)?.salary || 'Salary'
                                 }
                               </span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Briefcase className="w-4 h-4" />
                               <span>
-                                {jobDetails?.experienceMin && jobDetails?.experienceMax
-                                  ? `${jobDetails.experienceMin}-${jobDetails.experienceMax} years`
-                                  : jobDetails?.experienceLevel || jobDetails?.experience || 'Experience'
+                                {(jobDetails as any)?.experienceMin && (jobDetails as any)?.experienceMax
+                                  ? `${(jobDetails as any).experienceMin}-${(jobDetails as any).experienceMax} years`
+                                  : (jobDetails as any)?.experienceLevel || (jobDetails as any)?.experience || 'Experience'
                                 }
                               </span>
                             </div>
@@ -548,9 +548,9 @@ export default function BookmarksPage() {
                           {jobDetails?.skills && Array.isArray(jobDetails.skills) && jobDetails.skills.length > 0 && (
                             <div className="mb-3">
                               <div className="flex flex-wrap gap-1">
-                                {jobDetails.skills.slice(0, 4).map((skill, index) => (
+                                {jobDetails.skills.slice(0, 4).map((skill: any, index: number) => (
                                   <Badge key={index} variant="secondary" className="text-xs">
-                                    {typeof skill === 'string' ? skill : skill.name || skill}
+                                    {typeof skill === 'string' ? skill : skill?.name || skill}
                                   </Badge>
                                 ))}
                                 {jobDetails.skills.length > 4 && (
@@ -574,15 +574,15 @@ export default function BookmarksPage() {
                             <div className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
                               <span>
-                                Posted: {jobDetails?.createdAt 
-                                  ? new Date(jobDetails.createdAt).toLocaleDateString()
-                                  : jobDetails?.posted || 'Recently'
+                                Posted: {(jobDetails as any)?.createdAt 
+                                  ? new Date((jobDetails as any).createdAt).toLocaleDateString()
+                                  : (jobDetails as any)?.posted || 'Recently'
                                 }
                               </span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Eye className="w-4 h-4" />
-                              <span>{jobDetails?.applications || jobDetails?.applicants || 0} applicants</span>
+                              <span>{(jobDetails as any)?.applications || (jobDetails as any)?.applicants || 0} applicants</span>
                             </div>
                           </div>
                         </div>

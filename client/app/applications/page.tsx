@@ -239,7 +239,7 @@ export default function ApplicationsPage() {
                             View Job
                           </Button>
                         </Link>
-                        {!application.isSample && ['applied', 'reviewing', 'shortlisted'].includes(application.status) && (
+                        {!(application as any).isSample && ['applied', 'reviewing', 'shortlisted'].includes(application.status) && (
                           <Button
                             variant="outline"
                             size="sm"
