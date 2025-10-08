@@ -21,6 +21,7 @@
     "db:sync": "node deploy-sync.js",
     "db:fix-production": "node scripts/fix-production-database.js",
     "db:quick-fix": "node quick-fix-production.js",
+    "db:update-production": "node scripts/production-database-update.js",
     "test:google": "node test-google-auth.js",
     "test:email": "node test-email-service.js"
   },
