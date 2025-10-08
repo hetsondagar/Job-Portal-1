@@ -15,23 +15,22 @@ const router = express.Router();
 // Utility function to find resume file
 function findResumeFile(filename, metadata) {
   const possiblePaths = [
+    // First try absolute path from metadata (most reliable)
+    metadata?.absolutePath,
+    // Development paths (most common)
+    path.join(__dirname, '../uploads/resumes', filename),
+    path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+    path.join(process.cwd(), 'uploads', 'resumes', filename),
     // Production paths (Render.com)
     path.join('/opt/render/project/src/uploads/resumes', filename),
     path.join('/opt/render/project/src/server/uploads/resumes', filename),
     path.join('/tmp/uploads/resumes', filename),
-    // Development paths
-    path.join(__dirname, '../uploads/resumes', filename),
-    path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
-    path.join(process.cwd(), 'uploads', 'resumes', filename),
-    path.join('/tmp', 'uploads', 'resumes', filename),
     path.join('/var', 'tmp', 'uploads', 'resumes', filename),
     // Metadata-based paths
     metadata?.filePath ? path.join(process.cwd(), metadata.filePath.replace(/^\//, '')) : null,
-    metadata?.filePath ? path.join('/', metadata.filePath.replace(/^\//, '')) : null,
+    metadata?.filePath ? path.join(__dirname, '..', metadata.filePath.replace(/^\//, '')) : null,
     // Direct metadata filePath
-    metadata?.filePath ? metadata.filePath : null,
-    // Public URL based on our static mount
-    metadata?.filename ? `/uploads/resumes/${metadata.filename}` : null
+    metadata?.filePath ? metadata.filePath : null
   ].filter(Boolean);
 
   console.log('🔍 Trying possible file paths:', possiblePaths);
@@ -3358,6 +3357,10 @@ router.post('/resumes/upload', authenticateToken, upload.single('resume'), async
 
     const isDefault = existingResumes === 0;
 
+    // Store both relative and absolute paths for better compatibility
+    const relativePath = `/uploads/resumes/${filename}`;
+    const absolutePath = path.join(__dirname, '../uploads/resumes', filename);
+    
     // Create resume record
     const resume = await Resume.create({
       userId: req.user.id,
@@ -3372,7 +3375,9 @@ router.post('/resumes/upload', authenticateToken, upload.single('resume'), async
         fileSize,
         mimeType,
         uploadDate: new Date().toISOString(),
-        filePath: `/uploads/resumes/${filename}`
+        filePath: relativePath,
+        absolutePath: absolutePath,
+        publicUrl: relativePath
       }
     });
 
@@ -4347,24 +4352,7 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
       });
     }
 
-    // Use utility function to find the file
-    const filePath = findResumeFile(filename, metadata);
-    
-    if (!filePath) {
-      // Fallback: try redirecting to stored public path if present
-      if (metadata.filePath) {
-        return res.redirect(metadata.filePath);
-      }
-      return res.status(404).json({
-        success: false,
-        message: 'Resume file not found on server. The file may have been lost during server restart. Please re-upload your resume.',
-        code: 'FILE_NOT_FOUND'
-      });
-    }
-
-    console.log('✅ File exists, proceeding with download');
-
-    // Increment download count
+    // Increment download count first
     const currentDownloads = resume.downloads || 0;
     console.log('🔍 Current downloads:', currentDownloads);
     await resume.update({
@@ -4416,9 +4404,28 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
       // Don't fail the download if activity logging fails
     }
 
+    // Use utility function to find the file
+    const filePath = findResumeFile(filename, metadata);
+    
+    if (!filePath) {
+      console.log('❌ File not found on filesystem, attempting public URL redirect');
+      // Fallback: try redirecting to stored public path
+      if (metadata.filePath) {
+        console.log('🔄 Redirecting to public URL:', metadata.filePath);
+        return res.redirect(302, metadata.filePath);
+      }
+      
+      // Try constructing public URL from filename
+      const publicUrl = `/uploads/resumes/${filename}`;
+      console.log('🔄 Attempting public URL redirect:', publicUrl);
+      return res.redirect(302, publicUrl);
+    }
+
+    console.log('✅ File exists at:', filePath);
+
     // Set headers for file download
     res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
-    res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
 
     console.log('🔍 Sending file:', filePath);
     console.log('🔍 Headers set:', {
@@ -4427,7 +4434,19 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
     });
 
     // Send file
-    res.sendFile(filePath);
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('❌ Error sending file:', err);
+        if (!res.headersSent) {
+          // If sendFile fails, try redirect to public URL as last resort
+          const publicUrl = `/uploads/resumes/${filename}`;
+          console.log('🔄 SendFile failed, redirecting to:', publicUrl);
+          res.redirect(302, publicUrl);
+        }
+      } else {
+        console.log('✅ File sent successfully');
+      }
+    });
   } catch (error) {
     console.error('❌ Error downloading resume for employer:', error);
     console.error('❌ Error stack:', error.stack);
