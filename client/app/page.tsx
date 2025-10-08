@@ -39,6 +39,7 @@ import { useRouter } from "next/navigation"
 export default function HomePage() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [location, setLocation] = useState("")
@@ -763,6 +764,7 @@ export default function HomePage() {
       // If user is employer or admin, redirect to employer dashboard
       if (user.userType === 'employer' || user.userType === 'admin') {
         console.log('🔄 Employer/Admin detected on homepage, redirecting to employer dashboard')
+        setIsRedirecting(true)
         router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
         return
       }
@@ -770,6 +772,18 @@ export default function HomePage() {
     }
     // If no user (unauthenticated), they can stay on homepage
   }, [user, loading, router])
+
+  // Show loading while redirecting
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">

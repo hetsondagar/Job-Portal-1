@@ -51,6 +51,7 @@ export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user, loading } = useAuth()
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [forceUpdate, setForceUpdate] = useState(false)
@@ -378,9 +379,22 @@ export default function JobDetailPage() {
   useEffect(() => {
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
       console.log('🔄 Employer/Admin detected on job detail page, redirecting to employer dashboard')
+      setIsRedirecting(true)
       window.location.href = user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
     }
   }, [user])
+
+  // Show loading while redirecting
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
 
   const hasApplied = useMemo(() => sampleJobManager.hasApplied(jobIdFromParams), [jobIdFromParams, forceUpdate])
 

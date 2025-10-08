@@ -258,6 +258,7 @@ const getSearchSuggestions = (query: string, companies: Company[], limit: number
 export default function CompaniesPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const [isRedirecting, setIsRedirecting] = useState(false)
   
   // State management
   const [showFilters, setShowFilters] = useState(false)
@@ -525,9 +526,22 @@ export default function CompaniesPage() {
   useEffect(() => {
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
       console.log('🔄 Employer/Admin detected on companies page, redirecting to employer dashboard')
+      setIsRedirecting(true)
       router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
     }
   }, [user, router])
+
+  // Show loading while redirecting
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
 
   const getSectorColor = (sector: string) => {
     const colors = {
