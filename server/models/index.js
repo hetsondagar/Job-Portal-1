@@ -26,8 +26,6 @@ const Subscription = require('./Subscription');
 const SubscriptionPlan = require('./SubscriptionPlan');
 const EmployerQuota = require('./EmployerQuota');
 const FeaturedJob = require('./FeaturedJob');
-const HotVacancy = require('./HotVacancy');
-const HotVacancyPhoto = require('./HotVacancyPhoto');
 const SecureJobTap = require('./SecureJobTap');
 const BulkJobImport = require('./BulkJobImport');
 const Analytics = require('./Analytics');
@@ -89,8 +87,6 @@ const models = {
   SubscriptionPlan,
   EmployerQuota,
   FeaturedJob,
-  HotVacancy,
-  HotVacancyPhoto,
   SecureJobTap,
   BulkJobImport,
   Analytics,
