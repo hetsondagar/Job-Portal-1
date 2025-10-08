@@ -47,10 +47,13 @@ export default function JobDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [similarJobs, setSimilarJobs] = useState<any[]>([])
   const [similarJobsLoading, setSimilarJobsLoading] = useState(false)
+  const [applications, setApplications] = useState<any[]>([])
+  const [applicationsLoading, setApplicationsLoading] = useState(false)
 
   useEffect(() => {
     if (params.jobId) {
       fetchJobDetails()
+      fetchJobApplications()
     }
   }, [params.jobId])
 
@@ -104,6 +107,23 @@ export default function JobDetailPage() {
     }
   }
 
+  const fetchJobApplications = async () => {
+    try {
+      setApplicationsLoading(true)
+      const response = await apiService.getEmployerApplications()
+      if (response.success && Array.isArray(response.data)) {
+        const list = (response.data as any[]).filter(app => String(app.jobId) === String(params.jobId))
+        setApplications(list)
+      } else {
+        setApplications([])
+      }
+    } catch (e) {
+      setApplications([])
+    } finally {
+      setApplicationsLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -152,7 +172,7 @@ export default function JobDetailPage() {
     experience: job.experienceLevel || job.experience || 'Experience not specified',
     salary: job.salary || (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Salary not specified'),
     postedDate: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Date not available',
-    applications: job.applicationsCount || 0,
+    applications: (job.applicationsCount ?? applications.length) || applications.length || 0,
     views: job.views || 0,
     status: job.status || 'draft',
     department: job.department || 'Department not specified',
@@ -351,6 +371,25 @@ export default function JobDetailPage() {
                       <p className="text-slate-600 dark:text-slate-400">
                         View and manage applications for this job posting. You have received {transformedJob.applications} applications so far.
                       </p>
+                      <div className="mt-4">
+                        {applicationsLoading ? (
+                          <div className="text-sm text-slate-500">Loading applications...</div>
+                        ) : applications.length > 0 ? (
+                          <div className="space-y-3">
+                            {applications.slice(0,5).map(app => (
+                              <div key={app.id} className="p-3 border rounded-lg flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium text-slate-900">{app.applicant?.fullName || `${app.applicant?.first_name || ''} ${app.applicant?.last_name || ''}`.trim() || app.applicant?.email || 'Candidate'}</div>
+                                  <div className="text-xs text-slate-500">{app.status?.replace('_',' ') || 'applied'} • {new Date(app.appliedAt || app.createdAt).toLocaleDateString()}</div>
+                                </div>
+                                <Button size="sm" variant="outline" onClick={() => router.push(`/employer-dashboard/applications?jobId=${transformedJob.id}`)}>View</Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">No applications yet.</div>
+                        )}
+                      </div>
                       
                       <div className="mt-6">
                         <Button 
