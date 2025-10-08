@@ -46,7 +46,7 @@ export default function PostJobPage() {
     role: "",
     industryType: "",
     roleCategory: "",
-    education: "",
+    education: [] as string[],
     employmentType: "",
     // Hot Vacancy Premium Features
     isHotVacancy: false,
@@ -111,6 +111,7 @@ export default function PostJobPage() {
   const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
+  const [selectedEducation, setSelectedEducation] = useState<string[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
 
   // Dynamic steps based on whether it's a hot vacancy or not
@@ -178,6 +179,11 @@ export default function PostJobPage() {
             
             setEditingJobId(jobId);
             setUploadedJobId(jobId);
+            
+            // Sync selectedEducation state
+            const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
+            setSelectedEducation(educationArray)
+            
             setFormData({
               title: jobData.title || '',
               department: jobData.department || '',
@@ -192,7 +198,7 @@ export default function PostJobPage() {
               role: jobData.role || '',
               industryType: jobData.industryType || '',
               roleCategory: jobData.roleCategory || '',
-              education: jobData.education || '',
+              education: Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : []),
               employmentType: jobData.employmentType || '',
               // Hot Vacancy Premium Features
               isHotVacancy: jobData.isHotVacancy || false,
@@ -289,7 +295,7 @@ export default function PostJobPage() {
             role: templateData.role || '',
             industryType: templateData.industryType || '',
             roleCategory: templateData.roleCategory || '',
-            education: templateData.education || '',
+            education: Array.isArray(templateData.education) ? templateData.education : (templateData.education ? [templateData.education] : []),
             employmentType: templateData.employmentType || '',
             // Hot Vacancy Premium Features
             isHotVacancy: templateData.isHotVacancy || false,
@@ -408,6 +414,10 @@ export default function PostJobPage() {
         
         console.log('🔥 Hot vacancy mode:', isHotVacancyMode);
         
+        // Sync selectedEducation state
+        const educationArray = Array.isArray(template.templateData.education) ? template.templateData.education : (template.templateData.education ? [template.templateData.education] : [])
+        setSelectedEducation(educationArray)
+        
         const newFormData = {
           title: template.templateData.title || '',
           department: template.templateData.department || '',
@@ -422,7 +432,7 @@ export default function PostJobPage() {
           role: template.templateData.role || '',
           industryType: template.templateData.industryType || '',
           roleCategory: template.templateData.roleCategory || '',
-          education: template.templateData.education || '',
+          education: Array.isArray(template.templateData.education) ? template.templateData.education : (template.templateData.education ? [template.templateData.education] : []),
           employmentType: template.templateData.employmentType || '',
           // Hot Vacancy Premium Features - PRESERVE hot vacancy mode from URL or current state
           isHotVacancy: isHotVacancyMode,
@@ -759,7 +769,7 @@ export default function PostJobPage() {
              role: "",
              industryType: "",
              roleCategory: "",
-             education: "",
+             education: [],
              employmentType: "",
              // Hot Vacancy Premium Features
              isHotVacancy: false,
@@ -1104,7 +1114,7 @@ export default function PostJobPage() {
                           role: "",
                           industryType: "",
                           roleCategory: "",
-                          education: "",
+                          education: [],
                           employmentType: "",
                           // Hot Vacancy Premium Features
                           isHotVacancy: false,
@@ -1410,30 +1420,78 @@ export default function PostJobPage() {
             {/* Education */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Education*
+                Education* (Select Multiple)
               </label>
-              <Select value={formData.education} onValueChange={(value) => setFormData({ ...formData, education: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select education requirement" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Any Graduate">Any Graduate</SelectItem>
-                  <SelectItem value="B.Tech/B.E.">B.Tech/B.E.</SelectItem>
-                  <SelectItem value="B.Sc">B.Sc</SelectItem>
-                  <SelectItem value="B.Com">B.Com</SelectItem>
-                  <SelectItem value="BBA">BBA</SelectItem>
-                  <SelectItem value="BCA">BCA</SelectItem>
-                  <SelectItem value="M.Tech/M.E.">M.Tech/M.E.</SelectItem>
-                  <SelectItem value="M.Sc">M.Sc</SelectItem>
-                  <SelectItem value="MBA">MBA</SelectItem>
-                  <SelectItem value="MCA">MCA</SelectItem>
-                  <SelectItem value="M.Com">M.Com</SelectItem>
-                  <SelectItem value="Ph.D">Ph.D</SelectItem>
-                  <SelectItem value="Diploma">Diploma</SelectItem>
-                  <SelectItem value="12th Pass">12th Pass</SelectItem>
-                  <SelectItem value="10th Pass">10th Pass</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {[
+                    'Any Graduate',
+                    'B.Tech/B.E.',
+                    'B.Sc',
+                    'B.Com',
+                    'BBA',
+                    'BCA',
+                    'M.Tech/M.E.',
+                    'M.Sc',
+                    'MBA',
+                    'MCA',
+                    'M.Com',
+                    'Ph.D',
+                    'Diploma',
+                    '12th Pass',
+                    '10th Pass'
+                  ].map((edu) => (
+                    <div
+                      key={edu}
+                      onClick={() => {
+                        const isSelected = selectedEducation.includes(edu)
+                        const updated = isSelected
+                          ? selectedEducation.filter(e => e !== edu)
+                          : [...selectedEducation, edu]
+                        setSelectedEducation(updated)
+                        setFormData({ ...formData, education: updated })
+                      }}
+                      className={`px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedEducation.includes(edu)
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          selectedEducation.includes(edu)
+                            ? 'border-blue-500 bg-blue-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {selectedEducation.includes(edu) && (
+                            <CheckCircle className="h-3 w-3 text-white" />
+                          )}
+                        </div>
+                        <span className="text-sm">{edu}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {selectedEducation.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <span className="text-sm font-medium text-blue-900">Selected ({selectedEducation.length}):</span>
+                    {selectedEducation.map((edu) => (
+                      <Badge key={edu} variant="secondary" className="bg-blue-100 text-blue-800">
+                        {edu}
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const updated = selectedEducation.filter(e => e !== edu)
+                            setSelectedEducation(updated)
+                            setFormData({ ...formData, education: updated })
+                          }}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Requirements */}
@@ -2238,7 +2296,19 @@ export default function PostJobPage() {
                   </div>
                   <div>
                     <h5 className="font-semibold text-gray-900">Education</h5>
-                    <p className="text-gray-700 mt-1">{formData.education || "Not provided"}</p>
+                    <div className="text-gray-700 mt-1">
+                      {Array.isArray(formData.education) && formData.education.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {formData.education.map((edu, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {edu}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>Not provided</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -2387,7 +2457,19 @@ export default function PostJobPage() {
                   </div>
                   <div>
                     <h5 className="font-semibold text-gray-900">Education</h5>
-                    <p className="text-gray-700 mt-1">{formData.education || "Not provided"}</p>
+                    <div className="text-gray-700 mt-1">
+                      {Array.isArray(formData.education) && formData.education.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {formData.education.map((edu, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {edu}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>Not provided</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

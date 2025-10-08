@@ -87,6 +87,8 @@ export default function JobDetailPage() {
                 companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
                 location: res.data.location || 'Location not specified',
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
+                experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
+                education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
                 salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
                 skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
                 posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
@@ -139,6 +141,8 @@ export default function JobDetailPage() {
               companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
               location: res.data.location || 'Location not specified',
               experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
+              experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
+              education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
               salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
               skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
               posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
@@ -896,10 +900,10 @@ export default function JobDetailPage() {
                           <div className="w-8 h-8 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Award className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <div className="font-medium text-slate-900 dark:text-slate-100">Experience Level</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.experienceLevel || 'Not provided'}
+                              {job?.experienceLevel || job?.experience || 'Not specified'}
                             </div>
                           </div>
                         </div>
@@ -908,11 +912,19 @@ export default function JobDetailPage() {
                           <div className="w-8 h-8 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                             <GraduationCap className="w-4 h-4 text-pink-600 dark:text-pink-400" />
                           </div>
-                          <div>
-                            <div className="font-medium text-slate-900 dark:text-slate-100">Education</div>
-                            <div className="text-slate-600 dark:text-slate-400">
-                              {job?.education || 'Any Graduate'}
-                            </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-slate-900 dark:text-slate-100 mb-2">Education</div>
+                            {Array.isArray(job?.education) && job.education.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {job.education.map((edu: string, index: number) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {edu}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-slate-600 dark:text-slate-400">Any Graduate</div>
+                            )}
                           </div>
                         </div>
 
@@ -1018,12 +1030,105 @@ export default function JobDetailPage() {
                 </motion.div>
               )}
 
+              {/* Why Work With Us - MOVED UP FOR PROMINENCE */}
+              {job?.whyWorkWithUs && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.18, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-xl shadow-xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Building2 className="h-6 w-6 text-purple-600" />
+                        Why Work With Us
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="prose prose-slate dark:prose-invert max-w-none">
+                        <div className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line text-lg">
+                          {job.whyWorkWithUs}
+                        </div>
+                      </div>
+                      
+                      {/* Company Branding Section */}
+                      <div className="mt-6 pt-6 border-t border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center gap-4">
+                          {job.companyLogo && (
+                            <img 
+                              src={job.companyLogo} 
+                              alt={job.company}
+                              className="h-16 w-16 object-contain rounded-lg bg-white p-2"
+                            />
+                          )}
+                          <div>
+                            <h4 className="font-semibold text-lg text-purple-900 dark:text-purple-100">
+                              {job.company}
+                            </h4>
+                            {job.industry && (
+                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                                {job.industry}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Company Branding Media - MOVED UP FOR PROMINENCE */}
+              {(Array.isArray(job?.officeImages) && job.officeImages.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Building2 className="h-6 w-6 text-indigo-600" />
+                        Company Branding & Culture
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {job.officeImages.map((media: any, index: number) => (
+                          <div key={index} className="relative group rounded-lg overflow-hidden shadow-lg">
+                            {typeof media === 'string' && (media.endsWith('.mp4') || media.endsWith('.webm')) ? (
+                              <video
+                                src={media}
+                                className="w-full h-64 object-cover"
+                                controls
+                                preload="metadata"
+                              />
+                            ) : (
+                              <img
+                                src={typeof media === 'string' ? media : media.url}
+                                alt={`Company branding ${index + 1}`}
+                                className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            )}
+                            <div className="absolute top-2 left-2">
+                              <Badge variant="secondary" className="bg-white/90 backdrop-blur">
+                                {typeof media === 'string' && (media.endsWith('.mp4') || media.endsWith('.webm')) ? '🎥 Video' : '📸 Photo'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
               {/* Job Description */}
               {job?.description && (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.6 }}
+                  transition={{ delay: 0.25, duration: 0.6 }}
                 >
                   <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
                     <CardHeader>
@@ -1193,99 +1298,6 @@ export default function JobDetailPage() {
                           <div key={index} className="flex items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                             <Award className="w-5 h-5 text-blue-600 mr-3" />
                             <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Why Work With Us */}
-              {job?.whyWorkWithUs && (
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45, duration: 0.6 }}
-                >
-                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-xl shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="text-2xl flex items-center gap-2">
-                        <Building2 className="h-6 w-6 text-purple-600" />
-                        Why Work With Us
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="prose prose-slate dark:prose-invert max-w-none">
-                        <div className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                          {job.whyWorkWithUs}
-                        </div>
-                      </div>
-                      
-                      {/* Company Branding Section */}
-                      <div className="mt-6 pt-6 border-t border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center gap-4">
-                          {job.companyLogo && (
-                            <img 
-                              src={job.companyLogo} 
-                              alt={job.company}
-                              className="h-16 w-16 object-contain rounded-lg bg-white p-2"
-                            />
-                          )}
-                          <div>
-                            <h4 className="font-semibold text-lg text-purple-900 dark:text-purple-100">
-                              {job.company}
-                            </h4>
-                            {job.industry && (
-                              <p className="text-sm text-slate-600 dark:text-slate-400">
-                                {job.industry}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Company Branding Media (from Step 4) */}
-              {(Array.isArray(job?.officeImages) && job.officeImages.length > 0) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.48, duration: 0.6 }}
-                >
-                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="text-2xl flex items-center gap-2">
-                        <Building2 className="h-6 w-6 text-indigo-600" />
-                        Company Branding
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {job.officeImages.map((media: any, index: number) => (
-                          <div key={index} className="relative group rounded-lg overflow-hidden">
-                            {typeof media === 'string' && (media.endsWith('.mp4') || media.endsWith('.webm')) ? (
-                              <video
-                                src={media}
-                                className="w-full h-64 object-cover"
-                                controls
-                                preload="metadata"
-                              />
-                            ) : (
-                              <img
-                                src={typeof media === 'string' ? media : media.url}
-                                alt={`Company branding ${index + 1}`}
-                                className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            )}
-                            <div className="absolute top-2 left-2">
-                              <Badge variant="secondary" className="bg-white/90 backdrop-blur">
-                                {typeof media === 'string' && (media.endsWith('.mp4') || media.endsWith('.webm')) ? '🎥 Video' : '📸 Photo'}
-                              </Badge>
-                            </div>
                           </div>
                         ))}
                       </div>
