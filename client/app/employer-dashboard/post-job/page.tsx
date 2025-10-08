@@ -73,7 +73,28 @@ export default function PostJobPage() {
     externalApplyUrl: "",
     hotVacancyPrice: 0,
     hotVacancyCurrency: "INR",
-    hotVacancyPaymentStatus: "pending"
+    hotVacancyPaymentStatus: "pending",
+    // CRITICAL PREMIUM HOT VACANCY FEATURES (from hot_vacancies table)
+    urgencyLevel: "high",
+    hiringTimeline: "immediate",
+    maxApplications: 50,
+    applicationDeadline: "",
+    pricingTier: "premium",
+    price: 0,
+    currency: "INR",
+    paymentId: "",
+    paymentDate: "",
+    priorityListing: false,
+    featuredBadge: false,
+    unlimitedApplications: false,
+    advancedAnalytics: false,
+    candidateMatching: false,
+    directContact: false,
+    seoTitle: "",
+    seoDescription: "",
+    keywords: [] as string[],
+    impressions: 0,
+    clicks: 0
   })
   const [jobPhotos, setJobPhotos] = useState<any[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
@@ -90,14 +111,23 @@ export default function PostJobPage() {
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
 
-  const steps = [
+  // Dynamic steps based on whether it's a hot vacancy or not
+  const allSteps = [
     { id: 1, title: "Basic Info", description: "Basic job information" },
     { id: 2, title: "Job Details", description: "Role, industry, and requirements" },
     { id: 3, title: "Benefits & Perks", description: "What you offer" },
-    { id: 4, title: "Hot Vacancy Features", description: "Premium features and options" },
+    { id: 4, title: "Hot Vacancy Features", description: "Premium features and options", hotVacancyOnly: true },
     { id: 5, title: "Photos", description: "Showcase your workplace" },
     { id: 6, title: "Review & Post", description: "Final review" },
   ]
+  
+  // Filter steps based on hot vacancy mode
+  const steps = formData.isHotVacancy 
+    ? allSteps 
+    : allSteps.filter(step => !step.hotVacancyOnly).map((step, index) => ({
+        ...step,
+        id: index + 1 // Renumber steps when Step 4 is excluded
+      }))
 
   // Load job photos when uploadedJobId changes
   useEffect(() => {
@@ -124,9 +154,11 @@ export default function PostJobPage() {
 
   // Load job data when editing or template data from URL
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('draft') || urlParams.get('job');
+    const hotVacancyParam = urlParams.get('hotVacancy');
+    
     const loadJobData = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const jobId = urlParams.get('draft') || urlParams.get('job');
       const templateId = urlParams.get('template');
       const templateDataParam = urlParams.get('templateData');
       const templateName = urlParams.get('templateName');
@@ -183,9 +215,30 @@ export default function PostJobPage() {
               superFeatured: jobData.superFeatured || false,
               tierLevel: jobData.tierLevel || "basic",
               externalApplyUrl: jobData.externalApplyUrl || "",
-              hotVacancyPrice: jobData.hotVacancyPrice || 0,
-              hotVacancyCurrency: jobData.hotVacancyCurrency || "INR",
-              hotVacancyPaymentStatus: jobData.hotVacancyPaymentStatus || "pending"
+              hotVacancyPrice: jobData.hotVacancyPrice || jobData.price || 0,
+              hotVacancyCurrency: jobData.hotVacancyCurrency || jobData.currency || "INR",
+              hotVacancyPaymentStatus: jobData.hotVacancyPaymentStatus || "pending",
+              // CRITICAL PREMIUM HOT VACANCY FEATURES
+              urgencyLevel: jobData.urgencyLevel || "high",
+              hiringTimeline: jobData.hiringTimeline || "immediate",
+              maxApplications: jobData.maxApplications || 50,
+              applicationDeadline: jobData.applicationDeadline || "",
+              pricingTier: jobData.pricingTier || "premium",
+              price: jobData.price || jobData.hotVacancyPrice || 0,
+              currency: jobData.currency || jobData.hotVacancyCurrency || "INR",
+              paymentId: jobData.paymentId || "",
+              paymentDate: jobData.paymentDate || "",
+              priorityListing: jobData.priorityListing || false,
+              featuredBadge: jobData.featuredBadge || false,
+              unlimitedApplications: jobData.unlimitedApplications || false,
+              advancedAnalytics: jobData.advancedAnalytics || false,
+              candidateMatching: jobData.candidateMatching || false,
+              directContact: jobData.directContact || false,
+              seoTitle: jobData.seoTitle || "",
+              seoDescription: jobData.seoDescription || "",
+              keywords: jobData.keywords || [],
+              impressions: jobData.impressions || 0,
+              clicks: jobData.clicks || 0
             });
             
             // Load existing job photos
@@ -261,7 +314,28 @@ export default function PostJobPage() {
             externalApplyUrl: templateData.externalApplyUrl || "",
             hotVacancyPrice: templateData.hotVacancyPrice || 0,
             hotVacancyCurrency: templateData.hotVacancyCurrency || "INR",
-            hotVacancyPaymentStatus: templateData.hotVacancyPaymentStatus || "pending"
+            hotVacancyPaymentStatus: templateData.hotVacancyPaymentStatus || "pending",
+            // CRITICAL PREMIUM HOT VACANCY FEATURES
+            urgencyLevel: templateData.urgencyLevel || "high",
+            hiringTimeline: templateData.hiringTimeline || "immediate",
+            maxApplications: templateData.maxApplications || 50,
+            applicationDeadline: templateData.applicationDeadline || "",
+            pricingTier: templateData.pricingTier || "premium",
+            price: templateData.price || templateData.hotVacancyPrice || 0,
+            currency: templateData.currency || templateData.hotVacancyCurrency || "INR",
+            paymentId: templateData.paymentId || "",
+            paymentDate: templateData.paymentDate || "",
+            priorityListing: templateData.priorityListing || false,
+            featuredBadge: templateData.featuredBadge || false,
+            unlimitedApplications: templateData.unlimitedApplications || false,
+            advancedAnalytics: templateData.advancedAnalytics || false,
+            candidateMatching: templateData.candidateMatching || false,
+            directContact: templateData.directContact || false,
+            seoTitle: templateData.seoTitle || "",
+            seoDescription: templateData.seoDescription || "",
+            keywords: templateData.keywords || [],
+            impressions: templateData.impressions || 0,
+            clicks: templateData.clicks || 0
           });
           
           toast.success(`Template "${decodeURIComponent(templateName || '')}" applied successfully! Customize the fields as needed.`);
@@ -284,6 +358,19 @@ export default function PostJobPage() {
     if (user && !loading) {
       loadJobData();
       loadTemplates();
+      
+      // Check if hot vacancy mode should be enabled
+      if (hotVacancyParam === 'true' && !jobId) {
+        console.log('🔥 Hot Vacancy mode enabled from URL parameter');
+        setFormData(prev => ({
+          ...prev,
+          isHotVacancy: true,
+          urgentHiring: true,
+          boostedSearch: true
+        }));
+        // Navigate to Step 4 (Hot Vacancy Features)
+        setCurrentStep(4);
+      }
     }
   }, [user, loading]);
 
@@ -351,7 +438,28 @@ export default function PostJobPage() {
           externalApplyUrl: template.templateData.externalApplyUrl || "",
           hotVacancyPrice: template.templateData.hotVacancyPrice || 0,
           hotVacancyCurrency: template.templateData.hotVacancyCurrency || "INR",
-          hotVacancyPaymentStatus: template.templateData.hotVacancyPaymentStatus || "pending"
+          hotVacancyPaymentStatus: template.templateData.hotVacancyPaymentStatus || "pending",
+          // CRITICAL PREMIUM HOT VACANCY FEATURES
+          urgencyLevel: template.templateData.urgencyLevel || "high",
+          hiringTimeline: template.templateData.hiringTimeline || "immediate",
+          maxApplications: template.templateData.maxApplications || 50,
+          applicationDeadline: template.templateData.applicationDeadline || "",
+          pricingTier: template.templateData.pricingTier || "premium",
+          price: template.templateData.price || template.templateData.hotVacancyPrice || 0,
+          currency: template.templateData.currency || template.templateData.hotVacancyCurrency || "INR",
+          paymentId: template.templateData.paymentId || "",
+          paymentDate: template.templateData.paymentDate || "",
+          priorityListing: template.templateData.priorityListing || false,
+          featuredBadge: template.templateData.featuredBadge || false,
+          unlimitedApplications: template.templateData.unlimitedApplications || false,
+          advancedAnalytics: template.templateData.advancedAnalytics || false,
+          candidateMatching: template.templateData.candidateMatching || false,
+          directContact: template.templateData.directContact || false,
+          seoTitle: template.templateData.seoTitle || "",
+          seoDescription: template.templateData.seoDescription || "",
+          keywords: template.templateData.keywords || [],
+          impressions: template.templateData.impressions || 0,
+          clicks: template.templateData.clicks || 0
         };
         
         console.log('📝 Setting form data:', newFormData);
@@ -412,7 +520,38 @@ export default function PostJobPage() {
         benefits: formData.benefits || '',
         skills: formData.skills || [],
         department: formData.department || '',
-        status: editingJobId ? undefined : 'draft' // Only set to draft for new jobs, preserve existing status for edits
+        status: editingJobId ? undefined : 'draft', // Only set to draft for new jobs, preserve existing status for edits
+        // Include hot vacancy fields if it's a hot vacancy
+        ...(formData.isHotVacancy && {
+          isHotVacancy: formData.isHotVacancy,
+          urgencyLevel: formData.urgencyLevel,
+          hiringTimeline: formData.hiringTimeline,
+          maxApplications: formData.maxApplications,
+          applicationDeadline: formData.applicationDeadline,
+          pricingTier: formData.pricingTier,
+          price: formData.price || formData.hotVacancyPrice,
+          currency: formData.currency || formData.hotVacancyCurrency,
+          priorityListing: formData.priorityListing,
+          featuredBadge: formData.featuredBadge,
+          unlimitedApplications: formData.unlimitedApplications,
+          advancedAnalytics: formData.advancedAnalytics,
+          candidateMatching: formData.candidateMatching,
+          directContact: formData.directContact,
+          seoTitle: formData.seoTitle,
+          seoDescription: formData.seoDescription,
+          keywords: formData.keywords,
+          urgentHiring: formData.urgentHiring,
+          multipleEmailIds: formData.multipleEmailIds,
+          boostedSearch: formData.boostedSearch,
+          searchBoostLevel: formData.searchBoostLevel,
+          citySpecificBoost: formData.citySpecificBoost,
+          videoBanner: formData.videoBanner,
+          whyWorkWithUs: formData.whyWorkWithUs,
+          companyProfile: formData.companyProfile,
+          proactiveAlerts: formData.proactiveAlerts,
+          superFeatured: formData.superFeatured,
+          tierLevel: formData.tierLevel
+        })
       }
 
       let response;
@@ -560,50 +699,71 @@ export default function PostJobPage() {
          setShowSuccessDialog(true)
          
          if (!editingJobId) {
-           // Only reset form for new jobs, not when editing
-           setFormData({
-             title: "",
-             department: "",
-             location: "",
-             type: "",
-             experience: "",
-             salary: "",
-             description: "",
-             requirements: "",
-             benefits: "",
-             skills: [],
-             role: "",
-             industryType: "",
-             roleCategory: "",
-             education: "",
-             employmentType: "",
-             // Hot Vacancy Premium Features
-             isHotVacancy: false,
-             urgentHiring: false,
-             multipleEmailIds: [],
-             boostedSearch: false,
-             searchBoostLevel: "standard",
-             citySpecificBoost: [],
-             videoBanner: "",
-             whyWorkWithUs: "",
-             companyReviews: [],
-             autoRefresh: false,
-             refreshDiscount: 0,
-             attachmentFiles: [],
-             officeImages: [],
-             companyProfile: "",
-             proactiveAlerts: false,
-             alertRadius: 50,
-             alertFrequency: "immediate",
-             featuredKeywords: [],
-             customBranding: {},
-             superFeatured: false,
-             tierLevel: "basic",
-             externalApplyUrl: "",
-             hotVacancyPrice: 0,
-             hotVacancyCurrency: "INR",
-             hotVacancyPaymentStatus: "pending"
-           })
+          // Only reset form for new jobs, not when editing
+          setFormData({
+            title: "",
+            department: "",
+            location: "",
+            type: "",
+            experience: "",
+            salary: "",
+            description: "",
+            requirements: "",
+            benefits: "",
+            skills: [],
+            role: "",
+            industryType: "",
+            roleCategory: "",
+            education: "",
+            employmentType: "",
+            // Hot Vacancy Premium Features
+            isHotVacancy: false,
+            urgentHiring: false,
+            multipleEmailIds: [],
+            boostedSearch: false,
+            searchBoostLevel: "standard",
+            citySpecificBoost: [],
+            videoBanner: "",
+            whyWorkWithUs: "",
+            companyReviews: [],
+            autoRefresh: false,
+            refreshDiscount: 0,
+            attachmentFiles: [],
+            officeImages: [],
+            companyProfile: "",
+            proactiveAlerts: false,
+            alertRadius: 50,
+            alertFrequency: "immediate",
+            featuredKeywords: [],
+            customBranding: {},
+            superFeatured: false,
+            tierLevel: "basic",
+            externalApplyUrl: "",
+            hotVacancyPrice: 0,
+            hotVacancyCurrency: "INR",
+            hotVacancyPaymentStatus: "pending",
+            // CRITICAL PREMIUM HOT VACANCY FEATURES
+            urgencyLevel: "high",
+            hiringTimeline: "immediate",
+            maxApplications: 50,
+            applicationDeadline: "",
+            pricingTier: "premium",
+            price: 0,
+            currency: "INR",
+            paymentId: "",
+            paymentDate: "",
+            priorityListing: false,
+            featuredBadge: false,
+            unlimitedApplications: false,
+            advancedAnalytics: false,
+            candidateMatching: false,
+            directContact: false,
+            seoTitle: "",
+            seoDescription: "",
+            keywords: [],
+            impressions: 0,
+            clicks: 0
+          })
            setCurrentStep(1)
          }
        } else {
@@ -762,7 +922,18 @@ export default function PostJobPage() {
   
 
   const renderStepContent = () => {
-    switch (currentStep) {
+    // Map current step to actual content based on hot vacancy mode
+    const getActualStep = () => {
+      if (!formData.isHotVacancy && currentStep >= 4) {
+        // When not hot vacancy, skip step 4, so step 4 becomes photos (5), step 5 becomes review (6)
+        return currentStep + 1
+      }
+      return currentStep
+    }
+    
+    const actualStep = getActualStep()
+    
+    switch (actualStep) {
       case 1:
         return (
           <div className="space-y-6">
@@ -811,50 +982,71 @@ export default function PostJobPage() {
                       size="sm"
                       onClick={() => {
                         setSelectedTemplate("");
-                        setFormData({
-                          title: "",
-                          department: "",
-                          location: "",
-                          type: "",
-                          experience: "",
-                          salary: "",
-                          description: "",
-                          requirements: "",
-                          benefits: "",
-                          skills: [],
-                          role: "",
-                          industryType: "",
-                          roleCategory: "",
-                          education: "",
-                          employmentType: "",
-                          // Hot Vacancy Premium Features
-                          isHotVacancy: false,
-                          urgentHiring: false,
-                          multipleEmailIds: [],
-                          boostedSearch: false,
-                          searchBoostLevel: "standard",
-                          citySpecificBoost: [],
-                          videoBanner: "",
-                          whyWorkWithUs: "",
-                          companyReviews: [],
-                          autoRefresh: false,
-                          refreshDiscount: 0,
-                          attachmentFiles: [],
-                          officeImages: [],
-                          companyProfile: "",
-                          proactiveAlerts: false,
-                          alertRadius: 50,
-                          alertFrequency: "immediate",
-                          featuredKeywords: [],
-                          customBranding: {},
-                          superFeatured: false,
-                          tierLevel: "basic",
-                          externalApplyUrl: "",
-                          hotVacancyPrice: 0,
-                          hotVacancyCurrency: "INR",
-                          hotVacancyPaymentStatus: "pending"
-                        });
-                        toast.info("Template cleared. Form has been reset.");
+                      setFormData({
+                        title: "",
+                        department: "",
+                        location: "",
+                        type: "",
+                        experience: "",
+                        salary: "",
+                        description: "",
+                        requirements: "",
+                        benefits: "",
+                        skills: [],
+                        role: "",
+                        industryType: "",
+                        roleCategory: "",
+                        education: "",
+                        employmentType: "",
+                        // Hot Vacancy Premium Features
+                        isHotVacancy: false,
+                        urgentHiring: false,
+                        multipleEmailIds: [],
+                        boostedSearch: false,
+                        searchBoostLevel: "standard",
+                        citySpecificBoost: [],
+                        videoBanner: "",
+                        whyWorkWithUs: "",
+                        companyReviews: [],
+                        autoRefresh: false,
+                        refreshDiscount: 0,
+                        attachmentFiles: [],
+                        officeImages: [],
+                        companyProfile: "",
+                        proactiveAlerts: false,
+                        alertRadius: 50,
+                        alertFrequency: "immediate",
+                        featuredKeywords: [],
+                        customBranding: {},
+                        superFeatured: false,
+                        tierLevel: "basic",
+                        externalApplyUrl: "",
+                        hotVacancyPrice: 0,
+                        hotVacancyCurrency: "INR",
+                        hotVacancyPaymentStatus: "pending",
+                        // CRITICAL PREMIUM HOT VACANCY FEATURES
+                        urgencyLevel: "high",
+                        hiringTimeline: "immediate",
+                        maxApplications: 50,
+                        applicationDeadline: "",
+                        pricingTier: "premium",
+                        price: 0,
+                        currency: "INR",
+                        paymentId: "",
+                        paymentDate: "",
+                        priorityListing: false,
+                        featuredBadge: false,
+                        unlimitedApplications: false,
+                        advancedAnalytics: false,
+                        candidateMatching: false,
+                        directContact: false,
+                        seoTitle: "",
+                        seoDescription: "",
+                        keywords: [],
+                        impressions: 0,
+                        clicks: 0
+                      });
+                      toast.info("Template cleared. Form has been reset.");
                       }}
                     >
                       Clear Template
@@ -1238,6 +1430,34 @@ export default function PostJobPage() {
                 ))}
               </div>
             </div>
+            
+            {/* Hot Vacancy Toggle */}
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-6 mt-6">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="enableHotVacancy"
+                  checked={formData.isHotVacancy}
+                  onCheckedChange={(checked) => {
+                    setFormData({ ...formData, isHotVacancy: checked as boolean })
+                    if (checked) {
+                      toast.success('Hot Vacancy mode enabled! Premium features will be available in the next step.')
+                    } else {
+                      toast.info('Hot Vacancy mode disabled. Premium features step will be skipped.')
+                    }
+                  }}
+                />
+                <div className="flex-1">
+                  <label htmlFor="enableHotVacancy" className="text-sm font-medium text-gray-900 cursor-pointer flex items-center gap-2">
+                    🔥 Make this a Hot Vacancy (Premium Job Posting)
+                    <Badge variant="destructive" className="text-xs">Premium</Badge>
+                  </label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Get premium visibility, boosted search rankings, and advanced features to attract top talent faster. 
+                    Unlock features like urgent hiring badges, city-specific boosts, multiple contact emails, and more.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )
       case 4:
@@ -1270,54 +1490,328 @@ export default function PostJobPage() {
                 </div>
                 
                 {formData.isHotVacancy && (
-                  <div className="ml-6 space-y-4 border-l-2 border-red-200 pl-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="urgentHiring"
-                          checked={formData.urgentHiring}
-                          onCheckedChange={(checked) => setFormData({ ...formData, urgentHiring: checked as boolean })}
-                        />
-                        <label htmlFor="urgentHiring" className="text-sm flex items-center gap-1">
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                          Urgent Hiring
-                        </label>
+                  <div className="ml-6 space-y-6 border-l-2 border-red-200 pl-4">
+                    {/* Urgency & Timeline Settings */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold text-gray-900 mb-4">⏰ Urgency & Timeline</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Urgency Level
+                          </label>
+                          <Select 
+                            value={formData.urgencyLevel} 
+                            onValueChange={(value) => setFormData({ ...formData, urgencyLevel: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select urgency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="high">🟡 High - Fill within 2 weeks</SelectItem>
+                              <SelectItem value="critical">🟠 Critical - Fill within 1 week</SelectItem>
+                              <SelectItem value="immediate">🔴 Immediate - Fill within 2-3 days</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Hiring Timeline
+                          </label>
+                          <Select 
+                            value={formData.hiringTimeline} 
+                            onValueChange={(value) => setFormData({ ...formData, hiringTimeline: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select timeline" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="immediate">Immediate (1-3 days)</SelectItem>
+                              <SelectItem value="1-week">Within 1 Week</SelectItem>
+                              <SelectItem value="2-weeks">Within 2 Weeks</SelectItem>
+                              <SelectItem value="1-month">Within 1 Month</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="boostedSearch"
-                          checked={formData.boostedSearch}
-                          onCheckedChange={(checked) => setFormData({ ...formData, boostedSearch: checked as boolean })}
-                        />
-                        <label htmlFor="boostedSearch" className="text-sm flex items-center gap-1">
-                          <TrendingUp className="h-4 w-4 text-blue-500" />
-                          Boosted Search
-                        </label>
+                    </div>
+                    
+                    {/* Premium Paid Features */}
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                      <h4 className="font-semibold text-gray-900 mb-4">💎 Premium Paid Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="priorityListing"
+                            checked={formData.priorityListing}
+                            onCheckedChange={(checked) => setFormData({ ...formData, priorityListing: checked as boolean })}
+                          />
+                          <label htmlFor="priorityListing" className="text-sm font-medium flex items-center gap-1">
+                            <TrendingUp className="h-4 w-4 text-blue-500" />
+                            Priority Listing (Top Placement)
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="featuredBadge"
+                            checked={formData.featuredBadge}
+                            onCheckedChange={(checked) => setFormData({ ...formData, featuredBadge: checked as boolean })}
+                          />
+                          <label htmlFor="featuredBadge" className="text-sm font-medium flex items-center gap-1">
+                            <Star className="h-4 w-4 text-yellow-500" />
+                            Featured Badge
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="advancedAnalytics"
+                            checked={formData.advancedAnalytics}
+                            onCheckedChange={(checked) => setFormData({ ...formData, advancedAnalytics: checked as boolean })}
+                          />
+                          <label htmlFor="advancedAnalytics" className="text-sm font-medium flex items-center gap-1">
+                            📊 Advanced Analytics
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="candidateMatching"
+                            checked={formData.candidateMatching}
+                            onCheckedChange={(checked) => setFormData({ ...formData, candidateMatching: checked as boolean })}
+                          />
+                          <label htmlFor="candidateMatching" className="text-sm font-medium flex items-center gap-1">
+                            🤖 AI Candidate Matching
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="directContact"
+                            checked={formData.directContact}
+                            onCheckedChange={(checked) => setFormData({ ...formData, directContact: checked as boolean })}
+                          />
+                          <label htmlFor="directContact" className="text-sm font-medium flex items-center gap-1">
+                            📞 Direct Contact Access
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="unlimitedApplications"
+                            checked={formData.unlimitedApplications}
+                            onCheckedChange={(checked) => setFormData({ ...formData, unlimitedApplications: checked as boolean })}
+                          />
+                          <label htmlFor="unlimitedApplications" className="text-sm font-medium flex items-center gap-1">
+                            ∞ Unlimited Applications
+                          </label>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="proactiveAlerts"
-                          checked={formData.proactiveAlerts}
-                          onCheckedChange={(checked) => setFormData({ ...formData, proactiveAlerts: checked as boolean })}
-                        />
-                        <label htmlFor="proactiveAlerts" className="text-sm flex items-center gap-1">
-                          <Zap className="h-4 w-4 text-green-500" />
-                          Proactive Alerts
-                        </label>
+                    </div>
+                    
+                    {/* Basic Premium Features */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold text-gray-900 mb-4">🚀 Visibility Boosters</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="urgentHiring"
+                            checked={formData.urgentHiring}
+                            onCheckedChange={(checked) => setFormData({ ...formData, urgentHiring: checked as boolean })}
+                          />
+                          <label htmlFor="urgentHiring" className="text-sm flex items-center gap-1">
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                            Urgent Hiring Badge
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="boostedSearch"
+                            checked={formData.boostedSearch}
+                            onCheckedChange={(checked) => setFormData({ ...formData, boostedSearch: checked as boolean })}
+                          />
+                          <label htmlFor="boostedSearch" className="text-sm flex items-center gap-1">
+                            <TrendingUp className="h-4 w-4 text-blue-500" />
+                            Boosted Search
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="proactiveAlerts"
+                            checked={formData.proactiveAlerts}
+                            onCheckedChange={(checked) => setFormData({ ...formData, proactiveAlerts: checked as boolean })}
+                          />
+                          <label htmlFor="proactiveAlerts" className="text-sm flex items-center gap-1">
+                            <Zap className="h-4 w-4 text-green-500" />
+                            Proactive Alerts
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="superFeatured"
+                            checked={formData.superFeatured}
+                            onCheckedChange={(checked) => setFormData({ ...formData, superFeatured: checked as boolean })}
+                          />
+                          <label htmlFor="superFeatured" className="text-sm flex items-center gap-1">
+                            <Star className="h-4 w-4 text-purple-500" />
+                            Super Featured
+                          </label>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="superFeatured"
-                          checked={formData.superFeatured}
-                          onCheckedChange={(checked) => setFormData({ ...formData, superFeatured: checked as boolean })}
-                        />
-                        <label htmlFor="superFeatured" className="text-sm flex items-center gap-1">
-                          <Star className="h-4 w-4 text-purple-500" />
-                          Super Featured
-                        </label>
+                    </div>
+                    
+                    {/* Application Settings */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold text-gray-900 mb-4">📝 Application Settings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Max Applications
+                          </label>
+                          <Input
+                            type="number"
+                            placeholder="50"
+                            value={formData.maxApplications}
+                            onChange={(e) => setFormData({ ...formData, maxApplications: parseInt(e.target.value) || 50 })}
+                            disabled={formData.unlimitedApplications}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formData.unlimitedApplications ? 'Unlimited enabled' : 'Max number of applications accepted'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Application Deadline
+                          </label>
+                          <Input
+                            type="date"
+                            value={formData.applicationDeadline}
+                            onChange={(e) => setFormData({ ...formData, applicationDeadline: e.target.value })}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            When applications close (optional)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Pricing & Payment */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                      <h4 className="font-semibold text-gray-900 mb-4">💰 Pricing & Payment</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Pricing Tier
+                          </label>
+                          <Select 
+                            value={formData.pricingTier} 
+                            onValueChange={(value) => setFormData({ ...formData, pricingTier: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select tier" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="basic">Basic - ₹2,999</SelectItem>
+                              <SelectItem value="premium">Premium - ₹5,999</SelectItem>
+                              <SelectItem value="enterprise">Enterprise - ₹9,999</SelectItem>
+                              <SelectItem value="super-premium">Super Premium - ₹19,999</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Price (₹)
+                          </label>
+                          <Input
+                            type="number"
+                            placeholder="5999"
+                            value={formData.price || formData.hotVacancyPrice}
+                            onChange={(e) => setFormData({ 
+                              ...formData, 
+                              price: parseFloat(e.target.value) || 0,
+                              hotVacancyPrice: parseFloat(e.target.value) || 0
+                            })}
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Currency
+                          </label>
+                          <Select 
+                            value={formData.currency || formData.hotVacancyCurrency} 
+                            onValueChange={(value) => setFormData({ 
+                              ...formData, 
+                              currency: value,
+                              hotVacancyCurrency: value
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="INR">INR (₹)</SelectItem>
+                              <SelectItem value="USD">USD ($)</SelectItem>
+                              <SelectItem value="EUR">EUR (€)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* SEO Optimization */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold text-gray-900 mb-4">🔍 SEO Optimization</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            SEO Title
+                          </label>
+                          <Input
+                            placeholder="Senior React Developer Jobs in Bangalore | Top Tech Company"
+                            value={formData.seoTitle}
+                            onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Optimized for search engines (60 chars max)
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            SEO Description
+                          </label>
+                          <Textarea
+                            placeholder="Join our team as a Senior React Developer. Exciting opportunities, great benefits..."
+                            className="min-h-20"
+                            value={formData.seoDescription}
+                            onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Meta description for search results (160 chars max)
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            SEO Keywords
+                          </label>
+                          <Input
+                            placeholder="react developer, javascript, bangalore jobs (comma separated)"
+                            value={Array.isArray(formData.keywords) ? formData.keywords.join(', ') : ''}
+                            onChange={(e) => {
+                              const keywordsArray = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                              setFormData({ ...formData, keywords: keywordsArray });
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                     

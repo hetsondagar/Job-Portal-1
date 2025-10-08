@@ -600,7 +600,13 @@ export default function JobsPage() {
           startDate: job.startDate,
           workMode: job.workMode || job.remoteWork,
           learningObjectives: job.learningObjectives,
-          mentorship: job.mentorship
+          mentorship: job.mentorship,
+          // Hot Vacancy Premium Features
+          isHotVacancy: job.isHotVacancy || job.ishotvacancy || false,
+          urgentHiring: job.urgentHiring || job.urgenthiring || false,
+          superFeatured: job.superFeatured || job.superfeatured || false,
+          boostedSearch: job.boostedSearch || job.boostedsearch || false,
+          externalApplyUrl: job.externalApplyUrl || job.externalapplyurl
         }))
         
         // Use only real jobs from database, no sample data

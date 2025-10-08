@@ -93,7 +93,28 @@ exports.createJob = async (req, res, next) => {
       externalApplyUrl,
       hotVacancyPrice,
       hotVacancyCurrency = 'INR',
-      hotVacancyPaymentStatus = 'pending'
+      hotVacancyPaymentStatus = 'pending',
+      // CRITICAL PREMIUM HOT VACANCY FEATURES (from hot_vacancies table)
+      urgencyLevel, // high, critical, immediate
+      hiringTimeline, // immediate, 1-week, 2-weeks, 1-month
+      maxApplications, // Application limit (50 for premium)
+      applicationDeadline, // When applications close
+      pricingTier, // basic, premium, enterprise, super-premium
+      price, // Hot vacancy price (alias for hotVacancyPrice)
+      currency, // Currency (alias for hotVacancyCurrency)
+      paymentId, // Payment gateway transaction ID
+      paymentDate, // When payment was completed
+      priorityListing = false, // Show at top of listings
+      featuredBadge = false, // Display featured badge
+      unlimitedApplications = false, // No application limit
+      advancedAnalytics = false, // Advanced metrics and insights
+      candidateMatching = false, // AI-powered candidate matching
+      directContact = false, // Allow direct contact
+      seoTitle, // SEO optimized title
+      seoDescription, // SEO optimized description
+      keywords = [], // SEO keywords
+      impressions = 0, // Hot vacancy specific impressions
+      clicks = 0 // Hot vacancy specific clicks
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
@@ -111,6 +132,23 @@ exports.createJob = async (req, res, next) => {
       if (!type && !jobType) errors.push('Job type is required');
       if (!experience && !experienceLevel) errors.push('Experience level is required');
       if (!salary && !salaryMin && !salaryMax) errors.push('Salary information is required');
+      
+      // Hot vacancy specific validation
+      if (isHotVacancy === true) {
+        console.log('🔥 Validating hot vacancy requirements...');
+        if (!hotVacancyPrice || hotVacancyPrice <= 0) {
+          errors.push('Hot vacancy price is required and must be greater than 0');
+        }
+        if (!tierLevel) {
+          console.log('⚠️ No tier level provided, using default: premium');
+          req.body.tierLevel = 'premium';
+        }
+        // Ensure boosted search is enabled by default for hot vacancies
+        if (boostedSearch === undefined) {
+          console.log('✅ Enabling boosted search by default for hot vacancy');
+          req.body.boostedSearch = true;
+        }
+      }
     } else {
       // For drafts, only require title (can be "Untitled Job")
       if (!title || String(title).trim() === '') {
@@ -284,9 +322,28 @@ exports.createJob = async (req, res, next) => {
       superFeatured: Boolean(superFeatured),
       tierLevel: tierLevel || 'basic',
       externalApplyUrl: externalApplyUrl && externalApplyUrl.trim() ? externalApplyUrl.trim() : null,
-      hotVacancyPrice: hotVacancyPrice || null,
-      hotVacancyCurrency: hotVacancyCurrency || 'INR',
+      hotVacancyPrice: hotVacancyPrice || price || null, // Support both field names
+      hotVacancyCurrency: hotVacancyCurrency || currency || 'INR',
       hotVacancyPaymentStatus: hotVacancyPaymentStatus || 'pending',
+      // CRITICAL PREMIUM HOT VACANCY FEATURES (from hot_vacancies table)
+      urgencyLevel: urgencyLevel || null,
+      hiringTimeline: hiringTimeline || null,
+      maxApplications: maxApplications || null,
+      applicationDeadline: applicationDeadline || null,
+      pricingTier: pricingTier || null,
+      paymentId: paymentId || null,
+      paymentDate: paymentDate || null,
+      priorityListing: Boolean(priorityListing),
+      featuredBadge: Boolean(featuredBadge),
+      unlimitedApplications: Boolean(unlimitedApplications),
+      advancedAnalytics: Boolean(advancedAnalytics),
+      candidateMatching: Boolean(candidateMatching),
+      directContact: Boolean(directContact),
+      seoTitle: seoTitle && seoTitle.trim() ? seoTitle.trim() : null,
+      seoDescription: seoDescription && seoDescription.trim() ? seoDescription.trim() : null,
+      keywords: Array.isArray(keywords) ? keywords : [],
+      impressions: impressions || 0,
+      clicks: clicks || 0,
       validTill: resolvedValidTill,
       publishedAt,
       tags: Array.isArray(tags) ? tags : [],
@@ -747,10 +804,27 @@ exports.getAllJobs = async (req, res, next) => {
     }
 
     const finalWhere = andGroups.length ? { [And]: [whereClause, ...andGroups] } : whereClause;
+    
+    // Enhanced sorting to prioritize hot vacancies
+    const orderClauses = [];
+    
+    // ALWAYS prioritize hot vacancies with premium features first
+    orderClauses.push(['isHotVacancy', 'DESC']); // Hot vacancies first
+    orderClauses.push(['superFeatured', 'DESC']); // Super featured second
+    orderClauses.push(['priorityListing', 'DESC']); // Priority listing third
+    orderClauses.push(['urgentHiring', 'DESC']); // Urgent hiring fourth
+    orderClauses.push(['boostedSearch', 'DESC']); // Boosted search fifth
+    orderClauses.push(['featuredBadge', 'DESC']); // Featured badge sixth
+    
+    // Then apply user's requested sort
+    orderClauses.push([sortBy, sortOrder]);
+    
+    console.log('🔍 Using enhanced sorting for hot vacancy priority:', orderClauses);
+    
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: finalWhere,
       include,
-      order: [[sortBy, sortOrder]],
+      order: orderClauses,
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

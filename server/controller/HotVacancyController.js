@@ -2,15 +2,47 @@
 
 const { Job, Company, User, JobApplication, Notification } = require('../config');
 const JobController = require('./JobController');
-// Hot vacancies are now integrated into the Job model with isHotVacancy flag
 
 /**
- * Create a new hot vacancy (delegates to JobController with isHotVacancy=true)
+ * HOT VACANCY CONTROLLER
+ * 
+ * ARCHITECTURE NOTE:
+ * Hot vacancies are stored in the `jobs` table with isHotVacancy=true flag.
+ * This unified approach provides:
+ * - Simpler database queries and filtering
+ * - Shared relationships (applications, bookmarks, etc.)
+ * - Easier maintenance and consistency
+ * 
+ * The `hot_vacancies` table exists in the database but is NOT USED.
+ * All hot vacancy operations delegate to JobController for consistency.
+ */
+
+/**
+ * Create a new hot vacancy
+ * Delegates to JobController.createJob() with isHotVacancy=true
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ * @returns {Promise} Response with created hot vacancy job
  */
 exports.createHotVacancy = async (req, res, next) => {
-  // Set isHotVacancy flag
+  console.log('🔥 Creating hot vacancy...');
+  
+  // Ensure isHotVacancy is set to true
   req.body.isHotVacancy = true;
+  
+  // Set default values for hot vacancy
+  if (req.body.boostedSearch === undefined) {
+    req.body.boostedSearch = true; // Default to boosted
+  }
+  
+  if (req.body.tierLevel === undefined) {
+    req.body.tierLevel = 'premium'; // Default tier
+  }
+  
   // Delegate to regular job creation
+  // The Job model has all hot vacancy fields
   return JobController.createJob(req, res, next);
 };
 
@@ -54,26 +86,32 @@ exports.createHotVacancyLegacy = async (req, res, next) => {
       certifications = [],
       languages = [],
       tags = [],
-      // Hot vacancy specific fields
-      urgencyLevel = 'high',
-      hiringTimeline = 'immediate',
+      // Hot vacancy specific fields (CRITICAL PREMIUM FEATURES)
+      urgencyLevel = 'high', // high, critical, immediate
+      hiringTimeline = 'immediate', // immediate, 1-week, 2-weeks, 1-month
       maxApplications = 50,
       applicationDeadline,
       // Premium pricing
-      pricingTier = 'premium',
+      pricingTier = 'premium', // basic, premium, enterprise, super-premium
       price,
       currency = 'INR',
-      // Premium features
-      priorityListing = true,
-      featuredBadge = true,
-      unlimitedApplications = false,
-      advancedAnalytics = true,
-      candidateMatching = true,
-      directContact = true,
-      // SEO
+      // Payment tracking
+      paymentId, // Payment gateway transaction ID
+      paymentDate, // When payment was completed
+      // Premium features (PAID FEATURES)
+      priorityListing = true, // Show at top of listings
+      featuredBadge = true, // Display featured badge
+      unlimitedApplications = false, // No application limit
+      advancedAnalytics = true, // Advanced metrics
+      candidateMatching = true, // AI matching
+      directContact = true, // Direct employer contact
+      // SEO optimization
       seoTitle,
       seoDescription,
       keywords = [],
+      // Tracking metrics
+      impressions = 0, // Hot vacancy specific impressions
+      clicks = 0, // Hot vacancy specific clicks
       // Premium Hot Vacancy Features
       urgentHiring = false,
       multipleEmailIds = [],
@@ -155,6 +193,7 @@ exports.createHotVacancyLegacy = async (req, res, next) => {
     validTill.setDate(validTill.getDate() + 30);
 
     const hotVacancyData = {
+      // Basic job fields
       title,
       slug,
       description,
@@ -189,25 +228,36 @@ exports.createHotVacancyLegacy = async (req, res, next) => {
       certifications,
       languages,
       tags,
-      urgencyLevel,
-      hiringTimeline,
-      maxApplications,
-      applicationDeadline,
-      pricingTier,
+      validTill,
+      status: 'draft', // Start as draft until payment is confirmed
+      
+      // PREMIUM HOT VACANCY FEATURES (PAID)
+      urgencyLevel, // high, critical, immediate
+      hiringTimeline, // immediate, 1-week, 2-weeks, 1-month
+      maxApplications, // Application limit
+      applicationDeadline, // When applications close
+      pricingTier, // basic, premium, enterprise, super-premium
       price: parseFloat(price),
       currency,
-      priorityListing,
-      featuredBadge,
-      unlimitedApplications,
-      advancedAnalytics,
-      candidateMatching,
-      directContact,
+      paymentId, // Payment transaction ID
+      paymentDate, // Payment completion date
+      priorityListing, // Show at top
+      featuredBadge, // Featured badge display
+      unlimitedApplications, // No limit on applications
+      advancedAnalytics, // Advanced metrics
+      candidateMatching, // AI matching
+      directContact, // Direct contact feature
+      
+      // SEO optimization
       seoTitle,
       seoDescription,
       keywords,
-      validTill,
-      status: 'draft', // Start as draft until payment is confirmed
-      // Premium Hot Vacancy Features
+      
+      // Tracking metrics
+      impressions, // Hot vacancy impressions
+      clicks, // Hot vacancy clicks
+      
+      // Additional Premium Features
       urgentHiring,
       multipleEmailIds,
       boostedSearch,
@@ -228,6 +278,7 @@ exports.createHotVacancyLegacy = async (req, res, next) => {
       customBranding,
       superFeatured,
       tierLevel,
+      
       // Mark as hot vacancy
       isHotVacancy: true
     };
@@ -620,17 +671,26 @@ exports.getPublicHotVacancies = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website']
+          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'logo', 'description']
         }
       ],
       order: [
-        ['superFeatured', 'DESC'],
-        ['urgentHiring', 'DESC'],
-        ['createdAt', 'DESC']
+        // PREMIUM FEATURE PRIORITY SORTING (Most valuable features first)
+        ['superFeatured', 'DESC'], // Super featured first
+        ['priorityListing', 'DESC'], // Priority listing second
+        ['urgentHiring', 'DESC'], // Urgent hiring third
+        ['boostedSearch', 'DESC'], // Boosted search fourth
+        ['featuredBadge', 'DESC'], // Featured badge fifth
+        ['pricingTier', 'DESC'], // Higher tier sixth (super-premium > enterprise > premium > basic)
+        ['impressions', 'DESC'], // More impressions = better visibility
+        ['applicationDeadline', 'ASC'], // Closer deadline = more urgent
+        ['createdAt', 'DESC'] // Newer first
       ],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
+    
+    console.log(`🔥 Found ${count} public hot vacancies with premium feature sorting`);
 
     return res.status(200).json({
       success: true,

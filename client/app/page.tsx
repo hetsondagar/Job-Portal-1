@@ -739,6 +739,10 @@ export default function HomePage() {
           applicants: j.applications || 0,
           urgent: j.isUrgent || j.is_urgent || false,
           sector: 'technology',
+          // Hot Vacancy Premium Features
+          isHotVacancy: j.isHotVacancy || j.ishotvacancy || false,
+          urgentHiring: j.urgentHiring || j.urgenthiring || false,
+          superFeatured: j.superFeatured || j.superfeatured || false,
         }))
         setFeaturedJobs(mappedJobs)
         setTrendingJobRoles([])
@@ -1311,11 +1315,23 @@ export default function HomePage() {
                             <AvatarImage src={job.logo} alt={job.company} />
                             <AvatarFallback className="text-sm font-bold">{job.company[0]}</AvatarFallback>
                           </Avatar>
-                  {job.urgent && (
-                            <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                        Urgent
-                      </Badge>
-                          )}
+                          <div className="flex flex-col gap-1">
+                            {(job as any).isHotVacancy && (
+                              <Badge className="bg-red-100 text-red-800 border-red-200 text-xs animate-pulse">
+                                🔥 Hot
+                              </Badge>
+                            )}
+                            {((job as any).urgentHiring || job.urgent) && (
+                              <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                URGENT
+                              </Badge>
+                            )}
+                            {(job as any).superFeatured && (
+                              <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                                ⭐ Super
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
                         <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors line-clamp-2">

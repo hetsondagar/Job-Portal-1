@@ -2,6 +2,15 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Check if table already exists
+    const tableExists = await queryInterface.showAllTables()
+      .then(tables => tables.includes('job_preferences'));
+    
+    if (tableExists) {
+      console.log('ℹ️  Table job_preferences already exists, skipping...');
+      return;
+    }
+    
     await queryInterface.createTable('job_preferences', {
       id: {
         type: Sequelize.UUID,
@@ -126,19 +135,31 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('job_preferences', ['user_id'], {
-      unique: true,
-      name: 'job_preferences_user_id_unique'
-    });
+    // Add indexes (with error handling)
+    try {
+      await queryInterface.addIndex('job_preferences', ['user_id'], {
+        unique: true,
+        name: 'job_preferences_user_id_unique'
+      });
+    } catch (e) {
+      if (!e.message.includes('already exists')) throw e;
+    }
 
-    await queryInterface.addIndex('job_preferences', ['region'], {
-      name: 'job_preferences_region_idx'
-    });
+    try {
+      await queryInterface.addIndex('job_preferences', ['region'], {
+        name: 'job_preferences_region_idx'
+      });
+    } catch (e) {
+      if (!e.message.includes('already exists')) throw e;
+    }
 
-    await queryInterface.addIndex('job_preferences', ['is_active'], {
-      name: 'job_preferences_is_active_idx'
-    });
+    try {
+      await queryInterface.addIndex('job_preferences', ['is_active'], {
+        name: 'job_preferences_is_active_idx'
+      });
+    } catch (e) {
+      if (!e.message.includes('already exists')) throw e;
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

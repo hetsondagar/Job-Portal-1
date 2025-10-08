@@ -508,6 +508,116 @@ const Job = sequelize.define('Job', {
     allowNull: true,
     defaultValue: 'pending',
     field: 'hotvacancypaymentstatus' // Map to lowercase database column
+  },
+  // PREMIUM HOT VACANCY FEATURES (from hot_vacancies table)
+  // All field names are mapped to snake_case database columns
+  urgencyLevel: {
+    type: DataTypes.STRING, // Changed from ENUM to STRING for compatibility
+    allowNull: true,
+    field: 'urgencylevel',
+    validate: {
+      isIn: [['high', 'critical', 'immediate']]
+    }
+  },
+  hiringTimeline: {
+    type: DataTypes.STRING, // Changed from ENUM to STRING for compatibility
+    allowNull: true,
+    field: 'hiringtimeline',
+    validate: {
+      isIn: [['immediate', '1-week', '2-weeks', '1-month']]
+    }
+  },
+  maxApplications: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'maxapplications'
+  },
+  applicationDeadline: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'applicationdeadline'
+  },
+  pricingTier: {
+    type: DataTypes.STRING, // Changed from ENUM to STRING for compatibility
+    allowNull: true,
+    field: 'pricingtier',
+    validate: {
+      isIn: [['basic', 'premium', 'enterprise', 'super-premium']]
+    }
+  },
+  paymentId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'paymentid'
+  },
+  paymentDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'paymentdate'
+  },
+  priorityListing: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'prioritylisting'
+  },
+  featuredBadge: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'featuredbadge'
+  },
+  unlimitedApplications: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'unlimitedapplications'
+  },
+  advancedAnalytics: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'advancedanalytics'
+  },
+  candidateMatching: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'candidatematching'
+  },
+  directContact: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'directcontact'
+  },
+  seoTitle: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'seotitle'
+  },
+  seoDescription: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'seodescription'
+  },
+  keywords: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'keywords'
+  },
+  impressions: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+    field: 'impressions'
+  },
+  clicks: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+    field: 'clicks'
   }
 }, {
   sequelize,

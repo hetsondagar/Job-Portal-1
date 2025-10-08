@@ -217,7 +217,7 @@ export default function HotVacanciesPage() {
                 </p>
               </div>
             <Button 
-              onClick={() => router.push('/employer-dashboard/hot-vacancies/create')}
+              onClick={() => router.push('/employer-dashboard/post-job?hotVacancy=true')}
               className="bg-red-600 hover:bg-red-700"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -350,13 +350,13 @@ export default function HotVacanciesPage() {
         ) : hotVacancies.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-              <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Hot Vacancies Yet</h3>
                 <p className="text-gray-600 mb-6">
                 Create your first hot vacancy to get premium visibility and attract top candidates.
               </p>
               <Button 
-                onClick={() => router.push('/employer-dashboard/hot-vacancies/create')}
+                onClick={() => router.push('/employer-dashboard/post-job?hotVacancy=true')}
                 className="bg-red-600 hover:bg-red-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
