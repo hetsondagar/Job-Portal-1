@@ -12,6 +12,7 @@ import { Upload, FileText, Eye, Download, ArrowLeft, Trash2 } from 'lucide-react
 import { toast } from 'sonner'
 import { apiService, Resume } from '@/lib/api'
 import { Navbar } from '@/components/navbar'
+import { GulfJobseekerAuthGuard } from '@/components/gulf-jobseeker-auth-guard'
 
 export default function GulfResumesPage() {
   const { user, loading } = useAuth()
@@ -145,7 +146,8 @@ export default function GulfResumesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <GulfJobseekerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
         <div className="flex items-center justify-between mb-6">
@@ -209,7 +211,8 @@ export default function GulfResumesPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </GulfJobseekerAuthGuard>
   )
 }
 
