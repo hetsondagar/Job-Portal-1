@@ -5,9 +5,7 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node start-with-migration.js",
-    "start:direct": "node index.js",
-    "deploy": "node deploy-with-db-fix.js",
+    "start": "node index.js",
     "postinstall": "node scripts/auto-migrate-on-deploy.js",
     "dev": "nodemon index.js",
     "test": "jest",
@@ -19,13 +17,7 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
     "db:create": "sequelize-cli db:create",
-    "db:drop": "sequelize-cli db:drop",
-    "db:sync": "node deploy-sync.js",
-    "db:fix-production": "node scripts/fix-production-database.js",
-    "db:quick-fix": "node quick-fix-production.js",
-    "db:update-production": "node scripts/production-database-update.js",
-    "test:google": "node test-google-auth.js",
-    "test:email": "node test-email-service.js"
+    "db:drop": "sequelize-cli db:drop"
   },
   "keywords": [],
   "author": "",
