@@ -146,7 +146,7 @@ export default function HotVacanciesPage() {
       basic: { color: "bg-blue-100 text-blue-800", icon: Star },
       premium: { color: "bg-purple-100 text-purple-800", icon: Crown },
       enterprise: { color: "bg-orange-100 text-orange-800", icon: TrendingUp },
-      'super-premium': { color: "bg-red-100 text-red-800", icon: Fire }
+      'super-premium': { color: "bg-red-100 text-red-800", icon: Flame }
     }
     
     const config = tierConfig[tier as keyof typeof tierConfig] || tierConfig.premium
@@ -208,7 +208,7 @@ export default function HotVacanciesPage() {
               <h1 className="text-3xl font-bold flex items-center gap-2">
                   Hot Vacancies
                 <Badge variant="destructive" className="flex items-center gap-1">
-                  <Fire className="h-3 w-3" />
+                  <Flame className="h-3 w-3" />
                   Premium
                 </Badge>
                 </h1>
@@ -235,7 +235,7 @@ export default function HotVacanciesPage() {
                     <p className="text-sm font-medium text-gray-600">Total Hot Vacancies</p>
                   <p className="text-2xl font-bold">{hotVacancies.length}</p>
                   </div>
-                <Fire className="h-8 w-8 text-red-500" />
+                <Flame className="h-8 w-8 text-red-500" />
                 </div>
               </CardContent>
             </Card>
@@ -350,7 +350,7 @@ export default function HotVacanciesPage() {
         ) : hotVacancies.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-              <Fire className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Hot Vacancies Yet</h3>
                 <p className="text-gray-600 mb-6">
                 Create your first hot vacancy to get premium visibility and attract top candidates.
