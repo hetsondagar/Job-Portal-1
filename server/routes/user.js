@@ -1718,8 +1718,10 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     
     let applications;
     try {
+      const where = { employerId: req.user.id };
+      if (req.query && req.query.jobId) where.jobId = req.query.jobId;
       applications = await JobApplication.findAll({
-        where: { employerId: req.user.id },
+        where,
         include: [
           {
             model: Job,

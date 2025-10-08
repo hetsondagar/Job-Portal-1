@@ -1748,11 +1748,29 @@ exports.getJobsByEmployer = async (req, res, next) => {
     });
 
     console.log(`✅ Found ${count} jobs for employer ${req.user.id}`);
+    // Attach applicationsCount per job
+    let jobsWithCounts = jobs;
+    try {
+      const { JobApplication } = require('../config/index');
+      const jobIds = jobs.map(j => j.id);
+      if (jobIds.length > 0) {
+        const Sequelize = Job.sequelize;
+        const [rowsCount] = await Sequelize.query(
+          'SELECT job_id as "jobId", COUNT(*)::int as cnt FROM job_applications WHERE job_id = ANY($1) GROUP BY job_id',
+          { bind: [jobIds] }
+        );
+        const map = new Map(rowsCount.map(r => [r.jobId, r.cnt]));
+        jobsWithCounts = jobs.map(j => ({ ...(j.toJSON ? j.toJSON() : j), applicationsCount: map.get(j.id) || 0 }));
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to compute applicationsCount for employer jobs:', e?.message || e);
+      jobsWithCounts = jobs.map(j => ({ ...(j.toJSON ? j.toJSON() : j), applicationsCount: 0 }));
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Employer jobs retrieved successfully',
-      data: jobs,
+      data: jobsWithCounts,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),

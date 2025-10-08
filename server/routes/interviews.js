@@ -239,6 +239,17 @@ router.get('/employer', authenticateToken, async (req, res) => {
 
     const interviews = await Interview.findAndCountAll({
       where: whereClause,
+      include: [
+        {
+          model: JobApplication,
+          as: 'jobApplication',
+          attributes: ['id','status','appliedAt'],
+          include: [
+            { model: Job, as: 'job', attributes: ['id','title'] },
+            { model: User, as: 'applicant', attributes: ['id','first_name','last_name','email'] }
+          ]
+        }
+      ],
       order: [['scheduledAt', 'ASC']],
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit)
