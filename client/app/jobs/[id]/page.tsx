@@ -24,6 +24,7 @@ import {
   Users,
   GraduationCap,
   Zap,
+  Video,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -103,7 +104,13 @@ export default function JobDetailPage() {
                 founded: res.data.company?.founded || res.data.employer?.founded || 'Founded date not available',
                 website: res.data.company?.website || res.data.employer?.website || '',
                 aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
-                photos: res.data.photos || []
+                photos: res.data.photos || [],
+                // Hot Vacancy Premium Features
+                isHotVacancy: res.data.isHotVacancy || false,
+                externalApplyUrl: res.data.externalApplyUrl || '',
+                whyWorkWithUs: res.data.whyWorkWithUs || '',
+                videoBanner: res.data.videoBanner || '',
+                companyProfile: res.data.companyProfile || ''
               }
               
               console.log('✅ Transformed job data:', transformedJob)
@@ -153,7 +160,13 @@ export default function JobDetailPage() {
               startDate: res.data.startDate,
               workMode: res.data.workMode,
               learningObjectives: res.data.learningObjectives,
-              mentorship: res.data.mentorship
+              mentorship: res.data.mentorship,
+              // Hot Vacancy Premium Features
+              isHotVacancy: res.data.isHotVacancy || false,
+              externalApplyUrl: res.data.externalApplyUrl || '',
+              whyWorkWithUs: res.data.whyWorkWithUs || '',
+              videoBanner: res.data.videoBanner || '',
+              companyProfile: res.data.companyProfile || ''
             }
             
             console.log('✅ Transformed job data (fallback):', transformedJob)
@@ -764,6 +777,19 @@ export default function JobDetailPage() {
                       )}
                     </Button>
 
+                    {/* External Application Warning */}
+                    {job?.externalApplyUrl && !hasApplied && (
+                      <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                            <strong className="font-semibold">Note:</strong> You'll be redirected to the company's external career portal. 
+                            Your application will be managed by the employer on their platform.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {hasApplied && (
                       <Button
                         onClick={() => {
@@ -930,6 +956,63 @@ export default function JobDetailPage() {
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {/* Video Banner */}
+              {job?.videoBanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl overflow-hidden">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Video className="h-6 w-6 text-red-600" />
+                        Company Video
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {job.videoBanner.includes('youtube.com') || job.videoBanner.includes('youtu.be') ? (
+                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                          <iframe
+                            className="absolute top-0 left-0 w-full h-full rounded-lg"
+                            src={`https://www.youtube.com/embed/${
+                              job.videoBanner.includes('youtu.be') 
+                                ? job.videoBanner.split('youtu.be/')[1]?.split('?')[0]
+                                : job.videoBanner.split('v=')[1]?.split('&')[0]
+                            }`}
+                            title="Company Video"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : job.videoBanner.endsWith('.mp4') || job.videoBanner.endsWith('.webm') ? (
+                        <video 
+                          className="w-full rounded-lg" 
+                          controls
+                          preload="metadata"
+                        >
+                          <source src={job.videoBanner} type={`video/${job.videoBanner.split('.').pop()}`} />
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <div className="text-center p-6">
+                          <a 
+                            href={job.videoBanner} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 underline flex items-center justify-center gap-2"
+                          >
+                            <Video className="h-5 w-5" />
+                            Watch Company Video
+                          </a>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {/* Job Description */}
               {job?.description && (
@@ -1108,6 +1191,54 @@ export default function JobDetailPage() {
                             <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
                           </div>
                         ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Why Work With Us */}
+              {job?.whyWorkWithUs && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-xl shadow-xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Building2 className="h-6 w-6 text-purple-600" />
+                        Why Work With Us
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="prose prose-slate dark:prose-invert max-w-none">
+                        <div className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                          {job.whyWorkWithUs}
+                        </div>
+                      </div>
+                      
+                      {/* Company Branding Section */}
+                      <div className="mt-6 pt-6 border-t border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center gap-4">
+                          {job.companyLogo && (
+                            <img 
+                              src={job.companyLogo} 
+                              alt={job.company}
+                              className="h-16 w-16 object-contain rounded-lg bg-white p-2"
+                            />
+                          )}
+                          <div>
+                            <h4 className="font-semibold text-lg text-purple-900 dark:text-purple-100">
+                              {job.company}
+                            </h4>
+                            {job.industry && (
+                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                                {job.industry}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

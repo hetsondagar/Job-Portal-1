@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown, TrendingUp, Zap, Star, Plus, Mail } from "lucide-react"
+import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown, TrendingUp, Zap, Star, Plus, Mail, ExternalLink, Building2, Video } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -99,6 +99,8 @@ export default function PostJobPage() {
   const [jobPhotos, setJobPhotos] = useState<any[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [uploadedJobId, setUploadedJobId] = useState<string | null>(null)
+  const [brandingMedia, setBrandingMedia] = useState<{type: 'video' | 'photo', file: File, preview: string}[]>([])
+  const [uploadingBranding, setUploadingBranding] = useState(false)
   const [templates, setTemplates] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
@@ -908,6 +910,69 @@ export default function PostJobPage() {
     }))
   }
 
+  // Branding Media Handlers
+  const handleBrandingMediaAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files) return
+
+    const currentCount = brandingMedia.length
+    const MAX_ITEMS = 5
+    const remainingSlots = MAX_ITEMS - currentCount
+
+    if (remainingSlots <= 0) {
+      toast.error(`Maximum ${MAX_ITEMS} items allowed (photos + video combined)`)
+      return
+    }
+
+    const newFiles = Array.from(files).slice(0, remainingSlots)
+    const newMedia: {type: 'video' | 'photo', file: File, preview: string}[] = []
+
+    newFiles.forEach(file => {
+      // Check file type
+      const isVideo = file.type.startsWith('video/')
+      const isPhoto = file.type.startsWith('image/')
+
+      if (!isVideo && !isPhoto) {
+        toast.error(`${file.name}: Only images and videos are allowed`)
+        return
+      }
+
+      // Check file size (videos: 50MB, photos: 5MB)
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast.error(`${file.name}: File too large. Max ${isVideo ? '50MB for videos' : '5MB for photos'}`)
+        return
+      }
+
+      // Create preview
+      const preview = URL.createObjectURL(file)
+      newMedia.push({
+        type: isVideo ? 'video' : 'photo',
+        file,
+        preview
+      })
+    })
+
+    setBrandingMedia(prev => [...prev, ...newMedia])
+    
+    if (newMedia.length > 0) {
+      toast.success(`Added ${newMedia.length} item(s). ${MAX_ITEMS - currentCount - newMedia.length} slots remaining`)
+    }
+
+    // Reset input
+    event.target.value = ''
+  }
+
+  const handleBrandingMediaRemove = (index: number) => {
+    setBrandingMedia(prev => {
+      const updated = prev.filter((_, i) => i !== index)
+      // Clean up object URL
+      URL.revokeObjectURL(prev[index].preview)
+      return updated
+    })
+    toast.info('Item removed')
+  }
+
   // Navigation handlers
   const goToNextStep = () => {
     if (currentStep < steps.length) {
@@ -1703,132 +1768,39 @@ export default function PostJobPage() {
                       </div>
                     </div>
                     
-                    {/* Pricing & Payment */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-                      <h4 className="font-semibold text-gray-900 mb-4">💰 Pricing & Payment</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* External Application URL */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-300">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <ExternalLink className="h-5 w-5 text-blue-600" />
+                        External Application URL
+                      </h4>
+                      <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Pricing Tier
-                          </label>
-                          <Select 
-                            value={formData.pricingTier} 
-                            onValueChange={(value) => setFormData({ ...formData, pricingTier: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select tier" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="basic">Basic - ₹2,999</SelectItem>
-                              <SelectItem value="premium">Premium - ₹5,999</SelectItem>
-                              <SelectItem value="enterprise">Enterprise - ₹9,999</SelectItem>
-                              <SelectItem value="super-premium">Super Premium - ₹19,999</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Price (₹)
-                          </label>
                           <Input
-                            type="number"
-                            placeholder="5999"
-                            value={formData.price || formData.hotVacancyPrice}
-                            onChange={(e) => setFormData({ 
-                              ...formData, 
-                              price: parseFloat(e.target.value) || 0,
-                              hotVacancyPrice: parseFloat(e.target.value) || 0
-                            })}
+                            placeholder="https://yourcompany.com/careers/apply"
+                            value={formData.externalApplyUrl}
+                            onChange={(e) => setFormData({ ...formData, externalApplyUrl: e.target.value })}
+                            className="border-blue-300"
                           />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Currency
-                          </label>
-                          <Select 
-                            value={formData.currency || formData.hotVacancyCurrency} 
-                            onValueChange={(value) => setFormData({ 
-                              ...formData, 
-                              currency: value,
-                              hotVacancyCurrency: value
-                            })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="INR">INR (₹)</SelectItem>
-                              <SelectItem value="USD">USD ($)</SelectItem>
-                              <SelectItem value="EUR">EUR (€)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* SEO Optimization */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold text-gray-900 mb-4">🔍 SEO Optimization</h4>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            SEO Title
-                          </label>
-                          <Input
-                            placeholder="Senior React Developer Jobs in Bangalore | Top Tech Company"
-                            value={formData.seoTitle}
-                            onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Optimized for search engines (60 chars max)
+                          <p className="text-xs text-gray-600 mt-1">
+                            Redirect candidates to your company's career portal or external application system
                           </p>
                         </div>
                         
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            SEO Description
-                          </label>
-                          <Textarea
-                            placeholder="Join our team as a Senior React Developer. Exciting opportunities, great benefits..."
-                            className="min-h-20"
-                            value={formData.seoDescription}
-                            onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Meta description for search results (160 chars max)
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            SEO Keywords
-                          </label>
-                          <Input
-                            placeholder="react developer, javascript, bangalore jobs (comma separated)"
-                            value={Array.isArray(formData.keywords) ? formData.keywords.join(', ') : ''}
-                            onChange={(e) => {
-                              const keywordsArray = e.target.value.split(',').map(k => k.trim()).filter(k => k);
-                              setFormData({ ...formData, keywords: keywordsArray });
-                            }}
-                          />
-                        </div>
+                        {formData.externalApplyUrl && (
+                          <div className="bg-yellow-50 border border-yellow-300 rounded-md p-3">
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-yellow-800">
+                                <strong className="font-semibold">Note:</strong> Since you're using an external application link, 
+                                we cannot track applications submitted through your platform. You'll need to manage and 
+                                count applications on your own system. The "Apply" button will redirect candidates directly 
+                                to your provided URL.
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        External Application URL (Optional)
-                      </label>
-                      <Input
-                        placeholder="https://company.com/careers/apply"
-                        value={formData.externalApplyUrl}
-                        onChange={(e) => setFormData({ ...formData, externalApplyUrl: e.target.value })}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        If provided, applicants will be redirected to your external application page
-                      </p>
                     </div>
                     
                     <div>
@@ -1860,16 +1832,21 @@ export default function PostJobPage() {
                       </div>
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                    {/* Why Work With Us */}
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-purple-600" />
                         Why Work With Us
-                      </label>
+                      </h4>
                       <Textarea
-                        placeholder="Tell candidates why they should choose your company..."
-                        className="min-h-20"
+                        placeholder="Showcase your company culture, values, and benefits. Tell candidates what makes your company special..."
+                        className="min-h-32"
                         value={formData.whyWorkWithUs}
                         onChange={(e) => setFormData({ ...formData, whyWorkWithUs: e.target.value })}
                       />
+                      <p className="text-xs text-gray-600 mt-2">
+                        This will be displayed prominently on the job details page to attract top talent
+                      </p>
                     </div>
                     
                     <div>
@@ -1884,18 +1861,140 @@ export default function PostJobPage() {
                       />
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                    {/* Video Banner URL */}
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4 border border-red-200">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Video className="h-5 w-5 text-red-600" />
                         Video Banner URL (Optional)
-                      </label>
+                      </h4>
                       <Input
-                        placeholder="https://youtube.com/watch?v=..."
+                        placeholder="https://youtube.com/watch?v=... or https://youtu.be/... or direct video URL"
                         value={formData.videoBanner}
                         onChange={(e) => setFormData({ ...formData, videoBanner: e.target.value })}
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Add a video to showcase your company culture
+                      <p className="text-xs text-gray-600 mt-2">
+                        <strong>Supports:</strong> YouTube links, direct video files (.mp4, .webm), or any embeddable video URL
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        💡 Use this for YouTube or hosted videos. For local files, use the "Company Branding Media" section below.
+                      </p>
+                    </div>
+                    
+                    {/* Branding Photos & Videos */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border-2 border-indigo-300">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5 text-indigo-600" />
+                        Company Branding Media
+                      </h4>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-sm text-gray-700 mb-2">
+                            Upload photos or a video to showcase your company brand, culture, and workplace
+                          </p>
+                          <div className="bg-white rounded-lg p-3 border border-indigo-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700">
+                                {brandingMedia.length} / 5 items
+                              </span>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                brandingMedia.length >= 5 
+                                  ? 'bg-red-100 text-red-700' 
+                                  : 'bg-green-100 text-green-700'
+                              }`}>
+                                {5 - brandingMedia.length} slots remaining
+                              </span>
+                            </div>
+                            
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              multiple
+                              onChange={handleBrandingMediaAdd}
+                              disabled={brandingMedia.length >= 5}
+                              className="hidden"
+                              id="branding-media-upload"
+                            />
+                            <label
+                              htmlFor="branding-media-upload"
+                              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                                brandingMedia.length >= 5
+                                  ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                  : 'border-indigo-300 bg-white hover:bg-indigo-50 hover:border-indigo-400'
+                              }`}
+                            >
+                              <Upload className="h-5 w-5 text-indigo-600" />
+                              <span className="text-sm font-medium text-gray-700">
+                                {brandingMedia.length >= 5 ? 'Maximum 5 items reached' : 'Click to upload photos or video'}
+                              </span>
+                            </label>
+                          </div>
+                          
+                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                            <p>📸 <strong>Photos:</strong> Max 5MB each, JPG/PNG format</p>
+                            <p>🎥 <strong>Video:</strong> Max 50MB, MP4/WebM format (recommended: 1080p, 30fps, compressed)</p>
+                            <p>⚠️ <strong>Limit:</strong> Maximum 5 items total (photos + video combined)</p>
+                            <p>💡 <strong>Tip:</strong> Compress videos for faster loading (use tools like HandBrake)</p>
+                          </div>
+                        </div>
+                        
+                        {/* Preview Grid */}
+                        {brandingMedia.length > 0 && (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {brandingMedia.map((item, index) => (
+                              <div key={index} className="relative group">
+                                <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 border-2 border-indigo-200">
+                                  {item.type === 'video' ? (
+                                    <video
+                                      src={item.preview}
+                                      className="w-full h-full object-cover"
+                                      muted
+                                    />
+                                  ) : (
+                                    <img
+                                      src={item.preview}
+                                      alt={`Branding ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                  
+                                  {/* Overlay */}
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleBrandingMediaRemove(index)}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <X className="h-4 w-4" />
+                                      Remove
+                                    </Button>
+                                  </div>
+                                  
+                                  {/* Type Badge */}
+                                  <div className="absolute top-2 left-2">
+                                    <Badge variant="secondary" className="bg-white/90 backdrop-blur">
+                                      {item.type === 'video' ? '🎥 Video' : '📸 Photo'}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {/* File Size */}
+                                  <div className="absolute bottom-2 right-2">
+                                    <Badge variant="secondary" className="bg-white/90 backdrop-blur text-xs">
+                                      {(item.file.size / (1024 * 1024)).toFixed(1)} MB
+                                    </Badge>
+                                  </div>
+                                </div>
+                                
+                                <p className="text-xs text-gray-600 mt-1 truncate">
+                                  {item.file.name}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
