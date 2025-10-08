@@ -31,6 +31,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
+import { EmployerAuthGuard } from '@/components/employer-auth-guard'
 
 import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'

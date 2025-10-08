@@ -39,6 +39,7 @@ import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { toast } from "sonner"
 import React from "react"
+import { JobseekerAuthGuard } from "@/components/jobseeker-auth-guard"
 
 // Simple error boundary component
 class CompanyErrorBoundary extends React.Component<
@@ -951,8 +952,9 @@ function CompanyDetailPage() {
   }
 
   return (
-    <CompanyErrorBoundary>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <JobseekerAuthGuard>
+      <CompanyErrorBoundary>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
       {/* Company Header */}
@@ -1923,7 +1925,8 @@ function CompanyDetailPage() {
         </div>
       </footer>
     </div>
-    </CompanyErrorBoundary>
+      </CompanyErrorBoundary>
+    </JobseekerAuthGuard>
   )
 }
 

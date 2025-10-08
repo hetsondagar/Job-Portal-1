@@ -44,7 +44,6 @@ import { JobApplicationDialog } from "@/components/job-application-dialog"
 import RoleCategoryDropdown from "@/components/ui/role-category-dropdown"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
-import { JobseekerAuthGuard } from "@/components/jobseeker-auth-guard"
 
 // Types for state management
 interface FilterState {
@@ -1976,8 +1975,7 @@ export default function JobsPage() {
   }
 
   return (
-    <JobseekerAuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
       
       {/* Hero Section */}
@@ -2711,7 +2709,6 @@ export default function JobsPage() {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
-    </JobseekerAuthGuard>
+    </div>
   )
 }

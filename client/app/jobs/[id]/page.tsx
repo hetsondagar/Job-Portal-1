@@ -39,7 +39,6 @@ import { apiService } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
-import { JobseekerAuthGuard } from '@/components/jobseeker-auth-guard'
 
 // Interface for similar jobs API response
 interface SimilarJobsResponse {
@@ -496,8 +495,7 @@ export default function JobDetailPage() {
   }
 
   return (
-    <JobseekerAuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
 
       <div className="pt-16 pb-12">
@@ -1533,7 +1531,6 @@ export default function JobDetailPage() {
           </div>
         </div>
       </footer>
-      </div>
-    </JobseekerAuthGuard>
+    </div>
   )
 }

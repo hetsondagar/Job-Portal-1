@@ -33,8 +33,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { Navbar } from "@/components/navbar"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [location, setLocation] = useState("")
@@ -750,6 +754,22 @@ export default function HomePage() {
     load()
     return () => controller.abort()
   }, [])
+
+  // Auth check - redirect employers to employer dashboard
+  useEffect(() => {
+    if (loading) return; // Wait for auth to load
+    
+    if (user) {
+      // If user is employer or admin, redirect to employer dashboard
+      if (user.userType === 'employer' || user.userType === 'admin') {
+        console.log('🔄 Employer/Admin detected on homepage, redirecting to employer dashboard')
+        router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+        return
+      }
+      // If user is jobseeker, they can stay on homepage (no redirect needed)
+    }
+    // If no user (unauthenticated), they can stay on homepage
+  }, [user, loading, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
