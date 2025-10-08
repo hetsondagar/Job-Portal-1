@@ -63,9 +63,17 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   useEffect(() => {
     if (user) {
       // Check if profile is incomplete and show completion dialog
-      const isIncomplete = !user.phone || !user.designation || !user.companyId
+      const isIncomplete = () => {
+        // Check if user has marked profile as complete
+        if (user.preferences?.profileCompleted === true) {
+          return false
+        }
+        
+        // Required fields for employer
+        return !user.phone || !(user as any).designation || !user.companyId
+      }
       
-      if (isIncomplete) {
+      if (isIncomplete()) {
         // Show dialog after a short delay to avoid UI conflicts
         setTimeout(() => setShowProfileCompletion(true), 1000)
       }

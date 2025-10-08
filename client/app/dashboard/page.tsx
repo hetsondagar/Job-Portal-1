@@ -92,10 +92,22 @@ export default function DashboardPage() {
       setCurrentUser(user)
       
       // Check if profile is incomplete and show completion dialog
-      const isIncomplete = !user.phone || !user.currentLocation || !user.headline || 
-        (user.experienceYears === undefined || user.experienceYears === null)
+      const isIncomplete = () => {
+        // Check if user has marked profile as complete
+        if (user.preferences?.profileCompleted === true) {
+          return false
+        }
+        
+        // Required fields for jobseeker
+        return !user.phone || 
+               !user.currentLocation || 
+               !user.headline || 
+               (user.experienceYears === undefined || user.experienceYears === null) ||
+               !(user as any).gender ||
+               !(user as any).dateOfBirth
+      }
       
-      if (isIncomplete) {
+      if (isIncomplete()) {
         // Show dialog after a short delay to avoid UI conflicts
         setTimeout(() => setShowProfileCompletion(true), 1000)
       }

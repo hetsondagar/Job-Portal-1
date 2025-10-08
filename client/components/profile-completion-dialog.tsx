@@ -28,18 +28,35 @@ export function JobseekerProfileCompletionDialog({
     phone: '',
     currentLocation: '',
     headline: '',
+    summary: '',
     experienceYears: '',
     expectedSalary: '',
     noticePeriod: '',
     skills: '',
     dateOfBirth: '',
-    gender: ''
+    gender: '',
+    willingToRelocate: false,
+    preferredLocations: ''
   })
   const [submitting, setSubmitting] = useState(false)
 
-  // Check if profile is incomplete
-  const isProfileIncomplete = !user.phone || !user.currentLocation || !user.headline || 
-    (user.experienceYears === undefined || user.experienceYears === null)
+  // Check if profile is incomplete - COMPREHENSIVE CHECK
+  const isProfileIncomplete = () => {
+    // Check if user has marked profile as complete
+    if (user.preferences?.profileCompleted === true) {
+      return false
+    }
+
+    // Required fields for jobseeker
+    const hasRequiredFields = user.phone && 
+                              user.currentLocation && 
+                              user.headline && 
+                              (user.experienceYears !== undefined && user.experienceYears !== null) &&
+                              user.gender &&
+                              (user as any).dateOfBirth
+
+    return !hasRequiredFields
+  }
 
   // Load existing data
   useEffect(() => {
@@ -48,20 +65,23 @@ export function JobseekerProfileCompletionDialog({
         phone: user.phone || '',
         currentLocation: user.currentLocation || '',
         headline: user.headline || '',
+        summary: user.summary || '',
         experienceYears: user.experienceYears?.toString() || '',
         expectedSalary: user.expectedSalary?.toString() || '',
         noticePeriod: user.noticePeriod?.toString() || '',
         skills: Array.isArray(user.skills) ? user.skills.join(', ') : '',
         dateOfBirth: (user as any).dateOfBirth || '',
-        gender: (user as any).gender || ''
+        gender: (user as any).gender || '',
+        willingToRelocate: user.willingToRelocate || false,
+        preferredLocations: Array.isArray((user as any).preferredLocations) ? (user as any).preferredLocations.join(', ') : ''
       })
     }
   }, [user])
 
   const handleSubmit = async () => {
     // Validate required fields
-    if (!formData.phone || !formData.currentLocation || !formData.headline) {
-      toast.error('Please fill in all required fields (Phone, Location, Headline)')
+    if (!formData.phone || !formData.currentLocation || !formData.headline || !formData.gender || !formData.dateOfBirth) {
+      toast.error('Please fill in all required fields (Phone, Location, Headline, Gender, Date of Birth)')
       return
     }
 
@@ -71,12 +91,19 @@ export function JobseekerProfileCompletionDialog({
         phone: formData.phone,
         currentLocation: formData.currentLocation,
         headline: formData.headline,
+        summary: formData.summary || undefined,
         experienceYears: formData.experienceYears ? parseInt(formData.experienceYears) : 0,
         expectedSalary: formData.expectedSalary ? parseFloat(formData.expectedSalary) : undefined,
         noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) : undefined,
         skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
         dateOfBirth: formData.dateOfBirth || undefined,
-        gender: formData.gender || undefined
+        gender: formData.gender || undefined,
+        willingToRelocate: formData.willingToRelocate,
+        preferredLocations: formData.preferredLocations ? formData.preferredLocations.split(',').map(s => s.trim()).filter(Boolean) : [],
+        preferences: {
+          ...(user.preferences || {}),
+          profileCompleted: true
+        }
       }
 
       const response = await apiService.updateProfile(updateData)
@@ -101,13 +128,13 @@ export function JobseekerProfileCompletionDialog({
   }
 
   // Don't show dialog if profile is complete
-  if (!isProfileIncomplete) {
+  if (!isProfileIncomplete()) {
     return null
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserIcon className="w-5 h-5" />
@@ -119,11 +146,11 @@ export function JobseekerProfileCompletionDialog({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Required Fields */}
-          <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100">Required Information</h3>
+          {/* Personal Information */}
+          <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <h3 className="font-semibold text-sm text-purple-900 dark:text-purple-100">Personal Information *</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="phone">Phone Number *</Label>
                 <Input
@@ -136,16 +163,45 @@ export function JobseekerProfileCompletionDialog({
               </div>
 
               <div>
+                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="gender">Gender *</Label>
+                <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-3">
                 <Label htmlFor="currentLocation">Current Location *</Label>
                 <Input
                   id="currentLocation"
-                  placeholder="e.g., Mumbai, India"
+                  placeholder="e.g., Mumbai, Maharashtra, India"
                   value={formData.currentLocation}
                   onChange={(e) => setFormData(prev => ({ ...prev, currentLocation: e.target.value }))}
                 />
               </div>
             </div>
+          </div>
 
+          {/* Professional Information */}
+          <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100">Professional Information *</h3>
+            
             <div>
               <Label htmlFor="headline">Professional Headline *</Label>
               <Input
@@ -155,11 +211,22 @@ export function JobseekerProfileCompletionDialog({
                 onChange={(e) => setFormData(prev => ({ ...prev, headline: e.target.value }))}
               />
             </div>
+
+            <div>
+              <Label htmlFor="summary">Professional Summary</Label>
+              <Textarea
+                id="summary"
+                placeholder="Brief overview of your professional background and skills..."
+                rows={3}
+                value={formData.summary}
+                onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
+              />
+            </div>
           </div>
 
-          {/* Optional but Recommended Fields */}
+          {/* Career Details */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-300">Additional Details (Recommended)</h3>
+            <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-300">Career Details (Recommended)</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -196,20 +263,6 @@ export function JobseekerProfileCompletionDialog({
                 />
               </div>
 
-              <div>
-                <Label htmlFor="gender">Gender</Label>
-                <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                  <SelectTrigger id="gender">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="md:col-span-2">
                 <Label htmlFor="skills">Key Skills (comma-separated)</Label>
                 <Input
@@ -220,14 +273,27 @@ export function JobseekerProfileCompletionDialog({
                 />
               </div>
 
-              <div>
-                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <div className="md:col-span-2">
+                <Label htmlFor="preferredLocations">Preferred Work Locations (comma-separated)</Label>
                 <Input
-                  id="dateOfBirth"
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  id="preferredLocations"
+                  placeholder="e.g., Mumbai, Bangalore, Delhi"
+                  value={formData.preferredLocations}
+                  onChange={(e) => setFormData(prev => ({ ...prev, preferredLocations: e.target.value }))}
                 />
+              </div>
+
+              <div className="md:col-span-2 flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="willingToRelocate"
+                  checked={formData.willingToRelocate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, willingToRelocate: e.target.checked }))}
+                  className="rounded border-slate-300"
+                />
+                <Label htmlFor="willingToRelocate" className="cursor-pointer">
+                  I am willing to relocate for the right opportunity
+                </Label>
               </div>
             </div>
           </div>
@@ -243,7 +309,7 @@ export function JobseekerProfileCompletionDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !formData.phone || !formData.currentLocation || !formData.headline}
+            disabled={submitting || !formData.phone || !formData.currentLocation || !formData.headline || !formData.gender || !formData.dateOfBirth}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           >
             {submitting ? 'Saving...' : 'Complete Profile'}
@@ -272,8 +338,20 @@ export function EmployerProfileCompletionDialog({
   const [submitting, setSubmitting] = useState(false)
   const [needsCompany, setNeedsCompany] = useState(false)
 
-  // Check if profile is incomplete
-  const isProfileIncomplete = !user.phone || !user.designation || !user.companyId
+  // Check if profile is incomplete - COMPREHENSIVE CHECK
+  const isProfileIncomplete = () => {
+    // Check if user has marked profile as complete
+    if (user.preferences?.profileCompleted === true) {
+      return false
+    }
+
+    // Required fields for employer
+    const hasRequiredFields = user.phone && 
+                              (user as any).designation && 
+                              user.companyId
+
+    return !hasRequiredFields
+  }
 
   useEffect(() => {
     setNeedsCompany(!user.companyId)
@@ -332,7 +410,11 @@ export function EmployerProfileCompletionDialog({
         phone: formData.phone,
         designation: formData.designation,
         department: formData.department || undefined,
-        companyId: companyId
+        companyId: companyId,
+        preferences: {
+          ...(user.preferences || {}),
+          profileCompleted: true
+        }
       }
 
       const response = await apiService.updateProfile(updateData)
@@ -357,13 +439,13 @@ export function EmployerProfileCompletionDialog({
   }
 
   // Don't show dialog if profile is complete
-  if (!isProfileIncomplete) {
+  if (!isProfileIncomplete()) {
     return null
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="w-5 h-5" />
