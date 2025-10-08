@@ -752,6 +752,32 @@ export default function CandidateProfilePage() {
                   <p className="text-sm text-gray-600 mb-1">Phone</p>
                   <p className="font-medium text-gray-900">{candidate.phone}</p>
                 </div>
+            {candidate.linkedin && (
+              <div>
+                <p className="text-sm text-gray-600 mb-1">LinkedIn</p>
+                <a
+                  href={candidate.linkedin.startsWith('http') ? candidate.linkedin : `https://${candidate.linkedin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  View LinkedIn Profile
+                </a>
+              </div>
+            )}
+            {candidate.github && (
+              <div>
+                <p className="text-sm text-gray-600 mb-1">GitHub</p>
+                <a
+                  href={candidate.github.startsWith('http') ? candidate.github : `https://${candidate.github}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  View GitHub Profile
+                </a>
+              </div>
+            )}
                 <Button className="w-full bg-blue-600 hover:bg-blue-700">
                   <Phone className="w-4 h-4 mr-2" />
                   View Contact Details

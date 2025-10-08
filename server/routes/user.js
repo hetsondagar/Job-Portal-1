@@ -560,6 +560,10 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
       avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
       email: candidate.email,
       phone: candidate.phone,
+      // Social links
+      linkedin: (candidate.social_links && candidate.social_links.linkedin) || null,
+      github: (candidate.social_links && candidate.social_links.github) || null,
+      portfolio: (candidate.social_links && (candidate.social_links.portfolio || candidate.social_links.website)) || null,
       education: 'Not specified', // Would need education data
       preferredLocations: candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location || 'Not specified'],
       keySkills: candidate.skills ? (Array.isArray(candidate.skills) ? candidate.skills : JSON.parse(candidate.skills || '[]')) : [],

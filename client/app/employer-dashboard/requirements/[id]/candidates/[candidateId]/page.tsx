@@ -643,6 +643,32 @@ export default function CandidateProfilePage() {
                     <Globe className="w-4 h-4 text-slate-400" />
                     <span className="text-sm">{candidate.portfolio}</span>
                   </div>
+                  {candidate.linkedin && (
+                    <div className="flex items-center space-x-3">
+                      <Linkedin className="w-4 h-4 text-slate-400" />
+                      <a
+                        href={candidate.linkedin.startsWith('http') ? candidate.linkedin : `https://${candidate.linkedin}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        LinkedIn Profile
+                      </a>
+                    </div>
+                  )}
+                  {candidate.github && (
+                    <div className="flex items-center space-x-3">
+                      <Github className="w-4 h-4 text-slate-400" />
+                      <a
+                        href={candidate.github.startsWith('http') ? candidate.github : `https://${candidate.github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        GitHub Profile
+                      </a>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

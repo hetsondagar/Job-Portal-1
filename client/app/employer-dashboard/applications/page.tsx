@@ -871,6 +871,48 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
         </CardContent>
       </Card>
 
+      {/* Social Links */}
+      {(applicant?.social_links?.linkedin || applicant?.social_links?.github || applicant?.socialLinks?.linkedin || applicant?.socialLinks?.github) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <ExternalLink className="w-5 h-5 mr-2" />
+              Social Links
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {(applicant?.social_links?.linkedin || applicant?.socialLinks?.linkedin) && (
+                <div className="flex items-center text-sm text-gray-700">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  <a
+                    href={`${String(applicant?.social_links?.linkedin || applicant?.socialLinks?.linkedin).startsWith('http') ? '' : 'https://'}${applicant?.social_links?.linkedin || applicant?.socialLinks?.linkedin}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline truncate"
+                  >
+                    LinkedIn Profile
+                  </a>
+                </div>
+              )}
+              {(applicant?.social_links?.github || applicant?.socialLinks?.github) && (
+                <div className="flex items-center text-sm text-gray-700">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  <a
+                    href={`${String(applicant?.social_links?.github || applicant?.socialLinks?.github).startsWith('http') ? '' : 'https://'}${applicant?.social_links?.github || applicant?.socialLinks?.github}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline truncate"
+                  >
+                    GitHub Profile
+                  </a>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Work Experience */}
       {applicant?.workExperiences && applicant.workExperiences.length > 0 && (
         <Card>

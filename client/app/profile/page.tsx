@@ -47,7 +47,9 @@ export default function ProfilePage() {
     languages: '',
     expectedSalary: '',
     noticePeriod: '',
-    willingToRelocate: false
+    willingToRelocate: false,
+    linkedin: '',
+    github: ''
   })
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -73,7 +75,9 @@ export default function ProfilePage() {
         languages: Array.isArray(user.languages) ? user.languages.join(', ') : user.languages || '',
         expectedSalary: user.expectedSalary?.toString() || '',
         noticePeriod: user.noticePeriod?.toString() || '',
-        willingToRelocate: user.willingToRelocate || false
+        willingToRelocate: user.willingToRelocate || false,
+        linkedin: (user as any)?.socialLinks?.linkedin || '',
+        github: (user as any)?.socialLinks?.github || ''
       })
       calculateProfileCompletion()
     }
@@ -195,7 +199,12 @@ export default function ProfilePage() {
         skills: formData.skills ? formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '') : [],
         languages: formData.languages ? formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang !== '') : [],
         expectedSalary: formData.expectedSalary ? parseFloat(formData.expectedSalary.replace(/[^0-9.]/g, '')) || undefined : undefined,
-        noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) || undefined : undefined
+        noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) || undefined : undefined,
+        socialLinks: {
+          ...(user as any)?.socialLinks,
+          linkedin: formData.linkedin?.trim() || null,
+          github: formData.github?.trim() || null
+        }
       }
       
       console.log('🔍 Saving profile data:', profileData)
@@ -538,6 +547,35 @@ export default function ProfilePage() {
                         className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
+
+                  {/* Social Links */}
+                  <div className="space-y-2">
+                    <Label htmlFor="linkedin" className="flex items-center space-x-2">
+                      <Eye className="w-4 h-4" />
+                      <span>LinkedIn URL</span>
+                    </Label>
+                    <Input
+                      id="linkedin"
+                      value={formData.linkedin}
+                      onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                      placeholder="https://www.linkedin.com/in/username"
+                      className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="github" className="flex items-center space-x-2">
+                      <Eye className="w-4 h-4" />
+                      <span>GitHub URL</span>
+                    </Label>
+                    <Input
+                      id="github"
+                      value={formData.github}
+                      onChange={(e) => setFormData({ ...formData, github: e.target.value })}
+                      placeholder="https://github.com/username"
+                      className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="expectedSalary" className="flex items-center space-x-2">
