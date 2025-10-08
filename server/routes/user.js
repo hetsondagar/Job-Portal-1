@@ -2873,13 +2873,8 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     });
     console.log('✅ Found applications:', applications.length);
     
-    // Get hot vacancies for employer
-    const { HotVacancy } = require('../config/index');
-    const hotVacancies = await HotVacancy.findAll({
-      where: { employerId: req.user.id },
-      order: [['createdAt', 'DESC']],
-      limit: 5
-    });
+    // Get hot vacancies for employer (now integrated in Job model)
+    const hotVacancies = jobs.filter(job => job.isHotVacancy === true).slice(0, 5);
     console.log('✅ Found hot vacancies:', hotVacancies.length);
     
     // Calculate stats

@@ -1,11 +1,23 @@
 'use strict';
 
-const { HotVacancy, Company, User, JobApplication, HotVacancyPhoto, Notification } = require('../config');
+const { Job, Company, User, JobApplication, Notification } = require('../config');
+const JobController = require('./JobController');
+// Hot vacancies are now integrated into the Job model with isHotVacancy flag
 
 /**
- * Create a new hot vacancy
+ * Create a new hot vacancy (delegates to JobController with isHotVacancy=true)
  */
 exports.createHotVacancy = async (req, res, next) => {
+  // Set isHotVacancy flag
+  req.body.isHotVacancy = true;
+  // Delegate to regular job creation
+  return JobController.createJob(req, res, next);
+};
+
+/**
+ * Create a new hot vacancy (legacy endpoint - kept for compatibility)
+ */
+exports.createHotVacancyLegacy = async (req, res, next) => {
   try {
     console.log('🔥 Creating hot vacancy with data:', req.body);
     console.log('👤 Authenticated user:', req.user.id, req.user.email);
@@ -215,10 +227,12 @@ exports.createHotVacancy = async (req, res, next) => {
       featuredKeywords,
       customBranding,
       superFeatured,
-      tierLevel
+      tierLevel,
+      // Mark as hot vacancy
+      isHotVacancy: true
     };
 
-    const hotVacancy = await HotVacancy.create(hotVacancyData);
+    const hotVacancy = await Job.create(hotVacancyData);
 
     console.log('✅ Hot vacancy created successfully:', hotVacancy.id);
 
@@ -322,23 +336,25 @@ exports.createHotVacancy = async (req, res, next) => {
  */
 exports.getHotVacanciesByEmployer = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, status, urgencyLevel } = req.query;
+    const { page = 1, limit = 10, status } = req.query;
     const offset = (page - 1) * limit;
 
     const whereClause = {
-      employerId: req.user.id
+      employerId: req.user.id,
+      isHotVacancy: true // Filter for hot vacancies only
     };
 
     if (status) {
       whereClause.status = status;
     }
 
-    if (urgencyLevel) {
-      whereClause.urgencyLevel = urgencyLevel;
-    }
-
-    const { count, rows: hotVacancies } = await HotVacancy.findAndCountAll({
+    const { count, rows: hotVacancies } = await Job.findAndCountAll({
       where: whereClause,
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'name', 'industry', 'companySize', 'website']
+      }],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
@@ -373,7 +389,11 @@ exports.getHotVacancyById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const hotVacancy = await HotVacancy.findByPk(id, {
+    const hotVacancy = await Job.findOne({
+      where: { 
+        id,
+        isHotVacancy: true // Only get hot vacancy jobs
+      },
       include: [
         {
           model: Company,
@@ -384,14 +404,6 @@ exports.getHotVacancyById = async (req, res, next) => {
           model: User,
           as: 'employer',
           attributes: ['id', 'first_name', 'last_name', 'email']
-        },
-        {
-          model: HotVacancyPhoto,
-          as: 'photos',
-          attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
-          where: { isActive: true },
-          required: false,
-          order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
         }
       ]
     });
@@ -435,7 +447,12 @@ exports.updateHotVacancy = async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const hotVacancy = await HotVacancy.findByPk(id);
+    const hotVacancy = await Job.findOne({
+      where: {
+        id,
+        isHotVacancy: true
+      }
+    });
 
     if (!hotVacancy) {
       return res.status(404).json({
@@ -453,8 +470,8 @@ exports.updateHotVacancy = async (req, res, next) => {
     }
 
     // Don't allow updating certain fields after payment
-    if (hotVacancy.paymentStatus === 'paid') {
-      const restrictedFields = ['pricingTier', 'price', 'currency', 'urgencyLevel', 'hiringTimeline'];
+    if (hotVacancy.hotVacancyPaymentStatus === 'paid') {
+      const restrictedFields = ['tierLevel', 'hotVacancyPrice', 'hotVacancyCurrency'];
       restrictedFields.forEach(field => {
         if (updateData[field] !== undefined) {
           delete updateData[field];
@@ -532,7 +549,12 @@ exports.deleteHotVacancy = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const hotVacancy = await HotVacancy.findByPk(id);
+    const hotVacancy = await Job.findOne({
+      where: {
+        id,
+        isHotVacancy: true
+      }
+    });
 
     if (!hotVacancy) {
       return res.status(404).json({
@@ -571,12 +593,13 @@ exports.deleteHotVacancy = async (req, res, next) => {
  */
 exports.getPublicHotVacancies = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, location, jobType, experienceLevel, urgencyLevel } = req.query;
+    const { page = 1, limit = 10, location, jobType, experienceLevel } = req.query;
     const offset = (page - 1) * limit;
 
     const whereClause = {
       status: 'active',
-      paymentStatus: 'paid'
+      isHotVacancy: true,
+      hotVacancyPaymentStatus: 'paid'
     };
 
     if (location) {
@@ -591,30 +614,18 @@ exports.getPublicHotVacancies = async (req, res, next) => {
       whereClause.experienceLevel = experienceLevel;
     }
 
-    if (urgencyLevel) {
-      whereClause.urgencyLevel = urgencyLevel;
-    }
-
-    const { count, rows: hotVacancies } = await HotVacancy.findAndCountAll({
+    const { count, rows: hotVacancies } = await Job.findAndCountAll({
       where: whereClause,
       include: [
         {
           model: Company,
           as: 'company',
           attributes: ['id', 'name', 'industry', 'companySize', 'website']
-        },
-        {
-          model: HotVacancyPhoto,
-          as: 'photos',
-          attributes: ['id', 'fileUrl', 'altText', 'isPrimary'],
-          where: { isActive: true },
-          required: false,
-          limit: 1
         }
       ],
       order: [
-        ['priorityListing', 'DESC'],
-        ['urgencyLevel', 'DESC'],
+        ['superFeatured', 'DESC'],
+        ['urgentHiring', 'DESC'],
         ['createdAt', 'DESC']
       ],
       limit: parseInt(limit),

@@ -28,10 +28,10 @@ const Analytics = require('../models/Analytics');
 const JobPhoto = require('../models/JobPhoto');
 const CompanyPhoto = require('../models/CompanyPhoto');
 const CandidateLike = require('../models/CandidateLike');
-const HotVacancy = require('../models/HotVacancy');
+// const HotVacancy = require('../models/HotVacancy'); // Deprecated - Hot vacancies now integrated into Job model
 const EmployerQuota = require('../models/EmployerQuota');
 const UserActivityLog = require('../models/UserActivityLog');
-const HotVacancyPhoto = require('../models/HotVacancyPhoto');
+// const HotVacancyPhoto = require('../models/HotVacancyPhoto'); // Deprecated - Photos now in Job model
 const FeaturedJob = require('../models/FeaturedJob');
 const ViewTracking = require('../models/ViewTracking');
 const UserDashboard = require('../models/UserDashboard');
@@ -103,15 +103,14 @@ JobPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 CompanyPhoto.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
 CompanyPhoto.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 
-// HotVacancy associations
-HotVacancy.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
-HotVacancy.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
-// Note: Removed JobApplication association as hot_vacancy_id column doesn't exist in job_applications table
-HotVacancy.hasMany(HotVacancyPhoto, { foreignKey: 'hot_vacancy_id', as: 'photos' });
+// HotVacancy associations - DEPRECATED (Hot vacancies now integrated into Job model)
+// HotVacancy.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+// HotVacancy.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
+// HotVacancy.hasMany(HotVacancyPhoto, { foreignKey: 'hot_vacancy_id', as: 'photos' });
 
-// HotVacancyPhoto associations
-HotVacancyPhoto.belongsTo(HotVacancy, { foreignKey: 'hot_vacancy_id', as: 'hotVacancy' });
-HotVacancyPhoto.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
+// HotVacancyPhoto associations - DEPRECATED
+// HotVacancyPhoto.belongsTo(HotVacancy, { foreignKey: 'hot_vacancy_id', as: 'hotVacancy' });
+// HotVacancyPhoto.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 
 // JobAlert associations
 JobAlert.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -257,10 +256,10 @@ module.exports = {
   JobPhoto,
   CompanyPhoto,
   CandidateLike,
-  HotVacancy,
+  // HotVacancy, // Deprecated - Hot vacancies now integrated into Job model
   EmployerQuota,
   UserActivityLog,
-  HotVacancyPhoto,
+  // HotVacancyPhoto, // Deprecated - Photos now in Job model
   FeaturedJob,
   ViewTracking,
   UserDashboard,
