@@ -40,6 +40,7 @@ import { apiService } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
+import { JobApplicationDialog } from '@/components/job-application-dialog'
 
 // Interface for similar jobs API response
 interface SimilarJobsResponse {
@@ -55,6 +56,7 @@ export default function JobDetailPage() {
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [showApplicationDialog, setShowApplicationDialog] = useState(false)
   const [forceUpdate, setForceUpdate] = useState(false)
   const [jobLoading, setJobLoading] = useState(true)
   const [job, setJob] = useState<any | null>(null)
@@ -435,32 +437,27 @@ export default function JobDetailPage() {
       }
     } catch {}
 
-    try {
-      if (jobIdFromParams.startsWith('550e8400')) {
-        sampleJobManager.addApplication({
-          jobId: jobIdFromParams,
-          jobTitle: job?.title || 'Job',
-          companyName: typeof job?.company === 'string' ? job?.company : (job?.company?.name || 'Company'),
-          location: job?.location || '',
-          salary: job?.salary || '',
-          type: job?.type || ''
-        })
-        toast.success(`Application submitted successfully${job?.title ? ` for ${job.title}` : ''}!`)
-        setForceUpdate(prev => !prev)
-        return
-      }
-
-      const response = await apiService.applyJob(jobIdFromParams)
-      if (response.success) {
-        toast.success(`Application submitted successfully${job?.title ? ` for ${job.title}` : ''}!`)
-        setForceUpdate(prev => !prev)
-      } else {
-        toast.error(response.message || 'Failed to submit application')
-      }
-    } catch (error) {
-      console.error('Error applying for job:', error)
-      toast.error('Failed to submit application. Please try again.')
+    // For sample jobs, handle directly
+    if (jobIdFromParams.startsWith('550e8400')) {
+      sampleJobManager.addApplication({
+        jobId: jobIdFromParams,
+        jobTitle: job?.title || 'Job',
+        companyName: typeof job?.company === 'string' ? job?.company : (job?.company?.name || 'Company'),
+        location: job?.location || '',
+        salary: job?.salary || '',
+        type: job?.type || ''
+      })
+      toast.success(`Application submitted successfully${job?.title ? ` for ${job.title}` : ''}!`)
+      setForceUpdate(prev => !prev)
+      return
     }
+
+    // For real jobs, open the application dialog
+    setShowApplicationDialog(true)
+  }
+
+  const handleApplicationSuccess = () => {
+    setForceUpdate(prev => !prev)
   }
 
   const isExpired = (() => {
@@ -1667,6 +1664,24 @@ export default function JobDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Job Application Dialog with Resume Selection */}
+      {job && (
+        <JobApplicationDialog
+          isOpen={showApplicationDialog}
+          onClose={() => setShowApplicationDialog(false)}
+          job={{
+            id: job.id,
+            title: job.title,
+            company: {
+              name: typeof job.company === 'string' ? job.company : (job.company?.name || 'Company')
+            },
+            location: job.location
+          }}
+          onSuccess={handleApplicationSuccess}
+          isGulfJob={false}
+        />
+      )}
 
       {/* Footer */}
       <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
