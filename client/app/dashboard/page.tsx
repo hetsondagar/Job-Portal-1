@@ -38,6 +38,7 @@ import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/ap
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RecentNotifications } from '@/components/recent-notifications'
 import { JobseekerAuthGuard } from '@/components/jobseeker-auth-guard'
+import { JobseekerProfileCompletionDialog } from '@/components/profile-completion-dialog'
 
 export default function DashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -66,6 +67,7 @@ export default function DashboardPage() {
   const [dataLoaded, setDataLoaded] = useState(false)
   const [followedCompaniesCount, setFollowedCompaniesCount] = useState(0)
   const [followedCompaniesLoading, setFollowedCompaniesLoading] = useState(true)
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
   useEffect(() => {
     if (loading) return;
@@ -88,6 +90,15 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user && !loading && !dataLoaded) {
       setCurrentUser(user)
+      
+      // Check if profile is incomplete and show completion dialog
+      const isIncomplete = !user.phone || !user.currentLocation || !user.headline || 
+        (user.experienceYears === undefined || user.experienceYears === null)
+      
+      if (isIncomplete) {
+        // Show dialog after a short delay to avoid UI conflicts
+        setTimeout(() => setShowProfileCompletion(true), 1000)
+      }
       
       // Debounce all API calls to prevent excessive requests
       const timeoutId = setTimeout(async () => {
@@ -431,6 +442,12 @@ export default function DashboardPage() {
     } catch (error) {
       toast.error('Logout failed')
     }
+  }
+
+  const handleProfileUpdated = async (updatedData: any) => {
+    // Refresh user data to get updated profile
+    await refreshUser()
+    setShowProfileCompletion(false)
   }
 
   const getPriorityColor = (priority: string) => {
@@ -1536,6 +1553,16 @@ export default function DashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Completion Dialog */}
+      {user && (
+        <JobseekerProfileCompletionDialog
+          isOpen={showProfileCompletion}
+          onClose={() => setShowProfileCompletion(false)}
+          user={user}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
       </div>
     </JobseekerAuthGuard>
   )

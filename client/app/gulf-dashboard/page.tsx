@@ -39,6 +39,7 @@ import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
+import { EmployerProfileCompletionDialog } from "@/components/profile-completion-dialog"
 
 export default function GulfDashboard() {
   const { user, refreshUser } = useAuth()
@@ -61,9 +62,18 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [hotVacancies, setHotVacancies] = useState<any[]>([])
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
   useEffect(() => {
     if (user) {
+      // Check if profile is incomplete and show completion dialog
+      const isIncomplete = !user.phone || !user.designation || !user.companyId
+      
+      if (isIncomplete) {
+        // Show dialog after a short delay to avoid UI conflicts
+        setTimeout(() => setShowProfileCompletion(true), 1000)
+      }
+      
       // Ensure user region is set to 'gulf' when accessing Gulf dashboard
       if (user.region !== 'gulf') {
         console.log('🔧 Setting user region to gulf for Gulf dashboard access')
@@ -445,6 +455,14 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
     }
     
     return Math.min(100, Math.round(completion))
+  }
+
+  const handleProfileUpdated = async (updatedData: any) => {
+    // Refresh user data to get updated profile
+    await refreshUser()
+    setShowProfileCompletion(false)
+    // Reload dashboard data to reflect changes
+    loadDashboardData()
   }
 
   const generateRecentActivity = (applications: any[], jobs: any[], hotVacancies: any[] = []) => {
@@ -915,6 +933,17 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
       </div>
 
       <EmployerFooter />
+
+      {/* Profile Completion Dialog */}
+      {user && (
+        <EmployerProfileCompletionDialog
+          isOpen={showProfileCompletion}
+          onClose={() => setShowProfileCompletion(false)}
+          user={user}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
     </div>
   )
 }
+

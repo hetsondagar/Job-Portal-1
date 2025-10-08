@@ -37,6 +37,7 @@ import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { EmployerProfileCompletionDialog } from "@/components/profile-completion-dialog"
 
 export default function EmployerDashboard() {
   const { user, refreshUser } = useAuth()
@@ -57,9 +58,18 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [hotVacancies, setHotVacancies] = useState<any[]>([])
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
   useEffect(() => {
     if (user) {
+      // Check if profile is incomplete and show completion dialog
+      const isIncomplete = !user.phone || !user.designation || !user.companyId
+      
+      if (isIncomplete) {
+        // Show dialog after a short delay to avoid UI conflicts
+        setTimeout(() => setShowProfileCompletion(true), 1000)
+      }
+      
       loadDashboardData()
     }
   }, [user])
@@ -415,6 +425,14 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
     }
     
     return Math.min(100, Math.round(completion))
+  }
+
+  const handleProfileUpdated = async (updatedData: any) => {
+    // Refresh user data to get updated profile
+    await refreshUser()
+    setShowProfileCompletion(false)
+    // Reload dashboard data to reflect changes
+    loadDashboardData()
   }
 
   const generateRecentActivity = (applications: any[], jobs: any[], hotVacancies: any[] = []) => {
@@ -864,6 +882,16 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       </div>
 
       <EmployerFooter />
+
+      {/* Profile Completion Dialog */}
+      {user && (
+        <EmployerProfileCompletionDialog
+          isOpen={showProfileCompletion}
+          onClose={() => setShowProfileCompletion(false)}
+          user={user}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
     </div>
   )
 }
