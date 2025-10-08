@@ -43,22 +43,32 @@ interface HotVacancy {
   jobType: string;
   experienceLevel: string;
   salary: string;
+  salaryMin?: number;
+  salaryMax?: number;
   status: 'draft' | 'active' | 'paused' | 'closed';
   urgencyLevel: 'high' | 'critical' | 'immediate';
   tierLevel: 'basic' | 'premium' | 'enterprise' | 'super-premium';
   pricingTier: string;
-  price: number;
-  currency: string;
-  views: number;
-  applications: number;
+  hotVacancyPrice: number; // Use this instead of price
+  hotVacancyCurrency: string; // Use this instead of currency
+  views: number; // This might map to impressions
+  impressions?: number;
+  clicks?: number;
+  applications: number; // This comes from applicationsCount
+  applicationsCount?: number;
   createdAt: string;
   publishedAt?: string;
-  validTill: string;
+  validTill?: string;
   urgentHiring: boolean;
   boostedSearch: boolean;
   proactiveAlerts: boolean;
   superFeatured: boolean;
   featuredBadge: boolean;
+  priorityListing: boolean;
+  company?: {
+    name: string;
+    logo?: string;
+  };
   companyName?: string;
 }
 
@@ -260,7 +270,7 @@ export default function HotVacanciesPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Views</p>
                   <p className="text-2xl font-bold">
-                    {hotVacancies.reduce((sum, v) => sum + v.views, 0).toLocaleString()}
+                    {hotVacancies.reduce((sum, v) => sum + (v.views || v.impressions || 0), 0).toLocaleString()}
                     </p>
                   </div>
                 <TrendingUp className="h-8 w-8 text-blue-500" />
@@ -274,7 +284,7 @@ export default function HotVacanciesPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Applications</p>
                   <p className="text-2xl font-bold">
-                    {hotVacancies.reduce((sum, v) => sum + v.applications, 0).toLocaleString()}
+                    {hotVacancies.reduce((sum, v) => sum + (v.applications || v.applicationsCount || 0), 0).toLocaleString()}
                     </p>
                   </div>
                 <Users className="h-8 w-8 text-purple-500" />
@@ -372,6 +382,7 @@ export default function HotVacanciesPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
+                        <Flame className="h-5 w-5 text-red-600 flex-shrink-0" />
                         <h3 className="text-lg font-semibold text-gray-900">{vacancy.title}</h3>
                         {getStatusBadge(vacancy.status)}
                         {getTierBadge(vacancy.tierLevel)}
@@ -399,27 +410,29 @@ export default function HotVacanciesPage() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <DollarSign className="h-4 w-4" />
-                          {vacancy.salary || 'Not specified'}
+                          {vacancy.salary || (vacancy.salaryMin && vacancy.salaryMax ? `₹${(vacancy.salaryMin/100000).toFixed(0)}-${(vacancy.salaryMax/100000).toFixed(0)} LPA` : 'Not specified')}
                           </div>
                         </div>
                       
                       <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
                         <div className="flex items-center gap-1">
                           <Eye className="h-4 w-4" />
-                          {vacancy.views.toLocaleString()} views
+                          {(vacancy.views || vacancy.impressions || 0).toLocaleString()} views
                         </div>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
-                          {vacancy.applications.toLocaleString()} applications
+                          {(vacancy.applications || vacancy.applicationsCount || 0).toLocaleString()} applications
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
                           Created {formatDate(vacancy.createdAt)}
                       </div>
-                        <div className="flex items-center gap-1">
-                          <Target className="h-4 w-4" />
-                          Valid till {formatDate(vacancy.validTill)}
-                        </div>
+                        {vacancy.validTill && (
+                          <div className="flex items-center gap-1">
+                            <Target className="h-4 w-4" />
+                            Valid till {formatDate(vacancy.validTill)}
+                          </div>
+                        )}
                         </div>
                       
                       <div className="flex items-center gap-2">
@@ -442,10 +455,10 @@ export default function HotVacanciesPage() {
                     <div className="flex items-center gap-2 ml-4">
                       <div className="text-right">
                         <div className="text-lg font-bold text-gray-900">
-                          {formatCurrency(vacancy.price, vacancy.currency)}
+                          {formatCurrency(vacancy.hotVacancyPrice, vacancy.hotVacancyCurrency)}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {vacancy.pricingTier} tier
+                          {vacancy.pricingTier || vacancy.tierLevel || 'premium'} tier
                         </div>
                       </div>
                       

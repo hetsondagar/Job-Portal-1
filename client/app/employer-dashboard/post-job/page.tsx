@@ -401,6 +401,13 @@ export default function PostJobPage() {
         console.log('🔍 Applying template:', template.name);
         console.log('📋 Template data:', template.templateData);
         
+        // Check if we're in hot vacancy mode from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const hotVacancyParam = urlParams.get('hotVacancy');
+        const isHotVacancyMode = hotVacancyParam === 'true' || formData.isHotVacancy;
+        
+        console.log('🔥 Hot vacancy mode:', isHotVacancyMode);
+        
         const newFormData = {
           title: template.templateData.title || '',
           department: template.templateData.department || '',
@@ -417,11 +424,11 @@ export default function PostJobPage() {
           roleCategory: template.templateData.roleCategory || '',
           education: template.templateData.education || '',
           employmentType: template.templateData.employmentType || '',
-          // Hot Vacancy Premium Features
-          isHotVacancy: template.templateData.isHotVacancy || false,
-          urgentHiring: template.templateData.urgentHiring || false,
+          // Hot Vacancy Premium Features - PRESERVE hot vacancy mode from URL or current state
+          isHotVacancy: isHotVacancyMode,
+          urgentHiring: template.templateData.urgentHiring || (isHotVacancyMode ? true : false),
           multipleEmailIds: template.templateData.multipleEmailIds || [],
-          boostedSearch: template.templateData.boostedSearch || false,
+          boostedSearch: template.templateData.boostedSearch || (isHotVacancyMode ? true : false),
           searchBoostLevel: template.templateData.searchBoostLevel || "standard",
           citySpecificBoost: template.templateData.citySpecificBoost || [],
           videoBanner: template.templateData.videoBanner || "",
@@ -1735,11 +1742,11 @@ export default function PostJobPage() {
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <h4 className="font-semibold text-gray-900 mb-4">📝 Application Settings</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
                             Max Applications
-                          </label>
-                          <Input
+                      </label>
+                      <Input
                             type="number"
                             placeholder="50"
                             value={formData.maxApplications}
@@ -1778,8 +1785,8 @@ export default function PostJobPage() {
                         <div>
                           <Input
                             placeholder="https://yourcompany.com/careers/apply"
-                            value={formData.externalApplyUrl}
-                            onChange={(e) => setFormData({ ...formData, externalApplyUrl: e.target.value })}
+                        value={formData.externalApplyUrl}
+                        onChange={(e) => setFormData({ ...formData, externalApplyUrl: e.target.value })}
                             className="border-blue-300"
                           />
                           <p className="text-xs text-gray-600 mt-1">
@@ -1904,7 +1911,7 @@ export default function PostJobPage() {
                               }`}>
                                 {5 - brandingMedia.length} slots remaining
                               </span>
-                            </div>
+                  </div>
                             
                             <input
                               type="file"
@@ -1970,7 +1977,7 @@ export default function PostJobPage() {
                                       <X className="h-4 w-4" />
                                       Remove
                                     </Button>
-                                  </div>
+              </div>
                                   
                                   {/* Type Badge */}
                                   <div className="absolute top-2 left-2">
@@ -2133,6 +2140,22 @@ export default function PostJobPage() {
                   </div>
                 </div>
                 
+                {/* Salary */}
+                {formData.salary && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Salary</h5>
+                    <p className="text-gray-700 mt-1">{formData.salary}</p>
+                  </div>
+                )}
+                
+                {/* Experience */}
+                {formData.experience && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Experience</h5>
+                    <p className="text-gray-700 mt-1">{formData.experience}</p>
+                  </div>
+                )}
+                
                 {/* Job Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -2187,12 +2210,18 @@ export default function PostJobPage() {
 
                 <div>
                   <h5 className="font-semibold text-gray-900">Description</h5>
-                  <p className="text-gray-700 mt-1">{formData.description || "No description provided"}</p>
+                  <p className="text-gray-700 mt-1 whitespace-pre-line">{formData.description || "No description provided"}</p>
                 </div>
                 <div>
                   <h5 className="font-semibold text-gray-900">Requirements</h5>
-                  <p className="text-gray-700 mt-1">{formData.requirements || "No requirements provided"}</p>
+                  <p className="text-gray-700 mt-1 whitespace-pre-line">{formData.requirements || "No requirements provided"}</p>
                 </div>
+                {formData.benefits && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Benefits</h5>
+                    <p className="text-gray-700 mt-1 whitespace-pre-line">{formData.benefits}</p>
+                  </div>
+                )}
                 {formData.skills && formData.skills.length > 0 && (
                   <div>
                     <h5 className="font-semibold text-gray-900">Key Skills</h5>
@@ -2230,29 +2259,273 @@ export default function PostJobPage() {
                 )}
               </div>
             </div>
+            
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Your job is ready to be published! Review the details above and click "Publish Job" when you're ready.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )
+      case 6:
+        // Same as case 5 (Review & Publish) - for hot vacancies with 6 steps
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4">Job Preview</h3>
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Publishing Options</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="featured" />
-                  <label htmlFor="featured" className="text-sm">
-                    Make this a featured job (+₹2,000)
-                  </label>
+                <div>
+                  <h4 className="text-xl font-bold text-gray-900">{formData.title || "Job Title"}</h4>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="secondary">{formData.type || "Full-time"}</Badge>
+                    <Badge variant="secondary">{formData.department || "Department"}</Badge>
+                    <Badge variant="secondary">{formData.location || "Location"}</Badge>
+                    {formData.isHotVacancy && (
+                      <Badge className="bg-gradient-to-r from-red-600 to-orange-600 text-white">
+                        🔥 HOT VACANCY
+                      </Badge>
+                    )}
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="urgent" />
-                  <label htmlFor="urgent" className="text-sm">
-                    Mark as urgent hiring (+₹1,000)
-                  </label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="email" />
-                  <label htmlFor="email" className="text-sm">
-                    Send email notifications for applications
-                  </label>
+                
+                {/* Salary */}
+                {formData.salary && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Salary</h5>
+                    <p className="text-gray-700 mt-1">{formData.salary}</p>
                 </div>
+                )}
+                
+                {/* Experience */}
+                {formData.experience && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Experience</h5>
+                    <p className="text-gray-700 mt-1">{formData.experience}</p>
+              </div>
+                )}
+                
+                {/* Job Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Role</h5>
+                    <p className="text-gray-700 mt-1">{formData.role || "Not provided"}</p>
+            </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Industry Type</h5>
+                    <div className="text-gray-700 mt-1">
+                      {selectedIndustries.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {selectedIndustries.map((industry, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {industry.replace(/\s*\(\d+\)\s*$/, '')}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>Not provided</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Department</h5>
+                    <p className="text-gray-700 mt-1">{formData.department || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Employment Type</h5>
+                    <p className="text-gray-700 mt-1">{formData.employmentType || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Role Category</h5>
+                    <div className="text-gray-700 mt-1">
+                      {selectedRoleCategories.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {selectedRoleCategories.map((role, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>Not provided</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Education</h5>
+                    <p className="text-gray-700 mt-1">{formData.education || "Not provided"}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="font-semibold text-gray-900">Description</h5>
+                  <p className="text-gray-700 mt-1 whitespace-pre-line">{formData.description || "No description provided"}</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-gray-900">Requirements</h5>
+                  <p className="text-gray-700 mt-1 whitespace-pre-line">{formData.requirements || "No requirements provided"}</p>
+                </div>
+                {formData.benefits && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Benefits</h5>
+                    <p className="text-gray-700 mt-1 whitespace-pre-line">{formData.benefits}</p>
+                  </div>
+                )}
+                {formData.skills && formData.skills.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900">Key Skills</h5>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {formData.skills.map((skill, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Hot Vacancy Premium Features Preview */}
+                {formData.isHotVacancy && (
+                  <div className="mt-6 pt-6 border-t border-blue-200">
+                    <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      Premium Features Enabled
+                    </h5>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {formData.urgencyLevel && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Urgency: {formData.urgencyLevel}</span>
+                        </div>
+                      )}
+                      {formData.hiringTimeline && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Timeline: {formData.hiringTimeline}</span>
+                        </div>
+                      )}
+                      {formData.priorityListing && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Priority Listing</span>
+                        </div>
+                      )}
+                      {formData.featuredBadge && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Featured Badge</span>
+                        </div>
+                      )}
+                      {formData.boostedSearch && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Boosted Search</span>
+                        </div>
+                      )}
+                      {formData.urgentHiring && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Urgent Hiring</span>
+                        </div>
+                      )}
+                      {formData.advancedAnalytics && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Advanced Analytics</span>
+                        </div>
+                      )}
+                      {formData.candidateMatching && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>AI Candidate Matching</span>
+                        </div>
+                      )}
+                      {formData.directContact && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Direct Contact</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {formData.externalApplyUrl && (
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <ExternalLink className="h-4 w-4 text-blue-600 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-blue-900">External Application URL</p>
+                            <p className="text-xs text-blue-700 mt-1 break-all">{formData.externalApplyUrl}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {formData.whyWorkWithUs && (
+                      <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p className="text-sm font-medium text-purple-900 mb-1">Why Work With Us</p>
+                        <p className="text-xs text-purple-700 whitespace-pre-line">{formData.whyWorkWithUs}</p>
+                      </div>
+                    )}
+                    
+                    {formData.videoBanner && (
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Video className="h-4 w-4 text-red-600 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-red-900">Video Banner</p>
+                            <p className="text-xs text-red-700 mt-1 break-all">{formData.videoBanner}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {brandingMedia.length > 0 && (
+                      <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <p className="text-sm font-medium text-indigo-900 mb-2">Company Branding Media: {brandingMedia.length} items</p>
+                        <div className="flex flex-wrap gap-2">
+                          {brandingMedia.map((item, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {item.type === 'video' ? '🎥' : '📸'} {item.file.name.substring(0, 20)}...
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {jobPhotos.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-gray-900 mb-2">Job Showcase</h5>
+                    <div className="flex space-x-2 overflow-x-auto">
+                      {jobPhotos.slice(0, 4).map((photo, index) => (
+                        <div key={photo.photoId} className="flex-shrink-0">
+                          <img
+                            src={photo.fileUrl}
+                            alt={photo.altText || `Job photo ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                          />
+                        </div>
+                      ))}
+                      {jobPhotos.length > 4 && (
+                        <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                          <span className="text-xs text-gray-500 font-medium">
+                            +{jobPhotos.length - 4}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+            
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Your job is ready to be published! Review the details above and click "Publish Job" when you're ready.
+              </AlertDescription>
+            </Alert>
           </div>
         )
       default:

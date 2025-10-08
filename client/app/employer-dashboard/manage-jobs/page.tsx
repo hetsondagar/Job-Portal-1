@@ -426,8 +426,11 @@ export default function ManageJobsPage() {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-3">
+                            <div className="flex items-center space-x-3 mb-3 flex-wrap">
                               {getStatusIcon(job.status)}
+                              {job.isHotVacancy && (
+                                <span className="text-red-600 text-xl">🔥</span>
+                              )}
                               <Link
                                 href={`/employer-dashboard/manage-jobs/${job.id}`}
                                 className="text-xl font-semibold text-blue-600 hover:text-blue-700 transition-colors"
@@ -435,6 +438,17 @@ export default function ManageJobsPage() {
                                 {job.title}
                               </Link>
                               {getStatusBadge(job.status)}
+                              {job.isHotVacancy && (
+                                <Badge className="bg-gradient-to-r from-red-600 to-orange-600 text-white">
+                                  HOT VACANCY
+                                </Badge>
+                              )}
+                              {job.urgentHiring && (
+                                <Badge className="bg-red-100 text-red-800">URGENT</Badge>
+                              )}
+                              {job.featuredBadge && (
+                                <Badge className="bg-yellow-100 text-yellow-800">FEATURED</Badge>
+                              )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
