@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
 
 interface CompanyJobsDisplayProps {
   companyId: string
@@ -16,6 +17,8 @@ interface CompanyJobsDisplayProps {
 
 export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDisplayProps) {
   const router = useRouter()
+  const { user } = useAuth()
+  const basePath = user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
   const [jobs, setJobs] = useState<any[]>([])
   const [loading, setIsLoading] = useState(true)
   const [deletingJob, setDeletingJob] = useState<string | null>(null)
@@ -138,7 +141,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <Button onClick={() => router.push('/gulf-dashboard/post-job')}>
+            <Button onClick={() => router.push(`${basePath}/post-job`)}>
               <Plus className="w-4 h-4 mr-2" />
               Post New Job
             </Button>
@@ -155,7 +158,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
             <p className="text-slate-600 dark:text-slate-300 mb-4">
               Start posting jobs to attract talented candidates to your company
             </p>
-            <Button onClick={() => router.push('/gulf-dashboard/post-job')}>
+            <Button onClick={() => router.push(`${basePath}/post-job`)}>
               <Plus className="w-4 h-4 mr-2" />
               Post Your First Job
             </Button>
@@ -218,7 +221,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/gulf-dashboard/manage-jobs/${job.id}`)}
+                      onClick={() => router.push(`${basePath}/manage-jobs/${job.id}`)}
                       title="View Job Details"
                     >
                       <Eye className="w-4 h-4" />
@@ -227,7 +230,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/gulf-dashboard/post-job?draft=${job.id}`)}
+                      onClick={() => router.push(`${basePath}/post-job?draft=${job.id}`)}
                       title="Edit Job"
                     >
                       <Edit className="w-4 h-4" />

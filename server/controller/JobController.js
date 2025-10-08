@@ -1556,10 +1556,23 @@ exports.getJobForEdit = async (req, res, next) => {
       });
     }
 
+    // Include latest applications count for this job
+    let applicationsCount = 0;
+    try {
+      const { JobApplication } = require('../config/index');
+      applicationsCount = await JobApplication.count({ where: { jobId: id } });
+    } catch (countErr) {
+      console.warn('⚠️ Failed to count applications for job', id, countErr?.message || countErr);
+    }
+
+    // Attach to response without mutating model definition
+    const jobData = job.toJSON ? job.toJSON() : job;
+    jobData.applicationsCount = applicationsCount;
+
     return res.status(200).json({
       success: true,
       message: 'Job retrieved successfully for editing',
-      data: job
+      data: jobData
     });
   } catch (error) {
     console.error('Get job for edit error:', error);
