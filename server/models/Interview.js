@@ -235,3 +235,15 @@ Interview.prototype.canBeRescheduled = function() {
 };
 
 module.exports = Interview; 
+// Define associations in a safe, late-binding manner if associate is used elsewhere
+Interview.associate = (models) => {
+  try {
+    Interview.belongsTo(models.JobApplication, { as: 'jobApplication', foreignKey: 'jobApplicationId' });
+    Interview.belongsTo(models.User, { as: 'employer', foreignKey: 'employerId' });
+    Interview.belongsTo(models.User, { as: 'candidate', foreignKey: 'candidateId' });
+    Interview.belongsTo(models.Job, { as: 'job', foreignKey: 'jobId' });
+  } catch (e) {
+    // Avoid crash if models not fully initialized yet
+    console.warn('Interview association setup warning:', e?.message || e);
+  }
+};

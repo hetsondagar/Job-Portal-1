@@ -202,3 +202,15 @@ JobApplication.prototype.canUpdateStatus = function(newStatus) {
 };
 
 module.exports = JobApplication;
+// Define associations so includes work across routes
+JobApplication.associate = (models) => {
+  try {
+    JobApplication.belongsTo(models.Job, { as: 'job', foreignKey: 'jobId' });
+    JobApplication.belongsTo(models.User, { as: 'applicant', foreignKey: 'userId' });
+    JobApplication.belongsTo(models.User, { as: 'employer', foreignKey: 'employerId' });
+    JobApplication.belongsTo(models.Resume, { as: 'jobResume', foreignKey: 'resumeId' });
+    JobApplication.belongsTo(models.CoverLetter, { as: 'jobCoverLetter', foreignKey: 'coverLetterId' });
+  } catch (e) {
+    console.warn('JobApplication association setup warning:', e?.message || e);
+  }
+};
