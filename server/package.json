@@ -5,8 +5,10 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
+    "start": "node start-with-migration.js",
+    "start:direct": "node index.js",
     "deploy": "node deploy-with-db-fix.js",
+    "postinstall": "node scripts/auto-migrate-on-deploy.js",
     "dev": "nodemon index.js",
     "test": "jest",
     "test:watch": "jest --watch",
