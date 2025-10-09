@@ -60,6 +60,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
+  // Check profile completion separately (runs on every user update)
   useEffect(() => {
     if (user) {
       // Check if profile is incomplete and show completion dialog
@@ -86,8 +87,15 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       if (isIncomplete()) {
         // Show dialog after a short delay to avoid UI conflicts
         setTimeout(() => setShowProfileCompletion(true), 1000)
+      } else {
+        // Hide dialog if profile is now complete
+        setShowProfileCompletion(false)
       }
-      
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
       loadDashboardData()
     }
   }, [user])

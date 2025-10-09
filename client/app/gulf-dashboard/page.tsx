@@ -64,6 +64,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
+  // Check profile completion separately (runs on every user update)
   useEffect(() => {
     if (user) {
       // Check if profile is incomplete and show completion dialog
@@ -90,8 +91,15 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
       if (isIncomplete()) {
         // Show dialog after a short delay to avoid UI conflicts
         setTimeout(() => setShowProfileCompletion(true), 1000)
+      } else {
+        // Hide dialog if profile is now complete
+        setShowProfileCompletion(false)
       }
-      
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
       // Ensure user region is set to 'gulf' when accessing Gulf dashboard
       if (user.region !== 'gulf') {
         console.log('🔧 Setting user region to gulf for Gulf dashboard access')

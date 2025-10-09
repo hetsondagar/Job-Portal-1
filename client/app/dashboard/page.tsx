@@ -86,11 +86,9 @@ export default function DashboardPage() {
     router.replace('/login')
   }, [user, loading, router])
 
-  // Single useEffect to handle all data fetching with proper debouncing
+  // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user && !loading && !dataLoaded) {
-      setCurrentUser(user)
-      
+    if (user && !loading) {
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
@@ -120,7 +118,17 @@ export default function DashboardPage() {
       if (isIncomplete()) {
         // Show dialog after a short delay to avoid UI conflicts
         setTimeout(() => setShowProfileCompletion(true), 1000)
+      } else {
+        // Hide dialog if profile is now complete
+        setShowProfileCompletion(false)
       }
+    }
+  }, [user, loading])
+
+  // Single useEffect to handle all data fetching with proper debouncing
+  useEffect(() => {
+    if (user && !loading && !dataLoaded) {
+      setCurrentUser(user)
       
       // Debounce all API calls to prevent excessive requests
       const timeoutId = setTimeout(async () => {

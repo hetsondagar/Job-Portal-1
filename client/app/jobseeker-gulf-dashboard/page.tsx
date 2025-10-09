@@ -104,10 +104,9 @@ export default function JobseekerGulfDashboardPage() {
     router.replace('/gulf-opportunities')
   }, [user, loading, router])
 
+  // Check profile completion separately (runs on every user update)
   useEffect(() => {
     if (user && !loading) {
-      setCurrentUser(user)
-      
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
@@ -137,8 +136,16 @@ export default function JobseekerGulfDashboardPage() {
       if (isIncomplete()) {
         // Show dialog after a short delay to avoid UI conflicts
         setTimeout(() => setShowProfileCompletion(true), 1000)
+      } else {
+        // Hide dialog if profile is now complete
+        setShowProfileCompletion(false)
       }
-      
+    }
+  }, [user, loading])
+
+  useEffect(() => {
+    if (user && !loading) {
+      setCurrentUser(user)
       fetchDashboardStats()
       fetchResumes()
       fetchBookmarks()

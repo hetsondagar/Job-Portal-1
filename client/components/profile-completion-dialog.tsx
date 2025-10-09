@@ -169,8 +169,12 @@ export function JobseekerProfileCompletionDialog({
         }
       }
       
-      await apiService.updateProfile(updateData)
-      toast.success('Profile completion reminder snoozed for 12 hours')
+      const response = await apiService.updateProfile(updateData)
+      if (response.success) {
+        toast.success('Profile completion reminder snoozed for 12 hours')
+        // Refresh user data to update preferences in memory
+        onProfileUpdated(response.data)
+      }
       onClose()
     } catch (error) {
       console.error('Error updating skip preference:', error)
@@ -618,8 +622,12 @@ export function EmployerProfileCompletionDialog({
         }
       }
       
-      await apiService.updateProfile(updateData)
-      toast.success('Profile completion reminder snoozed for 12 hours')
+      const response = await apiService.updateProfile(updateData)
+      if (response.success) {
+        toast.success('Profile completion reminder snoozed for 12 hours')
+        // Refresh user data to update preferences in memory
+        onProfileUpdated(response.data)
+      }
       onClose()
     } catch (error) {
       console.error('Error updating skip preference:', error)
