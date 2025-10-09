@@ -193,7 +193,7 @@ export function JobseekerProfileCompletionDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserIcon className="w-5 h-5" />
@@ -378,9 +378,10 @@ export function JobseekerProfileCompletionDialog({
                 <Label htmlFor="preferredJobTitles">Preferred Job Titles/Roles (comma-separated)</Label>
                 <Input
                   id="preferredJobTitles"
-                  placeholder="e.g., Software Engineer, Full Stack Developer, Tech Lead"
+                  placeholder="e.g., Software Engineer, Developer..."
                   value={formData.preferredJobTitles}
                   onChange={(e) => setFormData(prev => ({ ...prev, preferredJobTitles: e.target.value }))}
+                  className="text-sm"
                 />
               </div>
 
@@ -650,7 +651,7 @@ export function EmployerProfileCompletionDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="w-5 h-5" />

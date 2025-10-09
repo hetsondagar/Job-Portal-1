@@ -350,8 +350,8 @@ export default function EmployerRegisterPage() {
             className="hidden lg:block space-y-8"
           >
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Hire the Best Talent</h1>
-              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Hire the Best Talent</h1>
+              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8">
                 Join 50,000+ companies that trust JobPortal for their hiring needs
               </p>
             </div>

@@ -203,8 +203,8 @@ export default function RegisterPage() {
           className="hidden lg:block space-y-8"
         >
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Start Your Career Journey</h1>
-            <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Start Your Career Journey</h1>
+            <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8">
               Join millions of professionals and discover your next opportunity
             </p>
           </div>
@@ -246,7 +246,7 @@ export default function RegisterPage() {
                   </span>
                 </Link>
               </div>
-              <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Create Account</CardTitle>
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Create Account</CardTitle>
               <p className="text-slate-600 dark:text-slate-300 mt-2 mb-4">
                 Join thousands of professionals finding their dream jobs
               </p>
