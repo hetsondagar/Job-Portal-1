@@ -45,8 +45,8 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [similarJobs, setSimilarJobs] = useState<any[]>([])
-  const [similarJobsLoading, setSimilarJobsLoading] = useState(false)
+  const [companyJobs, setCompanyJobs] = useState<any[]>([])
+  const [companyJobsLoading, setCompanyJobsLoading] = useState(false)
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
 
@@ -69,8 +69,9 @@ export default function JobDetailPage() {
         console.log('✅ Job details fetched:', response.data)
         setJob(response.data)
         
-        // Fetch similar jobs after getting job details
-        fetchSimilarJobs()
+        // Fetch other jobs from same company
+        const companyId = (response.data as any).companyId || response.data?.company?.id
+        await fetchCompanyJobs(companyId)
       } else {
         console.error('❌ Failed to fetch job details:', response)
         setError(response.message || 'Failed to fetch job details')
@@ -85,25 +86,22 @@ export default function JobDetailPage() {
     }
   }
 
-  const fetchSimilarJobs = async () => {
+  const fetchCompanyJobs = async (companyId?: string) => {
     try {
-      setSimilarJobsLoading(true)
-      console.log('🔍 Fetching similar jobs for ID:', params.jobId)
-      
-      const response = await apiService.getSimilarJobs(params.jobId as string, 4)
-      
+      if (!companyId) return
+      setCompanyJobsLoading(true)
+      const response = await apiService.getCompanyJobs(companyId, { limit: 5 })
       if (response.success && response.data) {
-        console.log('✅ Similar jobs fetched:', response.data)
-        setSimilarJobs(response.data)
+        const jobs = (response.data.jobs || response.data || []) as any[]
+        const filtered = jobs.filter(j => String(j.id) !== String(params.jobId))
+        setCompanyJobs(filtered)
       } else {
-        console.error('❌ Failed to fetch similar jobs:', response)
-        // Don't show error toast for similar jobs as it's not critical
+        setCompanyJobs([])
       }
-    } catch (error: any) {
-      console.error('❌ Error fetching similar jobs:', error)
-      // Don't show error toast for similar jobs as it's not critical
+    } catch (error) {
+      setCompanyJobs([])
     } finally {
-      setSimilarJobsLoading(false)
+      setCompanyJobsLoading(false)
     }
   }
 
@@ -468,17 +466,17 @@ export default function JobDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Similar Jobs */}
+            {/* Other Jobs from Your Company */}
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Similar Jobs</h3>
-                  {similarJobsLoading && (
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Other Jobs from Your Company</h3>
+                  {companyJobsLoading && (
                     <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
                   )}
                 </div>
                 
-                {similarJobsLoading ? (
+                {companyJobsLoading ? (
                   <div className="space-y-4">
                     {[1, 2, 3, 4].map((i) => (
                       <div key={i} className="p-4 border rounded-lg animate-pulse">
@@ -491,31 +489,31 @@ export default function JobDetailPage() {
                       </div>
                     ))}
                   </div>
-                ) : similarJobs.length > 0 ? (
+                ) : companyJobs.length > 0 ? (
                   <div className="space-y-4">
-                    {similarJobs.map((recJob) => (
+                    {companyJobs.map((recJob) => (
                       <Link
                         key={recJob.id}
                         href={`/employer-dashboard/manage-jobs/${recJob.id}`}
                         className="block p-4 border rounded-lg hover:border-blue-300 transition-colors cursor-pointer"
                       >
                         <h4 className="font-medium text-slate-900 dark:text-white mb-1">{recJob.title}</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{recJob.company}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{recJob.company?.name || transformedJob.company}</p>
                         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                           <span className="flex items-center">
                             <MapPin className="w-3 h-3 mr-1" />
                             {recJob.location}
                           </span>
-                          <span>{recJob.salary}</span>
+                          <span>{recJob.salary || (recJob.salaryMin && recJob.salaryMax ? `₹${recJob.salaryMin}-${recJob.salaryMax} LPA` : '')}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
                           <span className="flex items-center">
                             <Briefcase className="w-3 h-3 mr-1" />
-                            {recJob.type}
+                            {recJob.jobType || recJob.type}
                           </span>
                           <span className="flex items-center">
                             <Users className="w-3 h-3 mr-1" />
-                            {recJob.applications} applications
+                            {(recJob.applicationsCount ?? 0)} applications
                           </span>
                         </div>
                         {recJob.description && (
@@ -528,7 +526,7 @@ export default function JobDetailPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-slate-500 dark:text-slate-400">No similar jobs found</p>
+                    <p className="text-slate-500 dark:text-slate-400">No other jobs from your company</p>
                   </div>
                 )}
               </CardContent>
