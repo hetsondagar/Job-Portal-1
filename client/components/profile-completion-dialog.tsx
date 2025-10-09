@@ -36,7 +36,18 @@ export function JobseekerProfileCompletionDialog({
     dateOfBirth: '',
     gender: '',
     willingToRelocate: false,
-    preferredLocations: ''
+    preferredLocations: '',
+    // Professional Details
+    currentCompany: '',
+    currentRole: '',
+    highestEducation: '',
+    fieldOfStudy: '',
+    // Preferred Professional Details
+    preferredJobTitles: '',
+    preferredIndustries: '',
+    preferredCompanySize: '',
+    preferredWorkMode: '',
+    preferredEmploymentType: ''
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -73,7 +84,18 @@ export function JobseekerProfileCompletionDialog({
         dateOfBirth: (user as any).dateOfBirth || '',
         gender: (user as any).gender || '',
         willingToRelocate: user.willingToRelocate || false,
-        preferredLocations: Array.isArray((user as any).preferredLocations) ? (user as any).preferredLocations.join(', ') : ''
+        preferredLocations: Array.isArray((user as any).preferredLocations) ? (user as any).preferredLocations.join(', ') : '',
+        // Professional Details
+        currentCompany: (user as any).currentCompany || '',
+        currentRole: (user as any).currentRole || '',
+        highestEducation: (user as any).highestEducation || '',
+        fieldOfStudy: (user as any).fieldOfStudy || '',
+        // Preferred Professional Details
+        preferredJobTitles: Array.isArray((user as any).preferredJobTitles) ? (user as any).preferredJobTitles.join(', ') : '',
+        preferredIndustries: Array.isArray((user as any).preferredIndustries) ? (user as any).preferredIndustries.join(', ') : '',
+        preferredCompanySize: (user as any).preferredCompanySize || '',
+        preferredWorkMode: (user as any).preferredWorkMode || '',
+        preferredEmploymentType: (user as any).preferredEmploymentType || ''
       })
     }
   }, [user])
@@ -100,6 +122,17 @@ export function JobseekerProfileCompletionDialog({
         gender: formData.gender || undefined,
         willingToRelocate: formData.willingToRelocate,
         preferredLocations: formData.preferredLocations ? formData.preferredLocations.split(',').map(s => s.trim()).filter(Boolean) : [],
+        // Professional Details
+        currentCompany: formData.currentCompany || undefined,
+        currentRole: formData.currentRole || undefined,
+        highestEducation: formData.highestEducation || undefined,
+        fieldOfStudy: formData.fieldOfStudy || undefined,
+        // Preferred Professional Details
+        preferredJobTitles: formData.preferredJobTitles ? formData.preferredJobTitles.split(',').map(s => s.trim()).filter(Boolean) : [],
+        preferredIndustries: formData.preferredIndustries ? formData.preferredIndustries.split(',').map(s => s.trim()).filter(Boolean) : [],
+        preferredCompanySize: formData.preferredCompanySize || undefined,
+        preferredWorkMode: formData.preferredWorkMode || undefined,
+        preferredEmploymentType: formData.preferredEmploymentType || undefined,
         preferences: {
           ...(user.preferences || {}),
           profileCompleted: true
@@ -123,8 +156,26 @@ export function JobseekerProfileCompletionDialog({
     }
   }
 
-  const handleSkip = () => {
-    onClose()
+  const handleSkip = async () => {
+    try {
+      // Set skip timestamp to 12 hours from now
+      const skipUntil = new Date()
+      skipUntil.setHours(skipUntil.getHours() + 12)
+      
+      const updateData = {
+        preferences: {
+          ...(user.preferences || {}),
+          profileCompletionSkippedUntil: skipUntil.toISOString()
+        }
+      }
+      
+      await apiService.updateProfile(updateData)
+      toast.success('Profile completion reminder snoozed for 12 hours')
+      onClose()
+    } catch (error) {
+      console.error('Error updating skip preference:', error)
+      onClose()
+    }
   }
 
   // Don't show dialog if profile is complete
@@ -224,11 +275,31 @@ export function JobseekerProfileCompletionDialog({
             </div>
           </div>
 
-          {/* Career Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-300">Career Details (Recommended)</h3>
+          {/* Professional Details */}
+          <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <h3 className="font-semibold text-sm text-green-900 dark:text-green-100">Professional Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="currentCompany">Current Company</Label>
+                <Input
+                  id="currentCompany"
+                  placeholder="e.g., Tech Solutions Inc."
+                  value={formData.currentCompany}
+                  onChange={(e) => setFormData(prev => ({ ...prev, currentCompany: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="currentRole">Current Role/Position</Label>
+                <Input
+                  id="currentRole"
+                  placeholder="e.g., Senior Software Engineer"
+                  value={formData.currentRole}
+                  onChange={(e) => setFormData(prev => ({ ...prev, currentRole: e.target.value }))}
+                />
+              </div>
+
               <div>
                 <Label htmlFor="experienceYears">Years of Experience</Label>
                 <Input
@@ -242,13 +313,28 @@ export function JobseekerProfileCompletionDialog({
               </div>
 
               <div>
-                <Label htmlFor="expectedSalary">Expected Salary (LPA)</Label>
+                <Label htmlFor="highestEducation">Highest Education</Label>
+                <Select value={formData.highestEducation} onValueChange={(value) => setFormData(prev => ({ ...prev, highestEducation: value }))}>
+                  <SelectTrigger id="highestEducation">
+                    <SelectValue placeholder="Select education level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high_school">High School</SelectItem>
+                    <SelectItem value="diploma">Diploma</SelectItem>
+                    <SelectItem value="bachelors">Bachelor's Degree</SelectItem>
+                    <SelectItem value="masters">Master's Degree</SelectItem>
+                    <SelectItem value="phd">PhD/Doctorate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="fieldOfStudy">Field of Study</Label>
                 <Input
-                  id="expectedSalary"
-                  type="number"
-                  placeholder="e.g., 12"
-                  value={formData.expectedSalary}
-                  onChange={(e) => setFormData(prev => ({ ...prev, expectedSalary: e.target.value }))}
+                  id="fieldOfStudy"
+                  placeholder="e.g., Computer Science, Engineering"
+                  value={formData.fieldOfStudy}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fieldOfStudy: e.target.value }))}
                 />
               </div>
 
@@ -270,6 +356,91 @@ export function JobseekerProfileCompletionDialog({
                   placeholder="e.g., JavaScript, React, Node.js, Python"
                   value={formData.skills}
                   onChange={(e) => setFormData(prev => ({ ...prev, skills: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preferred Professional Details */}
+          <div className="space-y-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+            <h3 className="font-semibold text-sm text-orange-900 dark:text-orange-100">Preferred Professional Details</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="preferredJobTitles">Preferred Job Titles/Roles (comma-separated)</Label>
+                <Input
+                  id="preferredJobTitles"
+                  placeholder="e.g., Software Engineer, Full Stack Developer, Tech Lead"
+                  value={formData.preferredJobTitles}
+                  onChange={(e) => setFormData(prev => ({ ...prev, preferredJobTitles: e.target.value }))}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="preferredIndustries">Preferred Industries (comma-separated)</Label>
+                <Input
+                  id="preferredIndustries"
+                  placeholder="e.g., Technology, Finance, Healthcare, E-commerce"
+                  value={formData.preferredIndustries}
+                  onChange={(e) => setFormData(prev => ({ ...prev, preferredIndustries: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="preferredCompanySize">Preferred Company Size</Label>
+                <Select value={formData.preferredCompanySize} onValueChange={(value) => setFormData(prev => ({ ...prev, preferredCompanySize: value }))}>
+                  <SelectTrigger id="preferredCompanySize">
+                    <SelectValue placeholder="Select company size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="startup">Startup (1-50)</SelectItem>
+                    <SelectItem value="small">Small (51-200)</SelectItem>
+                    <SelectItem value="medium">Medium (201-1000)</SelectItem>
+                    <SelectItem value="large">Large (1000+)</SelectItem>
+                    <SelectItem value="any">Any Size</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="preferredWorkMode">Preferred Work Mode</Label>
+                <Select value={formData.preferredWorkMode} onValueChange={(value) => setFormData(prev => ({ ...prev, preferredWorkMode: value }))}>
+                  <SelectTrigger id="preferredWorkMode">
+                    <SelectValue placeholder="Select work mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="remote">Remote</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                    <SelectItem value="onsite">On-site</SelectItem>
+                    <SelectItem value="flexible">Flexible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="preferredEmploymentType">Preferred Employment Type</Label>
+                <Select value={formData.preferredEmploymentType} onValueChange={(value) => setFormData(prev => ({ ...prev, preferredEmploymentType: value }))}>
+                  <SelectTrigger id="preferredEmploymentType">
+                    <SelectValue placeholder="Select employment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full-time">Full-Time</SelectItem>
+                    <SelectItem value="part-time">Part-Time</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="freelance">Freelance</SelectItem>
+                    <SelectItem value="internship">Internship</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="expectedSalary">Expected Salary (LPA)</Label>
+                <Input
+                  id="expectedSalary"
+                  type="number"
+                  placeholder="e.g., 12"
+                  value={formData.expectedSalary}
+                  onChange={(e) => setFormData(prev => ({ ...prev, expectedSalary: e.target.value }))}
                 />
               </div>
 
@@ -434,8 +605,26 @@ export function EmployerProfileCompletionDialog({
     }
   }
 
-  const handleSkip = () => {
-    onClose()
+  const handleSkip = async () => {
+    try {
+      // Set skip timestamp to 12 hours from now
+      const skipUntil = new Date()
+      skipUntil.setHours(skipUntil.getHours() + 12)
+      
+      const updateData = {
+        preferences: {
+          ...(user.preferences || {}),
+          profileCompletionSkippedUntil: skipUntil.toISOString()
+        }
+      }
+      
+      await apiService.updateProfile(updateData)
+      toast.success('Profile completion reminder snoozed for 12 hours')
+      onClose()
+    } catch (error) {
+      console.error('Error updating skip preference:', error)
+      onClose()
+    }
   }
 
   // Don't show dialog if profile is complete

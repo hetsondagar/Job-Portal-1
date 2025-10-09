@@ -38,6 +38,7 @@ import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/ap
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RecentNotifications } from '@/components/recent-notifications'
 import { GulfJobseekerAuthGuard } from '@/components/gulf-jobseeker-auth-guard'
+import { JobseekerProfileCompletionDialog } from '@/components/profile-completion-dialog'
 
 export default function JobseekerGulfDashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -63,6 +64,7 @@ export default function JobseekerGulfDashboardPage() {
   const [coverLetterUploading, setCoverLetterUploading] = useState(false)
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null)
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false)
 
   // Dynamic Gulf jobs data
   const [gulfJobs, setGulfJobs] = useState<any[]>([])
@@ -105,6 +107,38 @@ export default function JobseekerGulfDashboardPage() {
   useEffect(() => {
     if (user && !loading) {
       setCurrentUser(user)
+      
+      // Check if profile is incomplete and show completion dialog
+      const isIncomplete = () => {
+        // Check if user has marked profile as complete
+        if (user.preferences?.profileCompleted === true) {
+          return false
+        }
+        
+        // Check if user has skipped and the skip period hasn't expired
+        if (user.preferences?.profileCompletionSkippedUntil) {
+          const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+          const now = new Date()
+          if (skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil)
+            return false // Don't show dialog yet
+          }
+        }
+        
+        // Required fields for jobseeker
+        return !user.phone || 
+               !user.currentLocation || 
+               !user.headline || 
+               (user.experienceYears === undefined || user.experienceYears === null) ||
+               !(user as any).gender ||
+               !(user as any).dateOfBirth
+      }
+      
+      if (isIncomplete()) {
+        // Show dialog after a short delay to avoid UI conflicts
+        setTimeout(() => setShowProfileCompletion(true), 1000)
+      }
+      
       fetchDashboardStats()
       fetchResumes()
       fetchBookmarks()
@@ -520,6 +554,12 @@ export default function JobseekerGulfDashboardPage() {
     } catch (error) {
       toast.error('Logout failed')
     }
+  }
+
+  const handleProfileUpdated = async (updatedData: any) => {
+    // Refresh user data to get updated profile
+    await refreshUser()
+    setShowProfileCompletion(false)
   }
 
   const getPriorityColor = (priority: string) => {
@@ -1580,6 +1620,16 @@ export default function JobseekerGulfDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Completion Dialog */}
+      {user && (
+        <JobseekerProfileCompletionDialog
+          isOpen={showProfileCompletion}
+          onClose={() => setShowProfileCompletion(false)}
+          user={user}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
       </div>
     </GulfJobseekerAuthGuard>
   )

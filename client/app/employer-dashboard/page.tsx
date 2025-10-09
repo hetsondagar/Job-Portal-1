@@ -69,6 +69,16 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           return false
         }
         
+        // Check if user has skipped and the skip period hasn't expired
+        if (user.preferences?.profileCompletionSkippedUntil) {
+          const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+          const now = new Date()
+          if (skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil)
+            return false // Don't show dialog yet
+          }
+        }
+        
         // Required fields for employer
         return !user.phone || !(user as any).designation || !user.companyId
       }

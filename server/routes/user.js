@@ -663,6 +663,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'noticePeriod': 'notice_period',
       'willingToRelocate': 'willing_to_relocate',
       'gender': 'gender',
+      'dateOfBirth': 'date_of_birth',
       'profileVisibility': 'profile_visibility',
       'contactVisibility': 'contact_visibility',
       'skills': 'skills',
@@ -673,7 +674,18 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'preferredLocations': 'preferred_locations',
       'designation': 'designation',
       'socialLinks': 'social_links',
-      'preferences': 'preferences'
+      'preferences': 'preferences',
+      // Professional Details
+      'currentCompany': 'current_company',
+      'currentRole': 'current_role',
+      'highestEducation': 'highest_education',
+      'fieldOfStudy': 'field_of_study',
+      // Preferred Professional Details
+      'preferredJobTitles': 'preferred_job_titles',
+      'preferredIndustries': 'preferred_industries',
+      'preferredCompanySize': 'preferred_company_size',
+      'preferredWorkMode': 'preferred_work_mode',
+      'preferredEmploymentType': 'preferred_employment_type'
     };
 
     const updateData = {};

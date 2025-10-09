@@ -107,6 +107,44 @@ const User = sequelize.define('User', {
     type: DataTypes.INTEGER, // in days
     allowNull: true
   },
+  // Professional Details (for job seekers)
+  current_company: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  current_role: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  highest_education: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  field_of_study: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  // Preferred Professional Details (for job seekers)
+  preferred_job_titles: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  preferred_industries: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  preferred_company_size: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  preferred_work_mode: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  preferred_employment_type: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   // For employers
   companyId: {
     type: DataTypes.UUID,
