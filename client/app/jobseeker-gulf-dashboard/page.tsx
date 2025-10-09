@@ -65,6 +65,7 @@ export default function JobseekerGulfDashboardPage() {
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null)
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [profileCheckDone, setProfileCheckDone] = useState(false)
 
   // Dynamic Gulf jobs data
   const [gulfJobs, setGulfJobs] = useState<any[]>([])
@@ -106,7 +107,7 @@ export default function JobseekerGulfDashboardPage() {
 
   // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !profileCheckDone) {
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
@@ -133,15 +134,29 @@ export default function JobseekerGulfDashboardPage() {
                !(user as any).dateOfBirth
       }
       
-      if (isIncomplete()) {
+      const incomplete = isIncomplete()
+      console.log('🔍 Gulf jobseeker profile completion check:', { incomplete, user: { phone: user.phone, location: user.currentLocation, headline: user.headline } })
+      
+      if (incomplete) {
         // Show dialog after a short delay to avoid UI conflicts
-        setTimeout(() => setShowProfileCompletion(true), 1000)
+        const timeoutId = setTimeout(() => {
+          console.log('✅ Showing Gulf jobseeker profile completion dialog')
+          setShowProfileCompletion(true)
+        }, 1000)
+        return () => clearTimeout(timeoutId)
       } else {
-        // Hide dialog if profile is now complete
         setShowProfileCompletion(false)
       }
+      setProfileCheckDone(true)
     }
-  }, [user, loading])
+  }, [user, loading, profileCheckDone])
+  
+  // Reset profile check when user updates (after skip or completion)
+  useEffect(() => {
+    if (user) {
+      setProfileCheckDone(false)
+    }
+  }, [user])
 
   useEffect(() => {
     if (user && !loading) {

@@ -68,6 +68,7 @@ export default function DashboardPage() {
   const [followedCompaniesCount, setFollowedCompaniesCount] = useState(0)
   const [followedCompaniesLoading, setFollowedCompaniesLoading] = useState(true)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [profileCheckDone, setProfileCheckDone] = useState(false)
 
   useEffect(() => {
     if (loading) return;
@@ -88,7 +89,7 @@ export default function DashboardPage() {
 
   // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !profileCheckDone) {
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
@@ -115,15 +116,29 @@ export default function DashboardPage() {
                !(user as any).dateOfBirth
       }
       
-      if (isIncomplete()) {
+      const incomplete = isIncomplete()
+      console.log('🔍 Profile completion check:', { incomplete, user: { phone: user.phone, location: user.currentLocation, headline: user.headline } })
+      
+      if (incomplete) {
         // Show dialog after a short delay to avoid UI conflicts
-        setTimeout(() => setShowProfileCompletion(true), 1000)
+        const timeoutId = setTimeout(() => {
+          console.log('✅ Showing profile completion dialog')
+          setShowProfileCompletion(true)
+        }, 1000)
+        return () => clearTimeout(timeoutId)
       } else {
-        // Hide dialog if profile is now complete
         setShowProfileCompletion(false)
       }
+      setProfileCheckDone(true)
     }
-  }, [user, loading])
+  }, [user, loading, profileCheckDone])
+  
+  // Reset profile check when user updates (after skip or completion)
+  useEffect(() => {
+    if (user) {
+      setProfileCheckDone(false)
+    }
+  }, [user])
 
   // Single useEffect to handle all data fetching with proper debouncing
   useEffect(() => {

@@ -59,10 +59,11 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [hotVacancies, setHotVacancies] = useState<any[]>([])
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [profileCheckDone, setProfileCheckDone] = useState(false)
 
   // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user) {
+    if (user && !profileCheckDone) {
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
@@ -84,13 +85,27 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         return !user.phone || !(user as any).designation || !user.companyId
       }
       
-      if (isIncomplete()) {
+      const incomplete = isIncomplete()
+      console.log('🔍 Employer profile completion check:', { incomplete, user: { phone: user.phone, designation: (user as any).designation, companyId: user.companyId } })
+      
+      if (incomplete) {
         // Show dialog after a short delay to avoid UI conflicts
-        setTimeout(() => setShowProfileCompletion(true), 1000)
+        const timeoutId = setTimeout(() => {
+          console.log('✅ Showing employer profile completion dialog')
+          setShowProfileCompletion(true)
+        }, 1000)
+        return () => clearTimeout(timeoutId)
       } else {
-        // Hide dialog if profile is now complete
         setShowProfileCompletion(false)
       }
+      setProfileCheckDone(true)
+    }
+  }, [user, profileCheckDone])
+  
+  // Reset profile check when user updates (after skip or completion)
+  useEffect(() => {
+    if (user) {
+      setProfileCheckDone(false)
     }
   }, [user])
 
