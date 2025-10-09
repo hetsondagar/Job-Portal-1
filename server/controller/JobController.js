@@ -114,7 +114,13 @@ exports.createJob = async (req, res, next) => {
       seoDescription, // SEO optimized description
       keywords = [], // SEO keywords
       impressions = 0, // Hot vacancy specific impressions
-      clicks = 0 // Hot vacancy specific clicks
+      clicks = 0, // Hot vacancy specific clicks
+      // AGENCY POSTING FIELDS
+      isAgencyPosted = false, // Whether this job was posted by an agency
+      hiringCompanyId, // The actual hiring company (for agency jobs)
+      postedByAgencyId, // The agency that posted the job
+      agencyDescription, // Short description about the agency
+      authorizationId // Link to the authorization record
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
@@ -164,6 +170,140 @@ exports.createJob = async (req, res, next) => {
         errors 
       });
     }
+
+    // ========== CRITICAL: AGENCY JOB POSTING VALIDATION ==========
+    // Validate agency job posting permissions and limits
+    if (isAgencyPosted === true && hiringCompanyId) {
+      console.log('🔒 Validating agency job posting authorization...');
+      
+      const { AgencyClientAuthorization } = require('../models');
+      
+      // Get the authorization record
+      const authorization = await AgencyClientAuthorization.findOne({
+        where: {
+          agencyCompanyId: companyId || req.user.company_id,
+          clientCompanyId: hiringCompanyId,
+        },
+        include: [
+          {
+            model: Company,
+            as: 'ClientCompany',
+            attributes: ['id', 'name', 'companyStatus']
+          }
+        ]
+      });
+      
+      if (!authorization) {
+        console.error('❌ No authorization found for client company');
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to post jobs for this company. Please add the client first.'
+        });
+      }
+      
+      // Check 1: Authorization must be active
+      if (authorization.status !== 'active') {
+        console.error(`❌ Authorization status is '${authorization.status}', not 'active'`);
+        return res.status(403).json({
+          success: false,
+          message: `Client authorization is ${authorization.status}. Only active authorizations can post jobs.`
+        });
+      }
+      
+      // Check 2: Must have posting permission
+      if (!authorization.canPostJobs) {
+        console.error('❌ canPostJobs is false');
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to post jobs for this client.'
+        });
+      }
+      
+      // Check 3: Contract must be valid (not expired)
+      if (authorization.contractEndDate) {
+        const contractEndDate = new Date(authorization.contractEndDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Compare dates only
+        contractEndDate.setHours(0, 0, 0, 0);
+        
+        if (contractEndDate < today) {
+          console.error(`❌ Contract expired on ${authorization.contractEndDate}`);
+          return res.status(403).json({
+            success: false,
+            message: `Client contract expired on ${new Date(authorization.contractEndDate).toLocaleDateString()}. Please renew the contract before posting jobs.`
+          });
+        }
+      }
+      
+      // Check 4: Job limit (if set)
+      if (authorization.maxActiveJobs && authorization.maxActiveJobs > 0) {
+        const activeJobsCount = await Job.count({
+          where: {
+            hiringCompanyId: hiringCompanyId,
+            postedByAgencyId: companyId || req.user.company_id,
+            status: 'active'
+          }
+        });
+        
+        console.log(`📊 Active jobs for this client: ${activeJobsCount}/${authorization.maxActiveJobs}`);
+        
+        if (activeJobsCount >= authorization.maxActiveJobs) {
+          console.error(`❌ Job limit reached: ${activeJobsCount}/${authorization.maxActiveJobs}`);
+          return res.status(403).json({
+            success: false,
+            message: `Job limit reached for this client. Maximum ${authorization.maxActiveJobs} active jobs allowed. Please close existing jobs or request limit increase.`
+          });
+        }
+      }
+      
+      // Check 5: Category restrictions (if set)
+      if (authorization.jobCategories && authorization.jobCategories.length > 0) {
+        const jobCategoryToCheck = category || roleCategory || department;
+        
+        if (jobCategoryToCheck) {
+          const isAllowed = authorization.jobCategories.some(allowedCat => 
+            allowedCat.toLowerCase() === jobCategoryToCheck.toLowerCase() ||
+            jobCategoryToCheck.toLowerCase().includes(allowedCat.toLowerCase())
+          );
+          
+          if (!isAllowed) {
+            console.error(`❌ Category '${jobCategoryToCheck}' not in allowed list: ${authorization.jobCategories.join(', ')}`);
+            return res.status(403).json({
+              success: false,
+              message: `Category '${jobCategoryToCheck}' is not allowed for this client. Allowed categories: ${authorization.jobCategories.join(', ')}`
+            });
+          }
+        }
+      }
+      
+      // Check 6: Location restrictions (if set)
+      if (authorization.allowedLocations && authorization.allowedLocations.length > 0) {
+        const jobLocation = location || city;
+        
+        if (jobLocation) {
+          const isAllowed = authorization.allowedLocations.some(allowedLoc =>
+            allowedLoc.toLowerCase() === 'all india' ||
+            allowedLoc.toLowerCase() === 'all' ||
+            jobLocation.toLowerCase().includes(allowedLoc.toLowerCase()) ||
+            allowedLoc.toLowerCase().includes(jobLocation.toLowerCase())
+          );
+          
+          if (!isAllowed) {
+            console.error(`❌ Location '${jobLocation}' not in allowed list: ${authorization.allowedLocations.join(', ')}`);
+            return res.status(403).json({
+              success: false,
+              message: `Location '${jobLocation}' is not allowed for this client. Allowed locations: ${authorization.allowedLocations.join(', ')}`
+            });
+          }
+        }
+      }
+      
+      console.log('✅ All agency authorization checks passed');
+      
+      // Store authorizationId for tracking
+      authorizationId = authorization.id;
+    }
+    // ========== END AGENCY VALIDATION ==========
 
     // Get the authenticated user's company
     let userCompany = null;
@@ -357,7 +497,13 @@ exports.createJob = async (req, res, next) => {
         (Array.isArray(requirements) ? requirements.join('\n') : requirements) : null,
       responsibilities: responsibilities && (Array.isArray(responsibilities) ? responsibilities.length > 0 : responsibilities.trim()) ? 
         (Array.isArray(responsibilities) ? responsibilities.join('\n') : responsibilities) : null,
-      region: jobRegion // Set region based on user's region
+      region: jobRegion, // Set region based on user's region
+      // AGENCY POSTING FIELDS
+      isAgencyPosted: Boolean(isAgencyPosted),
+      hiringCompanyId: hiringCompanyId || null,
+      postedByAgencyId: postedByAgencyId || null,
+      agencyDescription: agencyDescription && agencyDescription.trim() ? agencyDescription.trim() : null,
+      authorizationId: authorizationId || null
     };
 
     console.log('📝 Creating job with data:', {
@@ -394,6 +540,22 @@ exports.createJob = async (req, res, next) => {
     }
 
     console.log('✅ Job created successfully:', job.id);
+
+    // Update agency authorization stats (increment jobsPosted counter)
+    if (job.isAgencyPosted && job.authorizationId) {
+      try {
+        const { AgencyClientAuthorization } = require('../models');
+        const auth = await AgencyClientAuthorization.findByPk(job.authorizationId);
+        if (auth) {
+          auth.jobsPosted = (auth.jobsPosted || 0) + 1;
+          await auth.save();
+          console.log(`✅ Updated authorization stats: jobsPosted = ${auth.jobsPosted}`);
+        }
+      } catch (authUpdateError) {
+        console.error('⚠️ Failed to update authorization stats:', authUpdateError);
+        // Don't fail the job creation if stats update fails
+      }
+    }
 
     // Send proactive alerts for hot vacancies
     if (job.isHotVacancy && job.proactiveAlerts && job.status === 'active') {
@@ -762,8 +924,8 @@ exports.getAllJobs = async (req, res, next) => {
     const include = [
       {
         model: Company,
-        as: 'company',
-        attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone', 'companyType'],
+        as: 'Company',
+        attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
         where: (() => {
           const where = {};
@@ -782,14 +944,26 @@ exports.getAllJobs = async (req, res, next) => {
         })()
       },
       {
+        model: Company,
+        as: 'HiringCompany',
+        attributes: ['id', 'name', 'logo', 'industry', 'city', 'companySize', 'website'],
+        required: false // Optional - only for agency jobs
+      },
+      {
+        model: Company,
+        as: 'PostedByAgency',
+        attributes: ['id', 'name', 'logo', 'companyAccountType', 'industry', 'city'],
+        required: false // Optional - only for agency jobs
+      },
+      {
         model: User,
-        as: 'employer',
-        attributes: ['id', 'first_name', 'last_name', 'email', 'companyId'],
+        as: 'Employer',
+        attributes: ['id', 'firstName', 'lastName', 'email', 'companyId'],
         required: Boolean(recruiterType) || false
       },
       {
         model: JobPhoto,
-        as: 'photos',
+        as: 'JobPhotos',
         attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
         where: { isActive: true },
         required: false
@@ -798,9 +972,9 @@ exports.getAllJobs = async (req, res, next) => {
 
     // Recruiter type: company (employer has companyId) or consultant (no companyId)
     if (recruiterType === 'company') {
-      include[1] = { ...include[1], where: { companyId: { [OpNe]: null } }, required: true };
+      include[3] = { ...include[3], where: { companyId: { [OpNe]: null } }, required: true };
     } else if (recruiterType === 'consultant') {
-      include[1] = { ...include[1], where: { companyId: null }, required: true };
+      include[3] = { ...include[3], where: { companyId: null }, required: true };
     }
 
     const finalWhere = andGroups.length ? { [And]: [whereClause, ...andGroups] } : whereClause;
@@ -861,18 +1035,30 @@ exports.getJobById = async (req, res, next) => {
       include: [
         {
           model: Company,
-          as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone'],
+          as: 'Company',
+          attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone'],
           required: false // Make it optional since companyId can be NULL
         },
         {
+          model: Company,
+          as: 'HiringCompany',
+          attributes: ['id', 'name', 'logo', 'industry', 'city', 'companySize', 'website'],
+          required: false // Optional - only for agency jobs
+        },
+        {
+          model: Company,
+          as: 'PostedByAgency',
+          attributes: ['id', 'name', 'logo', 'companyAccountType', 'industry', 'city'],
+          required: false // Optional - only for agency jobs
+        },
+        {
           model: User,
-          as: 'employer',
-          attributes: ['id', 'first_name', 'last_name', 'email']
+          as: 'Employer',
+          attributes: ['id', 'firstName', 'lastName', 'email']
         },
         {
           model: JobPhoto,
-          as: 'photos',
+          as: 'JobPhotos',
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { isActive: true },
           required: false

@@ -113,6 +113,13 @@ export default function PostJobPage() {
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
   const [selectedEducation, setSelectedEducation] = useState<string[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
+  
+  // ========== AGENCY CLIENT SELECTION STATE ==========
+  const [isAgency, setIsAgency] = useState(false)
+  const [activeClients, setActiveClients] = useState<any[]>([])
+  const [selectedClient, setSelectedClient] = useState<string>('') // 'own' or client ID
+  const [loadingClients, setLoadingClients] = useState(false)
+  const [clientSelectionMade, setClientSelectionMade] = useState(false)
 
   // Dynamic steps based on whether it's a hot vacancy or not
   const allSteps = [
@@ -131,6 +138,41 @@ export default function PostJobPage() {
         ...step,
         id: index + 1 // Renumber steps when Step 4 is excluded
       }))
+
+  // ========== LOAD AGENCY CLIENTS ==========
+  useEffect(() => {
+    const checkAgencyAndLoadClients = async () => {
+      if (user && user.companyId) {
+        try {
+          // Check if user's company is an agency
+          const companyResponse = await apiService.getCompany(user.companyId)
+          if (companyResponse.success && companyResponse.data) {
+            const companyAccountType = companyResponse.data.companyAccountType || 'direct'
+            const isAgencyAccount = companyAccountType === 'recruiting_agency' || companyAccountType === 'consulting_firm'
+            setIsAgency(isAgencyAccount)
+            
+            if (isAgencyAccount) {
+              // Load active clients
+              setLoadingClients(true)
+              const clientsResponse = await apiService.getActiveClients()
+              if (clientsResponse.success) {
+                setActiveClients(clientsResponse.data || [])
+              }
+              setLoadingClients(false)
+            } else {
+              // Direct employer - auto-select "own company"
+              setSelectedClient('own')
+              setClientSelectionMade(true)
+            }
+          }
+        } catch (error) {
+          console.error('Error checking agency status:', error)
+        }
+      }
+    }
+
+    checkAgencyAndLoadClients()
+  }, [user])
 
   // Load job photos when uploadedJobId changes
   useEffect(() => {
@@ -184,7 +226,8 @@ export default function PostJobPage() {
             const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
             setSelectedEducation(educationArray)
             
-            setFormData({
+            setFormData((prev) => ({
+              ...prev,
               title: jobData.title || '',
               department: jobData.department || '',
               location: jobData.location || '',
@@ -247,7 +290,7 @@ export default function PostJobPage() {
               keywords: jobData.keywords || [],
               impressions: jobData.impressions || 0,
               clicks: jobData.clicks || 0
-            });
+            }));
             
             // Load existing job photos
             try {
@@ -281,7 +324,8 @@ export default function PostJobPage() {
           console.log('✅ Template data loaded:', templateData);
           
           setSelectedTemplate(templateId);
-          setFormData({
+          setFormData((prev) => ({
+            ...prev,
             title: templateData.title || '',
             department: templateData.department || '',
             location: templateData.location || '',
@@ -344,7 +388,7 @@ export default function PostJobPage() {
             keywords: templateData.keywords || [],
             impressions: templateData.impressions || 0,
             clicks: templateData.clicks || 0
-          });
+          }));
           
           toast.success(`Template "${decodeURIComponent(templateName || '')}" applied successfully! Customize the fields as needed.`);
           
@@ -698,6 +742,12 @@ export default function PostJobPage() {
         education: formData.education,
         employmentType: formData.employmentType,
         status: 'active', // Explicitly set status to active for publishing
+        // ========== AGENCY POSTING FIELDS ==========
+        ...(isAgency && selectedClient !== 'own' && {
+          isAgencyPosted: true,
+          hiringCompanyId: selectedClient,
+          postedByAgencyId: user.companyId
+        }),
         // Include hot vacancy fields if enabled
         ...(formData.isHotVacancy && {
           isHotVacancy: true,
@@ -2694,6 +2744,140 @@ export default function PostJobPage() {
           </div>
         </div>
 
+        {/* ========== AGENCY CLIENT SELECTION (BEFORE STEPS) ========== */}
+        {isAgency && !clientSelectionMade && (
+          <Card className="mb-8 border-blue-200 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-6 h-6 text-blue-600" />
+                Who are you posting this job for?
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-2">
+                Select whether you're posting for your own company or for a client
+              </p>
+            </CardHeader>
+            <CardContent>
+              {loadingClients ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Loading clients...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Option: Our Company */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedClient('own')
+                      setClientSelectionMade(true)
+                      toast.success('Posting for your own company')
+                    }}
+                    className="w-full text-left p-6 border-2 rounded-lg transition-all hover:border-blue-400 hover:bg-white"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-gray-900">Our Company</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Post for your own hiring needs. No additional verification required.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-blue-50 text-gray-500">OR</span>
+                    </div>
+                  </div>
+
+                  {/* Option: Client Company */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-gray-900">Post for Authorized Client</h3>
+                    
+                    {activeClients.length === 0 ? (
+                      <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                        <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600 mb-4">No active clients yet</p>
+                        <Button
+                          onClick={() => router.push('/employer-dashboard/add-client')}
+                          variant="outline"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Your First Client
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {activeClients.map((client: any) => {
+                          const daysLeft = client.contractEndDate 
+                            ? Math.ceil((new Date(client.contractEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                            : null
+                            
+                          return (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedClient(client.id)
+                                setClientSelectionMade(true)
+                                toast.success(`Posting for: ${client.ClientCompany?.name || 'Client'}`)
+                              }}
+                              disabled={!client.canPostJobs}
+                              className="text-left p-4 border-2 rounded-lg transition-all hover:border-blue-400 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <div className="flex items-start gap-3">
+                                {client.ClientCompany?.logo ? (
+                                  <img 
+                                    src={client.ClientCompany.logo} 
+                                    alt={client.ClientCompany.name}
+                                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                                    <Building2 className="w-5 h-5 text-white" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-gray-900 truncate">
+                                    {client.ClientCompany?.name || 'Unknown Company'}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {client.ClientCompany?.industry} • {client.ClientCompany?.city}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Badge variant="secondary" className="text-xs">
+                                      {client.jobsPosted || 0}
+                                      {client.maxActiveJobs ? `/${client.maxActiveJobs}` : ''} jobs
+                                    </Badge>
+                                    {daysLeft !== null && daysLeft > 0 && daysLeft < 30 && (
+                                      <Badge variant="outline" className="text-xs text-amber-600">
+                                        {daysLeft}d left
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Show form only after client selection (or if direct employer) */}
+        {(!isAgency || clientSelectionMade) && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar - Steps */}
           <div className="lg:col-span-1">
@@ -2795,6 +2979,7 @@ export default function PostJobPage() {
             </Card>
           </div>
         </div>
+        )}
       </div>
 
       <EmployerFooter />

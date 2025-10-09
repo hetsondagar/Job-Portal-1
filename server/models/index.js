@@ -35,6 +35,7 @@ const ViewTracking = require('./ViewTracking');
 const Requirement = require('./Requirement');
 const Application = require('./Application');
 const JobPreference = require('./JobPreference');
+const AgencyClientAuthorization = require('./AgencyClientAuthorization');
 
 // Import Sequelize
 const { Sequelize } = require('sequelize');
@@ -95,7 +96,8 @@ const models = {
   ViewTracking,
   Requirement,
   Application,
-  JobPreference
+  JobPreference,
+  AgencyClientAuthorization
 };
 
 // Define associations

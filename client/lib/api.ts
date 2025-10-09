@@ -87,12 +87,15 @@ export interface EmployerSignupData {
   fullName: string;
   email: string;
   password: string;
-  companyName: string;
+  companyName?: string; // Optional when joining existing company
+  companyId?: string; // Optional when creating new company
   phone: string;
   companySize?: string;
   industry?: string;
   website?: string;
   region?: string;
+  role?: string;
+  companyAccountType?: string; // For agency registration
   agreeToTerms: boolean;
   subscribeUpdates?: boolean;
 }
@@ -174,6 +177,14 @@ export interface Job {
   hotVacancyPrice?: number;
   hotVacancyCurrency?: string;
   hotVacancyPaymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
+  // Agency posting fields
+  isAgencyPosted?: boolean;
+  hiringCompanyId?: string;
+  postedByAgencyId?: string;
+  agencyDescription?: string;
+  authorizationId?: string;
+  HiringCompany?: Company;
+  PostedByAgency?: Company;
   // Additional fields
   status?: string;
   experience?: string;
@@ -1008,6 +1019,29 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  /**
+   * Check if company name is unclaimed (created by agency)
+   */
+  async checkClaimableCompanies(companyName: string): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    sp.append('companyName', companyName);
+    
+    const response = await fetch(`${API_BASE_URL}/companies/check-claimable?${sp.toString()}`);
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Claim an unclaimed company profile
+   */
+  async claimCompany(data: { companyId: string; userEmail: string; userName: string; userPhone: string; password: string }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return this.handleResponse<any>(response);
+  }
+
   // Follow/Unfollow company methods
   async followCompany(companyId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}/follow`, {
@@ -1046,6 +1080,192 @@ class ApiService {
       body: JSON.stringify(data),
     });
 
+    return this.handleResponse<any>(response);
+  }
+
+  // ========== AGENCY METHODS ==========
+  
+  /**
+   * Get agency KYC verification status
+   */
+  async getAgencyKycStatus(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/agency/kyc/status`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Upload agency KYC documents
+   */
+  async uploadAgencyKyc(formData: FormData): Promise<ApiResponse<any>> {
+    const headers: any = {
+      'Authorization': `Bearer ${this.authToken}`
+    };
+    // Don't set Content-Type for FormData - browser will set it automatically with boundary
+    
+    const response = await fetch(`${API_BASE_URL}/agency/kyc/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Get all clients for an agency
+   */
+  async getAgencyClients(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/agency/clients`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  /**
+   * Get active clients (can post jobs)
+   */
+  async getActiveClients(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/agency/clients/active/list`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  /**
+   * Get specific client authorization details
+   */
+  async getClientAuthorization(authorizationId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/agency/clients/${authorizationId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Search existing companies to add as clients
+   */
+  async searchCompanies(searchTerm: string): Promise<ApiResponse<any[]>> {
+    const sp = new URLSearchParams();
+    sp.append('search', searchTerm);
+    
+    const response = await fetch(`${API_BASE_URL}/agency/companies/search?${sp.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  /**
+   * Add a new client (create authorization request)
+   */
+  async addClient(formData: FormData): Promise<ApiResponse<any>> {
+    const headers: any = {
+      'Authorization': `Bearer ${this.authToken}`
+    };
+    // Don't set Content-Type for FormData
+    
+    const response = await fetch(`${API_BASE_URL}/agency/clients/add`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  // ========== ADMIN: AGENCY VERIFICATION METHODS ==========
+
+  /**
+   * Get all agency verifications (admin only)
+   */
+  async getAgencyVerifications(params?: { status?: string; type?: string; search?: string; limit?: number; offset?: number }): Promise<ApiResponse<any>> {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.append('status', params.status);
+    if (params?.type) sp.append('type', params.type);
+    if (params?.search) sp.append('search', params.search);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    if (params?.offset) sp.append('offset', String(params.offset));
+    
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications${sp.toString() ? `?${sp.toString()}` : ''}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Get verification statistics (admin only)
+   */
+  async getVerificationStats(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/stats`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Get detailed agency information (admin only)
+   */
+  async getAgencyDetails(agencyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/agency/${agencyId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Approve agency KYC verification (admin only)
+   */
+  async approveAgencyVerification(agencyId: string, notes?: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/agency/${agencyId}/approve`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ notes }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Reject agency KYC verification (admin only)
+   */
+  async rejectAgencyVerification(agencyId: string, reason: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/agency/${agencyId}/reject`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Get detailed client authorization information (admin only)
+   */
+  async getClientAuthorizationDetails(authorizationId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/client/${authorizationId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Approve client authorization (admin only)
+   */
+  async approveClientAuthorization(authorizationId: string, notes?: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/client/${authorizationId}/approve`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ notes }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Reject client authorization (admin only)
+   */
+  async rejectClientAuthorization(authorizationId: string, reason: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/agency-verifications/client/${authorizationId}/reject`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ reason }),
+    });
     return this.handleResponse<any>(response);
   }
 
@@ -3036,139 +3256,6 @@ class ApiService {
     }
   }
 
-  // Hot Vacancy API methods
-  async createHotVacancy(data: any): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async getHotVacancies(params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    urgencyLevel?: string;
-  }): Promise<ApiResponse<any>> {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.urgencyLevel) queryParams.append('urgencyLevel', params.urgencyLevel);
-
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies?${queryParams}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async getHotVacancyById(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async updateHotVacancy(id: string, data: any): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async deleteHotVacancy(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async getPublicHotVacancies(params?: {
-    page?: number;
-    limit?: number;
-    location?: string;
-    jobType?: string;
-    experienceLevel?: string;
-    urgencyLevel?: string;
-  }): Promise<ApiResponse<any>> {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.location) queryParams.append('location', params.location);
-    if (params?.jobType) queryParams.append('jobType', params.jobType);
-    if (params?.experienceLevel) queryParams.append('experienceLevel', params.experienceLevel);
-    if (params?.urgencyLevel) queryParams.append('urgencyLevel', params.urgencyLevel);
-
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/public?${queryParams}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async getHotVacancyPricing(): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/pricing`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async uploadHotVacancyPhoto(hotVacancyId: string, file: File, data: {
-    altText?: string;
-    caption?: string;
-    displayOrder?: number;
-    isPrimary?: boolean;
-  }): Promise<ApiResponse<any>> {
-    const formData = new FormData();
-    formData.append('photo', file);
-    formData.append('altText', data.altText || '');
-    formData.append('caption', data.caption || '');
-    formData.append('displayOrder', (data.displayOrder || 0).toString());
-    formData.append('isPrimary', (data.isPrimary || false).toString());
-
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.getToken()}`,
-      },
-      body: formData,
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async getHotVacancyPhotos(hotVacancyId: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async deleteHotVacancyPhoto(photoId: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/hot-vacancies/photos/${photoId}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
   // Interview scheduling methods
   async scheduleInterview(data: {
     jobApplicationId: string;
@@ -3900,10 +3987,11 @@ class ApiService {
       });
     }
 
+    const authHeaders = this.getAuthHeaders() as Record<string, string>;
     const response = await fetch(`${API_BASE_URL}/hot-vacancies/${hotVacancyId}/photos/upload`, {
       method: 'POST',
       headers: {
-        'Authorization': this.getAuthHeaders().Authorization,
+        'Authorization': authHeaders['Authorization'],
       },
       body: formData,
     });

@@ -1148,6 +1148,69 @@ export default function JobDetailPage() {
                 </motion.div>
               )}
 
+              {/* Agency Posted Job Alert */}
+              {job?.isAgencyPosted && job?.PostedByAgency && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.6 }}
+                >
+                  <Card className="border-blue-200 bg-blue-50/80 dark:bg-blue-900/20 dark:border-blue-800 backdrop-blur-xl shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                        <Building2 className="h-5 w-5 text-blue-600" />
+                        Posted by Recruiting Agency
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            {job.PostedByAgency.logo ? (
+                              <img
+                                src={job.PostedByAgency.logo}
+                                alt={job.PostedByAgency.name}
+                                className="w-16 h-16 rounded-lg object-cover border-2 border-blue-200 dark:border-blue-700"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 rounded-lg bg-blue-100 dark:bg-blue-800 flex items-center justify-center border-2 border-blue-200 dark:border-blue-700">
+                                <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-lg">
+                              {job.PostedByAgency.name}
+                            </h4>
+                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                              {job.PostedByAgency.industry} • {job.PostedByAgency.city}
+                            </p>
+                            <p className="text-sm text-blue-800 dark:text-blue-200 mt-3 leading-relaxed">
+                              This job is posted by <strong>{job.PostedByAgency.name}</strong> on behalf of{" "}
+                              <strong>{job.HiringCompany?.name || job.Company?.name}</strong>.
+                              Applications will be managed by the recruiting agency.
+                            </p>
+                            {job.agencyDescription && (
+                              <p className="text-sm text-blue-700 dark:text-blue-300 mt-2 italic">
+                                "{job.agencyDescription}"
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-blue-100/50 dark:bg-blue-800/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                          <p className="text-xs text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>
+                              The hiring company ({job.HiringCompany?.name || job.Company?.name}) has authorized this agency to recruit on their behalf.
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
               {/* Hot Vacancy Premium Features */}
               {job?.isHotVacancy && (
                 <motion.div

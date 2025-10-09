@@ -30,7 +30,7 @@ const Job = sequelize.define('Job', {
   },
   employerId: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true, // Made nullable to support agency jobs (they use companyId instead)
     references: {
       model: 'users',
       key: 'id'
@@ -618,6 +618,51 @@ const Job = sequelize.define('Job', {
     allowNull: true,
     defaultValue: 0,
     field: 'clicks'
+  },
+  
+  // ========== AGENCY POSTING FIELDS ==========
+  hiringCompanyId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'hiring_company_id',
+    references: {
+      model: 'companies',
+      key: 'id'
+    },
+    comment: 'The actual hiring company (for agency posts)'
+  },
+  postedByAgencyId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'posted_by_agency_id',
+    references: {
+      model: 'companies',
+      key: 'id'
+    },
+    comment: 'The agency that posted the job'
+  },
+  isAgencyPosted: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'is_agency_posted',
+    comment: 'Whether this job was posted by an agency'
+  },
+  agencyDescription: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'agency_description',
+    comment: 'Short description about the agency'
+  },
+  authorizationId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'authorization_id',
+    references: {
+      model: 'agency_client_authorizations',
+      key: 'id'
+    },
+    comment: 'Link to the authorization record'
   }
 }, {
   sequelize,
@@ -626,5 +671,40 @@ const Job = sequelize.define('Job', {
   timestamps: true,
   paranoid: false
 });
+
+// Define associations
+Job.associate = function(models) {
+  // Main company (employer who owns the job - could be agency or direct)
+  Job.belongsTo(models.Company, {
+    foreignKey: 'companyId',
+    as: 'Company'
+  });
+  
+  // Employer user
+  Job.belongsTo(models.User, {
+    foreignKey: 'employerId',
+    as: 'Employer'
+  });
+  
+  // NEW: Hiring company (the actual company hiring - for agency jobs)
+  Job.belongsTo(models.Company, {
+    foreignKey: 'hiringCompanyId',
+    as: 'HiringCompany',
+    constraints: false // Optional relationship
+  });
+  
+  // NEW: Agency that posted the job (for agency jobs)
+  Job.belongsTo(models.Company, {
+    foreignKey: 'postedByAgencyId',
+    as: 'PostedByAgency',
+    constraints: false // Optional relationship
+  });
+  
+  // Job photos
+  Job.hasMany(models.JobPhoto, {
+    foreignKey: 'jobId',
+    as: 'JobPhotos'
+  });
+};
 
 module.exports = Job;
