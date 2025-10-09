@@ -41,6 +41,7 @@ export interface User {
   skills?: string[];
   languages?: string[];
   expectedSalary?: number;
+  experienceYears?: number;
   noticePeriod?: number;
   willingToRelocate?: boolean;
   gender?: 'male' | 'female' | 'other';
@@ -53,6 +54,17 @@ export interface User {
   oauthId?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Professional Details
+  currentCompany?: string;
+  currentRole?: string;
+  highestEducation?: string;
+  fieldOfStudy?: string;
+  // Preferred Professional Details
+  preferredJobTitles?: string[];
+  preferredIndustries?: string[];
+  preferredCompanySize?: string;
+  preferredWorkMode?: string;
+  preferredEmploymentType?: string;
 }
 
 export interface Company {
@@ -124,9 +136,11 @@ export interface ProfileUpdateData {
   headline?: string;
   summary?: string;
   expectedSalary?: number;
+  experienceYears?: number;
   noticePeriod?: number;
   willingToRelocate?: boolean;
   gender?: 'male' | 'female' | 'other';
+  dateOfBirth?: string;
   profileVisibility?: 'public' | 'private' | 'connections_only';
   contactVisibility?: 'public' | 'private' | 'connections_only';
   skills?: string[];
@@ -134,6 +148,18 @@ export interface ProfileUpdateData {
   certifications?: any[];
   socialLinks?: any;
   preferences?: any;
+  preferredLocations?: string[];
+  // Professional Details
+  currentCompany?: string;
+  currentRole?: string;
+  highestEducation?: string;
+  fieldOfStudy?: string;
+  // Preferred Professional Details
+  preferredJobTitles?: string[];
+  preferredIndustries?: string[];
+  preferredCompanySize?: string;
+  preferredWorkMode?: string;
+  preferredEmploymentType?: string;
 }
 
 export interface Job {

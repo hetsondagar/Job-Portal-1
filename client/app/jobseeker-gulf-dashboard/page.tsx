@@ -38,6 +38,7 @@ import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/ap
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RecentNotifications } from '@/components/recent-notifications'
 import { GulfJobseekerAuthGuard } from '@/components/gulf-jobseeker-auth-guard'
+import { JobseekerProfileCompletionDialog } from '@/components/profile-completion-dialog'
 
 export default function JobseekerGulfDashboardPage() {
   const { user, loading, logout, refreshUser, debouncedRefreshUser } = useAuth()
@@ -63,6 +64,8 @@ export default function JobseekerGulfDashboardPage() {
   const [coverLetterUploading, setCoverLetterUploading] = useState(false)
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null)
   const [showCoverLetterSelect, setShowCoverLetterSelect] = useState(false)
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [profileCheckDone, setProfileCheckDone] = useState(false)
 
   // Dynamic Gulf jobs data
   const [gulfJobs, setGulfJobs] = useState<any[]>([])
@@ -101,6 +104,65 @@ export default function JobseekerGulfDashboardPage() {
     }
     router.replace('/gulf-opportunities')
   }, [user, loading, router])
+
+  // Check profile completion separately (runs on every user update)
+  useEffect(() => {
+    if (user && !loading && !profileCheckDone) {
+      // Check if profile is incomplete and show completion dialog
+      const isIncomplete = () => {
+        // Check if user has marked profile as complete
+        if (user.preferences?.profileCompleted === true) {
+          return false
+        }
+        
+        // Check if user has skipped and the skip period hasn't expired
+        if (user.preferences?.profileCompletionSkippedUntil) {
+          const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+          const skipSession = user.preferences?.profileCompletionSkipSession
+          const currentSession = user.lastLoginAt
+          const now = new Date()
+          
+          // Only honor skip if it's the SAME login session
+          if (skipSession === currentSession && skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil, '(same session)')
+            return false // Don't show dialog yet
+          } else if (skipSession !== currentSession) {
+            console.log('🔄 New login session detected - showing popup again')
+          }
+        }
+        
+        // Required fields for jobseeker
+        return !user.phone || 
+               !user.currentLocation || 
+               !user.headline || 
+               (user.experienceYears === undefined || user.experienceYears === null) ||
+               !(user as any).gender ||
+               !(user as any).dateOfBirth
+      }
+      
+      const incomplete = isIncomplete()
+      console.log('🔍 Gulf jobseeker profile completion check:', { incomplete, user: { phone: user.phone, location: user.currentLocation, headline: user.headline } })
+      
+      if (incomplete) {
+        // Show dialog after a short delay to avoid UI conflicts
+        const timeoutId = setTimeout(() => {
+          console.log('✅ Showing Gulf jobseeker profile completion dialog')
+          setShowProfileCompletion(true)
+        }, 1000)
+        return () => clearTimeout(timeoutId)
+      } else {
+        setShowProfileCompletion(false)
+      }
+      setProfileCheckDone(true)
+    }
+  }, [user, loading, profileCheckDone])
+  
+  // Reset profile check when user updates (after skip or completion)
+  useEffect(() => {
+    if (user) {
+      setProfileCheckDone(false)
+    }
+  }, [user])
 
   useEffect(() => {
     if (user && !loading) {
@@ -520,6 +582,12 @@ export default function JobseekerGulfDashboardPage() {
     } catch (error) {
       toast.error('Logout failed')
     }
+  }
+
+  const handleProfileUpdated = async (updatedData: any) => {
+    // Refresh user data to get updated profile
+    await refreshUser()
+    setShowProfileCompletion(false)
   }
 
   const getPriorityColor = (priority: string) => {
@@ -1580,6 +1648,16 @@ export default function JobseekerGulfDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Completion Dialog */}
+      {user && (
+        <JobseekerProfileCompletionDialog
+          isOpen={showProfileCompletion}
+          onClose={() => setShowProfileCompletion(false)}
+          user={user}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
       </div>
     </GulfJobseekerAuthGuard>
   )

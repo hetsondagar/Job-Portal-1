@@ -163,8 +163,8 @@ export default function LoginPage() {
           className="hidden lg:block space-y-8"
         >
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Welcome Back!</h1>
-            <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Welcome Back!</h1>
+            <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8">
               Continue your journey to find the perfect career opportunity
             </p>
           </div>
@@ -195,9 +195,9 @@ export default function LoginPage() {
         {/* Right Side - Login Form */}
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
           <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-            <CardHeader className="text-center pb-8">
-              <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Sign In</CardTitle>
-              <p className="text-slate-600 dark:text-slate-300 mt-2">Enter your credentials to access your account</p>
+            <CardHeader className="text-center pb-6 sm:pb-8">
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Sign In</CardTitle>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-2">Enter your credentials to access your account</p>
             </CardHeader>
 
             <CardContent className="space-y-6">

@@ -64,9 +64,9 @@ export function Navbar() {
               </Button>
               
               {/* Jobs Dropdown Menu */}
-              <div className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
-                <div className="p-6">
-                  <div className="grid grid-cols-3 gap-8">
+              <div className="absolute left-0 mt-2 w-full max-w-[95vw] sm:w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+                <div className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                     {/* Popular Categories */}
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Popular categories</h4>
@@ -206,9 +206,9 @@ export function Navbar() {
               </Button>
               
               {/* Companies Dropdown Menu */}
-              <div className="absolute left-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
-                <div className="p-6">
-                  <div className="grid grid-cols-2 gap-8">
+              <div className="absolute left-0 mt-2 w-full max-w-[95vw] sm:w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+                <div className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                     {/* Explore Categories */}
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white mb-4 text-sm">Explore categories</h4>

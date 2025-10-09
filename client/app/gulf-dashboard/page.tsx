@@ -63,9 +63,11 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
   const [hotVacancies, setHotVacancies] = useState<any[]>([])
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [profileCheckDone, setProfileCheckDone] = useState(false)
 
+  // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user) {
+    if (user && !profileCheckDone) {
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
@@ -73,15 +75,52 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
           return false
         }
         
+        // Check if user has skipped and the skip period hasn't expired
+        if (user.preferences?.profileCompletionSkippedUntil) {
+          const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+          const skipSession = user.preferences?.profileCompletionSkipSession
+          const currentSession = user.lastLoginAt
+          const now = new Date()
+          
+          // Only honor skip if it's the SAME login session
+          if (skipSession === currentSession && skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil, '(same session)')
+            return false // Don't show dialog yet
+          } else if (skipSession !== currentSession) {
+            console.log('🔄 New login session detected - showing popup again')
+          }
+        }
+        
         // Required fields for employer
         return !user.phone || !(user as any).designation || !user.companyId
       }
       
-      if (isIncomplete()) {
-        // Show dialog after a short delay to avoid UI conflicts
-        setTimeout(() => setShowProfileCompletion(true), 1000)
-      }
+      const incomplete = isIncomplete()
+      console.log('🔍 Gulf employer profile completion check:', { incomplete, user: { phone: user.phone, designation: (user as any).designation, companyId: user.companyId } })
       
+      if (incomplete) {
+        // Show dialog after a short delay to avoid UI conflicts
+        const timeoutId = setTimeout(() => {
+          console.log('✅ Showing Gulf employer profile completion dialog')
+          setShowProfileCompletion(true)
+        }, 1000)
+        return () => clearTimeout(timeoutId)
+      } else {
+        setShowProfileCompletion(false)
+      }
+      setProfileCheckDone(true)
+    }
+  }, [user, profileCheckDone])
+  
+  // Reset profile check when user updates (after skip or completion)
+  useEffect(() => {
+    if (user) {
+      setProfileCheckDone(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
       // Ensure user region is set to 'gulf' when accessing Gulf dashboard
       if (user.region !== 'gulf') {
         console.log('🔧 Setting user region to gulf for Gulf dashboard access')

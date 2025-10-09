@@ -68,6 +68,7 @@ export default function DashboardPage() {
   const [followedCompaniesCount, setFollowedCompaniesCount] = useState(0)
   const [followedCompaniesLoading, setFollowedCompaniesLoading] = useState(true)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
+  const [profileCheckDone, setProfileCheckDone] = useState(false)
 
   useEffect(() => {
     if (loading) return;
@@ -86,16 +87,30 @@ export default function DashboardPage() {
     router.replace('/login')
   }, [user, loading, router])
 
-  // Single useEffect to handle all data fetching with proper debouncing
+  // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user && !loading && !dataLoaded) {
-      setCurrentUser(user)
-      
+    if (user && !loading && !profileCheckDone) {
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
         // Check if user has marked profile as complete
         if (user.preferences?.profileCompleted === true) {
           return false
+        }
+        
+        // Check if user has skipped and the skip period hasn't expired
+        if (user.preferences?.profileCompletionSkippedUntil) {
+          const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+          const skipSession = user.preferences?.profileCompletionSkipSession
+          const currentSession = user.lastLoginAt
+          const now = new Date()
+          
+          // Only honor skip if it's the SAME login session
+          if (skipSession === currentSession && skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil, '(same session)')
+            return false // Don't show dialog yet
+          } else if (skipSession !== currentSession) {
+            console.log('🔄 New login session detected - showing popup again')
+          }
         }
         
         // Required fields for jobseeker
@@ -107,10 +122,34 @@ export default function DashboardPage() {
                !(user as any).dateOfBirth
       }
       
-      if (isIncomplete()) {
+      const incomplete = isIncomplete()
+      console.log('🔍 Profile completion check:', { incomplete, user: { phone: user.phone, location: user.currentLocation, headline: user.headline } })
+      
+      if (incomplete) {
         // Show dialog after a short delay to avoid UI conflicts
-        setTimeout(() => setShowProfileCompletion(true), 1000)
+        const timeoutId = setTimeout(() => {
+          console.log('✅ Showing profile completion dialog')
+          setShowProfileCompletion(true)
+        }, 1000)
+        return () => clearTimeout(timeoutId)
+      } else {
+        setShowProfileCompletion(false)
       }
+      setProfileCheckDone(true)
+    }
+  }, [user, loading, profileCheckDone])
+  
+  // Reset profile check when user updates (after skip or completion)
+  useEffect(() => {
+    if (user) {
+      setProfileCheckDone(false)
+    }
+  }, [user])
+
+  // Single useEffect to handle all data fetching with proper debouncing
+  useEffect(() => {
+    if (user && !loading && !dataLoaded) {
+      setCurrentUser(user)
       
       // Debounce all API calls to prevent excessive requests
       const timeoutId = setTimeout(async () => {
