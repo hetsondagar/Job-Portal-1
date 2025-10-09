@@ -117,7 +117,7 @@ export default function JobDetailPage() {
               companyProfile: res.data.companyProfile || '',
               officeImages: res.data.officeImages || [],
               attachmentFiles: res.data.attachmentFiles || []
-            }
+              }
               
               console.log('✅ Transformed job data:', transformedJob)
               console.log('📸 Job photos for jobseeker:', res.data.photos)
@@ -438,26 +438,26 @@ export default function JobDetailPage() {
     } catch {}
 
     // For sample jobs, handle directly
-    if (jobIdFromParams.startsWith('550e8400')) {
-      sampleJobManager.addApplication({
-        jobId: jobIdFromParams,
-        jobTitle: job?.title || 'Job',
-        companyName: typeof job?.company === 'string' ? job?.company : (job?.company?.name || 'Company'),
-        location: job?.location || '',
-        salary: job?.salary || '',
-        type: job?.type || ''
-      })
-      toast.success(`Application submitted successfully${job?.title ? ` for ${job.title}` : ''}!`)
-      setForceUpdate(prev => !prev)
-      return
-    }
+      if (jobIdFromParams.startsWith('550e8400')) {
+        sampleJobManager.addApplication({
+          jobId: jobIdFromParams,
+          jobTitle: job?.title || 'Job',
+          companyName: typeof job?.company === 'string' ? job?.company : (job?.company?.name || 'Company'),
+          location: job?.location || '',
+          salary: job?.salary || '',
+          type: job?.type || ''
+        })
+        toast.success(`Application submitted successfully${job?.title ? ` for ${job.title}` : ''}!`)
+        setForceUpdate(prev => !prev)
+        return
+      }
 
     // For real jobs, open the application dialog
     setShowApplicationDialog(true)
   }
 
   const handleApplicationSuccess = () => {
-    setForceUpdate(prev => !prev)
+        setForceUpdate(prev => !prev)
   }
 
   const isExpired = (() => {
@@ -924,7 +924,7 @@ export default function JobDetailPage() {
                                     {edu}
                                   </Badge>
                                 ))}
-                              </div>
+                            </div>
                             ) : (
                               <div className="text-slate-600 dark:text-slate-400">Any Graduate</div>
                             )}

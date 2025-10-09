@@ -1096,8 +1096,8 @@ function CompanyDetailPage() {
               Overview
             </TabsTrigger>
             {(company?.whyJoinUs || company?.why_join_us) && (
-              <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                Why Join Us
+            <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Why Join Us
               </TabsTrigger>
             )}
             <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
