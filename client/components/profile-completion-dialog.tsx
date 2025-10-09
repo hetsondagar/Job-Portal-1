@@ -162,16 +162,20 @@ export function JobseekerProfileCompletionDialog({
       const skipUntil = new Date()
       skipUntil.setHours(skipUntil.getHours() + 12)
       
+      // Store current login timestamp to track session
+      const currentLoginSession = user.lastLoginAt || new Date().toISOString()
+      
       const updateData = {
         preferences: {
           ...(user.preferences || {}),
-          profileCompletionSkippedUntil: skipUntil.toISOString()
+          profileCompletionSkippedUntil: skipUntil.toISOString(),
+          profileCompletionSkipSession: currentLoginSession // Track which session the skip was for
         }
       }
       
       const response = await apiService.updateProfile(updateData)
       if (response.success) {
-        toast.success('Profile completion reminder snoozed for 12 hours')
+        toast.success('Profile completion reminder snoozed for 12 hours (this session)')
         // Refresh user data to update preferences in memory
         onProfileUpdated(response.data)
       }
@@ -615,16 +619,20 @@ export function EmployerProfileCompletionDialog({
       const skipUntil = new Date()
       skipUntil.setHours(skipUntil.getHours() + 12)
       
+      // Store current login timestamp to track session
+      const currentLoginSession = user.lastLoginAt || new Date().toISOString()
+      
       const updateData = {
         preferences: {
           ...(user.preferences || {}),
-          profileCompletionSkippedUntil: skipUntil.toISOString()
+          profileCompletionSkippedUntil: skipUntil.toISOString(),
+          profileCompletionSkipSession: currentLoginSession // Track which session the skip was for
         }
       }
       
       const response = await apiService.updateProfile(updateData)
       if (response.success) {
-        toast.success('Profile completion reminder snoozed for 12 hours')
+        toast.success('Profile completion reminder snoozed for 12 hours (this session)')
         // Refresh user data to update preferences in memory
         onProfileUpdated(response.data)
       }

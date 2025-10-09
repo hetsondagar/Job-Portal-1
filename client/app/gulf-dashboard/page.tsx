@@ -78,10 +78,16 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
         // Check if user has skipped and the skip period hasn't expired
         if (user.preferences?.profileCompletionSkippedUntil) {
           const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+          const skipSession = user.preferences?.profileCompletionSkipSession
+          const currentSession = user.lastLoginAt
           const now = new Date()
-          if (skipUntil > now) {
-            console.log('⏰ Profile completion skipped until:', skipUntil)
+          
+          // Only honor skip if it's the SAME login session
+          if (skipSession === currentSession && skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil, '(same session)')
             return false // Don't show dialog yet
+          } else if (skipSession !== currentSession) {
+            console.log('🔄 New login session detected - showing popup again')
           }
         }
         
