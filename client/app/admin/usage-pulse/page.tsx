@@ -23,7 +23,8 @@ export default function UsagePulsePage() {
   useEffect(() => {
     if (loading) return
     if (!user) { router.replace('/login'); return }
-    if (user.userType !== 'admin') { router.replace('/'); return }
+    // Only company admins (admin with a companyId) can access Usage Pulse
+    if (user.userType !== 'admin' || !user.companyId) { router.replace('/'); return }
     const cid = apiService.getCompanyFromStorage()?.id || user.companyId || ''
     setCompanyId(cid)
   }, [user, loading])
@@ -124,7 +125,7 @@ export default function UsagePulsePage() {
   }, [postingInsights, userIndex])
 
   if (loading) return <div className="p-6">Loading...</div>
-  if (!user || user.userType !== 'admin') return null
+  if (!user || user.userType !== 'admin' || !user.companyId) return null
 
   return (
     <div className="min-h-screen bg-gray-50">
