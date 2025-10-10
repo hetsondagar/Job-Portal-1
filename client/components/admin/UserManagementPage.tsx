@@ -34,7 +34,7 @@ interface UserManagementPageProps {
 }
 
 export default function UserManagementPage({ portal, title, description, icon }: UserManagementPageProps) {
-  const { user, authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   
   const [users, setUsers] = useState<any[]>([])
@@ -85,7 +85,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await apiService.updateUserStatus(userId, !currentStatus)
+      const response = await apiService.updateUserStatus(userId, !currentStatus ? 'active' : 'inactive')
       
       if (response.success) {
         toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`)
@@ -113,14 +113,13 @@ export default function UserManagementPage({ portal, title, description, icon }:
   const exportUsers = async () => {
     try {
       const response = await apiService.exportUsers({
-        search: searchTerm,
         userType: filterType === 'all' ? undefined : filterType,
         status: filterStatus === 'all' ? undefined : filterStatus,
-        portal: portal
+        region: portal === 'gulf' ? 'gulf' : portal === 'normal' ? 'india' : undefined
       })
       
-      if (response.success) {
-        const csvContent = response.data.csv
+      if (response.success && response.data) {
+        const csvContent = response.data
         const blob = new Blob([csvContent], { type: 'text/csv' })
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')

@@ -1,302 +1,338 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/useAuth"
-import { apiService } from "@/lib/api"
-import { toast } from "sonner"
-import {
-  TrendingUp,
-  Users,
-  Eye,
-  FileText,
-  Search,
-  Calendar,
-  BarChart3,
-  RefreshCw,
-  Download,
-  Filter,
-  ArrowLeft
-} from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
+import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { apiService } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
+import { EmployerNavbar } from '@/components/employer-navbar'
 
 export default function UsagePulsePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
-  const [usageData, setUsageData] = useState<any>(null)
+
+  const [companyId, setCompanyId] = useState<string>('')
+  const [summary, setSummary] = useState<any[]>([])
   const [activities, setActivities] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [dateRange, setDateRange] = useState('30d')
-  const [filterType, setFilterType] = useState('all')
+  const [activitiesTotal, setActivitiesTotal] = useState<number>(0)
+  const [searchInsights, setSearchInsights] = useState<any[]>([])
+  const [postingInsights, setPostingInsights] = useState<any[]>([])
+  const [performance, setPerformance] = useState<any[]>([])
+  const [filters, setFilters] = useState<{ recruiterId?: string; activityType?: string; from?: string; to?: string; page: number; limit: number }>({ page: 1, limit: 20 })
 
   useEffect(() => {
-    if (authLoading) return
+    if (loading) return
+    if (!user) { router.replace('/login'); return }
+    if (user.userType !== 'admin') { router.replace('/'); return }
+    const cid = apiService.getCompanyFromStorage()?.id || user.companyId || ''
+    setCompanyId(cid)
+  }, [user, loading])
 
-    // Redirect if not logged in or not admin
-    if (!user) {
-      router.push('/admin-login')
-      return
-    }
-
-    if (user.userType !== 'admin' && user.userType !== 'superadmin') {
-      toast.error('Access denied. Admin privileges required.')
-      router.push('/')
-      return
-    }
-
-    loadUsageData()
-  }, [user, authLoading, router, dateRange])
-
-  const loadUsageData = async () => {
-    try {
-      setLoading(true)
-      
-      // Ensure API service has the latest token
-      apiService.refreshToken()
-      
-      const [summaryResponse, activitiesResponse] = await Promise.all([
-        apiService.getUsageSummary(),
-        apiService.getUsageActivities({ 
-          from: getDateFromRange(dateRange),
-          limit: 50 
-        })
+  useEffect(() => {
+    const load = async () => {
+      // ✅ No need to check companyId - backend will use authenticated user's company
+      const [s, si, pi, rp] = await Promise.all([
+        apiService.getUsageSummary(), // ✅ Remove companyId parameter
+        apiService.getUsageSearchInsights({}), // ✅ Remove companyId parameter
+        apiService.getUsagePostingInsights({}), // ✅ Remove companyId parameter
+        apiService.getRecruiterPerformance({}) // ✅ Remove companyId parameter
       ])
-      
-      if (summaryResponse.success) {
-        setUsageData(summaryResponse.data)
-      } else {
-        toast.error('Failed to load usage summary')
+      console.log('🔍 Admin usage pulse - getUsageSummary result:', s)
+      if (s.success && s.data) {
+        console.log('🔍 Admin usage pulse - setting summary data:', s.data)
+        setSummary(s.data)
       }
+      if (si.success && si.data) setSearchInsights(si.data)
+      if (pi.success && pi.data) setPostingInsights(pi.data)
+      if (rp.success && rp.data) setPerformance(rp.data)
+    }
+    load()
+  }, []) // ✅ Remove companyId dependency
 
-      if (activitiesResponse.success) {
-        setActivities(activitiesResponse.data.activities || [])
-      } else {
-        toast.error('Failed to load usage activities')
+  useEffect(() => {
+    const loadActivities = async () => {
+      const res = await apiService.getUsageActivities({
+        userId: filters.recruiterId,
+        activityType: filters.activityType,
+        from: filters.from,
+        to: filters.to,
+        limit: filters.limit,
+        offset: (filters.page - 1) * filters.limit
+      })
+      if (res.success && res.data) {
+        setActivities(res.data)
+        // No total from API; approximate for client-side paging
+        setActivitiesTotal(res.data.length < filters.limit ? (filters.page - 1) * filters.limit + res.data.length : filters.page * filters.limit + 1)
       }
-    } catch (error) {
-      console.error('Failed to load usage data:', error)
-      toast.error('Failed to load usage data')
-    } finally {
-      setLoading(false)
     }
-  }
+    loadActivities()
+  }, [filters])
 
-  const refreshData = async () => {
-    setRefreshing(true)
-    await loadUsageData()
-    setRefreshing(false)
-    toast.success('Usage data refreshed')
-  }
+  // Map userId -> {email, name}
+  const userIndex = useMemo(() => {
+    const map = new Map<string, { email?: string; name?: string }>()
+    ;(summary || []).forEach((r: any) => {
+      map.set(r.userId, { email: r.email, name: r.name })
+    })
+    return map
+  }, [summary])
 
-  const getDateFromRange = (range: string) => {
-    const now = new Date()
-    switch (range) {
-      case '7d':
-        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      case '30d':
-        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      case '90d':
-        return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
-      default:
-        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  }
+  // Function to format quota type names
+  const formatQuotaType = (quotaType: string) => {
+    const typeMap: { [key: string]: string } = {
+      // New field names
+      'job_postings': 'Job Postings',
+      'resume_views': 'Resume Views/Downloads',
+      'requirements_posted': 'Requirements Posted',
+      'profile_visits': 'Profile Visits',
+      // Old field names (for backward compatibility)
+      'resume_search': 'Resume Views/Downloads',
+      'messages': 'Requirements Posted',
+      'contact_views': 'Profile Visits'
+    };
+    return typeMap[quotaType] || quotaType;
+  };
 
-  const getUsagePercentage = (used: number, limit: number) => {
-    if (limit === 0) return 0
-    return Math.min((used / limit) * 100, 100)
-  }
+  const quotaChartData = useMemo(() => {
+    console.log('🔍 Admin usage pulse - processing summary data:', summary)
+    const result = summary.flatMap((r: any) => {
+      console.log('🔍 Processing recruiter:', r)
+      console.log('🔍 Recruiter quotas:', r.quotas)
+      return (r.quotas || []).map((q: any) => ({
+        recruiter: r.email || r.name,
+        quotaType: q.quotaType,
+        used: q.used,
+        limit: q.limit,
+        quotaLabel: `${r.email || r.name || r.userId} — ${formatQuotaType(q.quotaType)}`
+      }))
+    })
+    console.log('🔍 Final quota chart data:', result)
+    return result
+  }, [summary])
 
-  const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-red-600'
-    if (percentage >= 70) return 'text-yellow-600'
-    return 'text-green-600'
-  }
+  const postingSeries = useMemo(() => {
+    // Aggregate by recruiter only as series; show total jobs vs applications
+    const totals = postingInsights.reduce((acc: any, row: any) => {
+      const id = row.recruiterId
+      const recruiterEmail = userIndex.get(id)?.email || row.recruiterEmail || id
+      acc[id] = acc[id] || { recruiterId: id, recruiterEmail, jobs: 0, applications: 0 }
+      acc[id].jobs += row.totalJobs || 0
+      acc[id].applications += row.totalApplications || 0
+      return acc
+    }, {})
+    return Object.values(totals)
+  }, [postingInsights, userIndex])
 
-  const getUsageBadgeColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-100 text-red-800'
-    if (percentage >= 70) return 'bg-yellow-100 text-yellow-800'
-    return 'bg-green-100 text-green-800'
-  }
-
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading usage data...</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <div className="p-6">Loading...</div>
+  if (!user || user.userType !== 'admin') return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Link href={user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'}>
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center">
-                <TrendingUp className="w-8 h-8 mr-3 text-blue-600" />
-                Usage Pulse
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Monitor quota usage and activity for your company
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button onClick={refreshData} disabled={refreshing} variant="outline">
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <EmployerNavbar />
+      <div className="p-6 space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Usage Pulse</h1>
         </div>
 
-        {/* Usage Summary Cards */}
-        {usageData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
-            {usageData.recruiters?.map((recruiter: any) => (
-              <Card key={recruiter.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200 dark:border-slate-700">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">
-                    {recruiter.first_name} {recruiter.last_name}
-                  </CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
-                    {recruiter.email}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {recruiter.quotas?.map((quota: any) => {
-                    const percentage = getUsagePercentage(quota.used, quota.limit)
-                    return (
-                      <div key={quota.type} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300 capitalize">
-                            {quota.type.replace('_', ' ')}
-                          </span>
-                          <Badge className={getUsageBadgeColor(percentage)}>
-                            {quota.used}/{quota.limit}
-                          </Badge>
-                        </div>
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              percentage >= 90 ? 'bg-red-500' : 
-                              percentage >= 70 ? 'bg-yellow-500' : 'bg-green-500'
-                            }`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {percentage.toFixed(1)}% used
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+      {/* Summary: Quota usage per recruiter */}
+      <section className="bg-white border rounded-lg p-4">
+        <h2 className="text-lg font-medium mb-4">Quota Usage by Recruiter</h2>
+        <div className="h-72 w-full">
+          <ResponsiveContainer>
+            <BarChart data={quotaChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="quotaLabel" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="used" name="Used" fill="#2563eb" />
+              <Bar dataKey="limit" name="Limit" fill="#94a3b8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-4 overflow-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-600">
+                <th className="p-2">Recruiter</th>
+                <th className="p-2">Feature</th>
+                <th className="p-2">Used</th>
+                <th className="p-2">Limit</th>
+                <th className="p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {quotaChartData.map((row: any, idx: number) => (
+                <tr key={idx} className="border-t">
+                  <td className="p-2">{row.recruiter}</td>
+                  <td className="p-2">{formatQuotaType(row.quotaType)}</td>
+                  <td className="p-2">{row.used}</td>
+                  <td className="p-2">{row.limit}</td>
+                  <td className="p-2">
+                    <button
+                      className="px-2 py-1 border rounded text-xs"
+                      onClick={async () => {
+                        const recruiter = summary.find((r: any) => (r.email || r.name) === row.recruiter)
+                        if (!recruiter) return
+                        const current = Number(prompt(`Set limit for ${formatQuotaType(row.quotaType)} (${row.recruiter}). Current: ${row.limit}. Enter new limit:` , String(row.limit)))
+                        if (!Number.isFinite(current)) return
+                        const res = await apiService.updateQuota({ userId: recruiter.userId, quotaType: row.quotaType, limit: current })
+                        if (res.success) {
+                          // Refresh summary
+                          const s = await apiService.getUsageSummary()
+                          if (s.success) setSummary(s.data || [])
+                        }
+                      }}
+                    >Edit</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-        {/* Activity Log */}
-        <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200 dark:border-slate-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">
-                  Recent Activity
-                </CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400">
-                  Track usage activities and quota consumption
-                </CardDescription>
-              </div>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Activities</SelectItem>
-                  <SelectItem value="job_postings">Job Postings</SelectItem>
-                  <SelectItem value="resume_views">Resume Views</SelectItem>
-                  <SelectItem value="requirements_posted">Requirements</SelectItem>
-                  <SelectItem value="profile_visits">Profile Visits</SelectItem>
-                  <SelectItem value="resume_search">Resume Search</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {activities.length > 0 ? (
-              <div className="space-y-4">
-                {activities
-                  .filter(activity => filterType === 'all' || activity.activityType === filterType)
-                  .map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                          {activity.activityType === 'job_postings' && <FileText className="w-5 h-5 text-blue-600" />}
-                          {activity.activityType === 'resume_views' && <Eye className="w-5 h-5 text-blue-600" />}
-                          {activity.activityType === 'requirements_posted' && <Search className="w-5 h-5 text-blue-600" />}
-                          {activity.activityType === 'profile_visits' && <Users className="w-5 h-5 text-blue-600" />}
-                          {activity.activityType === 'resume_search' && <BarChart3 className="w-5 h-5 text-blue-600" />}
+      {/* Activities table */}
+      <section className="bg-white border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium">Activity Logs</h2>
+          <div className="flex gap-2">
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              value={filters.recruiterId || ''}
+              onChange={(e) => setFilters(f => ({ ...f, recruiterId: e.target.value || undefined, page: 1 }))}
+            >
+              <option value="">All recruiters</option>
+              {summary.map((r: any) => (
+                <option key={r.userId} value={r.userId}>{r.email || r.name}</option>
+              ))}
+            </select>
+            <input className="border rounded px-2 py-1 text-sm" placeholder="Activity Type" value={filters.activityType || ''} onChange={(e) => setFilters(f => ({ ...f, activityType: e.target.value || undefined, page: 1 }))} />
+            <input type="date" className="border rounded px-2 py-1 text-sm" value={filters.from || ''} onChange={(e) => setFilters(f => ({ ...f, from: e.target.value || undefined, page: 1 }))} />
+            <input type="date" className="border rounded px-2 py-1 text-sm" value={filters.to || ''} onChange={(e) => setFilters(f => ({ ...f, to: e.target.value || undefined, page: 1 }))} />
+          </div>
+        </div>
+        <div className="overflow-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-600">
+                <th className="p-2">Timestamp</th>
+                <th className="p-2">User</th>
+                <th className="p-2">Activity</th>
+                <th className="p-2">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activities.map((a: any) => (
+                <tr key={a.id} className="border-t">
+                  <td className="p-2">{new Date(a.timestamp).toLocaleString()}</td>
+                  <td className="p-2">
+                    {a.user?.email || a.user?.name || userIndex.get(a.userId)?.email || userIndex.get(a.userId)?.name || a.userId}
+                  </td>
+                  <td className="p-2">{a.activityType}</td>
+                  <td className="p-2">
+                    <div className="text-sm">
+                      {/* Show human-readable activity description if available */}
+                      {a.activityDescription && (
+                        <div className="font-medium text-gray-800 mb-2">
+                          {a.activityDescription}
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white capitalize">
-                            {activity.activityType.replace('_', ' ')}
-                          </p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            {activity.details}
-                          </p>
+                      )}
+                      
+                      {/* Show job information */}
+                      {a.job?.title && (
+                        <div className="font-medium text-blue-600">Job: {a.job.title}</div>
+                      )}
+                      
+                      {/* Show applicant information */}
+                      {a.applicant && (
+                        <div className="text-gray-700">Applicant: {a.applicant.name || a.applicant.email}</div>
+                      )}
+                      
+                      {/* Show meaningful details only */}
+                      {a.details && Object.keys(a.details).length > 0 && (
+                        <div className="text-gray-600 mt-1">
+                          {Object.entries(a.details)
+                            .filter(([key, value]) => {
+                              // Hide technical data and ID fields
+                              const hiddenKeys = [
+                                'jobId', 'applicationId', 'applicantId', 'candidateId', 'requirementId', 'interviewId',
+                                'ipAddress', 'userAgent', 'sessionId', 'referrer',
+                                'title' // Hide if we already show job title above
+                              ];
+                              return !hiddenKeys.includes(key) && value !== null && value !== undefined;
+                            })
+                            .map(([key, value]: [string, any]) => (
+                            <div key={key}>
+                              <span className="font-medium">{key}:</span> {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">
-                          {new Date(activity.createdAt).toLocaleDateString()}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {new Date(activity.createdAt).toLocaleTimeString()}
-                        </p>
-                      </div>
+                      )}
                     </div>
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 dark:text-slate-400">No activities found for the selected period</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex items-center justify-end gap-2 mt-3">
+            <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={filters.page <= 1} onClick={() => setFilters(f => ({ ...f, page: Math.max(1, f.page - 1) }))}>Prev</button>
+            <span className="text-sm">Page {filters.page}</span>
+            <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={activities.length < filters.limit} onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}>Next</button>
+          </div>
+        </div>
+      </section>
+
+      {/* Search insights */}
+      <section className="bg-white border rounded-lg p-4">
+        <h2 className="text-lg font-medium mb-4">Top Search Keywords</h2>
+        <ol className="list-decimal pl-6 space-y-1">
+          {searchInsights.map((k: any, idx: number) => (
+            <li key={idx} className="text-sm flex justify-between"><span>{k.keyword}</span><span className="text-gray-500">{k.count}</span></li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Posting insights */}
+      <section className="bg-white border rounded-lg p-4">
+        <h2 className="text-lg font-medium mb-4">Job Postings vs Applications</h2>
+        <div className="h-72 w-full">
+          <ResponsiveContainer>
+            <LineChart data={postingSeries as any[]}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="recruiterEmail" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="jobs" name="Jobs" stroke="#2563eb" />
+              <Line type="monotone" dataKey="applications" name="Applications" stroke="#16a34a" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      {/* Recruiter performance */}
+      <section className="bg-white border rounded-lg p-4">
+        <h2 className="text-lg font-medium mb-4">Recruiter Leaderboard</h2>
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-600">
+              <th className="p-2">Recruiter</th>
+              <th className="p-2">Email</th>
+              <th className="p-2">Activity Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {performance.map((r: any, idx: number) => (
+              <tr key={idx} className="border-t">
+                <td className="p-2">{r.name || r.userId}</td>
+                <td className="p-2">{r.email}</td>
+                <td className="p-2">{r.activityCount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
       </div>
     </div>
   )
