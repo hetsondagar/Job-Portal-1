@@ -30,6 +30,9 @@ export default function EmployerSettingsPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Dynamic user data from API
   const [userData, setUserData] = useState({
@@ -222,6 +225,42 @@ export default function EmployerSettingsPage() {
   const handleCancel = () => {
     setFormData(userData)
     setIsEditing(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    // Verify confirmation text
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm account deletion')
+      return
+    }
+
+    setIsDeleting(true)
+
+    try {
+      const response = await apiService.deleteAccount()
+      
+      if (response.success) {
+        toast.success('Account deleted successfully')
+        
+        // Clear local storage
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        
+        // Redirect to home page
+        setTimeout(() => {
+          router.push('/')
+        }, 2000)
+      } else {
+        toast.error(response.message || 'Failed to delete account')
+      }
+    } catch (error: any) {
+      console.error('Delete account error:', error)
+      toast.error('Failed to delete account. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+      setDeleteConfirmText('')
+    }
   }
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -480,17 +519,6 @@ export default function EmployerSettingsPage() {
                   </div>
                   <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
                     <div>
-                      <h4 className="font-medium text-slate-900">Push Notifications</h4>
-                      <p className="text-sm text-slate-600">Receive browser notifications</p>
-                    </div>
-                    <Switch
-                      checked={formData.notifications.push}
-                      onCheckedChange={(checked) => handleNotificationChange('push', checked)}
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                    <div>
                       <h4 className="font-medium text-slate-900">Job Applications</h4>
                       <p className="text-sm text-slate-600">Notify when candidates apply</p>
                     </div>
@@ -534,7 +562,11 @@ export default function EmployerSettingsPage() {
                         {userData.subscription.status}
                       </Badge>
                     </div>
-                    <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                    <Button 
+                      variant="outline" 
+                      className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                      onClick={() => router.push('/pricing')}
+                    >
                       Upgrade Plan
                     </Button>
                   </div>
@@ -573,15 +605,99 @@ export default function EmployerSettingsPage() {
             <CardTitle className="text-red-700">Danger Zone</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium text-red-700">Delete Account</h4>
-                <p className="text-sm text-red-600">Permanently delete your account and all data</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-red-700">Delete Account</h4>
+                  <p className="text-sm text-red-600">Permanently delete your account and all data</p>
+                </div>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeleting}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Delete Account
+                </Button>
               </div>
-              <Button variant="destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                Delete Account
-              </Button>
+
+              {/* Delete Confirmation Dialog */}
+              {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <Card className="w-full max-w-md">
+                    <CardHeader>
+                      <CardTitle className="text-red-600">⚠️ Confirm Account Deletion</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p className="text-sm text-red-800 font-medium mb-2">
+                          This action cannot be undone. This will permanently delete:
+                        </p>
+                        <ul className="text-sm text-red-700 space-y-1 ml-4 list-disc">
+                          <li>Your user account</li>
+                          <li>All uploaded documents and resumes</li>
+                          <li>Job applications and bookmarks</li>
+                          <li>Interview schedules</li>
+                          <li>Messages and notifications</li>
+                          {user?.userType === 'admin' && (
+                            <>
+                              <li className="font-semibold">Your company profile (if you're the only admin)</li>
+                              <li className="font-semibold">All company jobs and applications</li>
+                            </>
+                          )}
+                        </ul>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="delete-confirm" className="text-sm font-medium">
+                          Type <span className="font-mono font-bold bg-red-100 px-2 py-1 rounded">DELETE</span> to confirm
+                        </Label>
+                        <Input
+                          id="delete-confirm"
+                          type="text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder="Type DELETE"
+                          className="font-mono"
+                          autoFocus
+                        />
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowDeleteConfirm(false)
+                            setDeleteConfirmText('')
+                          }}
+                          disabled={isDeleting}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleDeleteAccount}
+                          disabled={isDeleting || deleteConfirmText !== 'DELETE'}
+                          className="flex-1"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <LogOut className="w-4 h-4 mr-2" />
+                              Delete Forever
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -212,16 +212,27 @@ export default function EmployerRegisterPage() {
       
       if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {
         // Check region for dashboard redirect
-        if (result?.company?.region === 'gulf') {
+        // Check if agency needs KYC verification
+        const company: any = result?.company
+        const isAgency = company?.companyAccountType === 'recruiting_agency' || 
+                        company?.companyAccountType === 'consulting_firm'
+        const needsVerification = company?.verificationStatus === 'pending'
+
+        if (isAgency && needsVerification) {
+          toast.success('🎉 Agency account created! Please complete KYC verification to start posting jobs...')
+          setTimeout(() => {
+            router.push('/employer-dashboard/kyc-verification')
+          }, 2000)
+        } else if (result?.company?.region === 'gulf') {
           toast.success('Employer account created successfully! Redirecting to Gulf dashboard...')
           setTimeout(() => {
             router.push('/gulf-dashboard')
           }, 2000)
         } else {
           toast.success('Employer account created successfully! Redirecting to employer dashboard...')
-        setTimeout(() => {
-          router.push('/employer-dashboard')
-        }, 2000)
+          setTimeout(() => {
+            router.push('/employer-dashboard')
+          }, 2000)
         }
       } else {
         toast.error('Failed to create employer account. Please try again.')

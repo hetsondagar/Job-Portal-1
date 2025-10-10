@@ -4805,4 +4805,224 @@ router.use((error, req, res, next) => {
   next(error);
 });
 
+/**
+ * @route   DELETE /api/user/account
+ * @desc    Permanently delete user account and all associated data
+ * @access  Private
+ */
+router.delete('/account', authenticateToken, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+    
+    console.log('🗑️ Starting account deletion for user:', userId);
+
+    // Load user with all associations
+    const user = await User.findByPk(userId, {
+      include: [{ model: require('../models/Company'), as: 'Company' }],
+      transaction
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const companyId = user.company_id;
+    const isAdmin = user.user_type === 'admin';
+    
+    // Get all models
+    const { 
+      JobApplication, 
+      Job, 
+      Company, 
+      Resume, 
+      CoverLetter,
+      JobBookmark,
+      JobAlert,
+      CompanyFollow,
+      Interview,
+      Message,
+      Notification,
+      UserSession,
+      UserActivityLog,
+      ViewTracking,
+      SearchHistory,
+      AgencyClientAuthorization,
+      JobPhoto,
+      CompanyPhoto,
+      UserDashboard
+    } = require('../models');
+
+    console.log('📋 Deleting user data...');
+
+    // 1. Delete job applications
+    await JobApplication.destroy({ where: { userId: userId }, transaction }); // userId is the candidate
+    await JobApplication.destroy({ where: { employerId: userId }, transaction });
+    console.log('✅ Job applications deleted');
+
+    // 2. Delete user's bookmarks, alerts, follows
+    await JobBookmark.destroy({ where: { userId }, transaction });
+    await JobAlert.destroy({ where: { userId }, transaction });
+    await CompanyFollow.destroy({ where: { userId }, transaction });
+    console.log('✅ Bookmarks, alerts, follows deleted');
+
+    // 3. Delete resumes
+    const resumes = await Resume.findAll({ where: { userId }, transaction });
+    for (const resume of resumes) {
+      // Delete file from disk if exists
+      if (resume.filePath) {
+        try {
+          const fullPath = path.join(__dirname, '..', resume.filePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+            console.log('✅ Deleted resume file:', resume.filePath);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not delete resume file:', err.message);
+        }
+      }
+    }
+    await Resume.destroy({ where: { userId }, transaction });
+    console.log('✅ Resumes deleted');
+
+    // 4. Delete cover letters
+    const coverLetters = await CoverLetter.findAll({ where: { userId }, transaction });
+    for (const letter of coverLetters) {
+      if (letter.filePath) {
+        try {
+          const fullPath = path.join(__dirname, '..', letter.filePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+            console.log('✅ Deleted cover letter file:', letter.filePath);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not delete cover letter file:', err.message);
+        }
+      }
+    }
+    await CoverLetter.destroy({ where: { userId }, transaction });
+    console.log('✅ Cover letters deleted');
+
+    // 5. Delete notifications, messages, sessions
+    await Notification.destroy({ where: { userId }, transaction });
+    await Message.destroy({ where: { senderId: userId }, transaction });
+    await Message.destroy({ where: { receiverId: userId }, transaction });
+    await UserSession.destroy({ where: { userId }, transaction });
+    await UserActivityLog.destroy({ where: { userId }, transaction });
+    await ViewTracking.destroy({ where: { userId }, transaction });
+    await SearchHistory.destroy({ where: { userId }, transaction });
+    console.log('✅ Notifications, messages, sessions deleted');
+
+    // 6. Delete interviews
+    await Interview.destroy({ where: { candidateId: userId }, transaction });
+    await Interview.destroy({ where: { employerId: userId }, transaction });
+    console.log('✅ Interviews deleted');
+
+    // 7. Delete user dashboard
+    await UserDashboard.destroy({ where: { userId }, transaction });
+    console.log('✅ User dashboard deleted');
+
+    // 8. Handle company data (if user is admin/owner)
+    if (isAdmin && companyId) {
+      console.log('👑 User is admin, checking company ownership...');
+      
+      // Count other admins for this company
+      const otherAdmins = await User.count({
+        where: { 
+          company_id: companyId, 
+          user_type: 'admin',
+          id: { [Op.ne]: userId }
+        },
+        transaction
+      });
+
+      if (otherAdmins === 0) {
+        console.log('🏢 No other admins, will delete company after user...');
+        
+        // Delete company jobs
+        const companyJobs = await Job.findAll({ where: { companyId }, transaction });
+        for (const job of companyJobs) {
+          // Delete job photos
+          const jobPhotos = await JobPhoto.findAll({ where: { jobId: job.id }, transaction });
+          for (const photo of jobPhotos) {
+            if (photo.filePath) {
+              try {
+                const fullPath = path.join(__dirname, '..', photo.filePath);
+                if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+              } catch (err) {}
+            }
+          }
+          await JobPhoto.destroy({ where: { jobId: job.id }, transaction });
+          
+          // Delete job applications for this job
+          await JobApplication.destroy({ where: { jobId: job.id }, transaction });
+        }
+        await Job.destroy({ where: { companyId }, transaction });
+        console.log('✅ Company jobs deleted');
+
+        // Delete company photos
+        const companyPhotos = await CompanyPhoto.findAll({ where: { companyId }, transaction });
+        for (const photo of companyPhotos) {
+          if (photo.filePath) {
+            try {
+              const fullPath = path.join(__dirname, '..', photo.filePath);
+              if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+            } catch (err) {}
+          }
+        }
+        await CompanyPhoto.destroy({ where: { companyId }, transaction });
+        console.log('✅ Company photos deleted');
+
+        // Delete agency authorizations
+        await AgencyClientAuthorization.destroy({ where: { agencyCompanyId: companyId }, transaction });
+        await AgencyClientAuthorization.destroy({ where: { clientCompanyId: companyId }, transaction });
+        console.log('✅ Agency authorizations deleted');
+
+        // Delete user first (has FK to company)
+        await user.destroy({ transaction });
+        console.log('✅ User account deleted');
+
+        // Then delete company
+        await Company.destroy({ where: { id: companyId }, transaction });
+        console.log('✅ Company deleted');
+      } else {
+        console.log(`ℹ️ Company has ${otherAdmins} other admin(s), keeping company but removing user`);
+        // Delete user only
+        await user.destroy({ transaction });
+        console.log('✅ User account deleted');
+      }
+    } else {
+      // Not an admin or no company - just delete user
+      await user.destroy({ transaction });
+      console.log('✅ User account deleted');
+    }
+
+    // Commit transaction
+    await transaction.commit();
+
+    console.log('🎉 Account deletion completed successfully for:', userEmail);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully',
+      data: {
+        deletedEmail: userEmail,
+        deletedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ Account deletion error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete account',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

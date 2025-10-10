@@ -62,6 +62,35 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
   const [profileCheckDone, setProfileCheckDone] = useState(false)
 
+  // Redirect unverified agencies to KYC verification page
+  useEffect(() => {
+    const checkAgencyVerification = async () => {
+      try {
+        if (user?.companyId) {
+          const companyResponse = await apiService.getCompany(user.companyId)
+          if (companyResponse.success && companyResponse.data) {
+            const company = companyResponse.data
+            const isAgency = company.companyAccountType === 'recruiting_agency' || 
+                           company.companyAccountType === 'consulting_firm'
+            const needsKYC = company.verificationStatus === 'pending' || 
+                           company.verificationStatus === 'unverified'
+            
+            if (isAgency && needsKYC) {
+              toast.info('⚠️ KYC verification required to post jobs and access features')
+              setTimeout(() => {
+                router.push('/employer-dashboard/kyc-verification')
+              }, 1500)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Agency verification check error:', error)
+      }
+    }
+    
+    checkAgencyVerification()
+  }, [user, router])
+
   // Check profile completion separately (runs on every user update)
   useEffect(() => {
     if (user && !profileCheckDone) {

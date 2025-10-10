@@ -990,17 +990,6 @@ class ApiService {
     }
   }
 
-  async deleteAccount(password: string): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/user/account`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ password }),
-    });
-
-    this.clearAuth();
-
-    return this.handleResponse(response);
-  }
 
   // Company endpoints
   async createCompany(data: any): Promise<ApiResponse<any>> {
@@ -4050,6 +4039,17 @@ class ApiService {
 
   async deleteHotVacancyPhoto(photoId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/hot-vacancies/photos/${photoId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Delete user account permanently
+   */
+  async deleteAccount(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/account`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
