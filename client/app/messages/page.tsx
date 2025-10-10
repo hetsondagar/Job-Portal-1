@@ -62,9 +62,10 @@ export default function MessagesPage() {
     }
   }
 
-  const startConversation = async () => {
-    if (!startingWith) return
-    const res = await apiService.startConversation(startingWith)
+  const startConversation = async (receiverId?: string) => {
+    const targetId = receiverId || startingWith
+    if (!targetId) return
+    const res = await apiService.startConversation(targetId)
     if (res.success && res.data?.id) {
       await loadConversations()
       await openConversation(res.data.id)
@@ -114,7 +115,7 @@ export default function MessagesPage() {
             <div className="mt-3 grid grid-cols-1 gap-2">
               {coworkers.map((u) => (
                 <button key={u.id} className="w-full text-left text-sm border rounded px-2 py-2 hover:bg-gray-50"
-                  onClick={async () => { setStartingWith(u.id); await startConversation(); }}>
+                  onClick={async () => { await startConversation(u.id); }}>
                   {u.name || u.email}
                 </button>
               ))}
@@ -131,7 +132,7 @@ export default function MessagesPage() {
                 <div className="flex flex-wrap gap-2 justify-center">
                   {coworkers.slice(0, 6).map((u) => (
                     <button key={u.id} className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
-                      onClick={async () => { setStartingWith(u.id); await startConversation(); }}>
+                      onClick={async () => { await startConversation(u.id); }}>
                       {u.name || u.email}
                     </button>
                   ))}

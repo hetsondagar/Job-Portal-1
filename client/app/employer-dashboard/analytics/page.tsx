@@ -41,9 +41,11 @@ export default function EmployerAnalyticsPage() {
       // Recruiter (self) activity snapshot
       // Using usage activities with filters for current user to derive quick counts.
       // Backend returns activities array; we count by type if available.
-      const myActs = await apiService.getUsageActivities({ userId: user?.id, limit: 500 })
+      const myActs = await apiService.getUsageActivities({ userId: user?.id, limit: 1000 })
       if (myActs.success && Array.isArray(myActs.data)) {
         const counts = { accessed: 0, hired: 0, shortlisted: 0 }
+        const shortlistedKeys = new Set<string>()
+        const hiredKeys = new Set<string>()
         const accessedSet = new Set([
           'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
         ])
@@ -62,12 +64,13 @@ export default function EmployerAnalyticsPage() {
         for (const a of myActs.data) {
           const t = String(a.activityType || '').toLowerCase()
           if (accessedSet.has(t)) counts.accessed += 1
-          if (hiredSet.has(t)) counts.hired += 1
-          if (shortlistedSet.has(t)) counts.shortlisted += 1
+          const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
+          if (hiredSet.has(t) && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
+          if (shortlistedSet.has(t) && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1 }
           // Status change payloads
           const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
-          if (newStatus === 'hired') counts.hired += 1
-          if (newStatus === 'shortlisted') counts.shortlisted += 1
+          if (newStatus === 'hired' && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
+          if (newStatus === 'shortlisted' && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1 }
         }
         setMyActivitiesCount(counts)
       }
@@ -85,7 +88,7 @@ export default function EmployerAnalyticsPage() {
 
         if (activities.success && Array.isArray(activities.data)) {
           // Build perRecruiter rollup
-          const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number }> = {}
+          const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number; hiredKeys: Set<string>; shortlistedKeys: Set<string>; }> = {}
           const accessedSet = new Set([
             'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
           ])
@@ -101,17 +104,18 @@ export default function EmployerAnalyticsPage() {
             const uid = a.userId || a.user?.id
             if (!uid) continue
             if (!byRecruiter[uid]) {
-              byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, hired: 0, shortlisted: 0 }
+              byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, hired: 0, shortlisted: 0, hiredKeys: new Set(), shortlistedKeys: new Set() }
             }
             const t = String(a.activityType || '').toLowerCase()
             if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
-            if (hiredSet.has(t)) byRecruiter[uid].hired += 1
-            if (shortlistedSet.has(t)) byRecruiter[uid].shortlisted += 1
+            const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
+            if (hiredSet.has(t) && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
+            if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1 }
             const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
-            if (newStatus === 'hired') byRecruiter[uid].hired += 1
-            if (newStatus === 'shortlisted') byRecruiter[uid].shortlisted += 1
+            if (newStatus === 'hired' && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
+            if (newStatus === 'shortlisted' && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1 }
           }
-          const rows = Object.values(byRecruiter)
+          const rows = Object.values(byRecruiter).map(r => ({ userId: r.userId, name: r.name, email: r.email, accessed: r.accessed, hired: r.hired, shortlisted: r.shortlisted }))
           setPerRecruiter(rows)
 
           // Totals
