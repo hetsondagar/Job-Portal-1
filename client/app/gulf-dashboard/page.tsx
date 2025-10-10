@@ -465,8 +465,9 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
 
   // Filter quick actions based on user type
   const quickActions = allQuickActions.filter(action => {
-    if (action.adminOnly && user?.userType !== 'admin') {
-      return false
+    if (action.adminOnly) {
+      // Show Usage Pulse for admin users (both system admins and company admins)
+      return user?.userType === 'admin' || user?.userType === 'superadmin'
     }
     return true
   })
