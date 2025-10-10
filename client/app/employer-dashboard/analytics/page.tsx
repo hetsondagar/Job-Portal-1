@@ -72,7 +72,7 @@ export default function EmployerAnalyticsPage() {
           if (shortlistedSet.has(t) && appKey && !shortlistedKeys.has(appKey)) {
             if (newStatus && newStatus !== 'shortlisted') {
               // skip counting non-shortlisted status changes (e.g., under_review)
-            } else {
+      } else {
               shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details })
             }
           }
@@ -89,10 +89,14 @@ export default function EmployerAnalyticsPage() {
         setMyActivitiesCount(counts)
       }
 
-      // Recruiter leaderboard (company scoped in backend by auth user)
-      const perf = await apiService.getRecruiterPerformance({})
-      if (perf.success && Array.isArray(perf.data)) {
-        setRecruiterPerformance(perf.data)
+      // Recruiter leaderboard: show only for company admins
+      if (user?.userType === 'admin' && user.companyId) {
+        const perf = await apiService.getRecruiterPerformance({})
+        if (perf.success && Array.isArray(perf.data)) {
+          setRecruiterPerformance(perf.data)
+        }
+      } else {
+        setRecruiterPerformance([])
       }
 
       // Company admin view: compute totals and per recruiter aggregations from usage summary + activities
@@ -201,7 +205,8 @@ export default function EmployerAnalyticsPage() {
                           </div>
         </section>
 
-        {/* Recruiter leaderboard (available to all) */}
+        {/* Recruiter leaderboard (company admin only) */}
+        {isCompanyAdmin && (
         <section className="bg-white border rounded-lg p-4">
           <h2 className="text-lg font-medium mb-4">Recruiter Performance</h2>
           <div className="h-72 w-full">
@@ -215,8 +220,9 @@ export default function EmployerAnalyticsPage() {
                 <Line type="monotone" dataKey="activityCount" name="Activities" stroke="#2563eb" />
               </LineChart>
             </ResponsiveContainer>
-                  </div>
+                        </div>
         </section>
+        )}
 
         {/* Company admin only: company-wide analytics */}
         {isCompanyAdmin && (
@@ -226,11 +232,11 @@ export default function EmployerAnalyticsPage() {
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Accessed</div>
                 <div className="text-2xl font-semibold">{companyTotals.accessed}</div>
-                      </div>
+                  </div>
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Hired</div>
                 <div className="text-2xl font-semibold">{companyTotals.hired}</div>
-                        </div>
+            </div>
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Shortlisted</div>
                 <div className="text-2xl font-semibold">{companyTotals.shortlisted}</div>
