@@ -17,7 +17,8 @@ const uploadDirs = [
   'uploads/avatars',
   'uploads/resumes',
   'uploads/job-photos',
-  'uploads/hot-vacancy-photos'
+  'uploads/hot-vacancy-photos',
+  'uploads/agency-documents'
 ];
 
 uploadDirs.forEach(dir => {
@@ -68,6 +69,10 @@ if (process.env.NODE_ENV !== 'production') {
 }
 const gulfJobsRoutes = require('./routes/gulf-jobs');
 const salaryRoutes = require('./routes/salary');
+const agencyRoutes = require('./routes/agency');
+const adminAgencyRoutes = require('./routes/admin-agency');
+const clientVerificationRoutes = require('./routes/client-verification');
+const companyClaimRoutes = require('./routes/company-claim');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -293,10 +298,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/companies', companyClaimRoutes);
 app.use('/api/companies', companiesRoutes);
 app.use('/api/jobs', jobsRoutes);
 app.use('/api/requirements', requirementsRoutes);
 app.use('/api/job-alerts', jobAlertsRoutes);
+app.use('/api/agency', agencyRoutes);
 // Mount test routes for notifications in non-production
 if (testNotificationsRoutes) {
   app.use('/api/test/notifications', testNotificationsRoutes);
@@ -312,7 +319,10 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
 app.use('/api/salary', salaryRoutes);
 app.use('/api/job-preferences', require('./routes/job-preferences'));
+// Client verification routes (public with token)
+app.use('/api/client', clientVerificationRoutes);
 // Admin routes (secure)
+app.use('/api/admin', adminAgencyRoutes);
 app.use('/api/admin', require('./routes/admin'));
 
   // Compatibility redirect for cover-letter download legacy path
@@ -479,6 +489,15 @@ const startServer = async () => {
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log(`🔗 API Documentation: http://localhost:${PORT}/api`);
+      
+      // Start contract expiry monitoring service
+      try {
+        const contractExpiryService = require('./services/contractExpiryService');
+        contractExpiryService.start();
+        console.log('✅ Contract expiry monitoring service started');
+      } catch (error) {
+        console.warn('⚠️ Failed to start contract expiry service:', error.message);
+      }
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

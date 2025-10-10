@@ -62,6 +62,7 @@ export default function EmployerRegisterPage() {
   const [formData, setFormData] = useState({
     companyId: "",
     companyName: "",
+    companyAccountType: "direct", // NEW: Account type for agencies
     fullName: "",
     email: "",
     phone: "",
@@ -204,6 +205,7 @@ export default function EmployerRegisterPage() {
         website: formData.website,
         role: formData.role,
         region: formData.region,
+        companyAccountType: formData.companyAccountType, // Include agency type
         agreeToTerms: formData.agreeToTerms,
         subscribeUpdates: formData.subscribeUpdates,
       })
@@ -438,14 +440,96 @@ export default function EmployerRegisterPage() {
                     <p className="text-xs text-slate-500">Admins are auto-assigned only when creating a new company.</p>
                   </div>
                 ) : (
+                  <>
+                    {/* Account Type Selection - NEW */}
                   <div className="space-y-2">
-                    <Label htmlFor="companyName" className="text-slate-700 dark:text-slate-300">New Company Name</Label>
+                      <Label className="text-slate-700 dark:text-slate-300 font-semibold">Account Type *</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange("companyAccountType", "direct")}
+                          className={`p-4 border-2 rounded-lg transition-all ${
+                            formData.companyAccountType === "direct"
+                              ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                              : "border-slate-200 dark:border-slate-600 hover:border-blue-300"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center text-center">
+                            <Building2 className={`w-8 h-8 mb-2 ${formData.companyAccountType === "direct" ? "text-blue-600" : "text-slate-400"}`} />
+                            <span className="font-medium text-sm">Direct Employer</span>
+                            <span className="text-xs text-slate-500 mt-1">Hiring for your own company</span>
+                          </div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange("companyAccountType", "recruiting_agency")}
+                          className={`p-4 border-2 rounded-lg transition-all ${
+                            formData.companyAccountType === "recruiting_agency"
+                              ? "border-purple-600 bg-purple-50 dark:bg-purple-900/20"
+                              : "border-slate-200 dark:border-slate-600 hover:border-purple-300"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center text-center">
+                            <User className={`w-8 h-8 mb-2 ${formData.companyAccountType === "recruiting_agency" ? "text-purple-600" : "text-slate-400"}`} />
+                            <span className="font-medium text-sm">Recruiting Agency</span>
+                            <span className="text-xs text-slate-500 mt-1">Post for multiple clients</span>
+                          </div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange("companyAccountType", "consulting_firm")}
+                          className={`p-4 border-2 rounded-lg transition-all ${
+                            formData.companyAccountType === "consulting_firm"
+                              ? "border-green-600 bg-green-50 dark:bg-green-900/20"
+                              : "border-slate-200 dark:border-slate-600 hover:border-green-300"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center text-center">
+                            <Globe className={`w-8 h-8 mb-2 ${formData.companyAccountType === "consulting_firm" ? "text-green-600" : "text-slate-400"}`} />
+                            <span className="font-medium text-sm">Consulting Firm</span>
+                            <span className="text-xs text-slate-500 mt-1">Staff augmentation services</span>
+                          </div>
+                        </button>
+                      </div>
+                      
+                      {/* Agency Info Banner */}
+                      {(formData.companyAccountType === "recruiting_agency" || formData.companyAccountType === "consulting_firm") && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-3">
+                          <h4 className="text-amber-900 dark:text-amber-200 font-medium mb-2 flex items-center">
+                            <span className="mr-2">ℹ️</span>
+                            Agency Account - Additional Verification Required
+                          </h4>
+                          <ul className="text-amber-800 dark:text-amber-300 text-sm space-y-1">
+                            <li>• You'll need to upload GST certificate & business documents</li>
+                            <li>• Each client requires separate authorization</li>
+                            <li>• Verification usually takes 1-3 business days</li>
+                            <li>• Once verified, you can post jobs for multiple clients</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName" className="text-slate-700 dark:text-slate-300">
+                        {formData.companyAccountType === "direct" ? "Company Name" : "Agency Name"} *
+                      </Label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <Input id="companyName" type="text" placeholder="Enter new company name" value={formData.companyName} onChange={(e) => handleInputChange("companyName", e.target.value)} className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700" />
+                        <Input 
+                          id="companyName" 
+                          type="text" 
+                          placeholder={formData.companyAccountType === "direct" ? "Enter your company name" : "Enter your agency name"} 
+                          value={formData.companyName} 
+                          onChange={(e) => handleInputChange("companyName", e.target.value)} 
+                          className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700" 
+                          required
+                        />
                     </div>
                     <p className="text-slate-500 text-xs">Creating a company will make you the Admin by default.</p>
                   </div>
+                  </>
                 )}
 
                  {/* Validation Status */}

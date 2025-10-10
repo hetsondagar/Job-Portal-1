@@ -264,6 +264,76 @@ const Company = sequelize.define('Company', {
     type: DataTypes.ENUM('india', 'gulf', 'other'),
     allowNull: true,
     defaultValue: 'india'
+  },
+  
+  // ========== AGENCY SYSTEM FIELDS ==========
+  companyAccountType: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    defaultValue: 'direct',
+    field: 'company_account_type',
+    comment: 'direct | recruiting_agency | consulting_firm'
+  },
+  agencyLicense: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'agency_license'
+  },
+  agencySpecialization: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'agency_specialization'
+  },
+  agencyDocuments: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {},
+    field: 'agency_documents'
+  },
+  verifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'verified_at'
+  },
+  verificationMethod: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'verification_method'
+  },
+  
+  // ========== COMPANY CLAIMING FIELDS (for agency-created profiles) ==========
+  createdByAgencyId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'created_by_agency_id',
+    references: {
+      model: 'companies',
+      key: 'id'
+    },
+    comment: 'Agency that created this company profile (if created by agency)'
+  },
+  isClaimed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_claimed',
+    comment: 'Whether company is claimed by its actual owner (false if created by agency and not yet claimed)'
+  },
+  claimedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'claimed_at',
+    comment: 'When company was claimed by its owner'
+  },
+  claimedByUserId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'claimed_by_user_id',
+    references: {
+      model: 'users',
+      key: 'id'
+    },
+    comment: 'User who claimed the company'
   }
 }, {
   tableName: 'companies',
@@ -293,6 +363,35 @@ Company.prototype.getCompanySizeRange = function() {
     '1000+': '1000+ employees'
   };
   return sizeMap[this.companySize] || 'Not specified';
+};
+
+// Agency-specific methods
+Company.prototype.isAgency = function() {
+  return this.companyAccountType === 'recruiting_agency' || this.companyAccountType === 'consulting_firm';
+};
+
+Company.prototype.isVerifiedAgency = function() {
+  return this.isAgency() && this.verificationStatus === 'verified' && this.verifiedAt;
+};
+
+// Company claiming methods
+Company.prototype.isUnclaimed = function() {
+  return !this.isClaimed && !!this.createdByAgencyId;
+};
+
+// Define associations
+Company.associate = function(models) {
+  // Self-reference for agency that created the company
+  Company.belongsTo(models.Company, {
+    foreignKey: 'createdByAgencyId',
+    as: 'CreatedByAgency'
+  });
+  
+  // User who claimed the company
+  Company.belongsTo(models.User, {
+    foreignKey: 'claimedByUserId',
+    as: 'ClaimedByUser'
+  });
 };
 
 module.exports = Company;

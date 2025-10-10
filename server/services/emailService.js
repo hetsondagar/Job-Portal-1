@@ -451,6 +451,97 @@ The Job Portal Team
       return { success: false, message: error.message };
     }
   }
+
+  /**
+   * Send client verification email for agency authorization
+   */
+  async sendClientVerificationEmail(options) {
+    try {
+      const {
+        clientEmail,
+        clientCompanyName,
+        agencyName,
+        agencyEmail,
+        contractStartDate,
+        contractEndDate,
+        maxActiveJobs,
+        authorizationId,
+        verificationToken
+      } = options;
+
+      const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+      
+      // Read HTML template
+      const templatePath = path.join(__dirname, '../templates/client-verification-email.html');
+      let htmlContent = '';
+      
+      try {
+        htmlContent = await fs.readFile(templatePath, 'utf-8');
+      } catch (error) {
+        console.error('Error reading email template:', error);
+        // Fallback to plain text
+        htmlContent = `<p>Please verify authorization request from ${agencyName}</p>`;
+      }
+
+      // Replace placeholders
+      htmlContent = htmlContent
+        .replace(/{{CLIENT_COMPANY_NAME}}/g, clientCompanyName)
+        .replace(/{{AGENCY_NAME}}/g, agencyName)
+        .replace(/{{AGENCY_EMAIL}}/g, agencyEmail)
+        .replace(/{{REQUEST_DATE}}/g, new Date().toLocaleDateString())
+        .replace(/{{CONTRACT_START_DATE}}/g, new Date(contractStartDate).toLocaleDateString())
+        .replace(/{{CONTRACT_END_DATE}}/g, new Date(contractEndDate).toLocaleDateString())
+        .replace(/{{MAX_JOBS}}/g, maxActiveJobs || 'Unlimited')
+        .replace(/{{APPROVE_URL}}/g, `${APP_URL}/client/verify-authorization?token=${verificationToken}&action=approve`)
+        .replace(/{{REJECT_URL}}/g, `${APP_URL}/client/verify-authorization?token=${verificationToken}&action=reject`)
+        .replace(/{{VIEW_DETAILS_URL}}/g, `${APP_URL}/client/authorization-details?id=${authorizationId}`)
+        .replace(/{{CLIENT_CONTACT_EMAIL}}/g, clientEmail);
+
+      const mailOptions = {
+        from: `"${this.fromName}" <${this.fromEmail}>`,
+        to: clientEmail,
+        subject: '🔔 Verify Recruiting Agency Authorization - Action Required',
+        html: htmlContent,
+        text: `Dear ${clientCompanyName},
+
+A recruiting agency has requested authorization to post jobs on your behalf.
+
+Agency: ${agencyName}
+Requested by: ${agencyEmail}
+Contract Period: ${new Date(contractStartDate).toLocaleDateString()} to ${new Date(contractEndDate).toLocaleDateString()}
+
+⚠️ ACTION REQUIRED:
+If you authorized this agency, approve the request:
+${APP_URL}/client/verify-authorization?token=${verificationToken}&action=approve
+
+If you did NOT authorize this, reject immediately:
+${APP_URL}/client/verify-authorization?token=${verificationToken}&action=reject
+
+This is a security measure to prevent unauthorized job postings.
+
+Job Portal Security Team
+support@jobportal.com`
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('✅ Client verification email sent successfully to:', clientEmail);
+      
+      return { 
+        success: true, 
+        message: 'Client verification email sent successfully',
+        messageId: result.messageId
+      };
+    } catch (error) {
+      console.error('❌ Error sending client verification email:', error);
+      return { 
+        success: false, 
+        message: error.message 
+      };
+    }
+  }
 }
+
+const path = require('path');
+const fs = require('fs').promises;
 
 module.exports = new EmailService();

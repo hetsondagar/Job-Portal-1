@@ -289,7 +289,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       });
     }
 
-    const { email, password, fullName, companyName, companyId, phone, companySize, industry, website, region, role } = req.body;
+    const { email, password, fullName, companyName, companyId, phone, companySize, industry, website, region, role, companyAccountType } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -341,11 +341,31 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         if (!company) {
           throw new Error('Company not found');
         }
-        console.log('✅ Joining existing company:', company.id);
+        
+        // Check if company is unclaimed (created by agency)
+        if (!company.isClaimed && company.createdByAgencyId) {
+          console.log('🔓 Claiming unclaimed company:', company.name);
+          
+          // Update company as claimed
+          company.isClaimed = true;
+          company.claimedAt = new Date();
+          company.contactPerson = fullName;
+          company.contactEmail = email;
+          company.contactPhone = phone;
+          company.email = email;
+          company.phone = phone;
+          
+          // Note: Don't set claimedByUserId yet - will be set after user creation
+          await company.save({ transaction });
+          
+          console.log('✅ Company claimed successfully by actual owner');
+        } else {
+          console.log('✅ Joining existing company:', company.id);
+        }
       } else {
       const companySlug = await generateSlug(companyName);
       // Create company record
-      console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug });
+      console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug, companyAccountType });
         company = await Company.create({
         name: companyName,
         slug: companySlug,
@@ -359,7 +379,12 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         contactEmail: email,
         contactPhone: phone,
         companyStatus: 'pending_approval',
-        isActive: true
+        isActive: true,
+        companyAccountType: companyAccountType || 'direct', // NEW: Agency support
+        verificationStatus: (companyAccountType === 'recruiting_agency' || companyAccountType === 'consulting_firm') ? 'pending' : 'unverified',
+        // Mark as claimed (created by owner themselves)
+        isClaimed: true,
+        claimedAt: new Date()
       }, { transaction });
       console.log('✅ Company created successfully:', company.id);
       }
@@ -398,6 +423,13 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       
       console.log('✅ Employer user created successfully:', user.id);
 
+      // If this was a company claiming (unclaimed company joined), update claimedByUserId
+      if (companyId && company && !company.claimedByUserId && company.claimedAt) {
+        company.claimedByUserId = user.id;
+        await company.save({ transaction });
+        console.log('✅ Updated company claimedByUserId:', user.id);
+      }
+
       // Commit the transaction
       await transaction.commit();
 
@@ -429,7 +461,9 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             website: company.website,
             email: company.email,
             phone: company.phone,
-            region: company.region
+            region: company.region,
+            companyAccountType: company.companyAccountType,
+            verificationStatus: company.verificationStatus
           } : undefined,
           token
         }
