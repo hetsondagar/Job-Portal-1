@@ -23,6 +23,8 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState("")
   const [loadingThread, setLoadingThread] = useState(false)
+  const [coworkers, setCoworkers] = useState<any[]>([])
+  const [startingWith, setStartingWith] = useState<string>("")
 
   useEffect(() => {
     if (loading) return
@@ -33,6 +35,8 @@ export default function MessagesPage() {
   const loadConversations = async () => {
     const res = await apiService.getConversations()
     if (res.success && Array.isArray(res.data)) setConversations(res.data as any)
+    const list = await apiService.getCompanyUsersForMessaging()
+    if (list.success && Array.isArray(list.data)) setCoworkers(list.data)
   }
 
   const openConversation = async (id: string) => {
@@ -57,6 +61,16 @@ export default function MessagesPage() {
     }
   }
 
+  const startConversation = async () => {
+    if (!startingWith) return
+    const res = await apiService.startConversation(startingWith)
+    if (res.success && res.data?.id) {
+      await loadConversations()
+      await openConversation(res.data.id)
+      setStartingWith("")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -78,6 +92,22 @@ export default function MessagesPage() {
                 <div className="text-xs text-gray-500">{c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString() : ''}</div>
               </button>
             ))}
+          </div>
+          <div className="mt-4 border-t pt-3">
+            <div className="text-sm font-medium mb-2">Start new chat</div>
+            <div className="flex gap-2">
+              <select
+                className="border rounded px-2 py-1 text-sm flex-1"
+                value={startingWith}
+                onChange={(e) => setStartingWith(e.target.value)}
+              >
+                <option value="">Select coworker</option>
+                {coworkers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                ))}
+              </select>
+              <button onClick={startConversation} className="px-3 py-1 border rounded text-sm">Start</button>
+            </div>
           </div>
         </div>
 

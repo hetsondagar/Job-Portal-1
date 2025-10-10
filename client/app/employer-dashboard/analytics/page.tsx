@@ -51,7 +51,12 @@ export default function EmployerAnalyticsPage() {
           'contact_candidate', 'message_sent', 'application_contacted'
         ])
         const shortlistedSet = new Set([
-          'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist'
+          // most likely shortlist events
+          'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist',
+          // common status change pattern
+          'application_status_changed',
+          // fallback generic
+          'shortlisted'
         ])
 
         for (const a of myActs.data) {
@@ -84,7 +89,9 @@ export default function EmployerAnalyticsPage() {
             'contact_candidate', 'message_sent', 'application_contacted'
           ])
           const shortlistedSet = new Set([
-            'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist'
+            'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist',
+            'application_status_changed',
+            'shortlisted'
           ])
           for (const a of activities.data) {
             const uid = a.userId || a.user?.id

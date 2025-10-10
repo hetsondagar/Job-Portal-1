@@ -2343,6 +2343,23 @@ class ApiService {
     return this.handleResponse<any[]>(response);
   }
 
+  async getCompanyUsersForMessaging(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/messages/company-users`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    })
+    return this.handleResponse(response)
+  }
+
+  async startConversation(receiverId: string, title?: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/messages/start`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ receiverId, title })
+    })
+    return this.handleResponse(response)
+  }
+
   async getMessages(conversationId: string, page: number = 1, limit: number = 50): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/messages/conversations/${conversationId}/messages?page=${page}&limit=${limit}`, {
       headers: this.getAuthHeaders(),

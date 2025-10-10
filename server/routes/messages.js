@@ -108,6 +108,69 @@ router.get('/conversations', authenticateToken, async (req, res) => {
   }
 });
 
+// List company coworkers (recruiters/admins in same company) to start chats
+router.get('/company-users', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.company_id) {
+      return res.json({ success: true, data: [] })
+    }
+    const coworkers = await User.findAll({
+      where: {
+        company_id: req.user.company_id,
+        id: { [Op.ne]: req.user.id },
+        user_type: { [Op.in]: ['employer', 'admin'] }
+      },
+      attributes: ['id', 'first_name', 'last_name', 'email', 'user_type']
+    })
+    return res.json({ success: true, data: coworkers.map(u => ({
+      id: u.id,
+      name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+      email: u.email,
+      userType: u.user_type
+    })) })
+  } catch (error) {
+    console.error('Error listing company users:', error)
+    return res.status(500).json({ success: false, message: 'Failed to list users' })
+  }
+})
+
+// Start (or fetch existing) conversation with a coworker in same company
+router.post('/start', authenticateToken, async (req, res) => {
+  try {
+    const { receiverId, title } = req.body || {}
+    if (!receiverId) return res.status(400).json({ success: false, message: 'receiverId is required' })
+
+    // Validate coworker and same company
+    const receiver = await User.findByPk(receiverId)
+    if (!receiver) return res.status(404).json({ success: false, message: 'User not found' })
+    if (!req.user.company_id || String(receiver.company_id) !== String(req.user.company_id)) {
+      return res.status(403).json({ success: false, message: 'Users are not in the same company' })
+    }
+
+    // Normalize participants order as in model hook
+    const p1 = req.user.id < receiverId ? req.user.id : receiverId
+    const p2 = req.user.id < receiverId ? receiverId : req.user.id
+
+    // Find or create conversation
+    let conversation = await Conversation.findOne({
+      where: { participant1Id: p1, participant2Id: p2, isActive: true }
+    })
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participant1Id: p1,
+        participant2Id: p2,
+        conversationType: 'general',
+        title: title || null,
+        isActive: true
+      })
+    }
+    return res.json({ success: true, data: { id: conversation.id } })
+  } catch (error) {
+    console.error('Error starting conversation:', error)
+    return res.status(500).json({ success: false, message: 'Failed to start conversation' })
+  }
+})
+
 // Get messages for a specific conversation
 router.get('/conversations/:conversationId/messages', authenticateToken, async (req, res) => {
   try {
