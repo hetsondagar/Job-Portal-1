@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Database,
   FileText,
+  MessageCircle,
   Calendar,
   Mail,
   Phone,
@@ -423,6 +424,13 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       icon: BarChart3,
       href: "/employer-dashboard/analytics",
       color: "from-orange-500 to-orange-600",
+    },
+    {
+      title: "Messages",
+      description: "Chat with your team",
+      icon: MessageCircle,
+      href: "/messages",
+      color: "from-sky-500 to-sky-600",
     },
     {
       title: "Usage Pulse",

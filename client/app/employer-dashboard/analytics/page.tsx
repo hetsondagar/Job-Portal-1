@@ -44,11 +44,21 @@ export default function EmployerAnalyticsPage() {
       const myActs = await apiService.getUsageActivities({ userId: user?.id, limit: 500 })
       if (myActs.success && Array.isArray(myActs.data)) {
         const counts = { accessed: 0, contacted: 0, shortlisted: 0 }
+        const accessedSet = new Set([
+          'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
+        ])
+        const contactedSet = new Set([
+          'contact_candidate', 'message_sent', 'application_contacted'
+        ])
+        const shortlistedSet = new Set([
+          'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist'
+        ])
+
         for (const a of myActs.data) {
-          const t = String(a.activityType || "").toLowerCase()
-          if (/(access|view|profile_view|resume_view)/.test(t)) counts.accessed += 1
-          if (/(contact|message|reach)/.test(t)) counts.contacted += 1
-          if (/(shortlist|shortlisted)/.test(t)) counts.shortlisted += 1
+          const t = String(a.activityType || '').toLowerCase()
+          if (accessedSet.has(t)) counts.accessed += 1
+          if (contactedSet.has(t)) counts.contacted += 1
+          if (shortlistedSet.has(t)) counts.shortlisted += 1
         }
         setMyActivitiesCount(counts)
       }
@@ -67,16 +77,25 @@ export default function EmployerAnalyticsPage() {
         if (activities.success && Array.isArray(activities.data)) {
           // Build perRecruiter rollup
           const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; contacted: number; shortlisted: number }> = {}
+          const accessedSet = new Set([
+            'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
+          ])
+          const contactedSet = new Set([
+            'contact_candidate', 'message_sent', 'application_contacted'
+          ])
+          const shortlistedSet = new Set([
+            'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist'
+          ])
           for (const a of activities.data) {
             const uid = a.userId || a.user?.id
             if (!uid) continue
             if (!byRecruiter[uid]) {
               byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, contacted: 0, shortlisted: 0 }
             }
-            const t = String(a.activityType || "").toLowerCase()
-            if (/(access|view|profile_view|resume_view)/.test(t)) byRecruiter[uid].accessed += 1
-            if (/(contact|message|reach)/.test(t)) byRecruiter[uid].contacted += 1
-            if (/(shortlist|shortlisted)/.test(t)) byRecruiter[uid].shortlisted += 1
+            const t = String(a.activityType || '').toLowerCase()
+            if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
+            if (contactedSet.has(t)) byRecruiter[uid].contacted += 1
+            if (shortlistedSet.has(t)) byRecruiter[uid].shortlisted += 1
           }
           const rows = Object.values(byRecruiter)
           setPerRecruiter(rows)
