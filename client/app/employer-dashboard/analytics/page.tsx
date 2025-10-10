@@ -46,6 +46,7 @@ export default function EmployerAnalyticsPage() {
         const counts = { accessed: 0, hired: 0, shortlisted: 0 }
         const shortlistedKeys = new Set<string>()
         const hiredKeys = new Set<string>()
+        const shortlistedDebugSelf: Array<{ appKey: string; activityType: string; activityId?: string; candidate?: any; details?: any }>=[]
         const accessedSet = new Set([
           'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
         ])
@@ -66,12 +67,14 @@ export default function EmployerAnalyticsPage() {
           if (accessedSet.has(t)) counts.accessed += 1
           const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
           if (hiredSet.has(t) && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
-          if (shortlistedSet.has(t) && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1 }
+          if (shortlistedSet.has(t) && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
           // Status change payloads
           const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
           if (newStatus === 'hired' && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
-          if (newStatus === 'shortlisted' && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1 }
+          if (newStatus === 'shortlisted' && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
         }
+        console.log('🔍 Self shortlisted (unique keys):', Array.from(shortlistedKeys))
+        console.log('🔍 Self shortlisted entries:', shortlistedDebugSelf)
         setMyActivitiesCount(counts)
       }
 
@@ -89,6 +92,7 @@ export default function EmployerAnalyticsPage() {
         if (activities.success && Array.isArray(activities.data)) {
           // Build perRecruiter rollup
           const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number; hiredKeys: Set<string>; shortlistedKeys: Set<string>; }> = {}
+          const shortlistedDebugCompany: Array<{ recruiterId: string; recruiterEmail?: string; appKey: string; activityType: string; activityId?: string; candidate?: any; details?: any }>=[]
           const accessedSet = new Set([
             'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
           ])
@@ -110,12 +114,14 @@ export default function EmployerAnalyticsPage() {
             if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
             const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
             if (hiredSet.has(t) && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
-            if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1 }
+            if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
             const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
             if (newStatus === 'hired' && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
-            if (newStatus === 'shortlisted' && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1 }
+            if (newStatus === 'shortlisted' && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
           }
           const rows = Object.values(byRecruiter).map(r => ({ userId: r.userId, name: r.name, email: r.email, accessed: r.accessed, hired: r.hired, shortlisted: r.shortlisted }))
+          console.log('🔍 Company shortlisted debug entries:', shortlistedDebugCompany)
+          console.log('🔍 Company shortlisted unique keys by recruiter:', Object.fromEntries(Object.entries(byRecruiter).map(([k,v]) => [k, Array.from(v.shortlistedKeys)])))
           setPerRecruiter(rows)
 
           // Totals
@@ -149,7 +155,7 @@ export default function EmployerAnalyticsPage() {
     <div className="min-h-screen bg-gray-50">
       <EmployerNavbar />
       <div className="p-6 space-y-8">
-        <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Analytics</h1>
           <div className="text-sm text-gray-600">{isCompanyAdmin ? "Company Admin View" : "Recruiter View"}</div>
         </div>
@@ -161,16 +167,16 @@ export default function EmployerAnalyticsPage() {
             <div className="border rounded p-3">
               <div className="text-gray-600 text-sm">Candidates Accessed</div>
               <div className="text-2xl font-semibold">{myActivitiesCount.accessed}</div>
-            </div>
+                      </div>
             <div className="border rounded p-3">
               <div className="text-gray-600 text-sm">Candidates Hired</div>
               <div className="text-2xl font-semibold">{myActivitiesCount.hired}</div>
-            </div>
+                            </div>
             <div className="border rounded p-3">
               <div className="text-gray-600 text-sm">Candidates Shortlisted</div>
               <div className="text-2xl font-semibold">{myActivitiesCount.shortlisted}</div>
-            </div>
-          </div>
+                            </div>
+                          </div>
         </section>
 
         {/* Recruiter leaderboard (available to all) */}
@@ -187,7 +193,7 @@ export default function EmployerAnalyticsPage() {
                 <Line type="monotone" dataKey="activityCount" name="Activities" stroke="#2563eb" />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+                  </div>
         </section>
 
         {/* Company admin only: company-wide analytics */}
@@ -198,16 +204,16 @@ export default function EmployerAnalyticsPage() {
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Accessed</div>
                 <div className="text-2xl font-semibold">{companyTotals.accessed}</div>
-              </div>
+                      </div>
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Hired</div>
                 <div className="text-2xl font-semibold">{companyTotals.hired}</div>
-              </div>
+                        </div>
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Shortlisted</div>
                 <div className="text-2xl font-semibold">{companyTotals.shortlisted}</div>
-              </div>
-            </div>
+                      </div>
+                    </div>
 
             <div className="h-80 w-full">
               <ResponsiveContainer>
@@ -222,10 +228,10 @@ export default function EmployerAnalyticsPage() {
                   <Bar dataKey="shortlisted" name="Shortlisted" fill="#fbbf24" />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+                          </div>
           </section>
         )}
-      </div>
+                      </div>
     </div>
   )
 }

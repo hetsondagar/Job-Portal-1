@@ -152,20 +152,21 @@ router.post('/start', authenticateToken, async (req, res) => {
     const p1 = req.user.id < receiverId ? req.user.id : receiverId
     const p2 = req.user.id < receiverId ? receiverId : req.user.id
 
-    // Find or create conversation
-    let conversation = await Conversation.findOne({
-      where: { participant1Id: p1, participant2Id: p2, isActive: true }
-    })
-    if (!conversation) {
-      conversation = await Conversation.create({
-        participant1Id: p1,
-        participant2Id: p2,
-        conversationType: 'general',
-        title: title || null,
-        isActive: true
-      })
+    // Use raw SQL to avoid column name mapping issues
+    const [rows] = await sequelize.query(
+      'SELECT "id" FROM "conversations" WHERE "participant1Id" = :p1 AND "participant2Id" = :p2 AND "isActive" = true LIMIT 1;',
+      { replacements: { p1, p2 }, type: sequelize.QueryTypes.SELECT }
+    )
+    if (rows && rows.id) {
+      return res.json({ success: true, data: { id: rows.id } })
     }
-    return res.json({ success: true, data: { id: conversation.id } })
+    const uuid = require('uuid').v4()
+    const [created] = await sequelize.query(
+      'INSERT INTO "conversations" ("id","participant1Id","participant2Id","conversationType","title","isActive","created_at","updated_at") VALUES (:id,:p1,:p2,:type,:title,true, NOW(), NOW()) RETURNING "id";',
+      { replacements: { id: uuid, p1, p2, type: 'general', title: title || null }, type: sequelize.QueryTypes.INSERT }
+    )
+    const createdId = created?.id || (Array.isArray(created) ? created[0]?.id : undefined)
+    return res.json({ success: true, data: { id: createdId || uuid } })
   } catch (error) {
     console.error('Error starting conversation:', error)
     return res.status(500).json({ success: false, message: 'Failed to start conversation' })
