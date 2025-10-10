@@ -73,8 +73,12 @@ export default function EmployerAnalyticsPage() {
           if (newStatus === 'hired' && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
           if (newStatus === 'shortlisted' && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
         }
-        console.log('🔍 Self shortlisted (unique keys):', Array.from(shortlistedKeys))
-        console.log('🔍 Self shortlisted entries:', shortlistedDebugSelf)
+        const selfNames = shortlistedDebugSelf.map(e => {
+          const c = e.candidate || {};
+          const n = (c.first_name && c.last_name) ? `${c.first_name} ${c.last_name}` : (c.name || c.email || c.fullName);
+          return n || 'Unknown Candidate';
+        })
+        console.log('🔍 Self shortlisted candidates (names):', Array.from(new Set(selfNames)))
         setMyActivitiesCount(counts)
       }
 
@@ -120,8 +124,12 @@ export default function EmployerAnalyticsPage() {
             if (newStatus === 'shortlisted' && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
           }
           const rows = Object.values(byRecruiter).map(r => ({ userId: r.userId, name: r.name, email: r.email, accessed: r.accessed, hired: r.hired, shortlisted: r.shortlisted }))
-          console.log('🔍 Company shortlisted debug entries:', shortlistedDebugCompany)
-          console.log('🔍 Company shortlisted unique keys by recruiter:', Object.fromEntries(Object.entries(byRecruiter).map(([k,v]) => [k, Array.from(v.shortlistedKeys)])))
+          const companyNames = shortlistedDebugCompany.map(e => {
+            const c = e.candidate || {};
+            const n = (c.first_name && c.last_name) ? `${c.first_name} ${c.last_name}` : (c.name || c.email || c.fullName);
+            return n || 'Unknown Candidate';
+          })
+          console.log('🔍 Company shortlisted candidates (names):', Array.from(new Set(companyNames)))
           setPerRecruiter(rows)
 
           // Totals

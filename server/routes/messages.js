@@ -179,18 +179,13 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
     const { conversationId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
-    // Verify user is participant in conversation
-    const conversation = await Conversation.findOne({
-      where: {
-        id: conversationId,
-        [Op.or]: [
-          { participant1Id: req.user.id },
-          { participant2Id: req.user.id }
-        ]
-      }
-    });
+    // Verify user is participant in conversation (raw SQL to honor camelCase columns)
+    const [convRows] = await sequelize.query(
+      'SELECT "id" FROM "conversations" WHERE "id" = :cid AND ("participant1Id" = :uid OR "participant2Id" = :uid) LIMIT 1;',
+      { replacements: { cid: conversationId, uid: req.user.id }, type: sequelize.QueryTypes.SELECT }
+    )
 
-    if (!conversation) {
+    if (!convRows || !convRows.id) {
       return res.status(404).json({
         success: false,
         message: 'Conversation not found'
@@ -225,8 +220,11 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
       }
     );
 
-    // Update conversation unread count
-    await conversation.update({ unreadCount: 0 });
+    // Update conversation unread count (raw SQL)
+    await sequelize.query('UPDATE "conversations" SET "unreadCount" = 0, "updated_at" = NOW() WHERE "id" = :cid', {
+      replacements: { cid: conversationId },
+      type: sequelize.QueryTypes.UPDATE
+    })
 
     // Transform messages
     const transformedMessages = messages.map(msg => ({
@@ -278,18 +276,13 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
       });
     }
 
-    // Verify user is participant in conversation
-    const conversation = await Conversation.findOne({
-      where: {
-        id: conversationId,
-        [Op.or]: [
-          { participant1Id: req.user.id },
-          { participant2Id: req.user.id }
-        ]
-      }
-    });
+    // Verify user is participant in conversation (raw SQL to honor camelCase columns)
+    const [convRows] = await sequelize.query(
+      'SELECT "id", "participant1Id", "participant2Id" FROM "conversations" WHERE "id" = :cid AND ("participant1Id" = :uid OR "participant2Id" = :uid) LIMIT 1;',
+      { replacements: { cid: conversationId, uid: req.user.id }, type: sequelize.QueryTypes.SELECT }
+    )
 
-    if (!conversation) {
+    if (!convRows || !convRows.id) {
       return res.status(404).json({
         success: false,
         message: 'Conversation not found'
@@ -297,8 +290,7 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
     }
 
     // Determine receiver
-    const receiverId = conversation.participant1Id === req.user.id ? 
-      conversation.participant2Id : conversation.participant1Id;
+    const receiverId = convRows.participant1Id === req.user.id ? convRows.participant2Id : convRows.participant1Id;
 
     // Create message
     const message = await Message.create({
@@ -309,12 +301,11 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
       content: content.trim()
     });
 
-    // Update conversation
-    await conversation.update({
-      lastMessageId: message.id,
-      lastMessageAt: new Date(),
-      unreadCount: sequelize.literal('unread_count + 1')
-    });
+    // Update conversation (raw SQL)
+    await sequelize.query('UPDATE "conversations" SET "lastMessageId" = :mid, "lastMessageAt" = NOW(), "unreadCount" = COALESCE("unreadCount",0) + 1, "updated_at" = NOW() WHERE "id" = :cid', {
+      replacements: { cid: conversationId, mid: message.id },
+      type: sequelize.QueryTypes.UPDATE
+    })
 
     res.status(201).json({
       success: true,
