@@ -12,11 +12,11 @@ export default function EmployerAnalyticsPage() {
   const router = useRouter()
 
   // Recruiter-level
-  const [myActivitiesCount, setMyActivitiesCount] = useState({ accessed: 0, contacted: 0, shortlisted: 0 })
+  const [myActivitiesCount, setMyActivitiesCount] = useState({ accessed: 0, hired: 0, shortlisted: 0 })
 
   // Company-admin level
-  const [companyTotals, setCompanyTotals] = useState({ accessed: 0, contacted: 0, shortlisted: 0 })
-  const [perRecruiter, setPerRecruiter] = useState<Array<{ userId: string; name?: string; email?: string; accessed: number; contacted: number; shortlisted: number }>>([])
+  const [companyTotals, setCompanyTotals] = useState({ accessed: 0, hired: 0, shortlisted: 0 })
+  const [perRecruiter, setPerRecruiter] = useState<Array<{ userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number }>>([])
 
   // Shared charts
   const [recruiterPerformance, setRecruiterPerformance] = useState<any[]>([])
@@ -43,12 +43,12 @@ export default function EmployerAnalyticsPage() {
       // Backend returns activities array; we count by type if available.
       const myActs = await apiService.getUsageActivities({ userId: user?.id, limit: 500 })
       if (myActs.success && Array.isArray(myActs.data)) {
-        const counts = { accessed: 0, contacted: 0, shortlisted: 0 }
+        const counts = { accessed: 0, hired: 0, shortlisted: 0 }
         const accessedSet = new Set([
           'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
         ])
-        const contactedSet = new Set([
-          'contact_candidate', 'message_sent', 'application_contacted'
+        const hiredSet = new Set([
+          'application_hired', 'candidate_hired', 'hired'
         ])
         const shortlistedSet = new Set([
           // most likely shortlist events
@@ -62,8 +62,12 @@ export default function EmployerAnalyticsPage() {
         for (const a of myActs.data) {
           const t = String(a.activityType || '').toLowerCase()
           if (accessedSet.has(t)) counts.accessed += 1
-          if (contactedSet.has(t)) counts.contacted += 1
+          if (hiredSet.has(t)) counts.hired += 1
           if (shortlistedSet.has(t)) counts.shortlisted += 1
+          // Status change payloads
+          const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
+          if (newStatus === 'hired') counts.hired += 1
+          if (newStatus === 'shortlisted') counts.shortlisted += 1
         }
         setMyActivitiesCount(counts)
       }
@@ -81,12 +85,12 @@ export default function EmployerAnalyticsPage() {
 
         if (activities.success && Array.isArray(activities.data)) {
           // Build perRecruiter rollup
-          const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; contacted: number; shortlisted: number }> = {}
+          const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number }> = {}
           const accessedSet = new Set([
             'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
           ])
-          const contactedSet = new Set([
-            'contact_candidate', 'message_sent', 'application_contacted'
+          const hiredSet = new Set([
+            'application_hired', 'candidate_hired', 'hired'
           ])
           const shortlistedSet = new Set([
             'application_shortlisted', 'candidate_shortlisted', 'requirement_shortlist',
@@ -97,12 +101,15 @@ export default function EmployerAnalyticsPage() {
             const uid = a.userId || a.user?.id
             if (!uid) continue
             if (!byRecruiter[uid]) {
-              byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, contacted: 0, shortlisted: 0 }
+              byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, hired: 0, shortlisted: 0 }
             }
             const t = String(a.activityType || '').toLowerCase()
             if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
-            if (contactedSet.has(t)) byRecruiter[uid].contacted += 1
+            if (hiredSet.has(t)) byRecruiter[uid].hired += 1
             if (shortlistedSet.has(t)) byRecruiter[uid].shortlisted += 1
+            const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
+            if (newStatus === 'hired') byRecruiter[uid].hired += 1
+            if (newStatus === 'shortlisted') byRecruiter[uid].shortlisted += 1
           }
           const rows = Object.values(byRecruiter)
           setPerRecruiter(rows)
@@ -110,9 +117,9 @@ export default function EmployerAnalyticsPage() {
           // Totals
           setCompanyTotals(rows.reduce((acc, r) => ({
             accessed: acc.accessed + r.accessed,
-            contacted: acc.contacted + r.contacted,
+            hired: acc.hired + r.hired,
             shortlisted: acc.shortlisted + r.shortlisted,
-          }), { accessed: 0, contacted: 0, shortlisted: 0 }))
+          }), { accessed: 0, hired: 0, shortlisted: 0 }))
         }
 
         // Optionally merge recruiter identity from summary
@@ -127,7 +134,7 @@ export default function EmployerAnalyticsPage() {
     }
   }
 
-  const perRecruiterChart = useMemo(() => perRecruiter.map(r => ({ recruiter: r.email || r.name || r.userId, accessed: r.accessed, contacted: r.contacted, shortlisted: r.shortlisted })), [perRecruiter])
+  const perRecruiterChart = useMemo(() => perRecruiter.map(r => ({ recruiter: r.email || r.name || r.userId, accessed: r.accessed, hired: r.hired, shortlisted: r.shortlisted })), [perRecruiter])
 
   if (loading) return <div className="p-6">Loading...</div>
   if (!user || (user.userType !== "employer" && user.userType !== "admin")) return null
@@ -152,8 +159,8 @@ export default function EmployerAnalyticsPage() {
               <div className="text-2xl font-semibold">{myActivitiesCount.accessed}</div>
             </div>
             <div className="border rounded p-3">
-              <div className="text-gray-600 text-sm">Candidates Contacted</div>
-              <div className="text-2xl font-semibold">{myActivitiesCount.contacted}</div>
+              <div className="text-gray-600 text-sm">Candidates Hired</div>
+              <div className="text-2xl font-semibold">{myActivitiesCount.hired}</div>
             </div>
             <div className="border rounded p-3">
               <div className="text-gray-600 text-sm">Candidates Shortlisted</div>
@@ -189,8 +196,8 @@ export default function EmployerAnalyticsPage() {
                 <div className="text-2xl font-semibold">{companyTotals.accessed}</div>
               </div>
               <div className="border rounded p-3">
-                <div className="text-gray-600 text-sm">Total Contacted</div>
-                <div className="text-2xl font-semibold">{companyTotals.contacted}</div>
+                <div className="text-gray-600 text-sm">Total Hired</div>
+                <div className="text-2xl font-semibold">{companyTotals.hired}</div>
               </div>
               <div className="border rounded p-3">
                 <div className="text-gray-600 text-sm">Total Shortlisted</div>
@@ -207,7 +214,7 @@ export default function EmployerAnalyticsPage() {
                   <Tooltip />
                   <Legend />
                   <Bar dataKey="accessed" name="Accessed" fill="#60a5fa" />
-                  <Bar dataKey="contacted" name="Contacted" fill="#34d399" />
+                  <Bar dataKey="hired" name="Hired" fill="#34d399" />
                   <Bar dataKey="shortlisted" name="Shortlisted" fill="#fbbf24" />
                 </BarChart>
               </ResponsiveContainer>

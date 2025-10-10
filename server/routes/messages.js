@@ -24,9 +24,10 @@ const authenticateToken = async (req, res, next) => {
 
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
+    // Tokens elsewhere use id
+    const uid = decoded.id || decoded.userId;
     const User = require('../models/User');
-    const user = await User.findByPk(decoded.userId);
+    const user = await User.findByPk(uid);
     
     if (!user) {
       return res.status(401).json({ 

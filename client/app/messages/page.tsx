@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/api"
+import { EmployerNavbar } from "@/components/employer-navbar"
 
 interface Conversation {
   id: string
@@ -73,6 +74,7 @@ export default function MessagesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <EmployerNavbar />
       <div className="max-w-6xl mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="border rounded bg-white p-3">
           <div className="font-semibold mb-3">Conversations</div>
@@ -108,12 +110,34 @@ export default function MessagesPage() {
               </select>
               <button onClick={startConversation} className="px-3 py-1 border rounded text-sm">Start</button>
             </div>
+            {/* Quick coworker list */}
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              {coworkers.map((u) => (
+                <button key={u.id} className="w-full text-left text-sm border rounded px-2 py-2 hover:bg-gray-50"
+                  onClick={async () => { setStartingWith(u.id); await startConversation(); }}>
+                  {u.name || u.email}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="md:col-span-2 border rounded bg-white flex flex-col min-h-[60vh]">
           {!selectedId ? (
-            <div className="flex-1 grid place-items-center text-gray-500">Select a conversation</div>
+            <div className="flex-1 grid place-items-center text-gray-500">
+              <div className="text-center p-6">
+                <div className="text-lg font-semibold mb-2">Start messaging</div>
+                <p className="text-sm mb-4">Choose a coworker from the left, or pick from suggestions below.</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {coworkers.slice(0, 6).map((u) => (
+                    <button key={u.id} className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+                      onClick={async () => { setStartingWith(u.id); await startConversation(); }}>
+                      {u.name || u.email}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex-1 overflow-auto p-3">
