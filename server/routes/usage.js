@@ -229,21 +229,22 @@ router.get('/activities', authenticateToken, async (req, res) => {
           user_type: { [Op.in]: ['employer', 'admin'] }, 
           company_id: userCompanyId 
         }, 
-        attributes: ['id', 'email', 'user_type', 'company_id'] 
+        attributes: ['id'] 
       });
-      console.log('🔍 Debug - Found recruiters for company:', recruiters.map(r => ({
-        id: r.id,
-        email: r.email,
-        userType: r.user_type,
-        companyId: r.company_id
-      })));
-      
       const recruiterIds = recruiters.map(r => r.id);
       if (!recruiterIds || recruiterIds.length === 0) {
-        console.log('🔍 Debug - No recruiters found for company, returning empty array');
         return res.json({ success: true, data: [] });
       }
-      where.userId = { [Op.in]: recruiterIds };
+      // Respect userId filter if provided: intersect with company users
+      if (userId) {
+        if (!recruiterIds.includes(userId)) {
+          // requested user not in this company; return empty
+          return res.json({ success: true, data: [] });
+        }
+        where.userId = userId;
+      } else {
+        where.userId = { [Op.in]: recruiterIds };
+      }
     } else {
       console.log('🔍 Debug - User has no company, showing only their own activities');
       // If user has no company, only show their own activities

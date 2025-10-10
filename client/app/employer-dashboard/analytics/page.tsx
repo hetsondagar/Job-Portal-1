@@ -65,7 +65,8 @@ export default function EmployerAnalyticsPage() {
         for (const a of myActs.data) {
           const t = String(a.activityType || '').toLowerCase()
           if (accessedSet.has(t)) counts.accessed += 1
-          const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
+          // Only count when tied to a concrete application/candidate; do NOT fallback to log id
+          const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || '').toString()
           const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
           if (hiredSet.has(t) && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
           // Only count shortlist events if not an 'under_review' state; if status present, require 'shortlisted'
@@ -127,7 +128,8 @@ export default function EmployerAnalyticsPage() {
             }
             const t = String(a.activityType || '').toLowerCase()
             if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
-            const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
+            // Only count when tied to a concrete application/candidate; do NOT fallback to log id
+            const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || '').toString()
             if (hiredSet.has(t) && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
             const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
             if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) {
