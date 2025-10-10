@@ -66,10 +66,17 @@ export default function EmployerAnalyticsPage() {
           const t = String(a.activityType || '').toLowerCase()
           if (accessedSet.has(t)) counts.accessed += 1
           const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
-          if (hiredSet.has(t) && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
-          if (shortlistedSet.has(t) && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
-          // Status change payloads
           const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
+          if (hiredSet.has(t) && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
+          // Only count shortlist events if not an 'under_review' state; if status present, require 'shortlisted'
+          if (shortlistedSet.has(t) && appKey && !shortlistedKeys.has(appKey)) {
+            if (newStatus && newStatus !== 'shortlisted') {
+              // skip counting non-shortlisted status changes (e.g., under_review)
+            } else {
+              shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details })
+            }
+          }
+          // Status change payloads
           if (newStatus === 'hired' && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
           if (newStatus === 'shortlisted' && appKey && !shortlistedKeys.has(appKey)) { shortlistedKeys.add(appKey); counts.shortlisted += 1; shortlistedDebugSelf.push({ appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
         }
@@ -118,8 +125,15 @@ export default function EmployerAnalyticsPage() {
             if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
             const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.id || '').toString()
             if (hiredSet.has(t) && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
-            if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
             const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
+            if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) {
+              if (newStatus && newStatus !== 'shortlisted') {
+                // skip non-shortlisted (e.g., under_review)
+              } else {
+                byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: t, activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details })
+              }
+            }
+            // reuse newStatus from above
             if (newStatus === 'hired' && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
             if (newStatus === 'shortlisted' && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
           }

@@ -104,19 +104,28 @@ const Message = sequelize.define('Message', {
   ],
   hooks: {
     afterCreate: async (message) => {
-      // Update conversation last message
-      const Conversation = require('./Conversation');
-      await Conversation.update(
-        { 
-          lastMessageAt: new Date(),
-          lastMessageId: message.id,
-          unreadCount: sequelize.literal('unread_count + 1')
-        },
-        { 
-          where: { id: message.conversationId },
-          returning: false
-        }
-      );
+      // Update conversation last message (use camelCase columns explicitly)
+      try {
+        await sequelize.query(
+          'UPDATE "conversations" SET "lastMessageAt" = NOW(), "lastMessageId" = :mid, "unreadCount" = COALESCE("unreadCount", 0) + 1, "updated_at" = NOW() WHERE "id" = :cid',
+          {
+            replacements: { mid: message.id, cid: message.conversationId },
+            type: sequelize.QueryTypes.UPDATE
+          }
+        );
+      } catch (e) {
+        // Fallback using model with correct literal if raw SQL fails
+        const Conversation = require('./Conversation');
+        await Conversation.update(
+          {
+            lastMessageAt: new Date(),
+            lastMessageId: message.id,
+            // Ensure we reference camelCase column
+            unreadCount: sequelize.literal('"unreadCount" + 1')
+          },
+          { where: { id: message.conversationId }, returning: false }
+        );
+      }
     }
   }
 });
