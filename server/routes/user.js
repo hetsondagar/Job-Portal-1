@@ -5025,4 +5025,82 @@ router.delete('/account', authenticateToken, async (req, res) => {
   }
 });
 
+// Update notification preferences (flexible endpoint for all notification types)
+router.put('/preferences/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { notifications } = req.body;
+    
+    if (!notifications || typeof notifications !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'Notification preferences object is required'
+      });
+    }
+
+    console.log('🔄 Updating notification preferences for user:', req.user.id);
+    console.log('📋 New notification preferences:', notifications);
+
+    // Get current preferences
+    const currentPreferences = req.user.preferences || {};
+
+    // Merge notification preferences
+    const updatedPreferences = {
+      ...currentPreferences,
+      notifications: {
+        ...(currentPreferences.notifications || {}),
+        ...notifications
+      }
+    };
+
+    // Update user preferences
+    await req.user.update({ preferences: updatedPreferences });
+
+    console.log('✅ Notification preferences updated successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Notification preferences updated successfully',
+      data: {
+        notifications: updatedPreferences.notifications
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Update notification preferences error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update notification preferences',
+      error: error.message
+    });
+  }
+});
+
+// Get notification preferences
+router.get('/preferences/notifications', authenticateToken, async (req, res) => {
+  try {
+    const preferences = req.user.preferences || {};
+    const notifications = preferences.notifications || {
+      email: true,
+      sms: false,
+      jobApplications: true,
+      candidateMatches: true,
+      systemUpdates: false,
+      marketing: false
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: { notifications }
+    });
+
+  } catch (error) {
+    console.error('❌ Get notification preferences error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get notification preferences',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

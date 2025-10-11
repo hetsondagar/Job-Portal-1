@@ -53,7 +53,6 @@ export default function EmployerSettingsPage() {
     notifications: {
       email: true,
       sms: false,
-      push: true,
       jobApplications: true,
       candidateMatches: true,
       systemUpdates: false,
@@ -97,6 +96,29 @@ export default function EmployerSettingsPage() {
           }
         }
 
+        // Load notification preferences from backend
+        let notificationPrefs = {
+          email: true,
+          sms: false,
+          jobApplications: true,
+          candidateMatches: true,
+          systemUpdates: false,
+          marketing: false
+        }
+        
+        try {
+          const notifResponse = await apiService.getNotificationPreferences()
+          if (notifResponse.success && notifResponse.data?.notifications) {
+            notificationPrefs = {
+              ...notificationPrefs,
+              ...notifResponse.data.notifications
+            }
+            console.log('✅ Notification preferences loaded:', notificationPrefs)
+          }
+        } catch (error) {
+          console.error('❌ Error loading notification preferences:', error)
+        }
+
         // Combine user and company data
         const combinedData = {
           firstName: userProfile.firstName || '',
@@ -113,15 +135,7 @@ export default function EmployerSettingsPage() {
           website: companyData?.website || '',
           address: companyData?.address || '',
           about: companyData?.description || '',
-          notifications: {
-            email: true,
-            sms: false,
-            push: true,
-            jobApplications: true,
-            candidateMatches: true,
-            systemUpdates: false,
-            marketing: false
-          },
+          notifications: notificationPrefs,
           subscription: {
             plan: "Basic",
             status: "Active",
@@ -156,7 +170,8 @@ export default function EmployerSettingsPage() {
     }))
   }
 
-  const handleNotificationChange = (key: string, value: boolean) => {
+  const handleNotificationChange = async (key: string, value: boolean) => {
+    // Update local state immediately for responsive UI
     setFormData(prev => ({
       ...prev,
       notifications: {
@@ -164,6 +179,49 @@ export default function EmployerSettingsPage() {
         [key]: value
       }
     }))
+
+    // Auto-save to backend
+    try {
+      console.log(`🔄 Saving notification preference: ${key} = ${value}`)
+      
+      const updatedNotifications = {
+        ...formData.notifications,
+        [key]: value
+      }
+
+      const response = await apiService.updateNotificationPreferencesFlexible(updatedNotifications)
+      
+      if (response.success) {
+        console.log('✅ Notification preference saved successfully')
+        // Update userData to reflect saved state
+        setUserData(prev => ({
+          ...prev,
+          notifications: updatedNotifications
+        }))
+        toast.success(`${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${value ? 'enabled' : 'disabled'}`)
+      } else {
+        // Revert on failure
+        setFormData(prev => ({
+          ...prev,
+          notifications: {
+            ...prev.notifications,
+            [key]: !value
+          }
+        }))
+        toast.error('Failed to update notification preference')
+      }
+    } catch (error: any) {
+      console.error('❌ Error saving notification preference:', error)
+      // Revert on error
+      setFormData(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [key]: !value
+        }
+      }))
+      toast.error('Failed to save notification settings')
+    }
   }
 
   const handleSave = async () => {
@@ -495,7 +553,7 @@ export default function EmployerSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <div>
                       <h4 className="font-medium text-slate-900">Email Notifications</h4>
                       <p className="text-sm text-slate-600">Receive updates via email</p>
@@ -503,10 +561,9 @@ export default function EmployerSettingsPage() {
                     <Switch
                       checked={formData.notifications.email}
                       onCheckedChange={(checked) => handleNotificationChange('email', checked)}
-                      disabled={!isEditing}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <div>
                       <h4 className="font-medium text-slate-900">SMS Notifications</h4>
                       <p className="text-sm text-slate-600">Receive updates via SMS</p>
@@ -514,29 +571,46 @@ export default function EmployerSettingsPage() {
                     <Switch
                       checked={formData.notifications.sms}
                       onCheckedChange={(checked) => handleNotificationChange('sms', checked)}
-                      disabled={!isEditing}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <div>
-                      <h4 className="font-medium text-slate-900">Job Applications</h4>
-                      <p className="text-sm text-slate-600">Notify when candidates apply</p>
+                      <h4 className="font-medium text-slate-900">Job Application Alerts</h4>
+                      <p className="text-sm text-slate-600">Notify when candidates apply to your jobs</p>
                     </div>
                     <Switch
                       checked={formData.notifications.jobApplications}
                       onCheckedChange={(checked) => handleNotificationChange('jobApplications', checked)}
-                      disabled={!isEditing}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <div>
-                      <h4 className="font-medium text-slate-900">Candidate Matches</h4>
-                      <p className="text-sm text-slate-600">Notify about matching candidates</p>
+                      <h4 className="font-medium text-slate-900">Candidate Match Alerts</h4>
+                      <p className="text-sm text-slate-600">Notify when candidates match your requirements</p>
                     </div>
                     <Switch
                       checked={formData.notifications.candidateMatches}
                       onCheckedChange={(checked) => handleNotificationChange('candidateMatches', checked)}
-                      disabled={!isEditing}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div>
+                      <h4 className="font-medium text-slate-900">System Updates</h4>
+                      <p className="text-sm text-slate-600">Important platform updates and announcements</p>
+                    </div>
+                    <Switch
+                      checked={formData.notifications.systemUpdates}
+                      onCheckedChange={(checked) => handleNotificationChange('systemUpdates', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div>
+                      <h4 className="font-medium text-slate-900">Marketing & Promotions</h4>
+                      <p className="text-sm text-slate-600">Special offers and promotional content</p>
+                    </div>
+                    <Switch
+                      checked={formData.notifications.marketing}
+                      onCheckedChange={(checked) => handleNotificationChange('marketing', checked)}
                     />
                   </div>
                 </div>

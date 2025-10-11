@@ -926,6 +926,26 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // NEW: Flexible notification preferences methods
+  async getNotificationPreferences(): Promise<ApiResponse<{ notifications: any }>> {
+    const response = await fetch(`${API_BASE_URL}/user/preferences/notifications`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<{ notifications: any }>(response);
+  }
+
+  async updateNotificationPreferencesFlexible(notifications: Record<string, boolean>): Promise<ApiResponse> {
+    console.log('🔄 Updating notification preferences:', notifications);
+    const response = await fetch(`${API_BASE_URL}/user/preferences/notifications`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ notifications }),
+    });
+
+    return this.handleResponse(response);
+  }
+
   // Job preferences endpoints
   async getJobPreferences(): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/job-preferences`, {

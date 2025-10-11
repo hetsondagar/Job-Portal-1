@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Building2, Edit, Save, X, Loader2, Globe, MapPin, Phone, Mail, Users, Calendar, ChevronDown } from "lucide-react"
+import { Building2, Edit, Save, X, Loader2, Globe, MapPin, Phone, Mail, Users, Calendar, ChevronDown, Briefcase, Target } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
 
 interface CompanyManagementProps {
   companyId: string
@@ -30,10 +31,52 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   const [photos, setPhotos] = useState<any[]>([])
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showNatureOfBusinessDropdown, setShowNatureOfBusinessDropdown] = useState(false)
+  const [showCompanyTypesDropdown, setShowCompanyTypesDropdown] = useState(false)
   const auth = useAuth() as any
 
   const companySizes = [
     "1-50", "51-200", "201-500", "500-1000", "1000+"
+  ]
+
+  const natureOfBusinessOptions = [
+    "SaaS (Software as a Service)",
+    "PaaS (Platform as a Service)",
+    "IaaS (Infrastructure as a Service)",
+    "B2B (Business to Business)",
+    "B2C (Business to Consumer)",
+    "B2B2C (Business to Business to Consumer)",
+    "D2C (Direct to Consumer)",
+    "C2C (Consumer to Consumer)",
+    "B2G (Business to Government)",
+    "Enterprise Software",
+    "Product-based",
+    "Service-based",
+    "Consulting",
+    "Manufacturing",
+    "E-commerce",
+    "Fintech",
+    "Healthcare",
+    "EdTech",
+    "AgriTech",
+    "Other"
+  ]
+
+  const companyTypeOptions = [
+    "Corporate",
+    "Foreign MNC",
+    "Indian MNC",
+    "Startup",
+    "Unicorn (₹1000+ Cr valuation)",
+    "Govt/PSU",
+    "MNC",
+    "SME (Small & Medium Enterprise)",
+    "Private Limited",
+    "Public Limited",
+    "Partnership Firm",
+    "Sole Proprietorship",
+    "Non-Profit / NGO",
+    "Others"
   ]
 
   // Remove the old industries array - we'll use the custom dropdown
@@ -170,7 +213,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
     setIsEditing(false)
   }
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev: any) => ({
       ...prev,
       [field]: value
@@ -362,27 +405,121 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               )}
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="about">About Company</Label>
-              <Textarea
-                id="about"
-                value={formData.about || ""}
-                onChange={(e) => handleInputChange("about", e.target.value)}
-                placeholder="Company description"
-                rows={3}
-              />
+            <Separator className="my-6" />
+            
+            {/* About Company Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                <Briefcase className="w-5 h-5 mr-2 text-blue-600" />
+                About Company
+              </h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="about">Company Description</Label>
+                <Textarea
+                  id="about"
+                  value={formData.about || formData.description || ""}
+                  onChange={(e) => handleInputChange("about", e.target.value)}
+                  placeholder="Tell candidates about your company, culture, and values..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="whyJoinUs">Why Join Us</Label>
+                <Textarea
+                  id="whyJoinUs"
+                  value={formData.whyJoinUs || ""}
+                  onChange={(e) => handleInputChange("whyJoinUs", e.target.value)}
+                  placeholder="Tell jobseekers why they should join your company"
+                  rows={4}
+                />
+              </div>
+
+              {/* Nature of Business - Multi-select */}
+              <div className="space-y-2">
+                <Label>Nature of Business (Multiple Selection)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => setShowNatureOfBusinessDropdown(true)}
+                >
+                  <span className="text-left flex-1 truncate">
+                    {formData.natureOfBusiness && formData.natureOfBusiness.length > 0
+                      ? `${formData.natureOfBusiness.length} selected`
+                      : "Select nature of business"}
+                  </span>
+                  <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                </Button>
+                
+                {/* Display selected values */}
+                {formData.natureOfBusiness && formData.natureOfBusiness.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {formData.natureOfBusiness.map((item: string) => (
+                      <Badge key={item} variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {showNatureOfBusinessDropdown && (
+                  <MultiSelectDropdown
+                    title="Select Nature of Business"
+                    options={natureOfBusinessOptions}
+                    selectedValues={formData.natureOfBusiness || []}
+                    onChange={(values) => {
+                      handleInputChange("natureOfBusiness", values)
+                    }}
+                    onClose={() => setShowNatureOfBusinessDropdown(false)}
+                  />
+                )}
+              </div>
+
+              {/* Company Type - Multi-select */}
+              <div className="space-y-2">
+                <Label>Company Type (Multiple Selection)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => setShowCompanyTypesDropdown(true)}
+                >
+                  <span className="text-left flex-1 truncate">
+                    {formData.companyTypes && formData.companyTypes.length > 0
+                      ? `${formData.companyTypes.length} selected`
+                      : "Select company type(s)"}
+                  </span>
+                  <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                </Button>
+                
+                {/* Display selected values */}
+                {formData.companyTypes && formData.companyTypes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {formData.companyTypes.map((type: string) => (
+                      <Badge key={type} variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200">
+                        {type}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {showCompanyTypesDropdown && (
+                  <MultiSelectDropdown
+                    title="Select Company Type(s)"
+                    options={companyTypeOptions}
+                    selectedValues={formData.companyTypes || []}
+                    onChange={(values) => {
+                      handleInputChange("companyTypes", values)
+                    }}
+                    onClose={() => setShowCompanyTypesDropdown(false)}
+                  />
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="whyJoinUs">Why Join Us</Label>
-              <Textarea
-                id="whyJoinUs"
-                value={formData.whyJoinUs || ""}
-                onChange={(e) => handleInputChange("whyJoinUs", e.target.value)}
-                placeholder="Tell jobseekers why they should join your company"
-                rows={5}
-              />
-            </div>
+            <Separator className="my-6" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -505,6 +642,38 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                     <p className="text-slate-700 dark:text-slate-300">
                       {company.whyJoinUs || 'No information provided'}
                     </p>
+                  </div>
+
+                  {/* Nature of Business Display */}
+                  <div>
+                    <Label className="text-sm text-slate-500">Nature of Business</Label>
+                    {company.natureOfBusiness && company.natureOfBusiness.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {company.natureOfBusiness.map((item: string) => (
+                          <Badge key={item} variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                            {item}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-700 dark:text-slate-300">Not specified</p>
+                    )}
+                  </div>
+
+                  {/* Company Types Display */}
+                  <div>
+                    <Label className="text-sm text-slate-500">Company Type</Label>
+                    {company.companyTypes && company.companyTypes.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {company.companyTypes.map((type: string) => (
+                          <Badge key={type} variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200">
+                            {type}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-700 dark:text-slate-300">Not specified</p>
+                    )}
                   </div>
                 </div>
               </div>

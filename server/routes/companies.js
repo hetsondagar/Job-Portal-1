@@ -725,6 +725,7 @@ router.get('/:id', async (req, res) => {
       email: company.email,
       phone: company.phone,
       description: company.description,
+      about: company.description, // Alias for compatibility
       whyJoinUs: company.whyJoinUs,
       address: company.address,
       city: company.city,
@@ -742,6 +743,9 @@ router.get('/:id', async (req, res) => {
       totalReviews: companyStats.totalReviews,
       activeJobsCount,
       photos: companyPhotos,
+      // New fields
+      natureOfBusiness: company.natureOfBusiness || [],
+      companyTypes: company.companyTypes || [],
       // Additional computed fields
       location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
       sector: company.industry, // Map industry to sector for compatibility
@@ -863,7 +867,10 @@ router.get('/:id/jobs', async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, industry, companySize, website, description, address, city, state, country, whyJoinUs } = req.body;
+    const { 
+      name, industry, companySize, website, description, address, city, state, country, 
+      whyJoinUs, natureOfBusiness, companyTypes, phone, email, about 
+    } = req.body;
     
     // Check if the user has access to this company
     if (req.user.user_type !== 'admin') {
@@ -884,19 +891,35 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    console.log('🔄 Updating company with data:', { natureOfBusiness, companyTypes });
+
     // Update company information
-    await company.update({
+    const updateData = {
       name: name || company.name,
       industry: industry || company.industry,
       companySize: companySize || company.companySize,
       website: website || company.website,
-      description: description || company.description,
+      description: description || about || company.description,
       whyJoinUs: typeof whyJoinUs === 'string' ? whyJoinUs : company.whyJoinUs,
       address: address || company.address,
       city: city || company.city,
       state: state || company.state,
-      country: country || company.country
-    });
+      country: country || company.country,
+      phone: phone || company.phone,
+      email: email || company.email
+    };
+
+    // Add new fields if provided (arrays)
+    if (Array.isArray(natureOfBusiness)) {
+      updateData.natureOfBusiness = natureOfBusiness;
+    }
+    if (Array.isArray(companyTypes)) {
+      updateData.companyTypes = companyTypes;
+    }
+
+    await company.update(updateData);
+
+    console.log('✅ Company updated successfully with natureOfBusiness and companyTypes');
 
     res.json({
       success: true,
@@ -910,11 +933,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
         email: company.email,
         phone: company.phone,
         description: company.description,
-      whyJoinUs: company.whyJoinUs,
+        about: company.description,
+        whyJoinUs: company.whyJoinUs,
         address: company.address,
         city: company.city,
         state: company.state,
-        country: company.country
+        country: company.country,
+        natureOfBusiness: company.natureOfBusiness,
+        companyTypes: company.companyTypes,
+        logo: company.logo
       }
     });
 
