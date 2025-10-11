@@ -165,6 +165,22 @@ const Company = sequelize.define('Company', {
       }
     }
   },
+  // NEW: Nature of Business (multi-select)
+  natureOfBusiness: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'nature_of_business',
+    comment: 'Array of business nature types: SaaS, PaaS, B2B, B2C, D2C, etc.'
+  },
+  // NEW: Company Types (multi-select)
+  companyTypes: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+    field: 'company_types',
+    comment: 'Array of company types: Corporate, Foreign MNC, Indian MNC, Startup, Govt/PSU, Unicorn, etc.'
+  },
   fundingStage: {
     type: DataTypes.ENUM('bootstrapped', 'seed', 'series-a', 'series-b', 'series-c', 'public'),
     allowNull: true

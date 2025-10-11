@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { apiService, User } from '@/lib/api'
 import { toast } from 'sonner'
-import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar } from 'lucide-react'
+import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar, Building2, ChevronDown } from 'lucide-react'
+import { Badge } from "@/components/ui/badge"
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
 
 interface ProfileCompletionDialogProps {
   isOpen: boolean
@@ -507,22 +509,66 @@ export function EmployerProfileCompletionDialog({
   onProfileUpdated 
 }: ProfileCompletionDialogProps) {
   const [formData, setFormData] = useState({
+    // Personal Info
     phone: '',
     designation: '',
     department: '',
+    location: '',
+    // Company Info (if creating new)
     companyName: '',
     companyIndustry: '',
     companySize: '',
-    companyWebsite: ''
+    companyWebsite: '',
+    companyDescription: '',
+    companyWhyJoinUs: '',
+    // Company Details (if existing company)
+    natureOfBusiness: [] as string[],
+    companyTypes: [] as string[]
   })
   const [submitting, setSubmitting] = useState(false)
   const [needsCompany, setNeedsCompany] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [showNatureOfBusinessDropdown, setShowNatureOfBusinessDropdown] = useState(false)
+  const [showCompanyTypesDropdown, setShowCompanyTypesDropdown] = useState(false)
+  const [companyData, setCompanyData] = useState<any>(null)
+
+  // Multi-select options
+  const natureOfBusinessOptions = [
+    "SaaS (Software as a Service)", "PaaS (Platform as a Service)", "IaaS (Infrastructure as a Service)",
+    "B2B (Business to Business)", "B2C (Business to Consumer)", "B2B2C (Business to Business to Consumer)",
+    "D2C (Direct to Consumer)", "C2C (Consumer to Consumer)", "B2G (Business to Government)",
+    "Enterprise Software", "Product-based", "Service-based", "Consulting", "Manufacturing",
+    "E-commerce", "Fintech", "Healthcare", "EdTech", "AgriTech", "Other"
+  ]
+
+  const companyTypeOptions = [
+    "Corporate", "Foreign MNC", "Indian MNC", "Startup", "Unicorn (₹1000+ Cr valuation)",
+    "Govt/PSU", "MNC", "SME (Small & Medium Enterprise)", "Private Limited", "Public Limited",
+    "Partnership Firm", "Sole Proprietorship", "Non-Profit / NGO", "Others"
+  ]
 
   // Check if profile is incomplete - COMPREHENSIVE CHECK
   const isProfileIncomplete = () => {
     // Check if user has marked profile as complete
     if (user.preferences?.profileCompleted === true) {
       return false
+    }
+
+    // Check if user has skipped and the skip period hasn't expired
+    if (user.preferences?.profileCompletionSkippedUntil) {
+      const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
+      const now = new Date()
+      
+      if (skipUntil > now) {
+        // Check if it's the same login session
+        const skipSession = user.preferences.profileCompletionSkipSession
+        const currentSession = user.lastLoginAt || new Date().toISOString()
+        
+        if (skipSession === currentSession) {
+          console.log('🕒 Profile completion skipped until:', skipUntil.toISOString())
+          return false
+        }
+      }
     }
 
     // Required fields for employer
@@ -533,30 +579,57 @@ export function EmployerProfileCompletionDialog({
     return !hasRequiredFields
   }
 
+  // Load company data if user has a company
+  useEffect(() => {
+    const loadCompanyData = async () => {
+      if (user?.companyId && !needsCompany) {
+        try {
+          const response = await apiService.getCompany(user.companyId)
+          if (response.success && response.data) {
+            setCompanyData(response.data)
+            setFormData(prev => ({
+              ...prev,
+              natureOfBusiness: response.data.natureOfBusiness || [],
+              companyTypes: response.data.companyTypes || []
+            }))
+          }
+        } catch (error) {
+          console.error('Error loading company data:', error)
+        }
+      }
+    }
+
+    loadCompanyData()
+  }, [user?.companyId, needsCompany])
+
   useEffect(() => {
     setNeedsCompany(!user.companyId)
     if (user) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         phone: user.phone || '',
         designation: (user as any).designation || '',
         department: (user as any).department || '',
-        companyName: '',
-        companyIndustry: '',
-        companySize: '',
-        companyWebsite: ''
-      })
+        location: user.currentLocation || ''
+      }))
     }
   }, [user])
 
   const handleSubmit = async () => {
-    // Validate required fields
-    if (!formData.phone || !formData.designation) {
-      toast.error('Please fill in all required fields (Phone, Designation)')
-      return
+    // Validate required fields based on current step
+    if (currentStep === 1) {
+      if (!formData.phone || !formData.designation) {
+        toast.error('Please fill in all required fields (Phone, Designation)')
+        return
+      }
+      if (needsCompany && (!formData.companyName || !formData.companyIndustry)) {
+        toast.error('Please provide company name and industry')
+        return
+      }
     }
 
-    if (needsCompany && (!formData.companyName || !formData.companyIndustry)) {
-      toast.error('Please provide company name and industry')
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1)
       return
     }
 
@@ -571,7 +644,10 @@ export function EmployerProfileCompletionDialog({
           industry: formData.companyIndustry,
           companySize: formData.companySize || 'Not specified',
           website: formData.companyWebsite || '',
-          description: `Company created for ${user.firstName} ${user.lastName}`,
+          description: formData.companyDescription || `Company created for ${user.firstName} ${user.lastName}`,
+          whyJoinUs: formData.companyWhyJoinUs || '',
+          natureOfBusiness: formData.natureOfBusiness,
+          companyTypes: formData.companyTypes,
           region: user.region || 'india'
         })
 
@@ -583,6 +659,19 @@ export function EmployerProfileCompletionDialog({
           setSubmitting(false)
           return
         }
+      } else if (!needsCompany && user.companyId) {
+        // Update existing company with additional details
+        try {
+          await apiService.updateCompany(user.companyId, {
+            description: formData.companyDescription || companyData?.description,
+            whyJoinUs: formData.companyWhyJoinUs || companyData?.whyJoinUs,
+            natureOfBusiness: formData.natureOfBusiness,
+            companyTypes: formData.companyTypes
+          })
+        } catch (error) {
+          console.error('Error updating company details:', error)
+          // Continue with user profile update even if company update fails
+        }
       }
 
       // Update user profile
@@ -590,6 +679,7 @@ export function EmployerProfileCompletionDialog({
         phone: formData.phone,
         designation: formData.designation,
         department: formData.department || undefined,
+        currentLocation: formData.location || undefined,
         companyId: companyId,
         preferences: {
           ...(user.preferences || {}),
@@ -600,7 +690,7 @@ export function EmployerProfileCompletionDialog({
       const response = await apiService.updateProfile(updateData)
       
       if (response.success) {
-        toast.success('Profile updated successfully!')
+        toast.success('Profile completed successfully! 🎉')
         onProfileUpdated(response.data)
         onClose()
       } else {
@@ -644,138 +734,354 @@ export function EmployerProfileCompletionDialog({
     }
   }
 
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const handleInputChange = (field: string, value: string | string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
   // Don't show dialog if profile is complete
   if (!isProfileIncomplete()) {
     return null
   }
 
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 1: return "Basic Information"
+      case 2: return "Company Details"
+      case 3: return "About Your Company"
+      default: return "Complete Your Profile"
+    }
+  }
+
+  const getStepDescription = () => {
+    switch (currentStep) {
+      case 1: return "Let's start with your basic professional information."
+      case 2: return needsCompany ? "Create your company profile to get started." : "Complete your company details."
+      case 3: return "Tell candidates about your company and what makes it special."
+      default: return "Complete your profile to start posting jobs and managing applications effectively."
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="w-5 h-5" />
             Complete Your Employer Profile
+            <Badge variant="outline" className="ml-2">Step {currentStep} of 3</Badge>
           </DialogTitle>
           <DialogDescription>
-            Complete your profile to start posting jobs and managing applications effectively.
+            {getStepDescription()}
           </DialogDescription>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / 3) * 100}%` }}
+            />
+          </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Required Fields */}
-          <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100">Required Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="emp-phone">Phone Number *</Label>
-                <Input
-                  id="emp-phone"
-                  type="tel"
-                  placeholder="+91 9876543210"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="designation">Your Designation *</Label>
-                <Input
-                  id="designation"
-                  placeholder="e.g., HR Manager, Recruiter"
-                  value={formData.designation}
-                  onChange={(e) => setFormData(prev => ({ ...prev, designation: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  placeholder="e.g., Human Resources"
-                  value={formData.department}
-                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Company Information (if needed) */}
-          {needsCompany && (
-            <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <h3 className="font-semibold text-sm text-green-900 dark:text-green-100">Company Information</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                You don't have a company associated. Please provide company details or join an existing company.
-              </p>
+          {/* Step 1: Basic Information */}
+          {currentStep === 1 && (
+            <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                <UserIcon className="w-4 h-4" />
+                Basic Information
+              </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="companyName">Company Name *</Label>
+                  <Label htmlFor="emp-phone">Phone Number *</Label>
                   <Input
-                    id="companyName"
-                    placeholder="e.g., Tech Solutions Pvt Ltd"
-                    value={formData.companyName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                    id="emp-phone"
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="companyIndustry">Industry *</Label>
+                  <Label htmlFor="designation">Your Designation *</Label>
                   <Input
-                    id="companyIndustry"
-                    placeholder="e.g., IT Services, Manufacturing"
-                    value={formData.companyIndustry}
-                    onChange={(e) => setFormData(prev => ({ ...prev, companyIndustry: e.target.value }))}
+                    id="designation"
+                    placeholder="e.g., HR Manager, Recruiter"
+                    value={formData.designation}
+                    onChange={(e) => handleInputChange('designation', e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="companySize">Company Size</Label>
-                  <Select value={formData.companySize} onValueChange={(value) => setFormData(prev => ({ ...prev, companySize: value }))}>
-                    <SelectTrigger id="companySize">
-                      <SelectValue placeholder="Select size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1-10 employees</SelectItem>
-                      <SelectItem value="11-50">11-50 employees</SelectItem>
-                      <SelectItem value="51-200">51-200 employees</SelectItem>
-                      <SelectItem value="201-500">201-500 employees</SelectItem>
-                      <SelectItem value="501-1000">501-1000 employees</SelectItem>
-                      <SelectItem value="1000+">1000+ employees</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="department">Department</Label>
+                  <Input
+                    id="department"
+                    placeholder="e.g., Human Resources"
+                    value={formData.department}
+                    onChange={(e) => handleInputChange('department', e.target.value)}
+                  />
                 </div>
 
                 <div>
-                  <Label htmlFor="companyWebsite">Company Website</Label>
+                  <Label htmlFor="location">Location</Label>
                   <Input
-                    id="companyWebsite"
-                    type="url"
-                    placeholder="https://www.example.com"
-                    value={formData.companyWebsite}
-                    onChange={(e) => setFormData(prev => ({ ...prev, companyWebsite: e.target.value }))}
+                    id="location"
+                    placeholder="e.g., Mumbai, Maharashtra"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange('location', e.target.value)}
                   />
                 </div>
               </div>
             </div>
           )}
+
+          {/* Step 2: Company Details */}
+          {currentStep === 2 && (
+            <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <h3 className="font-semibold text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Company Details
+              </h3>
+              
+              {needsCompany ? (
+                <>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    You don't have a company associated. Please provide company details to get started.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="companyName">Company Name *</Label>
+                      <Input
+                        id="companyName"
+                        placeholder="e.g., Tech Solutions Pvt Ltd"
+                        value={formData.companyName}
+                        onChange={(e) => handleInputChange('companyName', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="companyIndustry">Industry *</Label>
+                      <Input
+                        id="companyIndustry"
+                        placeholder="e.g., IT Services, Manufacturing"
+                        value={formData.companyIndustry}
+                        onChange={(e) => handleInputChange('companyIndustry', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="companySize">Company Size</Label>
+                      <Select value={formData.companySize} onValueChange={(value) => handleInputChange('companySize', value)}>
+                        <SelectTrigger id="companySize">
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1-50">1-50 employees</SelectItem>
+                          <SelectItem value="51-200">51-200 employees</SelectItem>
+                          <SelectItem value="201-500">201-500 employees</SelectItem>
+                          <SelectItem value="500-1000">500-1000 employees</SelectItem>
+                          <SelectItem value="1000+">1000+ employees</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="companyWebsite">Company Website</Label>
+                      <Input
+                        id="companyWebsite"
+                        type="url"
+                        placeholder="https://www.example.com"
+                        value={formData.companyWebsite}
+                        onChange={(e) => handleInputChange('companyWebsite', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <Building2 className="w-12 h-12 mx-auto text-green-600 mb-4" />
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    You're already associated with <strong>{companyData?.name}</strong>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Continue to the next step to complete your company profile.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: About Your Company */}
+          {currentStep === 3 && (
+            <div className="space-y-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <h3 className="font-semibold text-sm text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                <Briefcase className="w-4 h-4" />
+                About Your Company
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="companyDescription">Company Description</Label>
+                  <Textarea
+                    id="companyDescription"
+                    placeholder="Tell candidates about your company, culture, and values..."
+                    value={formData.companyDescription}
+                    onChange={(e) => handleInputChange('companyDescription', e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="companyWhyJoinUs">Why Join Us</Label>
+                  <Textarea
+                    id="companyWhyJoinUs"
+                    placeholder="Tell jobseekers why they should join your company..."
+                    value={formData.companyWhyJoinUs}
+                    onChange={(e) => handleInputChange('companyWhyJoinUs', e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nature of Business */}
+                  <div className="space-y-2">
+                    <Label>Nature of Business</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => setShowNatureOfBusinessDropdown(true)}
+                    >
+                      <span className="text-left flex-1 truncate">
+                        {formData.natureOfBusiness.length > 0
+                          ? `${formData.natureOfBusiness.length} selected`
+                          : "Select nature of business"}
+                      </span>
+                      <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                    </Button>
+                    
+                    {formData.natureOfBusiness.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {formData.natureOfBusiness.slice(0, 3).map((item: string) => (
+                          <Badge key={item} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                            {item}
+                          </Badge>
+                        ))}
+                        {formData.natureOfBusiness.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{formData.natureOfBusiness.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Company Types */}
+                  <div className="space-y-2">
+                    <Label>Company Type</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => setShowCompanyTypesDropdown(true)}
+                    >
+                      <span className="text-left flex-1 truncate">
+                        {formData.companyTypes.length > 0
+                          ? `${formData.companyTypes.length} selected`
+                          : "Select company type(s)"}
+                      </span>
+                      <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                    </Button>
+                    
+                    {formData.companyTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {formData.companyTypes.slice(0, 3).map((type: string) => (
+                          <Badge key={type} variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                            {type}
+                          </Badge>
+                        ))}
+                        {formData.companyTypes.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{formData.companyTypes.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Multi-Select Dropdowns */}
+          {showNatureOfBusinessDropdown && (
+            <MultiSelectDropdown
+              title="Select Nature of Business"
+              options={natureOfBusinessOptions}
+              selectedValues={formData.natureOfBusiness}
+              onChange={(values) => {
+                handleInputChange("natureOfBusiness", values)
+              }}
+              onClose={() => setShowNatureOfBusinessDropdown(false)}
+            />
+          )}
+
+          {showCompanyTypesDropdown && (
+            <MultiSelectDropdown
+              title="Select Company Type(s)"
+              options={companyTypeOptions}
+              selectedValues={formData.companyTypes}
+              onChange={(values) => {
+                handleInputChange("companyTypes", values)
+              }}
+              onClose={() => setShowCompanyTypesDropdown(false)}
+            />
+          )}
         </div>
 
         <div className="flex justify-between gap-3 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleSkip}
-            disabled={submitting}
-          >
-            Skip for Now
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSkip}
+              disabled={submitting}
+            >
+              Skip for Now
+            </Button>
+            {currentStep > 1 && (
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={submitting}
+              >
+                Previous
+              </Button>
+            )}
+          </div>
+          
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !formData.phone || !formData.designation || (needsCompany && (!formData.companyName || !formData.companyIndustry))}
+            disabled={
+              submitting || 
+              (currentStep === 1 && (!formData.phone || !formData.designation)) ||
+              (currentStep === 2 && needsCompany && (!formData.companyName || !formData.companyIndustry))
+            }
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           >
-            {submitting ? 'Saving...' : 'Complete Profile'}
+            {submitting ? 'Saving...' : 
+             currentStep < 3 ? 'Next' : 'Complete Profile'}
           </Button>
         </div>
       </DialogContent>

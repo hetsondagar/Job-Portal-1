@@ -47,21 +47,8 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Storage for company gallery photos
-const companyPhotoStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/company-photos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, 'company-photo-' + uniqueSuffix + extension);
-  }
-});
+// Use memory storage for Cloudinary uploads
+const companyPhotoStorage = multer.memoryStorage();
 
 // Define upload middlewares BEFORE routes that use them
 const companyPhotoUpload = multer({
@@ -75,21 +62,11 @@ const companyPhotoUpload = multer({
   }
 });
 
-// Storage for company logo uploads
-const logoStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/company-logos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, 'company-logo-' + uniqueSuffix + extension);
-  }
-});
+// Cloudinary upload configuration
+const { uploadBufferToCloudinary, isConfigured } = require('../config/cloudinary');
+
+// Use memory storage (Cloudinary doesn't need disk storage)
+const logoStorage = multer.memoryStorage();
 
 const companyLogoUpload = multer({
   storage: logoStorage,
@@ -116,28 +93,37 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // CompanyPhoto model is now directly imported
+    // Upload to Cloudinary (persistent cloud storage)
+    let fileUrl, filename, publicId;
 
-    const filename = req.file.filename;
-    const filePath = `/uploads/company-photos/${filename}`;
-    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
-    
-    console.log('🔍 BACKEND_URL:', process.env.BACKEND_URL);
-    console.log('🔍 Generated company photo URL:', fileUrl);
-    console.log('🔍 File saved to:', req.file.path);
-    console.log('🔍 File exists:', require('fs').existsSync(req.file.path));
-    
-    // Check upload directory
-    const uploadDir = require('path').join(__dirname, '..', 'uploads', 'company-photos');
-    console.log('🔍 Upload directory exists:', require('fs').existsSync(uploadDir));
-    console.log('🔍 Upload directory path:', uploadDir);
-    
-    // List files in upload directory
-    try {
-      const files = require('fs').readdirSync(uploadDir);
-      console.log('🔍 Files in upload directory:', files.slice(0, 5)); // Show first 5 files
-    } catch (err) {
-      console.log('🔍 Error reading upload directory:', err.message);
+    if (isConfigured()) {
+      console.log('☁️ Uploading company photo to Cloudinary...');
+      const cloudinaryResult = await uploadBufferToCloudinary(
+        req.file.buffer,
+        'company-photos',
+        {
+          public_id: `company-${id}-photo-${Date.now()}`,
+          transformation: [
+            { width: 1200, height: 800, crop: 'limit' },
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+          ]
+        }
+      );
+      fileUrl = cloudinaryResult.url;
+      publicId = cloudinaryResult.publicId;
+      filename = req.file.originalname;
+      console.log('✅ Photo uploaded to Cloudinary:', fileUrl);
+    } else {
+      console.warn('⚠️ Cloudinary not configured, using local storage');
+      filename = `photo-${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const localPath = path.join(__dirname, '../uploads/company-photos', filename);
+      const fs = require('fs');
+      if (!fs.existsSync(path.dirname(localPath))) {
+        fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      }
+      fs.writeFileSync(localPath, req.file.buffer);
+      fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/uploads/company-photos/${filename}`;
     }
 
     // If marking as primary, unset others for this company
@@ -150,7 +136,7 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
     const photo = await CompanyPhoto.create({
       companyId: id,
       filename,
-      filePath,
+      filePath: publicId || `/uploads/company-photos/${filename}`,
       fileUrl,
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
@@ -236,9 +222,36 @@ router.post('/:id/logo', authenticateToken, companyLogoUpload.single('logo'), as
     const company = await Company.findByPk(id);
     if (!company) return res.status(404).json({ success: false, message: 'Company not found' });
 
-    const filename = req.file.filename;
-    const filePath = `/uploads/company-logos/${filename}`;
-    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+    // Upload to Cloudinary (persistent cloud storage)
+    let fileUrl;
+    
+    if (isConfigured()) {
+      console.log('☁️ Uploading logo to Cloudinary...');
+      const cloudinaryResult = await uploadBufferToCloudinary(
+        req.file.buffer,
+        'company-logos',
+        {
+          public_id: `company-logo-${id}-${Date.now()}`,
+          transformation: [
+            { width: 400, height: 400, crop: 'limit' },
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+          ]
+        }
+      );
+      fileUrl = cloudinaryResult.url;
+      console.log('✅ Logo uploaded to Cloudinary:', fileUrl);
+    } else {
+      console.warn('⚠️ Cloudinary not configured, using local storage (files will be lost on restart!)');
+      const filename = `logo-${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const localPath = path.join(__dirname, '../uploads/company-logos', filename);
+      const fs = require('fs');
+      if (!fs.existsSync(path.dirname(localPath))) {
+        fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      }
+      fs.writeFileSync(localPath, req.file.buffer);
+      fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/uploads/company-logos/${filename}`;
+    }
 
     await company.update({ logo: fileUrl });
 
@@ -713,6 +726,7 @@ router.get('/:id', async (req, res) => {
       email: company.email,
       phone: company.phone,
       description: company.description,
+      about: company.description, // Alias for compatibility
       whyJoinUs: company.whyJoinUs,
       address: company.address,
       city: company.city,
@@ -730,6 +744,9 @@ router.get('/:id', async (req, res) => {
       totalReviews: companyStats.totalReviews,
       activeJobsCount,
       photos: companyPhotos,
+      // New fields
+      natureOfBusiness: company.natureOfBusiness || [],
+      companyTypes: company.companyTypes || [],
       // Additional computed fields
       location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
       sector: company.industry, // Map industry to sector for compatibility
@@ -851,7 +868,10 @@ router.get('/:id/jobs', async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, industry, companySize, website, description, address, city, state, country, whyJoinUs } = req.body;
+    const { 
+      name, industry, companySize, website, description, address, city, state, country, 
+      whyJoinUs, natureOfBusiness, companyTypes, phone, email, about 
+    } = req.body;
     
     // Check if the user has access to this company
     if (req.user.user_type !== 'admin') {
@@ -872,19 +892,35 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    console.log('🔄 Updating company with data:', { natureOfBusiness, companyTypes });
+
     // Update company information
-    await company.update({
+    const updateData = {
       name: name || company.name,
       industry: industry || company.industry,
       companySize: companySize || company.companySize,
       website: website || company.website,
-      description: description || company.description,
+      description: description || about || company.description,
       whyJoinUs: typeof whyJoinUs === 'string' ? whyJoinUs : company.whyJoinUs,
       address: address || company.address,
       city: city || company.city,
       state: state || company.state,
-      country: country || company.country
-    });
+      country: country || company.country,
+      phone: phone || company.phone,
+      email: email || company.email
+    };
+
+    // Add new fields if provided (arrays)
+    if (Array.isArray(natureOfBusiness)) {
+      updateData.natureOfBusiness = natureOfBusiness;
+    }
+    if (Array.isArray(companyTypes)) {
+      updateData.companyTypes = companyTypes;
+    }
+
+    await company.update(updateData);
+
+    console.log('✅ Company updated successfully with natureOfBusiness and companyTypes');
 
     res.json({
       success: true,
@@ -898,11 +934,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
         email: company.email,
         phone: company.phone,
         description: company.description,
-      whyJoinUs: company.whyJoinUs,
+        about: company.description,
+        whyJoinUs: company.whyJoinUs,
         address: company.address,
         city: company.city,
         state: company.state,
-        country: company.country
+        country: company.country,
+        natureOfBusiness: company.natureOfBusiness,
+        companyTypes: company.companyTypes,
+        logo: company.logo
       }
     });
 

@@ -18,9 +18,58 @@ const { authenticateToken } = (() => {
 const NotificationService = require('../services/notificationService');
 const JobPreferenceMatchingService = require('../services/jobPreferenceMatchingService');
 const { Job, Company, User, Requirement } = require('../config/index');
+const emailService = require('../services/emailService');
 
 // Health check
 router.get('/health', (req, res) => res.json({ ok: true }));
+
+// Test email functionality
+router.post('/test-email', async (req, res) => {
+  try {
+    const { email, testType } = req.body;
+    const targetEmail = email || process.env.SMTP_USER || 'test@example.com';
+    
+    console.log('\n🧪 Testing email service...');
+    console.log(`📧 Target email: ${targetEmail}`);
+    console.log(`📧 Test type: ${testType || 'password-reset'}`);
+    
+    let result;
+    if (testType === 'password-reset') {
+      result = await emailService.sendPasswordResetEmail(
+        targetEmail, 
+        'test-token-' + Date.now(), 
+        'Test User'
+      );
+    } else {
+      // Generic test email
+      result = await emailService.sendMail({
+        to: targetEmail,
+        subject: 'Test Email from Job Portal',
+        html: `
+          <h2>Test Email</h2>
+          <p>If you received this email, your SMTP configuration is working correctly!</p>
+          <p>Sent at: ${new Date().toLocaleString()}</p>
+        `
+      });
+    }
+    
+    console.log('✅ Email test result:', result);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Test email sent successfully',
+      result,
+      targetEmail
+    });
+  } catch (error) {
+    console.error('❌ Email test failed:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to send test email',
+      error: error.message 
+    });
+  }
+});
 
 // Trigger preferred job notification for matching users or a specific user
 router.post('/preferred', authenticateToken, async (req, res) => {

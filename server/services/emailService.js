@@ -1,5 +1,13 @@
 const nodemailer = require('nodemailer');
 
+// Try to load SendGrid if available
+let sgMail = null;
+try {
+  sgMail = require('@sendgrid/mail');
+} catch (e) {
+  // SendGrid not installed, will use SMTP fallback
+}
+
 class EmailService {
   constructor() {
     this.fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@jobportal.com';
@@ -9,10 +17,19 @@ class EmailService {
     this.initializeTransporter();
   }
 
-  async initializeTransporter() {
+  async initializeTransporter(forceReinitialize = false) {
     try {
+      // If already initialized and not forcing reinitialize, skip
+      if (this.initialized && !forceReinitialize) {
+        return;
+      }
+      // Skip SendGrid completely - use SMTP only
+      console.log('📧 Using SMTP providers only (SendGrid disabled)');
+
       // Try multiple email providers in order of preference
+      // Gmail is most reliable in production environments like Render.com
       const providers = [
+        // Priority 1: Gmail SMTP (most reliable in production)
         {
           name: 'Gmail',
           host: 'smtp.gmail.com',
@@ -21,6 +38,25 @@ class EmailService {
           port: 587,
           secure: false
         },
+        // Priority 2: Custom SMTP (supports any provider)
+        {
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true'
+        },
+        // Priority 3: Outlook/Hotmail
+        {
+          name: 'Outlook',
+          host: 'smtp-mail.outlook.com',
+          user: process.env.OUTLOOK_USER,
+          pass: process.env.OUTLOOK_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        // Priority 4: Yahoo SMTP (last resort - often blocked by hosting providers)
         {
           name: 'Yahoo (Port 587)',
           host: 'smtp.mail.yahoo.com',
@@ -36,33 +72,39 @@ class EmailService {
           pass: process.env.YAHOO_APP_PASSWORD,
           port: 465,
           secure: true
-        },
-        {
-          name: 'Custom SMTP',
-          host: process.env.SMTP_HOST,
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_SECURE === 'true'
         }
       ];
 
       console.log('\n📧 Email Service Configuration Check:');
       console.log('=====================================');
-      if (process.env.GMAIL_USER) {
-        console.log('✓ Gmail credentials found');
+      if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+        console.log('✓ Gmail SMTP credentials found (PRIORITY 1 - Most Reliable)');
         console.log(`  User: ${process.env.GMAIL_USER}`);
         console.log(`  Password: ${process.env.GMAIL_APP_PASSWORD ? '***' + process.env.GMAIL_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      }
+      if (process.env.YAHOO_USER && process.env.YAHOO_APP_PASSWORD) {
+        console.log('✓ Yahoo SMTP credentials found (BACKUP - Often Blocked)');
+        console.log(`  User: ${process.env.YAHOO_USER}`);
+        console.log(`  Password: ${process.env.YAHOO_APP_PASSWORD ? '***' + process.env.YAHOO_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      }
+      // SendGrid disabled - using SMTP only
+      if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        console.log('✓ Custom SMTP credentials found (BACKUP)');
+        console.log(`  Host: ${process.env.SMTP_HOST}`);
+        console.log(`  Port: ${process.env.SMTP_PORT || 587}`);
+        console.log(`  User: ${process.env.SMTP_USER}`);
+        console.log(`  Secure: ${process.env.SMTP_SECURE === 'true' ? 'Yes (TLS)' : 'No (STARTTLS)'}`);
+        console.log(`  Password: ${process.env.SMTP_PASS ? '***' + process.env.SMTP_PASS.slice(-4) : 'NOT SET'}`);
       }
       if (process.env.YAHOO_USER) {
         console.log('✓ Yahoo credentials found');
         console.log(`  User: ${process.env.YAHOO_USER}`);
         console.log(`  Password: ${process.env.YAHOO_APP_PASSWORD ? '***' + process.env.YAHOO_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
       }
-      if (process.env.SMTP_HOST) {
-        console.log('✓ Custom SMTP credentials found');
-        console.log(`  Host: ${process.env.SMTP_HOST}`);
-        console.log(`  User: ${process.env.SMTP_USER}`);
+      if (process.env.GMAIL_USER) {
+        console.log('✓ Gmail credentials found');
+        console.log(`  User: ${process.env.GMAIL_USER}`);
+        console.log(`  Password: ${process.env.GMAIL_APP_PASSWORD ? '***' + process.env.GMAIL_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
       }
       console.log('=====================================\n');
 
@@ -94,13 +136,21 @@ class EmailService {
       console.log('=====================================');
       console.log('Using MOCK transporter - emails will NOT actually send!');
       console.log('');
-      console.log('To fix this:');
-      console.log('1. Check your .env file has email credentials');
-      console.log('2. For Gmail: Use App Password (not regular password)');
-      console.log('3. For Yahoo: Generate app password in Yahoo settings');
-      console.log('4. Make sure password has NO SPACES');
+      console.log('🚀 QUICK FIX - Use Gmail SMTP (Recommended):');
+      console.log('1. Go to https://myaccount.google.com/apppasswords');
+      console.log('2. Generate an app password for "Job Portal"');
+      console.log('3. Add to Render.com environment variables:');
+      console.log('   GMAIL_USER=your-gmail@gmail.com');
+      console.log('   GMAIL_APP_PASSWORD=your-16-char-password');
+      console.log('4. Restart your service');
       console.log('');
-      console.log('See server/QUICK_EMAIL_SETUP.md for detailed instructions');
+      console.log('📧 Alternative: Use SendGrid (Production Ready)');
+      console.log('1. Sign up at https://sendgrid.com');
+      console.log('2. Get API key and add:');
+      console.log('   SENDGRID_API_KEY=your-api-key');
+      console.log('   SENDGRID_FROM_EMAIL=your-verified-email');
+      console.log('');
+      console.log('See server/scripts/setup-gmail-smtp.js for detailed instructions');
       console.log('=====================================\n');
       this.initialized = true;
 
@@ -112,6 +162,10 @@ class EmailService {
   }
 
   async createTransporter(provider) {
+    // Special handling for Yahoo SMTP and Gmail
+    const isYahoo = provider.host && provider.host.includes('yahoo');
+    const isGmail = provider.host && provider.host.includes('gmail');
+    
     const transporterOptions = {
       host: provider.host,
       port: provider.port,
@@ -123,14 +177,33 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: 5000, // Reduced to 5 seconds for faster fallback
-      greetingTimeout: 5000,
-      socketTimeout: 5000,
+      connectionTimeout: isYahoo ? 45000 : 15000, // Extra aggressive timeout for Yahoo
+      greetingTimeout: isYahoo ? 45000 : 15000,
+      socketTimeout: isYahoo ? 45000 : 15000,
       requireTLS: !provider.secure,
       tls: {
         rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        minVersion: 'TLSv1.2',
+        // Yahoo specific TLS settings
+        ciphers: isYahoo ? 'SSLv3' : undefined,
+        // Additional Yahoo optimizations
+        ...(isYahoo && {
+          servername: 'smtp.mail.yahoo.com',
+          checkServerIdentity: false
+        })
       },
+      // Yahoo-specific connection options - more aggressive settings
+      ...(isYahoo && {
+        connectionTimeout: 45000, // 45 seconds
+        greetingTimeout: 45000,   // 45 seconds
+        socketTimeout: 45000,     // 45 seconds
+        ignoreTLS: false,
+        requireTLS: true,
+        // Additional Yahoo optimizations
+        pool: false,
+        maxConnections: 1,
+        maxMessages: 1
+      }),
       debug: process.env.NODE_ENV === 'development',
       logger: process.env.NODE_ENV === 'development'
     };
@@ -144,21 +217,43 @@ class EmailService {
     
     const transporter = nodemailer.createTransport(transporterOptions);
     
+    // For Yahoo, skip verification entirely to avoid timeout issues
+    // For Gmail, also skip verification for faster initialization
+    if (isYahoo || isGmail) {
+      console.log(`✅ ${provider.name} transporter created (verification skipped for faster initialization)`);
+      if (isYahoo) {
+        console.log(`🔄 Yahoo SMTP verification skipped - will try to send emails anyway`);
+        console.log(`   (Yahoo Mail sometimes fails verification but still works)`);
+      }
+      if (isGmail) {
+        console.log(`🔄 Gmail SMTP verification skipped - will verify on first send`);
+      }
+      return transporter;
+    }
+    
     try {
-      // Use a shorter timeout for verification
+      // Use a longer timeout for production stability for other providers
+      const timeoutDuration = 20000; // 20 seconds for others
       const verifyPromise = transporter.verify();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Verification timeout')), 5000)
+        setTimeout(() => reject(new Error('Verification timeout')), timeoutDuration)
       );
       
       await Promise.race([verifyPromise, timeoutPromise]);
       console.log(`✅ ${provider.name} connection verified successfully`);
       return transporter;
     } catch (verifyError) {
-      console.error(`❌ ${provider.name} verification failed:`, verifyError.message);
+      console.error(`⚠️  ${provider.name} verification failed:`, verifyError.message);
+      console.log(`   Error Code: ${verifyError.code || 'N/A'}`);
       
-      // For timeout errors, throw to try next provider
+      // For timeout errors on other providers, throw to try next provider
       if (verifyError.message.includes('timeout') || verifyError.code === 'ETIMEDOUT') {
+        throw verifyError;
+      }
+      
+      // For authentication errors, throw to try next provider
+      if (verifyError.code === 'EAUTH' || verifyError.responseCode === 535) {
+        console.error(`   Authentication failed - check username and password`);
         throw verifyError;
       }
       
@@ -219,6 +314,27 @@ class EmailService {
     try {
       if (this.transporter.type === 'mock') {
         return await this.transporter.sendMail(mailOptions);
+      } else if (this.transporter.type === 'sendgrid') {
+        // SendGrid transporter
+        console.log('📧 Sending email via SendGrid...');
+        console.log('📧 Email details:', {
+          to: mailOptions.to,
+          from: mailOptions.from,
+          subject: mailOptions.subject
+        });
+        
+        const msg = {
+          to: mailOptions.to,
+          from: process.env.SENDGRID_FROM_EMAIL || mailOptions.from,
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html,
+        };
+        
+        const response = await this.transporter.sgMail.send(msg);
+        console.log('✅ Password reset email sent via SendGrid');
+        console.log('📧 Response:', response[0].statusCode);
+        return { success: true, method: 'sendgrid', messageId: response[0].headers['x-message-id'] };
       } else {
         // Standard SMTP transporter
         console.log('📧 Sending email via SMTP...');
@@ -242,6 +358,23 @@ class EmailService {
         response: error?.response,
         responseCode: error?.responseCode
       });
+      
+      // Handle SMTP connection issues with retry
+      if (error?.code === 'ETIMEDOUT' || error?.code === 'ECONNRESET') {
+        console.log('🔄 SMTP connection issue detected, attempting to reinitialize...');
+        try {
+          await this.initializeTransporter(true); // Force reinitialize
+          if (this.transporter && this.transporter.type !== 'mock') {
+            console.log('🔄 Retrying email send with reinitialized SMTP provider...');
+            const retryResult = await this.transporter.sendMail(mailOptions);
+            console.log('✅ Email sent successfully via SMTP retry');
+            return { success: true, method: 'smtp-retry', messageId: retryResult.messageId };
+          }
+        } catch (retryError) {
+          console.error('❌ SMTP retry also failed:', retryError.message);
+        }
+      }
+      
       throw new Error(`Email send failed: ${error?.message || error}`);
     }
   }

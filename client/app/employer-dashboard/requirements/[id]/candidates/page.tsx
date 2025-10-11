@@ -42,6 +42,8 @@ interface Candidate {
   likedByCurrent?: boolean;
   atsScore?: number | null;
   atsCalculatedAt?: string | null;
+  relevanceScore?: number;
+  matchReasons?: string[];
 }
 
 interface Requirement {
@@ -114,14 +116,14 @@ export default function CandidatesPage() {
         
         if (response.success && response.data) {
           const newCandidates = response.data.candidates || []
-          console.log('📊 New candidates data with ATS scores:', newCandidates.map(c => ({ 
+          console.log('📊 New candidates data with ATS scores:', newCandidates.map((c: Candidate) => ({ 
             name: c.name, 
             atsScore: c.atsScore,
             requirementId: params.id 
           })))
           
           // Verify no old ATS scores are persisting
-          const candidatesWithOldScores = newCandidates.filter(c => 
+          const candidatesWithOldScores = newCandidates.filter((c: Candidate) => 
             c.atsScore !== null && c.atsCalculatedAt && 
             new Date(c.atsCalculatedAt).getTime() < Date.now() - 60000 // More than 1 minute old
           )
@@ -302,7 +304,7 @@ export default function CandidatesPage() {
   }
 
   return (
-    <div key={params.id} className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+    <div key={String(params.id)} className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <EmployerNavbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -338,18 +340,81 @@ export default function CandidatesPage() {
               </Button>
             </div>
           ) : requirement ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Candidates for {requirement.title}</h1>
-              <p className="text-slate-600">Found {requirement.totalCandidates} matching candidates</p>
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">Candidates for {requirement.title}</h1>
+                <p className="text-slate-600">Found {requirement.totalCandidates} matching candidates</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-slate-900">{requirement.accessedCandidates || 0}</div>
+                <div className="text-sm text-slate-600">Accessed Today</div>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-slate-900">{requirement.accessedCandidates}</div>
-              <div className="text-sm text-slate-600">Accessed Today</div>
-            </div>
+            
+            {/* Show Applied Filters */}
+            {(requirement as any).appliedFilters && (requirement as any).appliedFilters.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-sm text-slate-600 font-medium">Active Filters:</span>
+                {(requirement as any).appliedFilters.map((filter: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                    {filter}
+                  </Badge>
+                ))}
+                {(requirement as any).fallbackApplied && (
+                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                    ⚡ Smart Fallback Applied
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
           ) : null}
         </div>
+
+        {/* Matching Statistics Summary */}
+        {!loading && !error && requirement && (
+          <Card className="mb-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-blue-200">
+            <div className="p-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{requirement.totalCandidates || 0}</div>
+                  <div className="text-xs text-slate-600">Total Found</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {candidates.filter((c: any) => c.relevanceScore >= 80).length}
+                  </div>
+                  <div className="text-xs text-slate-600">Excellent (80%+)</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {candidates.filter((c: any) => c.relevanceScore >= 60 && c.relevanceScore < 80).length}
+                  </div>
+                  <div className="text-xs text-slate-600">Good (60-79%)</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {candidates.filter((c: any) => c.relevanceScore >= 40 && c.relevanceScore < 60).length}
+                  </div>
+                  <div className="text-xs text-slate-600">Potential (40-59%)</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {candidates.filter((c: any) => c.atsScore && c.atsScore > 0).length}
+                  </div>
+                  <div className="text-xs text-slate-600">ATS Scored</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {candidates.filter((c: any) => c.phoneVerified && c.emailVerified).length}
+                  </div>
+                  <div className="text-xs text-slate-600">Verified</div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Search and Filters */}
         <div className="mb-6">
@@ -358,7 +423,7 @@ export default function CandidatesPage() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <Input
-                placeholder="Search candidates by name, skills, or location..."
+                placeholder="Search candidates by name, skills, designation, or location..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -644,22 +709,34 @@ export default function CandidatesPage() {
                         ) : null}
                       </div>
                       <p className="text-slate-600 text-sm mb-2">{candidate.designation}</p>
-                      {/* Relevance Score and Match Reasons */}
+                      {/* Enhanced Relevance Score and Match Reasons */}
                       {candidate.relevanceScore !== undefined && (
-                        <div className="mb-2">
-                          <div className="flex items-center space-x-2 mb-1">
+                        <div className="mb-3">
+                          <div className="flex items-center space-x-2 mb-2">
                             <Badge 
-                              variant={candidate.relevanceScore >= 50 ? "default" : candidate.relevanceScore >= 25 ? "secondary" : "outline"}
-                              className="text-xs"
+                              variant="default"
+                              className={`text-xs font-semibold px-3 py-1 ${
+                                candidate.relevanceScore >= 80 ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                candidate.relevanceScore >= 60 ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                candidate.relevanceScore >= 40 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                'bg-gray-100 text-gray-800 border-gray-200'
+                              }`}
                             >
-                              {candidate.relevanceScore}% Match
+                              <Star className="w-3 h-3 mr-1 inline" />
+                              {candidate.relevanceScore}% Relevance
                             </Badge>
+                            <span className="text-xs text-slate-500">
+                              {candidate.relevanceScore >= 80 ? '🎯 Excellent Match' :
+                               candidate.relevanceScore >= 60 ? '✅ Good Match' :
+                               candidate.relevanceScore >= 40 ? '⚡ Potential Match' :
+                               '💡 Consider'}
+                            </span>
                           </div>
                           {candidate.matchReasons && candidate.matchReasons.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {candidate.matchReasons.map((reason, index) => (
-                                <Badge key={index} variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                                  {reason}
+                            <div className="flex flex-wrap gap-1.5">
+                              {candidate.matchReasons.map((reason: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200">
+                                  ✓ {reason}
                                 </Badge>
                               ))}
                             </div>

@@ -926,6 +926,26 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // NEW: Flexible notification preferences methods
+  async getNotificationPreferences(): Promise<ApiResponse<{ notifications: any }>> {
+    const response = await fetch(`${API_BASE_URL}/user/preferences/notifications`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<{ notifications: any }>(response);
+  }
+
+  async updateNotificationPreferencesFlexible(notifications: Record<string, boolean>): Promise<ApiResponse> {
+    console.log('🔄 Updating notification preferences:', notifications);
+    const response = await fetch(`${API_BASE_URL}/user/preferences/notifications`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ notifications }),
+    });
+
+    return this.handleResponse(response);
+  }
+
   // Job preferences endpoints
   async getJobPreferences(): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/job-preferences`, {
@@ -990,17 +1010,6 @@ class ApiService {
     }
   }
 
-  async deleteAccount(password: string): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/user/account`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ password }),
-    });
-
-    this.clearAuth();
-
-    return this.handleResponse(response);
-  }
 
   // Company endpoints
   async createCompany(data: any): Promise<ApiResponse<any>> {
@@ -4051,6 +4060,17 @@ class ApiService {
 
   async deleteHotVacancyPhoto(photoId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/hot-vacancies/photos/${photoId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Delete user account permanently
+   */
+  async deleteAccount(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/account`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
