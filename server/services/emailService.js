@@ -1,5 +1,13 @@
 const nodemailer = require('nodemailer');
 
+// Try to load SendGrid if available
+let sgMail = null;
+try {
+  sgMail = require('@sendgrid/mail');
+} catch (e) {
+  // SendGrid not installed, will use SMTP fallback
+}
+
 class EmailService {
   constructor() {
     this.fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@jobportal.com';
@@ -9,11 +17,34 @@ class EmailService {
     this.initializeTransporter();
   }
 
-  async initializeTransporter() {
+  async initializeTransporter(forceReinitialize = false) {
     try {
+      // If already initialized and not forcing reinitialize, skip
+      if (this.initialized && !forceReinitialize) {
+        return;
+      }
+      // Check for SendGrid first (most reliable for production)
+      if (sgMail && process.env.SENDGRID_API_KEY) {
+        console.log('📧 SendGrid API key found - using SendGrid for email delivery');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        this.transporter = { type: 'sendgrid', sgMail };
+        this.initialized = true;
+        console.log('✅ SendGrid email service initialized successfully!');
+        return;
+      }
+
       // Try multiple email providers in order of preference
       const providers = [
-        // Priority 1: Custom SMTP (supports Yahoo, Gmail, and any other provider)
+        // Priority 1: Gmail (most reliable in production)
+        {
+          name: 'Gmail',
+          host: 'smtp.gmail.com',
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        // Priority 2: Custom SMTP (supports any provider)
         {
           name: 'Custom SMTP',
           host: process.env.SMTP_HOST,
@@ -22,7 +53,16 @@ class EmailService {
           port: parseInt(process.env.SMTP_PORT) || 587,
           secure: process.env.SMTP_SECURE === 'true'
         },
-        // Priority 2: Yahoo with explicit credentials
+        // Priority 3: Outlook/Hotmail (more reliable than Yahoo)
+        {
+          name: 'Outlook',
+          host: 'smtp-mail.outlook.com',
+          user: process.env.OUTLOOK_USER,
+          pass: process.env.OUTLOOK_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        // Priority 4: Yahoo (last resort due to reliability issues)
         {
           name: 'Yahoo (Port 587)',
           host: 'smtp.mail.yahoo.com',
@@ -38,15 +78,6 @@ class EmailService {
           pass: process.env.YAHOO_APP_PASSWORD,
           port: 465,
           secure: true
-        },
-        // Priority 3: Gmail
-        {
-          name: 'Gmail',
-          host: 'smtp.gmail.com',
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-          port: 587,
-          secure: false
         }
       ];
 
@@ -100,13 +131,21 @@ class EmailService {
       console.log('=====================================');
       console.log('Using MOCK transporter - emails will NOT actually send!');
       console.log('');
-      console.log('To fix this:');
-      console.log('1. Check your .env file has email credentials');
-      console.log('2. For Gmail: Use App Password (not regular password)');
-      console.log('3. For Yahoo: Generate app password in Yahoo settings');
-      console.log('4. Make sure password has NO SPACES');
+      console.log('🚀 QUICK FIX - Use Gmail SMTP (Recommended):');
+      console.log('1. Go to https://myaccount.google.com/apppasswords');
+      console.log('2. Generate an app password for "Job Portal"');
+      console.log('3. Add to Render.com environment variables:');
+      console.log('   GMAIL_USER=your-gmail@gmail.com');
+      console.log('   GMAIL_APP_PASSWORD=your-16-char-password');
+      console.log('4. Restart your service');
       console.log('');
-      console.log('See server/QUICK_EMAIL_SETUP.md for detailed instructions');
+      console.log('📧 Alternative: Use SendGrid (Production Ready)');
+      console.log('1. Sign up at https://sendgrid.com');
+      console.log('2. Get API key and add:');
+      console.log('   SENDGRID_API_KEY=your-api-key');
+      console.log('   SENDGRID_FROM_EMAIL=your-verified-email');
+      console.log('');
+      console.log('See server/scripts/setup-gmail-smtp.js for detailed instructions');
       console.log('=====================================\n');
       this.initialized = true;
 
@@ -245,6 +284,27 @@ class EmailService {
     try {
       if (this.transporter.type === 'mock') {
         return await this.transporter.sendMail(mailOptions);
+      } else if (this.transporter.type === 'sendgrid') {
+        // SendGrid transporter
+        console.log('📧 Sending email via SendGrid...');
+        console.log('📧 Email details:', {
+          to: mailOptions.to,
+          from: mailOptions.from,
+          subject: mailOptions.subject
+        });
+        
+        const msg = {
+          to: mailOptions.to,
+          from: process.env.SENDGRID_FROM_EMAIL || mailOptions.from,
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html,
+        };
+        
+        const response = await this.transporter.sgMail.send(msg);
+        console.log('✅ Password reset email sent via SendGrid');
+        console.log('📧 Response:', response[0].statusCode);
+        return { success: true, method: 'sendgrid', messageId: response[0].headers['x-message-id'] };
       } else {
         // Standard SMTP transporter
         console.log('📧 Sending email via SMTP...');
@@ -268,6 +328,23 @@ class EmailService {
         response: error?.response,
         responseCode: error?.responseCode
       });
+      
+      // If it's a connection timeout and we're using Yahoo, try to reinitialize with a different provider
+      if (error?.code === 'ETIMEDOUT' && this.transporter?.options?.host?.includes('yahoo')) {
+        console.log('🔄 Yahoo SMTP timeout detected, attempting to reinitialize with alternative provider...');
+        try {
+          await this.initializeTransporter();
+          if (this.transporter && this.transporter.type !== 'mock') {
+            console.log('🔄 Retrying email send with alternative provider...');
+            const retryResult = await this.transporter.sendMail(mailOptions);
+            console.log('✅ Email sent successfully on retry');
+            return { success: true, method: 'smtp-retry', messageId: retryResult.messageId };
+          }
+        } catch (retryError) {
+          console.error('❌ Retry also failed:', retryError.message);
+        }
+      }
+      
       throw new Error(`Email send failed: ${error?.message || error}`);
     }
   }
