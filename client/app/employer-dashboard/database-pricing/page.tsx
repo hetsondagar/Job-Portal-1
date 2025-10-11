@@ -54,7 +54,7 @@ export default function DatabasePricingPage() {
     
     // Initiate payment
     await initiatePayment(
-      'Resdex Lite', // Plan type
+      'Database Lite', // Plan type
       selectedQuantity, // Quantity
       finalPrice, // Amount
       {
@@ -63,7 +63,7 @@ export default function DatabasePricingPage() {
         phone: (user as any).phone || ''
       },
       {
-        planId: 'resdex_lite',
+        planId: 'database_lite',
         originalPrice: totalPrice,
         discount: discount
       }
@@ -75,7 +75,7 @@ export default function DatabasePricingPage() {
     router.push('/contact');
   };
 
-  const resdexLiteFeatures = [
+  const databaseLiteFeatures = [
     { icon: Eye, text: '100 CV views per requirement', included: true },
     { icon: Search, text: 'Up to 500 search results', included: true },
     { icon: Users, text: 'Candidates active in last 6 months', included: true },
@@ -84,7 +84,7 @@ export default function DatabasePricingPage() {
     { icon: Search, text: '1 search query (role, location) per requirement', included: true }
   ];
 
-  const resdexFeatures = [
+  const databaseFeatures = [
     { icon: Eye, text: 'CV views as per plan', included: true },
     { icon: Search, text: 'Unlimited search results', included: true },
     { icon: Users, text: 'All available candidates', included: true },
@@ -129,7 +129,7 @@ export default function DatabasePricingPage() {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
               <Badge className="mb-4 bg-blue-500 text-white">
-                RESDEX
+                DATABASE
               </Badge>
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
                 Search India's largest talent pool
@@ -206,7 +206,7 @@ export default function DatabasePricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <Badge className="mb-4 bg-orange-500 text-white">
-              RESDEX
+              DATABASE
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
               Search India's largest resume database
@@ -217,10 +217,10 @@ export default function DatabasePricingPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {/* Resdex Lite */}
+            {/* Database Lite */}
             <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors">
               <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl font-bold text-blue-600 mb-2">Resdex Lite</CardTitle>
+                <CardTitle className="text-2xl font-bold text-blue-600 mb-2">Database Lite</CardTitle>
                 <CardDescription className="text-slate-600">
                   Best for small and medium businesses with smaller hiring needs
                 </CardDescription>
@@ -245,7 +245,7 @@ export default function DatabasePricingPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800 mb-4">Key Features</h4>
                   <ul className="space-y-3">
-                    {resdexLiteFeatures.map((feature, index) => (
+                    {databaseLiteFeatures.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <Check className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                         <span className="text-slate-700">{feature.text}</span>
@@ -310,10 +310,10 @@ export default function DatabasePricingPage() {
               </CardContent>
             </Card>
 
-            {/* Resdex */}
+            {/* Database */}
             <Card className="border-2 border-purple-200 hover:border-purple-400 transition-colors">
               <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl font-bold text-purple-600 mb-2">Resdex</CardTitle>
+                <CardTitle className="text-2xl font-bold text-purple-600 mb-2">Database</CardTitle>
                 <CardDescription className="text-slate-600">
                   Get customised solutions and dedicated support for your bigger hiring needs
                 </CardDescription>
@@ -328,7 +328,7 @@ export default function DatabasePricingPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800 mb-4">Key Features</h4>
                   <ul className="space-y-3">
-                    {resdexFeatures.map((feature, index) => (
+                    {databaseFeatures.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <Check className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                         <span className="text-slate-700">{feature.text}</span>

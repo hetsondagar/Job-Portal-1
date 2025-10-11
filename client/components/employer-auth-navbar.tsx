@@ -89,7 +89,7 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
                                   Resume Database
                                 </h4>
                                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                                  Resdex plans - Access 50M+ profiles starting at ₹4,000
+                                  Database plans - Access 50M+ profiles starting at ₹4,000
                                 </p>
                               </div>
                             </div>

@@ -85,18 +85,18 @@ export default function PricingPage() {
                 </div>
                 <CardTitle className="text-2xl font-bold text-purple-600 mb-2">Resume Database</CardTitle>
                 <CardDescription className="text-slate-600">
-                  Search India's largest talent pool with our Resdex database plans
+                  Search India's largest talent pool with our database plans
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center">
                     <Check className="w-4 h-4 text-green-500 mr-2" />
-                    <span>Resdex Lite</span>
+                    <span>Database Lite</span>
                   </div>
                   <div className="flex items-center">
                     <Check className="w-4 h-4 text-green-500 mr-2" />
-                    <span>Resdex Pro</span>
+                    <span>Database Pro</span>
                   </div>
                   <div className="flex items-center">
                     <Check className="w-4 h-4 text-green-500 mr-2" />

@@ -1,5 +1,27 @@
 
 
+// Helper function to determine if SSL should be used
+const shouldUseSSL = (host) => {
+  // Don't use SSL for localhost or local development databases
+  if (!host || host === 'localhost' || host === '127.0.0.1' || host.includes('localhost')) {
+    return false;
+  }
+  // Use SSL for remote databases (Render, AWS, etc.)
+  return true;
+};
+
+const getDialectOptions = (host) => {
+  if (shouldUseSSL(host)) {
+    return {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    };
+  }
+  return {}; // No SSL for local databases
+};
+
 module.exports = {
   development: {
     username: process.env.DB_USER || 'jobportal_dev_0u1u_user',
@@ -21,12 +43,7 @@ module.exports = {
       underscored: false,
       freezeTableName: true
     },
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
+    dialectOptions: getDialectOptions(process.env.DB_HOST)
   },
   test: {
     username: process.env.DB_USER || 'jobportal_test_0u1u_user',
@@ -48,12 +65,7 @@ module.exports = {
       underscored: false,
       freezeTableName: true
     },
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
+    dialectOptions: getDialectOptions(process.env.DB_HOST)
   },
   production: {
     username: process.env.DB_USER || 'jobportal_dev_0u1u_user',
@@ -74,11 +86,6 @@ module.exports = {
       underscored: false,
       freezeTableName: true
     },
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
+    dialectOptions: getDialectOptions(process.env.DB_HOST)
   }
 }; 

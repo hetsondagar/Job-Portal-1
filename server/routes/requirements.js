@@ -369,41 +369,79 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     // Get total candidates count for this requirement
     const { User } = require('../config/index');
     const { sequelize } = require('../config/sequelize');
+    const Op = sequelize.Op;
     
-    // Build the same query as in candidates endpoint to get accurate count
-    let whereClause = {
+    // Build comprehensive matching criteria (same as candidates endpoint)
+    const whereClause = {
       user_type: 'jobseeker',
       is_active: true,
       account_status: 'active'
     };
     
-    // Add location filter
-    if (requirement.location && requirement.location.trim()) {
-      whereClause.current_location = {
-        [sequelize.Op.iLike]: `%${requirement.location.trim()}%`
-      };
-    }
+    // Build matching conditions - use OR for flexibility
+    const matchingConditions = [];
     
-    // Add experience filter
+    // 1. EXPERIENCE RANGE MATCHING
     if (requirement.experienceMin || requirement.experienceMax) {
-      whereClause.experience_years = {};
-      if (requirement.experienceMin) {
-        whereClause.experience_years[sequelize.Op.gte] = requirement.experienceMin;
-      }
-      if (requirement.experienceMax) {
-        whereClause.experience_years[sequelize.Op.lte] = requirement.experienceMax;
+      const expConditions = {};
+      if (requirement.experienceMin) expConditions[Op.gte] = requirement.experienceMin;
+      if (requirement.experienceMax) expConditions[Op.lte] = requirement.experienceMax;
+      if (Object.keys(expConditions).length > 0) {
+        matchingConditions.push({ experience_years: expConditions });
       }
     }
     
-    // Add salary filter
+    // 2. SKILLS MATCHING (Primary)
+    if (requirement.keySkills && requirement.keySkills.length > 0) {
+      matchingConditions.push({ 
+        key_skills: { [Op.overlap]: requirement.keySkills } 
+      });
+    }
+    if (requirement.skills && requirement.skills.length > 0) {
+      matchingConditions.push({ 
+        skills: { [Op.overlap]: requirement.skills } 
+      });
+    }
+    
+    // 3. LOCATION MATCHING
+    if (requirement.candidateLocations && requirement.candidateLocations.length > 0) {
+      const locationConditions = requirement.candidateLocations.map(loc => ({
+        current_location: { [Op.iLike]: `%${loc}%` }
+      }));
+      matchingConditions.push({ 
+        [Op.or]: [
+          { [Op.or]: locationConditions },
+          { willing_to_relocate: true }
+        ]
+      });
+    }
+    
+    // 4. EDUCATION MATCHING
+    if (requirement.education) {
+      matchingConditions.push({
+        [Op.or]: [
+          sequelize.where(
+            sequelize.cast(sequelize.col('education'), 'text'),
+            { [Op.iLike]: `%${requirement.education}%` }
+          ),
+          { highest_education: { [Op.iLike]: `%${requirement.education}%` } }
+        ]
+      });
+    }
+    
+    // 5. SALARY RANGE MATCHING
     if (requirement.salaryMin || requirement.salaryMax) {
-      whereClause.expected_salary = {};
-      if (requirement.salaryMin) {
-        whereClause.expected_salary[sequelize.Op.gte] = requirement.salaryMin;
+      const salaryConditions = {};
+      if (requirement.salaryMin) salaryConditions[Op.gte] = requirement.salaryMin;
+      if (requirement.salaryMax) salaryConditions[Op.lte] = requirement.salaryMax;
+      if (Object.keys(salaryConditions).length > 0) {
+        matchingConditions.push({ expected_salary: salaryConditions });
       }
-      if (requirement.salaryMax) {
-        whereClause.expected_salary[sequelize.Op.lte] = requirement.salaryMax;
-      }
+    }
+    
+    // Apply matching conditions
+    if (matchingConditions.length > 0) {
+      whereClause[Op.or] = matchingConditions;
     }
     
     // Get total candidates count
@@ -628,11 +666,8 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     if (requirement.currentCompany) {
       matchingConditions.push({
         [Op.or]: [
-          // Search in experience JSONB array for company names
-          sequelize.where(
-            sequelize.cast(sequelize.col('experience'), 'text'),
-            { [Op.iLike]: `%${requirement.currentCompany}%` }
-          ),
+          // Search in current_company field
+          { current_company: { [Op.iLike]: `%${requirement.currentCompany}%` } },
           { headline: { [Op.iLike]: `%${requirement.currentCompany}%` } },
           { summary: { [Op.iLike]: `%${requirement.currentCompany}%` } }
         ]
@@ -748,7 +783,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
         'experience_years', 'preferred_locations', 'education', 'designation',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt', 'experience',
+        'is_email_verified', 'is_phone_verified', 'createdAt',
         'preferences', 'certifications'
       ]
     });
@@ -806,7 +841,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
           'experience_years', 'preferred_locations', 'education', 'designation',
           'profile_completion', 'last_login_at', 'last_profile_update',
-          'is_email_verified', 'is_phone_verified', 'createdAt', 'experience',
+          'is_email_verified', 'is_phone_verified', 'createdAt',
           'preferences', 'certifications'
         ]
       });
