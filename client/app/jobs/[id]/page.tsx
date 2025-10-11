@@ -81,12 +81,28 @@ export default function JobDetailPage() {
             
             if (res.success && res.data) {
               // Transform the job data to match the expected format
+              const metadata = res.data.metadata || {};
+              const isConsultancy = metadata.postingType === 'consultancy';
+              
               const transformedJob = {
                 id: res.data.id,
                 title: res.data.title || 'Untitled Job',
-                company: res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
+                // Company name handling - check metadata first, then Company relation
+                company: isConsultancy && metadata.showHiringCompanyDetails 
+                  ? metadata.hiringCompany?.name || 'Company Name'
+                  : isConsultancy 
+                    ? metadata.consultancyName || 'Consultancy'
+                    : metadata.companyName || res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
                 companyId: res.data.companyId || res.data.employerId || '',
                 companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
+                // Consultancy-specific data
+                isConsultancy: isConsultancy,
+                consultancyName: metadata.consultancyName || null,
+                hiringCompany: metadata.hiringCompany || null,
+                showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
+                // Industry from multiple sources
+                industryType: res.data.industryType || metadata.hiringCompany?.industry || res.data.company?.industry || 'Not specified',
+                department: res.data.department || 'Not specified',
                 location: res.data.location || 'Location not specified',
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
                 experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
@@ -100,14 +116,15 @@ export default function JobDetailPage() {
                 benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
                 type: res.data.jobType || res.data.type || 'Full-time',
                 remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
-                department: res.data.department || 'Department not specified',
                 companySize: res.data.company?.companySize || res.data.company?.size || res.data.employer?.size || 'Company size not specified',
                 companyRating: res.data.company?.rating || res.data.employer?.rating || 0,
                 companyReviews: res.data.company?.reviews || res.data.employer?.reviews || 0,
-                industry: res.data.company?.industry || res.data.employer?.industry || res.data.industry || 'Industry not specified',
+                industry: res.data.industryType || metadata.hiringCompany?.industry || res.data.company?.industry || res.data.employer?.industry || res.data.industry || 'Industry not specified',
                 founded: res.data.company?.founded || res.data.employer?.founded || 'Founded date not available',
                 website: res.data.company?.website || res.data.employer?.website || '',
-                aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
+                aboutCompany: isConsultancy && metadata.showHiringCompanyDetails 
+                  ? metadata.hiringCompany?.description || 'Company description not available'
+                  : res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
                 photos: res.data.photos || [],
               // Hot Vacancy Premium Features
               isHotVacancy: res.data.isHotVacancy || false,
@@ -1222,15 +1239,35 @@ export default function JobDetailPage() {
                     <CardHeader>
                       <CardTitle className="text-2xl flex items-center gap-2">
                         <Building2 className="h-6 w-6 text-blue-600" />
-                        About the Company
+                        {job?.isConsultancy && job?.showHiringCompanyDetails ? 'About the Hiring Company' : 'About the Company'}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-6">
+                        {/* Consultancy Job Badge */}
+                        {job?.isConsultancy && (
+                          <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Building2 className="w-5 h-5 text-purple-600" />
+                              <span className="font-semibold text-purple-900 dark:text-purple-100">Consultancy Job</span>
+                            </div>
+                            <p className="text-sm text-purple-800 dark:text-purple-200">
+                              Posted by: <span className="font-medium">{job.consultancyName}</span>
+                            </p>
+                            {!job.showHiringCompanyDetails && (
+                              <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
+                                Hiring company details are confidential
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                         {/* Company Description */}
                         {job?.aboutCompany && (
                           <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Company Overview</h4>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                              {job?.isConsultancy && job?.showHiringCompanyDetails ? 'Hiring Company Overview' : 'Company Overview'}
+                            </h4>
                             <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                               {job.aboutCompany}
                             </p>

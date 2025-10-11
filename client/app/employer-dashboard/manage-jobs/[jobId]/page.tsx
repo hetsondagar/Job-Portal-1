@@ -67,7 +67,20 @@ export default function JobDetailPage() {
       
       if (response.success && response.data) {
         console.log('✅ Job details fetched:', response.data)
-        setJob(response.data)
+        
+        // Extract consultancy metadata
+        const metadata = response.data.metadata || {};
+        const enrichedJob = {
+          ...response.data,
+          isConsultancy: metadata.postingType === 'consultancy',
+          consultancyName: metadata.consultancyName || null,
+          hiringCompany: metadata.hiringCompany || null,
+          showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
+          companyName: metadata.companyName || response.data.company?.name || null,
+          industryType: response.data.industryType || metadata.hiringCompany?.industry || response.data.company?.industry || null,
+        };
+        
+        setJob(enrichedJob)
         
         // Fetch other jobs from same company
         const companyId = (response.data as any).companyId || response.data?.company?.id
@@ -163,8 +176,18 @@ export default function JobDetailPage() {
   const transformedJob = {
     id: job.id,
     title: job.title || 'Untitled Job',
-    company: job.company?.name || 'Company Name',
+    // Company name - check for consultancy first
+    company: job.isConsultancy && job.showHiringCompanyDetails
+      ? job.hiringCompany?.name || 'Hiring Company'
+      : job.isConsultancy
+        ? job.consultancyName || 'Consultancy'
+        : job.companyName || job.company?.name || 'Company Name',
     companyLogo: job.company?.logo || "/placeholder-logo.png",
+    // Consultancy-specific fields
+    isConsultancy: job.isConsultancy || false,
+    consultancyName: job.consultancyName || null,
+    hiringCompany: job.hiringCompany || null,
+    showHiringCompanyDetails: job.showHiringCompanyDetails || false,
     location: job.location || 'Location not specified',
     type: job.jobType || job.type || 'Full-time',
     experience: job.experienceLevel || job.experience || 'Experience not specified',
@@ -178,10 +201,12 @@ export default function JobDetailPage() {
     description: job.description || 'No description provided',
     benefits: Array.isArray(job.benefits) ? job.benefits : (job.benefits ? job.benefits.split('\n').filter((b: string) => b.trim()) : []),
     companyInfo: {
-      description: job.company?.description || 'Company description not available',
+      description: job.isConsultancy && job.showHiringCompanyDetails
+        ? job.hiringCompany?.description || 'Company description not available'
+        : job.company?.description || 'Company description not available',
       founded: job.company?.founded || 'N/A',
       employees: job.company?.employees || 'N/A',
-      industry: job.company?.industry || 'N/A',
+      industry: job.industryType || job.hiringCompany?.industry || job.company?.industry || 'N/A',
       website: job.company?.website || '',
       linkedin: job.company?.linkedin || '',
       location: job.company?.location || job.location || 'Location not specified'
@@ -318,7 +343,27 @@ export default function JobDetailPage() {
 
                   <TabsContent value="company" className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">About {transformedJob.company}</h3>
+                      {/* Consultancy Job Badge */}
+                      {transformedJob.isConsultancy && (
+                        <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Building2 className="w-5 h-5 text-purple-600" />
+                            <span className="font-semibold text-purple-900 dark:text-purple-100">Consultancy Job</span>
+                          </div>
+                          <p className="text-sm text-purple-800 dark:text-purple-200">
+                            Posted by: <span className="font-medium">{transformedJob.consultancyName}</span>
+                          </p>
+                          {!transformedJob.showHiringCompanyDetails && (
+                            <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
+                              Hiring company details are confidential
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                        About {transformedJob.isConsultancy && transformedJob.showHiringCompanyDetails ? 'the Hiring Company' : transformedJob.company}
+                      </h3>
                       <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
                         {transformedJob.companyInfo.description}
                       </p>

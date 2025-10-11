@@ -454,7 +454,8 @@ exports.createJob = async (req, res, next) => {
       isFeatured: Boolean(isFeatured),
       // New fields from step 2
       role: role && role.trim() ? role.trim() : null,
-      industryType: industryType && industryType.trim() ? industryType.trim() : null,
+      // For consultancy jobs, use hiringCompanyIndustry if industryType is not provided
+      industryType: (industryType && industryType.trim() ? industryType.trim() : null) || (postingType === 'consultancy' && hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null),
       roleCategory: roleCategory && roleCategory.trim() ? roleCategory.trim() : null,
       employmentType: employmentType && employmentType.trim() ? employmentType.trim() : null,
       isPremium: Boolean(isPremium),
