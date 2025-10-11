@@ -27,8 +27,36 @@ class EmailService {
       console.log('📧 Using SMTP providers only (SendGrid disabled)');
 
       // Try multiple email providers in order of preference
+      // Gmail is most reliable in production environments like Render.com
       const providers = [
-        // Priority 1: Yahoo SMTP (optimized for production)
+        // Priority 1: Gmail SMTP (most reliable in production)
+        {
+          name: 'Gmail',
+          host: 'smtp.gmail.com',
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        // Priority 2: Custom SMTP (supports any provider)
+        {
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true'
+        },
+        // Priority 3: Outlook/Hotmail
+        {
+          name: 'Outlook',
+          host: 'smtp-mail.outlook.com',
+          user: process.env.OUTLOOK_USER,
+          pass: process.env.OUTLOOK_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        // Priority 4: Yahoo SMTP (last resort - often blocked by hosting providers)
         {
           name: 'Yahoo (Port 587)',
           host: 'smtp.mail.yahoo.com',
@@ -44,45 +72,20 @@ class EmailService {
           pass: process.env.YAHOO_APP_PASSWORD,
           port: 465,
           secure: true
-        },
-        // Priority 2: Custom SMTP (supports any provider)
-        {
-          name: 'Custom SMTP',
-          host: process.env.SMTP_HOST,
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
-          port: parseInt(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true'
-        },
-        // Priority 3: Gmail (backup)
-        {
-          name: 'Gmail',
-          host: 'smtp.gmail.com',
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-          port: 587,
-          secure: false
-        },
-        // Priority 4: Outlook/Hotmail (backup)
-        {
-          name: 'Outlook',
-          host: 'smtp-mail.outlook.com',
-          user: process.env.OUTLOOK_USER,
-          pass: process.env.OUTLOOK_PASSWORD,
-          port: 587,
-          secure: false
         }
       ];
 
       console.log('\n📧 Email Service Configuration Check:');
       console.log('=====================================');
+      if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+        console.log('✓ Gmail SMTP credentials found (PRIORITY 1 - Most Reliable)');
+        console.log(`  User: ${process.env.GMAIL_USER}`);
+        console.log(`  Password: ${process.env.GMAIL_APP_PASSWORD ? '***' + process.env.GMAIL_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      }
       if (process.env.YAHOO_USER && process.env.YAHOO_APP_PASSWORD) {
-        console.log('✓ Yahoo SMTP credentials found (PRIORITY 1)');
+        console.log('✓ Yahoo SMTP credentials found (BACKUP - Often Blocked)');
         console.log(`  User: ${process.env.YAHOO_USER}`);
         console.log(`  Password: ${process.env.YAHOO_APP_PASSWORD ? '***' + process.env.YAHOO_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
-      }
-      if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-        console.log('✓ Gmail SMTP credentials found (BACKUP)');
       }
       // SendGrid disabled - using SMTP only
       if (process.env.SMTP_HOST && process.env.SMTP_USER) {
@@ -159,8 +162,9 @@ class EmailService {
   }
 
   async createTransporter(provider) {
-    // Special handling for Yahoo SMTP
+    // Special handling for Yahoo SMTP and Gmail
     const isYahoo = provider.host && provider.host.includes('yahoo');
+    const isGmail = provider.host && provider.host.includes('gmail');
     
     const transporterOptions = {
       host: provider.host,
@@ -214,10 +218,16 @@ class EmailService {
     const transporter = nodemailer.createTransport(transporterOptions);
     
     // For Yahoo, skip verification entirely to avoid timeout issues
-    if (isYahoo) {
-      console.log(`✅ ${provider.name} transporter created (verification skipped for Yahoo)`);
-      console.log(`🔄 Yahoo SMTP verification skipped - will try to send emails anyway`);
-      console.log(`   (Yahoo Mail sometimes fails verification but still works)`);
+    // For Gmail, also skip verification for faster initialization
+    if (isYahoo || isGmail) {
+      console.log(`✅ ${provider.name} transporter created (verification skipped for faster initialization)`);
+      if (isYahoo) {
+        console.log(`🔄 Yahoo SMTP verification skipped - will try to send emails anyway`);
+        console.log(`   (Yahoo Mail sometimes fails verification but still works)`);
+      }
+      if (isGmail) {
+        console.log(`🔄 Gmail SMTP verification skipped - will verify on first send`);
+      }
       return transporter;
     }
     
