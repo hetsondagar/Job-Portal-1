@@ -126,7 +126,7 @@ export default function EmployerSettingsPage() {
           email: userProfile.email || '',
           phone: userProfile.phone || '',
           company: companyData?.name || '',
-          designation: userProfile.headline || '',
+          designation: userProfile.designation || userProfile.headline || '',
           location: userProfile.currentLocation || '',
           avatar: userProfile.avatar || '',
           companyLogo: companyData?.logo || '',
@@ -235,7 +235,7 @@ export default function EmployerSettingsPage() {
         lastName: formData.lastName,
         phone: formData.phone,
         currentLocation: formData.location,
-        headline: formData.designation
+        designation: formData.designation
       }
 
       const userResponse = await apiService.updateProfile(userUpdateData)

@@ -57,7 +57,7 @@ export function EmployerNavbar() {
     email: user?.email || "employer@company.com",
     avatar: user?.avatar || "/placeholder-user.jpg",
     company: company?.name || "Your Company",
-    designation: "HR Manager"
+    designation: user?.designation || "HR Manager"
   }
 
   const getInitials = (firstName: string, lastName: string) => {

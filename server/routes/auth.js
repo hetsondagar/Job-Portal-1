@@ -721,7 +721,9 @@ router.get('/me', async (req, res) => {
       currentLocation: user.current_location,
       headline: user.headline,
       summary: user.summary,
-      profileCompletion: user.profile_completion
+      profileCompletion: user.profile_completion,
+      designation: user.designation,
+      region: user.region
     };
 
     res.status(200).json({

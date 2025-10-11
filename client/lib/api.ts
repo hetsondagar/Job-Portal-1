@@ -38,6 +38,7 @@ export interface User {
   profileCompletion?: number;
   lastLoginAt?: string;
   companyId?: string;
+  designation?: string;
   skills?: string[];
   languages?: string[];
   expectedSalary?: number;
@@ -135,6 +136,7 @@ export interface ProfileUpdateData {
   currentLocation?: string;
   headline?: string;
   summary?: string;
+  designation?: string;
   expectedSalary?: number;
   experienceYears?: number;
   noticePeriod?: number;
