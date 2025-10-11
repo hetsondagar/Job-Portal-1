@@ -391,28 +391,40 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     }
     
     // 2. SKILLS MATCHING (Primary)
-    if (requirement.keySkills && requirement.keySkills.length > 0) {
-      matchingConditions.push({ 
-        key_skills: { [Op.overlap]: requirement.keySkills } 
-      });
+    // Ensure keySkills and skills are valid arrays before using Op.overlap
+    if (requirement.keySkills && Array.isArray(requirement.keySkills) && requirement.keySkills.length > 0) {
+      // Filter out any null/undefined values and ensure it's a clean array
+      const cleanKeySkills = requirement.keySkills.filter(skill => skill != null);
+      if (cleanKeySkills.length > 0) {
+        matchingConditions.push({ 
+          key_skills: { [Op.overlap]: cleanKeySkills } 
+        });
+      }
     }
-    if (requirement.skills && requirement.skills.length > 0) {
-      matchingConditions.push({ 
-        skills: { [Op.overlap]: requirement.skills } 
-      });
+    if (requirement.skills && Array.isArray(requirement.skills) && requirement.skills.length > 0) {
+      // Filter out any null/undefined values and ensure it's a clean array
+      const cleanSkills = requirement.skills.filter(skill => skill != null);
+      if (cleanSkills.length > 0) {
+        matchingConditions.push({ 
+          skills: { [Op.overlap]: cleanSkills } 
+        });
+      }
     }
     
     // 3. LOCATION MATCHING
-    if (requirement.candidateLocations && requirement.candidateLocations.length > 0) {
-      const locationConditions = requirement.candidateLocations.map(loc => ({
-        current_location: { [Op.iLike]: `%${loc}%` }
-      }));
-      matchingConditions.push({ 
-        [Op.or]: [
-          { [Op.or]: locationConditions },
-          { willing_to_relocate: true }
-        ]
-      });
+    if (requirement.candidateLocations && Array.isArray(requirement.candidateLocations) && requirement.candidateLocations.length > 0) {
+      const cleanLocations = requirement.candidateLocations.filter(loc => loc != null && loc.trim() !== '');
+      if (cleanLocations.length > 0) {
+        const locationConditions = cleanLocations.map(loc => ({
+          current_location: { [Op.iLike]: `%${loc}%` }
+        }));
+        matchingConditions.push({ 
+          [Op.or]: [
+            { [Op.or]: locationConditions },
+            { willing_to_relocate: true }
+          ]
+        });
+      }
     }
     
     // 4. EDUCATION MATCHING
