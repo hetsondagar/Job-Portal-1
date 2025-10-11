@@ -18,41 +18,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-
-// Employer Navbar Component
-function EmployerNavbar() {
-  return (
-    <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              JobPortal
-            </span>
-            <span className="text-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full font-medium">
-              Employers
-            </span>
-          </Link>
-
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/employer-login"
-              className="text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
-            >
-              Login
-            </Link>
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              Post a Job
-            </Button>
-          </div>
-        </div>
-      </div>
-    </nav>
-  )
-}
+import EmployerAuthNavbar from "@/components/employer-auth-navbar"
+import EmployerAuthFooter from "@/components/employer-auth-footer"
 
 export default function EmployerRegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -351,7 +318,7 @@ export default function EmployerRegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <EmployerNavbar />
+      <EmployerAuthNavbar variant="register" />
 
       <div className="flex items-center justify-center p-4 pt-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -946,95 +913,8 @@ export default function EmployerRegisterPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">JobPortal</span>
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                India's leading job portal connecting talent with opportunities. Find your dream job or hire the perfect
-                candidate.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">For Job Seekers</h3>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>
-                  <Link href="/jobs" className="hover:text-white transition-colors">
-                    Browse Jobs
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/companies" className="hover:text-white transition-colors">
-                    Browse Companies
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/job-at-pace" className="hover:text-white transition-colors font-medium">
-                    Job at Pace Premium
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/register" className="hover:text-white transition-colors">
-                    Create Account
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="hover:text-white transition-colors">
-                    Login
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">For Employers</h3>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>
-                  <Link href="/employer-dashboard/post-job" className="hover:text-white transition-colors">
-                    Post a Job
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/employer-dashboard/requirements" className="hover:text-white transition-colors">
-                    Search Resume Database
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/employer-dashboard/manage-jobs" className="hover:text-white transition-colors">
-                    Manage Jobs
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/employer-register" className="hover:text-white transition-colors">
-                    Employer Registration
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">Contact Us</h3>
-              <div className="space-y-2 text-sm text-slate-300">
-                <p>Email: support@jobportal.com</p>
-                <p>Phone: +91 80-4040-0000</p>
-                <p>Address: Bangalore, India</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-sm text-slate-400">
-            <p>© 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
-          </div>
-        </div>
-      </footer>
+      {/* Enhanced Footer */}
+      <EmployerAuthFooter />
     </div>
   )
 }
