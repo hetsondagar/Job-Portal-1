@@ -234,9 +234,20 @@ export default function PostJobPage() {
             const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
             setSelectedEducation(educationArray)
             
+            // Extract metadata for consultancy fields
+            const metadata = jobData.metadata || {};
+            
             setFormData((prev) => ({
               ...prev,
               title: jobData.title || '',
+              // Consultancy fields from metadata
+              companyName: metadata.companyName || '',
+              postingType: metadata.postingType || 'company',
+              consultancyName: metadata.consultancyName || '',
+              hiringCompanyName: metadata.hiringCompany?.name || '',
+              hiringCompanyIndustry: metadata.hiringCompany?.industry || '',
+              hiringCompanyDescription: metadata.hiringCompany?.description || '',
+              showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
               department: jobData.department || '',
               location: jobData.location || '',
               type: jobData.jobType || jobData.type || '',

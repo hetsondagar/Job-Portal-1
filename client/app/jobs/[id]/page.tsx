@@ -103,6 +103,9 @@ export default function JobDetailPage() {
                 // Industry from multiple sources
                 industryType: res.data.industryType || metadata.hiringCompany?.industry || res.data.company?.industry || 'Not specified',
                 department: res.data.department || 'Not specified',
+                role: res.data.role || null,
+                roleCategory: res.data.roleCategory || null,
+                employmentType: res.data.employmentType || null,
                 location: res.data.location || 'Location not specified',
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
                 experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
@@ -860,7 +863,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Role</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.title || 'Not provided'}
+                              {job?.role || job?.title || 'Not provided'}
                             </div>
                           </div>
                         </div>
@@ -896,7 +899,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Employment Type</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.type ? `${job.type.replace('-', ' ')}${job?.remoteWork ? `, ${job.remoteWork}` : ''}` : 'Not provided'}
+                              {job?.employmentType || job?.type ? `${(job?.employmentType || job.type).replace('-', ' ')}${job?.remoteWork ? `, ${job.remoteWork}` : ''}` : 'Not provided'}
                             </div>
                           </div>
                         </div>
@@ -911,7 +914,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Role Category</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.category || job?.department || 'Not provided'}
+                              {job?.roleCategory || job?.category || job?.department || 'Not provided'}
                             </div>
                           </div>
                         </div>

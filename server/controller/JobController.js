@@ -1820,7 +1820,65 @@ exports.updateJob = async (req, res, next) => {
       });
     }
 
-    await job.update(updateData);
+    // Validate and convert education field (same as createJob)
+    if (updateData.education !== undefined && updateData.education !== null) {
+      if (Array.isArray(updateData.education)) {
+        // Convert array to string
+        updateData.education = updateData.education.join(', ');
+      } else if (typeof updateData.education === 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: ['education cannot be an array or an object']
+        });
+      }
+    }
+
+    // Handle consultancy metadata fields
+    const {
+      companyName,
+      postingType,
+      consultancyName,
+      hiringCompanyName,
+      hiringCompanyIndustry,
+      hiringCompanyDescription,
+      showHiringCompanyDetails,
+      industryType,
+      ...otherUpdateData
+    } = updateData;
+
+    // Prepare metadata update
+    const existingMetadata = job.metadata || {};
+    const metadataUpdate = {
+      ...existingMetadata,
+      postingType: postingType || existingMetadata.postingType || 'company',
+      companyName: companyName || existingMetadata.companyName || null,
+    };
+
+    // Add consultancy fields if postingType is 'consultancy'
+    if (postingType === 'consultancy' || existingMetadata.postingType === 'consultancy') {
+      metadataUpdate.consultancyName = consultancyName || existingMetadata.consultancyName || null;
+      metadataUpdate.hiringCompany = {
+        name: hiringCompanyName || existingMetadata.hiringCompany?.name || null,
+        industry: hiringCompanyIndustry || existingMetadata.hiringCompany?.industry || null,
+        description: hiringCompanyDescription || existingMetadata.hiringCompany?.description || null
+      };
+      metadataUpdate.showHiringCompanyDetails = showHiringCompanyDetails !== undefined 
+        ? Boolean(showHiringCompanyDetails) 
+        : existingMetadata.showHiringCompanyDetails || false;
+    }
+
+    // Prepare final update data with metadata
+    const finalUpdateData = {
+      ...otherUpdateData,
+      metadata: metadataUpdate,
+      // For consultancy jobs, use hiringCompanyIndustry if industryType is not provided
+      industryType: (industryType && industryType.trim() ? industryType.trim() : null) || 
+                    (postingType === 'consultancy' && hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null) ||
+                    job.industryType
+    };
+
+    await job.update(finalUpdateData);
 
     return res.status(200).json({
       success: true,
