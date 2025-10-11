@@ -13,14 +13,16 @@ class EmailService {
     try {
       // Try multiple email providers in order of preference
       const providers = [
+        // Priority 1: Custom SMTP (supports Yahoo, Gmail, and any other provider)
         {
-          name: 'Gmail',
-          host: 'smtp.gmail.com',
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-          port: 587,
-          secure: false
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true'
         },
+        // Priority 2: Yahoo with explicit credentials
         {
           name: 'Yahoo (Port 587)',
           host: 'smtp.mail.yahoo.com',
@@ -37,32 +39,36 @@ class EmailService {
           port: 465,
           secure: true
         },
+        // Priority 3: Gmail
         {
-          name: 'Custom SMTP',
-          host: process.env.SMTP_HOST,
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_SECURE === 'true'
+          name: 'Gmail',
+          host: 'smtp.gmail.com',
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+          port: 587,
+          secure: false
         }
       ];
 
       console.log('\n📧 Email Service Configuration Check:');
       console.log('=====================================');
-      if (process.env.GMAIL_USER) {
-        console.log('✓ Gmail credentials found');
-        console.log(`  User: ${process.env.GMAIL_USER}`);
-        console.log(`  Password: ${process.env.GMAIL_APP_PASSWORD ? '***' + process.env.GMAIL_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        console.log('✓ Custom SMTP credentials found (PRIMARY)');
+        console.log(`  Host: ${process.env.SMTP_HOST}`);
+        console.log(`  Port: ${process.env.SMTP_PORT || 587}`);
+        console.log(`  User: ${process.env.SMTP_USER}`);
+        console.log(`  Secure: ${process.env.SMTP_SECURE === 'true' ? 'Yes (TLS)' : 'No (STARTTLS)'}`);
+        console.log(`  Password: ${process.env.SMTP_PASS ? '***' + process.env.SMTP_PASS.slice(-4) : 'NOT SET'}`);
       }
       if (process.env.YAHOO_USER) {
         console.log('✓ Yahoo credentials found');
         console.log(`  User: ${process.env.YAHOO_USER}`);
         console.log(`  Password: ${process.env.YAHOO_APP_PASSWORD ? '***' + process.env.YAHOO_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
       }
-      if (process.env.SMTP_HOST) {
-        console.log('✓ Custom SMTP credentials found');
-        console.log(`  Host: ${process.env.SMTP_HOST}`);
-        console.log(`  User: ${process.env.SMTP_USER}`);
+      if (process.env.GMAIL_USER) {
+        console.log('✓ Gmail credentials found');
+        console.log(`  User: ${process.env.GMAIL_USER}`);
+        console.log(`  Password: ${process.env.GMAIL_APP_PASSWORD ? '***' + process.env.GMAIL_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
       }
       console.log('=====================================\n');
 
@@ -112,6 +118,9 @@ class EmailService {
   }
 
   async createTransporter(provider) {
+    // Special handling for Yahoo SMTP
+    const isYahoo = provider.host && provider.host.includes('yahoo');
+    
     const transporterOptions = {
       host: provider.host,
       port: provider.port,
@@ -123,13 +132,15 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: 5000, // Reduced to 5 seconds for faster fallback
-      greetingTimeout: 5000,
-      socketTimeout: 5000,
+      connectionTimeout: isYahoo ? 10000 : 5000, // Yahoo needs more time
+      greetingTimeout: isYahoo ? 10000 : 5000,
+      socketTimeout: isYahoo ? 10000 : 5000,
       requireTLS: !provider.secure,
       tls: {
         rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        minVersion: 'TLSv1.2',
+        // Yahoo specific TLS settings
+        ciphers: isYahoo ? 'SSLv3' : undefined
       },
       debug: process.env.NODE_ENV === 'development',
       logger: process.env.NODE_ENV === 'development'
@@ -145,20 +156,35 @@ class EmailService {
     const transporter = nodemailer.createTransport(transporterOptions);
     
     try {
-      // Use a shorter timeout for verification
+      // Use a longer timeout for Yahoo
+      const timeoutDuration = isYahoo ? 10000 : 5000;
       const verifyPromise = transporter.verify();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Verification timeout')), 5000)
+        setTimeout(() => reject(new Error('Verification timeout')), timeoutDuration)
       );
       
       await Promise.race([verifyPromise, timeoutPromise]);
       console.log(`✅ ${provider.name} connection verified successfully`);
       return transporter;
     } catch (verifyError) {
-      console.error(`❌ ${provider.name} verification failed:`, verifyError.message);
+      console.error(`⚠️  ${provider.name} verification failed:`, verifyError.message);
+      console.log(`   Error Code: ${verifyError.code || 'N/A'}`);
       
-      // For timeout errors, throw to try next provider
+      // For Yahoo, skip verification and try to use it anyway
+      if (isYahoo) {
+        console.log(`🔄 Yahoo SMTP verification skipped - will try to send emails anyway`);
+        console.log(`   (Yahoo Mail sometimes fails verification but still works)`);
+        return transporter;
+      }
+      
+      // For timeout errors on other providers, throw to try next provider
       if (verifyError.message.includes('timeout') || verifyError.code === 'ETIMEDOUT') {
+        throw verifyError;
+      }
+      
+      // For authentication errors, throw to try next provider
+      if (verifyError.code === 'EAUTH' || verifyError.responseCode === 535) {
+        console.error(`   Authentication failed - check username and password`);
         throw verifyError;
       }
       
