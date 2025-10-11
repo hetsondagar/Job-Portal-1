@@ -24,45 +24,26 @@ class EmailService {
         return;
       }
       // Check for SendGrid first (most reliable for production)
-      if (sgMail && process.env.SENDGRID_API_KEY) {
-        console.log('📧 SendGrid API key found - using SendGrid for email delivery');
-        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-        this.transporter = { type: 'sendgrid', sgMail };
-        this.initialized = true;
-        console.log('✅ SendGrid email service initialized successfully!');
-        return;
+      if (sgMail && process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL) {
+        console.log('📧 SendGrid API key found - attempting to initialize SendGrid...');
+        try {
+          sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+          // Test SendGrid with a simple verification
+          this.transporter = { type: 'sendgrid', sgMail };
+          console.log('✅ SendGrid email service initialized successfully!');
+          this.initialized = true;
+          return;
+        } catch (error) {
+          console.log('⚠️ SendGrid initialization failed, falling back to SMTP providers:', error.message);
+          // Continue to SMTP providers
+        }
+      } else if (sgMail && process.env.SENDGRID_API_KEY) {
+        console.log('⚠️ SendGrid API key found but SENDGRID_FROM_EMAIL not set - falling back to SMTP');
       }
 
       // Try multiple email providers in order of preference
       const providers = [
-        // Priority 1: Gmail (most reliable in production)
-        {
-          name: 'Gmail',
-          host: 'smtp.gmail.com',
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-          port: 587,
-          secure: false
-        },
-        // Priority 2: Custom SMTP (supports any provider)
-        {
-          name: 'Custom SMTP',
-          host: process.env.SMTP_HOST,
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
-          port: parseInt(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true'
-        },
-        // Priority 3: Outlook/Hotmail (more reliable than Yahoo)
-        {
-          name: 'Outlook',
-          host: 'smtp-mail.outlook.com',
-          user: process.env.OUTLOOK_USER,
-          pass: process.env.OUTLOOK_PASSWORD,
-          port: 587,
-          secure: false
-        },
-        // Priority 4: Yahoo (last resort due to reliability issues)
+        // Priority 1: Yahoo SMTP (optimized for production)
         {
           name: 'Yahoo (Port 587)',
           host: 'smtp.mail.yahoo.com',
@@ -78,13 +59,51 @@ class EmailService {
           pass: process.env.YAHOO_APP_PASSWORD,
           port: 465,
           secure: true
+        },
+        // Priority 2: Custom SMTP (supports any provider)
+        {
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true'
+        },
+        // Priority 3: Gmail (backup)
+        {
+          name: 'Gmail',
+          host: 'smtp.gmail.com',
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+          port: 587,
+          secure: false
+        },
+        // Priority 4: Outlook/Hotmail (backup)
+        {
+          name: 'Outlook',
+          host: 'smtp-mail.outlook.com',
+          user: process.env.OUTLOOK_USER,
+          pass: process.env.OUTLOOK_PASSWORD,
+          port: 587,
+          secure: false
         }
       ];
 
       console.log('\n📧 Email Service Configuration Check:');
       console.log('=====================================');
+      if (process.env.YAHOO_USER && process.env.YAHOO_APP_PASSWORD) {
+        console.log('✓ Yahoo SMTP credentials found (PRIORITY 1)');
+        console.log(`  User: ${process.env.YAHOO_USER}`);
+        console.log(`  Password: ${process.env.YAHOO_APP_PASSWORD ? '***' + process.env.YAHOO_APP_PASSWORD.slice(-4) : 'NOT SET'}`);
+      }
+      if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+        console.log('✓ Gmail SMTP credentials found (BACKUP)');
+      }
+      if (process.env.SENDGRID_API_KEY) {
+        console.log('✓ SendGrid API key found (DISABLED - 403 error)');
+      }
       if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-        console.log('✓ Custom SMTP credentials found (PRIMARY)');
+        console.log('✓ Custom SMTP credentials found (BACKUP)');
         console.log(`  Host: ${process.env.SMTP_HOST}`);
         console.log(`  Port: ${process.env.SMTP_PORT || 587}`);
         console.log(`  User: ${process.env.SMTP_USER}`);
@@ -171,16 +190,29 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: 15000, // Increased timeout for production
-      greetingTimeout: 15000,
-      socketTimeout: 15000,
+      connectionTimeout: isYahoo ? 25000 : 15000, // Extra timeout for Yahoo
+      greetingTimeout: isYahoo ? 25000 : 15000,
+      socketTimeout: isYahoo ? 25000 : 15000,
       requireTLS: !provider.secure,
       tls: {
         rejectUnauthorized: false,
         minVersion: 'TLSv1.2',
         // Yahoo specific TLS settings
-        ciphers: isYahoo ? 'SSLv3' : undefined
+        ciphers: isYahoo ? 'SSLv3' : undefined,
+        // Additional Yahoo optimizations
+        ...(isYahoo && {
+          servername: 'smtp.mail.yahoo.com',
+          checkServerIdentity: false
+        })
       },
+      // Yahoo-specific connection options
+      ...(isYahoo && {
+        connectionTimeout: 30000,
+        greetingTimeout: 30000,
+        socketTimeout: 30000,
+        ignoreTLS: false,
+        requireTLS: true
+      }),
       debug: process.env.NODE_ENV === 'development',
       logger: process.env.NODE_ENV === 'development'
     };
@@ -195,8 +227,8 @@ class EmailService {
     const transporter = nodemailer.createTransport(transporterOptions);
     
     try {
-      // Use a longer timeout for production stability
-      const timeoutDuration = 20000; // 20 seconds for production
+      // Use a longer timeout for production stability, especially for Yahoo
+      const timeoutDuration = isYahoo ? 35000 : 20000; // 35 seconds for Yahoo, 20 for others
       const verifyPromise = transporter.verify();
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Verification timeout')), timeoutDuration)
@@ -329,11 +361,11 @@ class EmailService {
         responseCode: error?.responseCode
       });
       
-      // If it's a connection timeout and we're using Yahoo, try to reinitialize with a different provider
+      // Handle different types of failures
       if (error?.code === 'ETIMEDOUT' && this.transporter?.options?.host?.includes('yahoo')) {
         console.log('🔄 Yahoo SMTP timeout detected, attempting to reinitialize with alternative provider...');
         try {
-          await this.initializeTransporter();
+          await this.initializeTransporter(true); // Force reinitialize
           if (this.transporter && this.transporter.type !== 'mock') {
             console.log('🔄 Retrying email send with alternative provider...');
             const retryResult = await this.transporter.sendMail(mailOptions);
@@ -342,6 +374,21 @@ class EmailService {
           }
         } catch (retryError) {
           console.error('❌ Retry also failed:', retryError.message);
+        }
+      } else if (error?.code === 403 && this.transporter?.type === 'sendgrid') {
+        console.log('🔄 SendGrid 403 Forbidden error - falling back to SMTP providers...');
+        try {
+          // Remove SendGrid and try SMTP providers
+          delete process.env.SENDGRID_API_KEY; // Temporarily disable SendGrid
+          await this.initializeTransporter(true); // Force reinitialize
+          if (this.transporter && this.transporter.type !== 'mock') {
+            console.log('🔄 Retrying email send with SMTP provider...');
+            const retryResult = await this.transporter.sendMail(mailOptions);
+            console.log('✅ Email sent successfully via SMTP fallback');
+            return { success: true, method: 'smtp-fallback', messageId: retryResult.messageId };
+          }
+        } catch (retryError) {
+          console.error('❌ SMTP fallback also failed:', retryError.message);
         }
       }
       
