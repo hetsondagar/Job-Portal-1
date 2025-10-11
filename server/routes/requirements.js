@@ -369,90 +369,43 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     // Get total candidates count for this requirement
     const { User } = require('../config/index');
     
-    // Build comprehensive matching criteria (same as candidates endpoint)
-    // Note: Op and sequelize are already imported at the top of this file
+    // SIMPLIFIED APPROACH: Use basic filters only (no JSONB overlap to avoid type issues)
     const whereClause = {
       user_type: 'jobseeker',
       is_active: true,
       account_status: 'active'
     };
     
-    // Build matching conditions - use OR for flexibility
-    const matchingConditions = [];
+    // Add simple filters (no complex JSONB operations for stats)
     
     // 1. EXPERIENCE RANGE MATCHING
     if (requirement.experienceMin || requirement.experienceMax) {
-      const expConditions = {};
-      if (requirement.experienceMin) expConditions[Op.gte] = requirement.experienceMin;
-      if (requirement.experienceMax) expConditions[Op.lte] = requirement.experienceMax;
-      if (Object.keys(expConditions).length > 0) {
-        matchingConditions.push({ experience_years: expConditions });
+      whereClause.experience_years = {};
+      if (requirement.experienceMin) {
+        whereClause.experience_years[Op.gte] = requirement.experienceMin;
+      }
+      if (requirement.experienceMax) {
+        whereClause.experience_years[Op.lte] = requirement.experienceMax;
       }
     }
     
-    // 2. SKILLS MATCHING (Primary)
-    // Ensure keySkills and skills are valid arrays before using Op.overlap
-    if (requirement.keySkills && Array.isArray(requirement.keySkills) && requirement.keySkills.length > 0) {
-      // Filter out any null/undefined values and ensure it's a clean array
-      const cleanKeySkills = requirement.keySkills.filter(skill => skill != null);
-      if (cleanKeySkills.length > 0) {
-        matchingConditions.push({ 
-          key_skills: { [Op.overlap]: cleanKeySkills } 
-        });
-      }
-    }
-    if (requirement.skills && Array.isArray(requirement.skills) && requirement.skills.length > 0) {
-      // Filter out any null/undefined values and ensure it's a clean array
-      const cleanSkills = requirement.skills.filter(skill => skill != null);
-      if (cleanSkills.length > 0) {
-        matchingConditions.push({ 
-          skills: { [Op.overlap]: cleanSkills } 
-        });
-      }
-    }
-    
-    // 3. LOCATION MATCHING
-    if (requirement.candidateLocations && Array.isArray(requirement.candidateLocations) && requirement.candidateLocations.length > 0) {
-      const cleanLocations = requirement.candidateLocations.filter(loc => loc != null && loc.trim() !== '');
-      if (cleanLocations.length > 0) {
-        const locationConditions = cleanLocations.map(loc => ({
-          current_location: { [Op.iLike]: `%${loc}%` }
-        }));
-        matchingConditions.push({ 
-          [Op.or]: [
-            { [Op.or]: locationConditions },
-            { willing_to_relocate: true }
-          ]
-        });
-      }
-    }
-    
-    // 4. EDUCATION MATCHING
-    if (requirement.education) {
-      matchingConditions.push({
-        [Op.or]: [
-          sequelize.where(
-            sequelize.cast(sequelize.col('education'), 'text'),
-            { [Op.iLike]: `%${requirement.education}%` }
-          ),
-          { highest_education: { [Op.iLike]: `%${requirement.education}%` } }
-        ]
-      });
-    }
-    
-    // 5. SALARY RANGE MATCHING
+    // 2. SALARY RANGE MATCHING
     if (requirement.salaryMin || requirement.salaryMax) {
-      const salaryConditions = {};
-      if (requirement.salaryMin) salaryConditions[Op.gte] = requirement.salaryMin;
-      if (requirement.salaryMax) salaryConditions[Op.lte] = requirement.salaryMax;
-      if (Object.keys(salaryConditions).length > 0) {
-        matchingConditions.push({ expected_salary: salaryConditions });
+      whereClause.expected_salary = {};
+      if (requirement.salaryMin) {
+        whereClause.expected_salary[Op.gte] = requirement.salaryMin;
+      }
+      if (requirement.salaryMax) {
+        whereClause.expected_salary[Op.lte] = requirement.salaryMax;
       }
     }
     
-    // Apply matching conditions
-    if (matchingConditions.length > 0) {
-      whereClause[Op.or] = matchingConditions;
+    // 3. LOCATION MATCHING (Simple text search, no array operations)
+    if (requirement.location && requirement.location.trim()) {
+      whereClause[Op.or] = [
+        { current_location: { [Op.iLike]: `%${requirement.location.trim()}%` } },
+        { willing_to_relocate: true }
+      ];
     }
     
     // Get total candidates count
