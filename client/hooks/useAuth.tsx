@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profileCompletion: u.profile_completion ?? u.profileCompletion,
     lastLoginAt: u.last_login_at ?? u.lastLoginAt,
     companyId: u.company_id ?? u.companyId,
+    designation: u.designation,
     skills: u.skills,
     languages: u.languages,
     expectedSalary: u.expected_salary ?? u.expectedSalary,

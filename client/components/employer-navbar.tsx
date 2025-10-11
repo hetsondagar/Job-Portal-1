@@ -18,7 +18,7 @@ export function EmployerNavbar() {
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const [company, setCompany] = useState<any>(null)
   const isAdmin = (user?.userType === 'admin') || (user?.preferences?.employerRole === 'admin')
   
@@ -27,6 +27,14 @@ export function EmployerNavbar() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Refresh user data if designation is missing
+  useEffect(() => {
+    if (mounted && user && !user.designation && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Refreshing user data to get designation...')
+      refreshUser()
+    }
+  }, [mounted, user, refreshUser])
 
   // Get company data if user is an employer
   useEffect(() => {
@@ -59,6 +67,14 @@ export function EmployerNavbar() {
     company: company?.name || "Your Company",
     designation: user?.designation || "HR Manager"
   }
+
+  // Debug logging
+  console.log('🔍 Employer Navbar - User data:', {
+    userDesignation: user?.designation,
+    userType: user?.userType,
+    companyName: company?.name,
+    finalDesignation: userData.designation
+  })
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
