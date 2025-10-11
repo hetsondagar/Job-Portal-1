@@ -120,7 +120,15 @@ exports.createJob = async (req, res, next) => {
       hiringCompanyId, // The actual hiring company (for agency jobs)
       postedByAgencyId, // The agency that posted the job
       agencyDescription, // Short description about the agency
-      authorizationId // Link to the authorization record
+      authorizationId, // Link to the authorization record
+      // CONSULTANCY POSTING FIELDS
+      companyName, // Company name for display
+      postingType = 'company', // 'company' or 'consultancy'
+      consultancyName, // Name of the consultancy
+      hiringCompanyName, // Company the consultancy is hiring for
+      hiringCompanyIndustry, // Industry of hiring company
+      hiringCompanyDescription, // Description of hiring company
+      showHiringCompanyDetails = false // Whether to show hiring company details to candidates
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
@@ -487,7 +495,21 @@ exports.createJob = async (req, res, next) => {
       validTill: resolvedValidTill,
       publishedAt,
       tags: Array.isArray(tags) ? tags : [],
-      metadata,
+      metadata: {
+        ...metadata,
+        // CONSULTANCY POSTING FIELDS - Store in metadata
+        postingType: postingType || 'company',
+        companyName: companyName && companyName.trim() ? companyName.trim() : null,
+        ...(postingType === 'consultancy' && {
+          consultancyName: consultancyName && consultancyName.trim() ? consultancyName.trim() : null,
+          hiringCompany: {
+            name: hiringCompanyName && hiringCompanyName.trim() ? hiringCompanyName.trim() : null,
+            industry: hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null,
+            description: hiringCompanyDescription && hiringCompanyDescription.trim() ? hiringCompanyDescription.trim() : null
+          },
+          showHiringCompanyDetails: Boolean(showHiringCompanyDetails)
+        })
+      },
       city,
       state,
       country,

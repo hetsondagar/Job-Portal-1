@@ -102,8 +102,25 @@ const PORT = process.env.PORT || 8000;
 // Trust proxy for rate limiting behind reverse proxy (Render, etc.)
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Configure helmet to allow cross-origin resources
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:", "http:", "blob:", "https://res.cloudinary.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https:", "http:"],
+      frameSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'", "https:", "data:"],
+      workerSrc: ["'self'", "blob:"]
+    }
+  }
+}));
 
 // Enhanced CORS configuration - MUST BE BEFORE ALL ROUTES
 const corsOptions = {
@@ -220,15 +237,18 @@ if (process.env.NODE_ENV === 'development') {
 
 // Bulk import routes already registered above
 
-// Serve static files from uploads directory
+// Serve static files from uploads directory with comprehensive CORS headers
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, filePath) => {
     // Allow cross-origin usage of uploaded files (for frontend domains)
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     res.setHeader('Cache-Control', 'public, max-age=31536000');
     // Fix Cross-Origin-Resource-Policy issue
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+    res.setHeader('Timing-Allow-Origin', '*');
     // Set accurate content-type based on extension
     const lower = filePath.toLowerCase();
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
@@ -239,6 +259,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
       res.setHeader('Content-Type', 'image/gif');
     } else if (lower.endsWith('.webp')) {
       res.setHeader('Content-Type', 'image/webp');
+    } else if (lower.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
     }
   }
 }));

@@ -34,6 +34,7 @@ export default function PostJobPage() {
   const [editingJobId, setEditingJobId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
+    companyName: "", // NEW: Company name field
     department: "",
     location: "",
     type: "",
@@ -48,6 +49,13 @@ export default function PostJobPage() {
     roleCategory: "",
     education: [] as string[],
     employmentType: "",
+    // NEW: Consultancy fields
+    postingType: "company" as "company" | "consultancy",
+    consultancyName: "",
+    hiringCompanyName: "",
+    hiringCompanyIndustry: "",
+    hiringCompanyDescription: "",
+    showHiringCompanyDetails: false,
     // Hot Vacancy Premium Features
     isHotVacancy: false,
     urgentHiring: false,
@@ -694,6 +702,27 @@ export default function PostJobPage() {
     if (!formData.title || formData.title.trim() === '') {
       validationErrors.push('Job title is required')
     }
+    
+    // Validate posting type specific fields
+    if (formData.postingType === 'consultancy') {
+      if (!formData.consultancyName || formData.consultancyName.trim() === '') {
+        validationErrors.push('Consultancy name is required')
+      }
+      if (!formData.hiringCompanyName || formData.hiringCompanyName.trim() === '') {
+        validationErrors.push('Hiring company name is required')
+      }
+      if (!formData.hiringCompanyIndustry || formData.hiringCompanyIndustry.trim() === '') {
+        validationErrors.push('Hiring company industry is required')
+      }
+      if (!formData.hiringCompanyDescription || formData.hiringCompanyDescription.trim() === '') {
+        validationErrors.push('Hiring company description is required')
+      }
+    } else {
+      if (!formData.companyName || formData.companyName.trim() === '') {
+        validationErrors.push('Company name is required')
+      }
+    }
+    
     if (!formData.description || formData.description.trim() === '') {
       validationErrors.push('Job description is required')
     }
@@ -742,6 +771,16 @@ export default function PostJobPage() {
         education: formData.education,
         employmentType: formData.employmentType,
         status: 'active', // Explicitly set status to active for publishing
+        // ========== CONSULTANCY POSTING FIELDS ==========
+        companyName: formData.companyName,
+        postingType: formData.postingType,
+        ...(formData.postingType === 'consultancy' && {
+          consultancyName: formData.consultancyName,
+          hiringCompanyName: formData.hiringCompanyName,
+          hiringCompanyIndustry: formData.hiringCompanyIndustry,
+          hiringCompanyDescription: formData.hiringCompanyDescription,
+          showHiringCompanyDetails: formData.showHiringCompanyDetails
+        }),
         // ========== AGENCY POSTING FIELDS ==========
         ...(isAgency && selectedClient !== 'own' && {
           isAgencyPosted: true,
@@ -804,23 +843,31 @@ export default function PostJobPage() {
          setShowSuccessDialog(true)
          
          if (!editingJobId) {
-           // Only reset form for new jobs, not when editing
-           setFormData({
-             title: "",
-             department: "",
-             location: "",
-             type: "",
-             experience: "",
-             salary: "",
-             description: "",
-             requirements: "",
-             benefits: "",
-             skills: [],
-             role: "",
-             industryType: "",
-             roleCategory: "",
-             education: [],
-             employmentType: "",
+          // Only reset form for new jobs, not when editing
+          setFormData({
+            title: "",
+            companyName: "",
+            department: "",
+            location: "",
+            type: "",
+            experience: "",
+            salary: "",
+            description: "",
+            requirements: "",
+            benefits: "",
+            skills: [],
+            role: "",
+            industryType: "",
+            roleCategory: "",
+            education: [],
+            employmentType: "",
+            // Consultancy fields
+            postingType: "company",
+            consultancyName: "",
+            hiringCompanyName: "",
+            hiringCompanyIndustry: "",
+            hiringCompanyDescription: "",
+            showHiringCompanyDetails: false,
              // Hot Vacancy Premium Features
              isHotVacancy: false,
              urgentHiring: false,
@@ -1256,6 +1303,39 @@ export default function PostJobPage() {
               )}
             </div>
             
+            {/* Posting Type Selection */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                You are posting for*
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, postingType: "company" })}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    formData.postingType === "company"
+                      ? "border-blue-600 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <Building2 className={`w-6 h-6 mx-auto mb-2 ${formData.postingType === "company" ? "text-blue-600" : "text-gray-400"}`} />
+                  <div className="font-medium text-sm">Your Company/Business</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, postingType: "consultancy" })}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    formData.postingType === "consultancy"
+                      ? "border-purple-600 bg-purple-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <ExternalLink className={`w-6 h-6 mx-auto mb-2 ${formData.postingType === "consultancy" ? "text-purple-600" : "text-gray-400"}`} />
+                  <div className="font-medium text-sm">Consultancy</div>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -1270,6 +1350,74 @@ export default function PostJobPage() {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 />
               </div>
+              
+              {/* Company Name or Consultancy Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  {formData.postingType === "consultancy" ? "Consultancy Name*" : "Company Name*"}
+                </label>
+                <Input
+                  placeholder={formData.postingType === "consultancy" ? "e.g. ABC Consultants" : "e.g. Tech Solutions Pvt Ltd"}
+                  value={formData.postingType === "consultancy" ? formData.consultancyName : formData.companyName}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    [formData.postingType === "consultancy" ? "consultancyName" : "companyName"]: e.target.value 
+                  })}
+                />
+              </div>
+
+              {/* Consultancy Hiring Company Fields */}
+              {formData.postingType === "consultancy" && (
+                <>
+                  <div className="md:col-span-2 mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h3 className="text-sm font-semibold text-purple-900 mb-4">Company You're Hiring For</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Company Name*</label>
+                        <Input
+                          placeholder="e.g. Client Company Pvt Ltd"
+                          value={formData.hiringCompanyName}
+                          onChange={(e) => setFormData({ ...formData, hiringCompanyName: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Industry*</label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-between"
+                          onClick={() => setShowIndustryDropdown(true)}
+                        >
+                          {formData.hiringCompanyIndustry || "Select industry"}
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Company Description*</label>
+                        <Textarea
+                          placeholder="Brief description about the company you're hiring for..."
+                          className="min-h-20"
+                          value={formData.hiringCompanyDescription}
+                          onChange={(e) => setFormData({ ...formData, hiringCompanyDescription: e.target.value })}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="showHiringCompanyDetails"
+                            checked={formData.showHiringCompanyDetails}
+                            onCheckedChange={(checked) => setFormData({ ...formData, showHiringCompanyDetails: checked as boolean })}
+                          />
+                          <label htmlFor="showHiringCompanyDetails" className="text-sm text-gray-700">
+                            Show company details to candidates (if unchecked, only consultancy name will be shown)
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Department*</label>
                 <Button
@@ -1297,6 +1445,39 @@ export default function PostJobPage() {
                   />
                 )}
               </div>
+
+              {/* Industry Type - Moved from Step 2 */}
+              {formData.postingType !== "consultancy" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Industry Type*</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => setShowIndustryDropdown(true)}
+                  >
+                    {selectedIndustries.length > 0 
+                      ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
+                      : "Select industry type"
+                    }
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                  {selectedIndustries.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {selectedIndustries.slice(0, 3).map((industry, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {industry.replace(/\s*\(\d+\)\s*$/, '')}
+                        </Badge>
+                      ))}
+                      {selectedIndustries.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{selectedIndustries.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Location*</label>
                 <Input
@@ -1379,39 +1560,7 @@ export default function PostJobPage() {
               <p className="text-sm text-gray-500 mt-1">Enter the specific role title</p>
             </div>
 
-            {/* Industry Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Industry Type*
-              </label>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-between"
-                onClick={() => setShowIndustryDropdown(true)}
-              >
-                {selectedIndustries.length > 0 
-                  ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
-                  : "Select industry type"
-                }
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-              {selectedIndustries.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {selectedIndustries.slice(0, 3).map((industry, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {industry.replace(/\s*\(\d+\)\s*$/, '')}
-                    </Badge>
-                  ))}
-                  {selectedIndustries.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{selectedIndustries.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-
+            {/* Industry Type field removed - now in Step 1 */}
 
             {/* Employment Type */}
             <div>
@@ -3154,13 +3303,22 @@ export default function PostJobPage() {
       {/* Industry Dropdown */}
       {showIndustryDropdown && (
         <IndustryDropdown
-          selectedIndustries={selectedIndustries}
+          selectedIndustries={formData.postingType === "consultancy" && formData.hiringCompanyIndustry 
+            ? [formData.hiringCompanyIndustry] 
+            : selectedIndustries
+          }
           onIndustryChange={(industries) => {
-            setSelectedIndustries(industries)
-            setFormData({ ...formData, industryType: industries.join(', ') })
+            if (formData.postingType === "consultancy") {
+              // For consultancy, set hiring company industry (single selection)
+              setFormData({ ...formData, hiringCompanyIndustry: industries[0] || "" })
+            } else {
+              // For regular company, set multiple industries
+              setSelectedIndustries(industries)
+              setFormData({ ...formData, industryType: industries.join(', ') })
+            }
           }}
           onClose={() => setShowIndustryDropdown(false)}
-          hideSelectAllButtons={true}
+          hideSelectAllButtons={formData.postingType === "consultancy"}
         />
       )}
 
