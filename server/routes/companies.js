@@ -481,10 +481,11 @@ router.post('/', authenticateToken, async (req, res) => {
       isActive: true
     });
 
-    // Update user with company_id and set as admin (since they created the company)
+    // Update user with company_id and set as admin with Hiring Manager designation
     await req.user.update({ 
       company_id: company.id,
-      user_type: 'admin' // User becomes admin when they create a company
+      user_type: 'admin', // User becomes admin when they create a company
+      designation: 'Hiring Manager' // Set proper designation for company creators
     });
 
     // Fetch the updated user data

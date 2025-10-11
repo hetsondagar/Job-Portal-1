@@ -72,7 +72,7 @@ export default function EmployerOAuthCallbackPage() {
             
             // Redirect to employer dashboard (respect Gulf region)
             setTimeout(() => {
-              const region = (userResponse.data.user as any)?.region
+              const region = (userResponse.data?.user as any)?.region
               router.push(region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
             }, 2000)
           }
@@ -328,9 +328,37 @@ function EmployerProfileSetupForm({ onSubmit, user }: {
     phone: '',
     companyName: '',
     companyId: '',
-    region: 'india'
+    region: 'india',
+    action: 'create' // 'create' or 'join'
   })
   const [loading, setLoading] = useState(false)
+  const [companies, setCompanies] = useState<any[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [companySearch, setCompanySearch] = useState('')
+
+  // Search companies when user types
+  useEffect(() => {
+    const searchCompanies = async () => {
+      if (companySearch.length < 2) {
+        setCompanies([])
+        return
+      }
+      
+      setSearchLoading(true)
+      try {
+        const response = await apiService.listCompanies({ search: companySearch, limit: 10 })
+        if (response.success && response.data) {
+          setCompanies(response.data)
+        }
+      } catch (error) {
+        console.error('Error searching companies:', error)
+      }
+      setSearchLoading(false)
+    }
+
+    const timeoutId = setTimeout(searchCompanies, 300)
+    return () => clearTimeout(timeoutId)
+  }, [companySearch])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -340,13 +368,18 @@ function EmployerProfileSetupForm({ onSubmit, user }: {
       return
     }
     
-    if (!formData.companyName && !formData.companyId) {
-      toast.error('Please provide either a company name or select an existing company')
+    if (formData.action === 'create' && !formData.companyName) {
+      toast.error('Please provide a company name')
+      return
+    }
+    
+    if (formData.action === 'join' && !formData.companyId) {
+      toast.error('Please select a company to join')
       return
     }
     
     setLoading(true)
-    await onSubmit(formData)
+    await onSubmit({ ...formData, action: formData.action })
     setLoading(false)
   }
 
@@ -422,19 +455,96 @@ function EmployerProfileSetupForm({ onSubmit, user }: {
         
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Company Name *
+            Company Setup *
           </label>
-          <input
-            type="text"
-            value={formData.companyName}
-            onChange={(e) => setFormData({ ...formData, companyName: e.target.value, companyId: '' })}
-            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
-            placeholder="Enter your company name"
-            required
-          />
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            We'll create a new company profile for you
-          </p>
+          
+          {/* Action Selection */}
+          <div className="flex gap-4 mb-4">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="action"
+                value="create"
+                checked={formData.action === 'create'}
+                onChange={(e) => setFormData({ ...formData, action: e.target.value, companyId: '', companyName: '' })}
+                className="mr-2"
+              />
+              <span className="text-sm">Create New Company</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="action"
+                value="join"
+                checked={formData.action === 'join'}
+                onChange={(e) => setFormData({ ...formData, action: e.target.value, companyId: '', companyName: '' })}
+                className="mr-2"
+              />
+              <span className="text-sm">Join Existing Company</span>
+            </label>
+          </div>
+
+          {/* Create New Company */}
+          {formData.action === 'create' && (
+            <div>
+              <input
+                type="text"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+                placeholder="Enter your company name"
+                required
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                You'll be assigned as the Hiring Manager
+              </p>
+            </div>
+          )}
+
+          {/* Join Existing Company */}
+          {formData.action === 'join' && (
+            <div>
+              <input
+                type="text"
+                value={companySearch}
+                onChange={(e) => setCompanySearch(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-white"
+                placeholder="Search for your company..."
+                required
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                You'll be assigned as a Recruiter
+              </p>
+              
+              {/* Company Search Results */}
+              {companySearch.length >= 2 && (
+                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-md">
+                  {searchLoading ? (
+                    <div className="p-3 text-center text-sm text-slate-500">Searching...</div>
+                  ) : companies.length > 0 ? (
+                    companies.map((company) => (
+                      <div
+                        key={company.id}
+                        onClick={() => {
+                          setFormData({ ...formData, companyId: company.id })
+                          setCompanySearch(company.name)
+                          setCompanies([])
+                        }}
+                        className="p-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-600 last:border-b-0"
+                      >
+                        <div className="font-medium text-sm">{company.name}</div>
+                        <div className="text-xs text-slate-500">
+                          {company.industry} • {company.companySize}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-3 text-center text-sm text-slate-500">No companies found</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       

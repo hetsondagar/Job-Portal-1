@@ -580,7 +580,7 @@ router.get('/facebook/callback', (req, res) => {
 // Complete employer profile setup (including company creation)
 router.post('/complete-employer-profile', async (req, res) => {
   try {
-    const { firstName, lastName, phone, companyName, companyId, region } = req.body;
+    const { firstName, lastName, phone, companyName, companyId, region, action } = req.body;
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
@@ -597,8 +597,23 @@ router.post('/complete-employer-profile', async (req, res) => {
       });
     }
     
-    // Validate company information based on type
-    if (!companyName && !companyId) {
+    // Validate company information based on action type
+    if (action === 'create' && !companyName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company name is required when creating a new company'
+      });
+    }
+    
+    if (action === 'join' && !companyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company ID is required when joining an existing company'
+      });
+    }
+    
+    // Fallback validation for backward compatibility
+    if (!action && !companyName && !companyId) {
       return res.status(400).json({
         success: false,
         message: 'Either companyName (for new company) or companyId (for existing company) is required'
@@ -629,7 +644,7 @@ router.post('/complete-employer-profile', async (req, res) => {
     try {
       let company;
       
-      if (companyName) {
+      if (action === 'create' || companyName) {
         // Create new company
         const companySlug = generateSlug(companyName);
         
@@ -649,7 +664,7 @@ router.post('/complete-employer-profile', async (req, res) => {
         }, { transaction });
 
         console.log('✅ Company created for employer profile setup:', company.id);
-      } else if (companyId) {
+      } else if (action === 'join' || companyId) {
         // Join existing company
         company = await Company.findByPk(companyId, { transaction });
         
@@ -671,7 +686,8 @@ router.post('/complete-employer-profile', async (req, res) => {
         phone: phone,
         region: region,
         company_id: company.id,
-        user_type: companyName ? 'admin' : 'employer', // Admin if they created company, employer if they joined
+        user_type: (action === 'create' || companyName) ? 'admin' : 'employer', // Keep user_type for system permissions
+        designation: (action === 'create' || companyName) ? 'Hiring Manager' : 'Recruiter', // Set proper designation
         profile_completion: 60, // Basic profile completed
         last_profile_update: new Date()
       }, { transaction });

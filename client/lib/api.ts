@@ -1650,6 +1650,7 @@ class ApiService {
     companyName?: string;
     companyId?: string;
     region: string;
+    action?: string;
   }): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/oauth/complete-employer-profile`, {
       method: 'POST',
