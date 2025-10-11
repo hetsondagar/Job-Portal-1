@@ -133,6 +133,17 @@ exports.createJob = async (req, res, next) => {
 
     // Basic validation - only require fields for active jobs, not drafts
     const errors = [];
+    
+    // Validate education field type (must not be array or object) - FIX THIS FIRST
+    if (education !== undefined && education !== null) {
+      if (Array.isArray(education)) {
+        // Convert array to string
+        req.body.education = education.join(', ');
+      } else if (typeof education === 'object') {
+        errors.push('education cannot be an array or an object');
+      }
+    }
+    
     if (status === 'active') {
       // For active jobs, require all essential fields
       if (!title || String(title).trim() === '') errors.push('Job title is required');
@@ -435,7 +446,7 @@ exports.createJob = async (req, res, next) => {
       travelRequired: Boolean(travelRequired),
       shiftTiming: shiftTiming && shiftTiming.trim() ? shiftTiming : 'day',
       noticePeriod,
-      education,
+      education: req.body.education && req.body.education.trim ? req.body.education.trim() : null, // Use converted value from validation
       certifications: Array.isArray(certifications) ? certifications : [],
       languages: Array.isArray(languages) ? languages : [],
       status,
