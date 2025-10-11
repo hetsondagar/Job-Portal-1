@@ -3,16 +3,42 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Info, Clock, Users, MapPin, Eye, Star, Building2 } from 'lucide-react';
-import { useState } from 'react';
+import { Check, X, Info, Clock, Users, MapPin, Eye, Star, Building2, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { usePayment } from '@/hooks/usePayment';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 export default function EmployerPricingPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [selectedQuantities, setSelectedQuantities] = useState({
     hotVacancy: 1,
     classified: 1,
     standard: 1
   });
+
+  const { initiatePayment, isProcessing } = usePayment({
+    onSuccess: (paymentId) => {
+      toast.success('Payment successful! Your credits have been added.');
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        router.push('/employer-dashboard');
+      }, 2000);
+    },
+    onError: (error) => {
+      console.error('Payment error:', error);
+    }
+  });
+
+  // Check authentication
+  useEffect(() => {
+    if (!user) {
+      toast.error('Please login to purchase plans');
+      router.push('/employer-login');
+    }
+  }, [user, router]);
 
   const handleQuantityChange = (plan: string, quantity: number) => {
     setSelectedQuantities(prev => ({
@@ -21,20 +47,47 @@ export default function EmployerPricingPage() {
     }));
   };
 
-  const handleBuyNow = (plan: string, price: number) => {
+  const handleBuyNow = async (plan: string, planName: string, price: number) => {
+    if (!user) {
+      toast.error('Please login to purchase');
+      router.push('/employer-login');
+      return;
+    }
+
     const quantity = selectedQuantities[plan as keyof typeof selectedQuantities] || 1;
     const totalPrice = price * quantity;
     
-    toast.success(`Redirecting to payment for ${plan} - Quantity: ${quantity}, Total: ₹${totalPrice.toLocaleString()}`);
-    
-    // Here you would integrate with your payment gateway
-    // For now, just show success message
+    // Apply discount for 5+ quantity
+    const discount = quantity >= 5 ? totalPrice * 0.10 : 0;
+    const finalPrice = totalPrice - discount;
+
+    // Initiate payment
+    await initiatePayment(
+      planName, // Plan type
+      quantity, // Quantity
+      finalPrice, // Amount
+      {
+        name: `${(user as any).first_name || (user as any).firstName || 'User'} ${(user as any).last_name || (user as any).lastName || ''}`,
+        email: user.email,
+        phone: (user as any).phone || ''
+      },
+      {
+        planId: plan,
+        originalPrice: totalPrice,
+        discount: discount
+      }
+    );
   };
 
   const handlePostFreeJob = () => {
+    if (!user) {
+      toast.error('Please login to post a free job');
+      router.push('/employer-login');
+      return;
+    }
+    
     toast.success('Redirecting to free job posting...');
-    // Redirect to post job page
-    window.location.href = '/employer-dashboard/post-job';
+    router.push('/employer-dashboard/post-job');
   };
 
   const pricingPlans = [
@@ -58,7 +111,7 @@ export default function EmployerPricingPage() {
       ],
       offer: 'Flat 10% OFF on 5 Job Postings or more',
       buttonText: 'Buy now',
-      buttonAction: () => handleBuyNow('hotVacancy', 1650)
+      buttonAction: () => handleBuyNow('hotVacancy', 'Hot Vacancy', 1650)
     },
     {
       id: 'classified',
@@ -78,7 +131,7 @@ export default function EmployerPricingPage() {
       ],
       offer: 'Flat 10% OFF on 5 Job Postings or more',
       buttonText: 'Buy now',
-      buttonAction: () => handleBuyNow('classified', 850)
+      buttonAction: () => handleBuyNow('classified', 'Classified', 850)
     },
     {
       id: 'standard',
@@ -98,7 +151,7 @@ export default function EmployerPricingPage() {
       ],
       offer: 'Flat 10% OFF on 5 Job Postings or more',
       buttonText: 'Buy now',
-      buttonAction: () => handleBuyNow('standard', 400)
+      buttonAction: () => handleBuyNow('standard', 'Standard', 400)
     },
     {
       id: 'free',
@@ -275,8 +328,16 @@ export default function EmployerPricingPage() {
                           : 'bg-blue-600 hover:bg-blue-700 text-white'
                       }`}
                       onClick={plan.buttonAction}
+                      disabled={isProcessing}
                     >
-                      {plan.buttonText}
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        plan.buttonText
+                      )}
                     </Button>
                   </div>
                 </CardContent>

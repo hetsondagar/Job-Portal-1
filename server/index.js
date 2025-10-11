@@ -73,6 +73,7 @@ const agencyRoutes = require('./routes/agency');
 const adminAgencyRoutes = require('./routes/admin-agency');
 const clientVerificationRoutes = require('./routes/client-verification');
 const companyClaimRoutes = require('./routes/company-claim');
+const paymentRoutes = require('./routes/payment');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -319,6 +320,8 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);
 app.use('/api/salary', salaryRoutes);
 app.use('/api/job-preferences', require('./routes/job-preferences'));
+// Payment routes (authenticated)
+app.use('/api/payment', paymentRoutes);
 // Client verification routes (public with token)
 app.use('/api/client', clientVerificationRoutes);
 // Admin routes (secure)

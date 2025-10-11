@@ -3,31 +3,76 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Info, Search, Zap, MessageCircle, Users, Filter, Eye, Download, Mail, Database } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Info, Search, Zap, MessageCircle, Users, Filter, Eye, Download, Mail, Database, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { usePayment } from '@/hooks/usePayment';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 export default function DatabasePricingPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+
+  const { initiatePayment, isProcessing } = usePayment({
+    onSuccess: (paymentId) => {
+      toast.success('Payment successful! Your database access has been activated.');
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        router.push('/employer-dashboard');
+      }, 2000);
+    },
+    onError: (error) => {
+      console.error('Payment error:', error);
+    }
+  });
+
+  // Check authentication
+  useEffect(() => {
+    if (!user) {
+      toast.error('Please login to purchase plans');
+      router.push('/employer-login');
+    }
+  }, [user, router]);
 
   const handleQuantityChange = (quantity: number) => {
     setSelectedQuantity(quantity);
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
+    if (!user) {
+      toast.error('Please login to purchase');
+      router.push('/employer-login');
+      return;
+    }
+
     const price = 4000;
     const totalPrice = price * selectedQuantity;
     const discount = selectedQuantity >= 3 ? 1500 * selectedQuantity : 0;
     const finalPrice = totalPrice - discount;
     
-    toast.success(`Redirecting to payment for Resdex Lite - Quantity: ${selectedQuantity}, Total: ₹${finalPrice.toLocaleString()}${discount > 0 ? ` (₹${discount.toLocaleString()} OFF)` : ''}`);
-    
-    // Here you would integrate with your payment gateway
+    // Initiate payment
+    await initiatePayment(
+      'Resdex Lite', // Plan type
+      selectedQuantity, // Quantity
+      finalPrice, // Amount
+      {
+        name: `${(user as any).first_name || (user as any).firstName || 'User'} ${(user as any).last_name || (user as any).lastName || ''}`,
+        email: user.email,
+        phone: (user as any).phone || ''
+      },
+      {
+        planId: 'resdex_lite',
+        originalPrice: totalPrice,
+        discount: discount
+      }
+    );
   };
 
   const handleContactSales = () => {
     toast.success('Redirecting to contact sales...');
-    // Redirect to contact page or open contact modal
+    router.push('/contact');
   };
 
   const resdexLiteFeatures = [
@@ -246,8 +291,16 @@ export default function DatabasePricingPage() {
                   <Button 
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={handleBuyNow}
+                    disabled={isProcessing}
                   >
-                    Buy now
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Buy now'
+                    )}
                   </Button>
                   
                   <p className="text-center text-sm text-slate-500 mt-3">
