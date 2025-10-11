@@ -507,12 +507,9 @@ export default function RequirementsPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-3">
-                            <Link
-                              href={`/employer-dashboard/requirements/${requirement.id}`}
-                              className="text-xl font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                            >
+                            <h3 className="text-xl font-semibold text-slate-900">
                               {requirement.title}
-                            </Link>
+                            </h3>
                             {getStatusBadge(getRequirementStatus(requirement))}
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-slate-600 mb-4">

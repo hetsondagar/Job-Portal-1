@@ -368,10 +368,9 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     
     // Get total candidates count for this requirement
     const { User } = require('../config/index');
-    const { sequelize } = require('../config/sequelize');
-    const Op = sequelize.Op;
     
     // Build comprehensive matching criteria (same as candidates endpoint)
+    // Note: Op and sequelize are already imported at the top of this file
     const whereClause = {
       user_type: 'jobseeker',
       is_active: true,
