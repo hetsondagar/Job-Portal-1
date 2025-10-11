@@ -612,7 +612,22 @@ export default function PostJobPage() {
         benefits: formData.benefits || '',
         skills: formData.skills || [],
         department: formData.department || '',
+        role: formData.role || '',
+        industryType: formData.industryType || '',
+        roleCategory: formData.roleCategory || '',
+        education: Array.isArray(formData.education) ? formData.education.join(', ') : formData.education || '',
+        employmentType: formData.employmentType || '',
         status: editingJobId ? undefined : 'draft', // Only set to draft for new jobs, preserve existing status for edits
+        // ========== CONSULTANCY POSTING FIELDS ==========
+        companyName: formData.companyName || '',
+        postingType: formData.postingType || 'company',
+        ...(formData.postingType === 'consultancy' && {
+          consultancyName: formData.consultancyName,
+          hiringCompanyName: formData.hiringCompanyName,
+          hiringCompanyIndustry: formData.hiringCompanyIndustry,
+          hiringCompanyDescription: formData.hiringCompanyDescription,
+          showHiringCompanyDetails: formData.showHiringCompanyDetails
+        }),
         // Include hot vacancy fields if it's a hot vacancy
         ...(formData.isHotVacancy && {
           isHotVacancy: formData.isHotVacancy,
@@ -787,7 +802,7 @@ export default function PostJobPage() {
         role: formData.role,
         industryType: formData.industryType,
         roleCategory: formData.roleCategory,
-        education: formData.education,
+        education: Array.isArray(formData.education) ? formData.education.join(', ') : formData.education,
         employmentType: formData.employmentType,
         status: 'active', // Explicitly set status to active for publishing
         // ========== CONSULTANCY POSTING FIELDS ==========
