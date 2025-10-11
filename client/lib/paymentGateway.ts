@@ -159,6 +159,14 @@ export const processPayment = async (
   }
 };
 
+// Helper function to get API base URL
+const getApiBaseUrl = (): string => {
+  // Match the pattern used in api.ts
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  // Ensure URL ends with /api if not already present
+  return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+};
+
 // Helper function to create order on backend
 export const createPaymentOrder = async (
   planType: string,
@@ -167,7 +175,8 @@ export const createPaymentOrder = async (
   metadata: Record<string, any> = {}
 ): Promise<{ orderId: string; amount: number }> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payment/create-order`, {
+    const apiUrl = getApiBaseUrl();
+    const response = await fetch(`${apiUrl}/payment/create-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -182,7 +191,8 @@ export const createPaymentOrder = async (
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create order');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to create order');
     }
 
     const data = await response.json();
@@ -202,7 +212,8 @@ export const verifyPayment = async (
   signature: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payment/verify`, {
+    const apiUrl = getApiBaseUrl();
+    const response = await fetch(`${apiUrl}/payment/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -216,7 +227,8 @@ export const verifyPayment = async (
     });
 
     if (!response.ok) {
-      throw new Error('Payment verification failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Payment verification failed');
     }
 
     const data = await response.json();
