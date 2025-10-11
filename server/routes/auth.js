@@ -835,11 +835,22 @@ router.post('/forgot-password', validateForgotPassword, async (req, res) => {
     // Send password reset email asynchronously to avoid blocking the response
     try {
       const userName = user.first_name || user.email.split('@')[0];
+      console.log(`📧 Scheduling password reset email for: ${user.email}`);
+      
       // Fire-and-forget: do not await to prevent UI hanging on slow SMTP
       Promise.resolve()
-        .then(() => emailService.sendPasswordResetEmail(user.email, resetToken, userName))
-        .then(() => console.log('✅ Password reset email sent successfully to:', user.email))
-        .catch((emailError) => console.error('❌ Failed to send password reset email:', emailError));
+        .then(() => {
+          console.log(`📧 Attempting to send password reset email to: ${user.email}`);
+          return emailService.sendPasswordResetEmail(user.email, resetToken, userName);
+        })
+        .then((result) => {
+          console.log('✅ Password reset email sent successfully to:', user.email);
+          console.log('📧 Email result:', result);
+        })
+        .catch((emailError) => {
+          console.error('❌ Failed to send password reset email to:', user.email);
+          console.error('❌ Email error details:', emailError);
+        });
     } catch (emailScheduleError) {
       console.error('❌ Failed to schedule password reset email:', emailScheduleError);
     }
@@ -942,6 +953,38 @@ router.get('/verify-reset-token/:token', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+});
+
+// Test email endpoint for debugging
+router.post('/test-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const testEmail = email || 'test@example.com';
+    
+    console.log(`🧪 Testing email service with: ${testEmail}`);
+    
+    const result = await emailService.sendPasswordResetEmail(
+      testEmail, 
+      'test-token-' + Date.now(), 
+      'Test User'
+    );
+    
+    console.log('📧 Test email result:', result);
+    
+    res.json({ 
+      success: true, 
+      message: 'Test email sent successfully', 
+      result,
+      testEmail 
+    });
+  } catch (error) {
+    console.error('❌ Test email failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Test email failed', 
+      error: error.message 
     });
   }
 });

@@ -132,9 +132,9 @@ class EmailService {
       pool: false,
       maxConnections: 1,
       maxMessages: 1,
-      connectionTimeout: isYahoo ? 10000 : 5000, // Yahoo needs more time
-      greetingTimeout: isYahoo ? 10000 : 5000,
-      socketTimeout: isYahoo ? 10000 : 5000,
+      connectionTimeout: 15000, // Increased timeout for production
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
       requireTLS: !provider.secure,
       tls: {
         rejectUnauthorized: false,
@@ -156,8 +156,8 @@ class EmailService {
     const transporter = nodemailer.createTransport(transporterOptions);
     
     try {
-      // Use a longer timeout for Yahoo
-      const timeoutDuration = isYahoo ? 10000 : 5000;
+      // Use a longer timeout for production stability
+      const timeoutDuration = 20000; // 20 seconds for production
       const verifyPromise = transporter.verify();
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Verification timeout')), timeoutDuration)

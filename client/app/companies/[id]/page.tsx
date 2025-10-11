@@ -1021,14 +1021,54 @@ function CompanyDetailPage() {
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
                       <div>
                         <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{toDisplayText(company.name) || 'Company'}</h1>
-                        <div className="flex items-center space-x-4 mb-3">
-                          <Badge
-                            className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
-                          >
-                            {company.companyType}
-                          </Badge>
-                          <Badge variant="secondary">Private</Badge>
-                          <Badge variant="secondary">Corporate</Badge>
+                        <div className="flex items-center flex-wrap gap-2 mb-3">
+                          {/* Industry Badge */}
+                          {company.industry && (
+                            <Badge
+                              className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
+                            >
+                              {company.industry}
+                            </Badge>
+                          )}
+                          
+                          {/* Company Types */}
+                          {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
+                            <>
+                              {company.companyTypes.slice(0, 2).map((type: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                                  {type}
+                                </Badge>
+                              ))}
+                              {company.companyTypes.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{company.companyTypes.length - 2} more
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Nature of Business */}
+                          {company.natureOfBusiness && Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 && (
+                            <>
+                              {company.natureOfBusiness.slice(0, 1).map((nature: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                                  {nature}
+                                </Badge>
+                              ))}
+                              {company.natureOfBusiness.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{company.natureOfBusiness.length - 1} more
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Company Size */}
+                          {company.companySize && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                              {company.companySize} employees
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center space-x-6 text-slate-600 dark:text-slate-300">
                           <div className="flex items-center">
@@ -1115,6 +1155,38 @@ function CompanyDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-6">{company.description || ''}</p>
+                    
+                    {/* Company Details */}
+                    <div className="space-y-6 mb-6">
+                      {/* Nature of Business */}
+                      {company.natureOfBusiness && Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 && (
+                        <div>
+                          <div className="font-medium text-slate-900 dark:text-white mb-2">Nature of Business</div>
+                          <div className="flex flex-wrap gap-2">
+                            {company.natureOfBusiness.map((nature: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                                {nature}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Company Types */}
+                      {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
+                        <div>
+                          <div className="font-medium text-slate-900 dark:text-white mb-2">Company Type</div>
+                          <div className="flex flex-wrap gap-2">
+                            {company.companyTypes.map((type: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                                {type}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
                     <div className="grid grid-cols-2 gap-6">
                       <div className="flex items-center">
                         <Calendar className="w-5 h-5 mr-3 text-slate-400" />
