@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const Razorpay = require('razorpay');
 const { authenticateToken } = require('../middlewares/auth');
 const { User, Company } = require('../models');
 
@@ -14,9 +15,15 @@ const { User, Company } = require('../models');
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_NtAc3GFJLI6NbG';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'YKGgIMm1Uyh2KBXkfRDbmUUF';
 
+// Initialize Razorpay instance
+const razorpayInstance = new Razorpay({
+  key_id: RAZORPAY_KEY_ID,
+  key_secret: RAZORPAY_KEY_SECRET
+});
+
 /**
  * @route   POST /api/payment/create-order
- * @desc    Create a payment order
+ * @desc    Create a payment order via Razorpay
  * @access  Private
  */
 router.post('/create-order', authenticateToken, async (req, res) => {
@@ -39,39 +46,54 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       });
     }
 
-    // Generate unique order ID
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // Convert amount to paise (smallest currency unit)
+    const amountInPaise = Math.round(amount * 100);
 
-    // In a real implementation, you would:
-    // 1. Create order in Razorpay using their API
-    // 2. Store order details in database
-    // 3. Return order ID and amount
-
-    // For now, we'll return a mock order
-    const orderData = {
-      orderId: orderId,
-      amount: amount,
+    // Create order via Razorpay API
+    const razorpayOrderOptions = {
+      amount: amountInPaise, // Amount in paise
       currency: 'INR',
-      planType: planType,
-      quantity: quantity,
-      userId: req.user.id,
-      status: 'created',
-      createdAt: new Date(),
-      metadata: metadata || {}
+      receipt: `receipt_${Date.now()}`,
+      notes: {
+        planType: planType,
+        quantity: quantity.toString(),
+        userId: req.user.id,
+        userEmail: req.user.email,
+        ...metadata
+      }
     };
 
+    // Call Razorpay API to create order
+    const razorpayOrder = await razorpayInstance.orders.create(razorpayOrderOptions);
+
     // TODO: Save order to database
+    // const orderData = {
+    //   orderId: razorpayOrder.id,
+    //   amount: amount,
+    //   amountPaid: 0,
+    //   currency: razorpayOrder.currency,
+    //   planType: planType,
+    //   quantity: quantity,
+    //   userId: req.user.id,
+    //   status: 'created',
+    //   razorpayOrderId: razorpayOrder.id,
+    //   receipt: razorpayOrder.receipt,
+    //   metadata: metadata || {},
+    //   createdAt: new Date()
+    // };
     // await Order.create(orderData);
+
+    console.log('✅ Razorpay order created:', razorpayOrder.id);
 
     res.json({
       success: true,
-      orderId: orderData.orderId,
-      amount: orderData.amount,
-      currency: orderData.currency,
+      orderId: razorpayOrder.id,
+      amount: amount,
+      currency: razorpayOrder.currency,
       message: 'Order created successfully'
     });
   } catch (error) {
-    console.error('Create order error:', error);
+    console.error('❌ Create order error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create order',
@@ -103,17 +125,41 @@ router.post('/verify', authenticateToken, async (req, res) => {
       .update(`${orderId}|${paymentId}`)
       .digest('hex');
 
+    console.log('🔐 Signature verification:', {
+      orderId,
+      paymentId,
+      providedSignature: signature.substring(0, 20) + '...',
+      generatedSignature: generatedSignature.substring(0, 20) + '...',
+      match: generatedSignature === signature
+    });
+
     if (generatedSignature !== signature) {
+      console.error('❌ Signature verification failed');
       return res.status(400).json({
         success: false,
         message: 'Invalid payment signature'
       });
     }
 
+    console.log('✅ Payment verified successfully:', paymentId);
+
     // Signature is valid
     // TODO: Update order status in database
     // TODO: Activate purchased plan/credits
     // TODO: Send confirmation email
+
+    // Fetch payment details from Razorpay (optional but recommended)
+    try {
+      const payment = await razorpayInstance.payments.fetch(paymentId);
+      console.log('💰 Payment details:', {
+        id: payment.id,
+        amount: payment.amount / 100,
+        status: payment.status,
+        method: payment.method
+      });
+    } catch (fetchError) {
+      console.warn('⚠️ Could not fetch payment details:', fetchError.message);
+    }
 
     res.json({
       success: true,
@@ -122,7 +168,7 @@ router.post('/verify', authenticateToken, async (req, res) => {
       orderId: orderId
     });
   } catch (error) {
-    console.error('Payment verification error:', error);
+    console.error('❌ Payment verification error:', error);
     res.status(500).json({
       success: false,
       message: 'Payment verification failed',
