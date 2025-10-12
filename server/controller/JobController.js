@@ -1965,12 +1965,23 @@ exports.deleteJob = async (req, res, next) => {
 exports.getJobsByEmployer = async (req, res, next) => {
   try {
     console.log('🔍 Fetching jobs for employer:', req.user.id, req.user.email);
+    console.log('🔍 User companyId:', req.user.companyId);
     console.log('🔍 Query parameters:', req.query);
     
     const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
     const offset = (page - 1) * limit;
     
-    const whereClause = { employerId: req.user.id };
+    // Filter by companyId if user has one (employers/admins), otherwise by employerId
+    const whereClause = {};
+    if (req.user.companyId) {
+      // Employers and admins see all jobs from their company
+      whereClause.companyId = req.user.companyId;
+      console.log('🔍 Filtering by companyId:', req.user.companyId);
+    } else {
+      // Fallback to employerId for users without companyId
+      whereClause.employerId = req.user.id;
+      console.log('🔍 Filtering by employerId:', req.user.id);
+    }
     
     // Add region filtering to ensure Gulf employers only see Gulf jobs
     if (req.user.region === 'gulf') {
@@ -2494,6 +2505,8 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     console.log('🔍 Fetching jobs for employer:', req.user.id, req.user.email);
 
+    console.log('🔍 User companyId:', req.user.companyId);
+
     console.log('🔍 Query parameters:', req.query);
 
     
@@ -2504,7 +2517,17 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     
 
-    const whereClause = { employerId: req.user.id };
+    // Filter by companyId if user has one (employers/admins), otherwise by employerId
+    const whereClause = {};
+    if (req.user.companyId) {
+      // Employers and admins see all jobs from their company
+      whereClause.companyId = req.user.companyId;
+      console.log('🔍 Filtering by companyId:', req.user.companyId);
+    } else {
+      // Fallback to employerId for users without companyId
+      whereClause.employerId = req.user.id;
+      console.log('🔍 Filtering by employerId:', req.user.id);
+    }
     
     // Add region filtering to ensure Gulf employers only see Gulf jobs
     if (req.user.region === 'gulf') {

@@ -89,9 +89,9 @@ export default function JobDetailPage() {
                 title: res.data.title || 'Untitled Job',
                 // Company name handling - check metadata first, then Company relation
                 company: isConsultancy && metadata.showHiringCompanyDetails 
-                  ? metadata.hiringCompany?.name || 'Company Name'
+                  ? metadata.hiringCompany?.name || 'Hiring Company'
                   : isConsultancy 
-                    ? metadata.consultancyName || 'Consultancy'
+                    ? metadata.hiringCompany?.name || 'Hiring Company'
                     : metadata.companyName || res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
                 companyId: res.data.companyId || res.data.employerId || '',
                 companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
@@ -592,14 +592,21 @@ export default function JobDetailPage() {
                         </Avatar>
                         <div>
                           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{job?.title || 'Job'}</h1>
-                          {job?.company && (
-                            <Link
-                              href={`/companies/${job?.companyId || ''}`}
-                              className="text-xl text-blue-600 hover:text-blue-700 font-medium mb-3 inline-block"
-                            >
-                              {typeof job.company === 'string' ? job.company : job.company?.name}
-                            </Link>
-                          )}
+                          <div className="flex items-center gap-2 flex-wrap mb-3">
+                            {job?.company && (
+                              <Link
+                                href={`/companies/${job?.companyId || ''}`}
+                                className="text-xl text-blue-600 hover:text-blue-700 font-medium"
+                              >
+                                {typeof job.company === 'string' ? job.company : job.company?.name}
+                              </Link>
+                            )}
+                            {job?.isConsultancy && job?.consultancyName && (
+                              <Badge variant="outline" className="text-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700">
+                                Posted by {job.consultancyName}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center space-x-1 mb-4">
                             <Star className="w-4 h-4 text-yellow-400 fill-current" />
                             <span className="font-semibold">{job?.companyRating || 0}</span>
@@ -1457,10 +1464,6 @@ export default function JobDetailPage() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Company Size</span>
                           <span className="font-medium">{job.companySize}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500">Founded</span>
-                          <span className="font-medium">{job.founded}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Website</span>

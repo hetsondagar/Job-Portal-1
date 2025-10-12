@@ -1096,6 +1096,109 @@ router.get('/:id/follow-status', authenticateToken, async (req, res) => {
   }
 });
 
+// Rate a company (POST /api/companies/:id/rate)
+router.post('/:id/rate', authenticateToken, async (req, res) => {
+  try {
+    const { id: companyId } = req.params;
+    const userId = req.user.id;
+    const { rating } = req.body;
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    // Check if company exists
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    const CompanyReview = require('../models/CompanyReview');
+
+    // Check if user has already rated this company
+    let existingReview = await CompanyReview.findOne({
+      where: { userId, companyId }
+    });
+
+    if (existingReview) {
+      // Update existing rating
+      existingReview.rating = rating;
+      existingReview.review = existingReview.review || 'User rating'; // Keep existing review or use default
+      await existingReview.save();
+
+      return res.json({
+        success: true,
+        message: 'Rating updated successfully',
+        data: {
+          rating: existingReview.rating,
+          reviewId: existingReview.id
+        }
+      });
+    } else {
+      // Create new rating (with minimal review text since it's required)
+      const newReview = await CompanyReview.create({
+        companyId,
+        userId,
+        rating,
+        review: 'User rating', // Default text for rating-only submissions
+        employmentStatus: 'current', // Default status
+        status: 'approved' // Auto-approve simple ratings
+      });
+
+      return res.json({
+        success: true,
+        message: 'Rating submitted successfully',
+        data: {
+          rating: newReview.rating,
+          reviewId: newReview.id
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('Rate company error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Get user's rating for a company (GET /api/companies/:id/user-rating)
+router.get('/:id/user-rating', authenticateToken, async (req, res) => {
+  try {
+    const { id: companyId } = req.params;
+    const userId = req.user.id;
+
+    const CompanyReview = require('../models/CompanyReview');
+    const review = await CompanyReview.findOne({
+      where: { userId, companyId }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        rating: review ? review.rating : null,
+        hasRated: !!review
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user rating error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Cleanup orphaned photos (admin only)
 router.post('/cleanup-orphaned-photos', authenticateToken, async (req, res) => {
   try {

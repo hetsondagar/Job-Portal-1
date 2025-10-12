@@ -1520,9 +1520,20 @@ export default function PostJobPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Experience Level*</label>
-                <Select value={formData.experience} onValueChange={(value) => setFormData({ ...formData, experience: value })}>
+                <Select 
+                  value={formData.experience || undefined} 
+                  onValueChange={(value) => {
+                    console.log('Experience level selected:', value);
+                    setFormData({ ...formData, experience: value });
+                  }}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select experience" />
+                    <SelectValue placeholder="Select experience level">
+                      {formData.experience === "fresher" && "Fresher (0-1 years)"}
+                      {formData.experience === "junior" && "Junior (1-3 years)"}
+                      {formData.experience === "mid" && "Mid-level (3-5 years)"}
+                      {formData.experience === "senior" && "Senior (5+ years)"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fresher">Fresher (0-1 years)</SelectItem>

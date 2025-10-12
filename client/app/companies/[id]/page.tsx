@@ -110,6 +110,9 @@ function CompanyDetailPage() {
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [hoverRating, setHoverRating] = useState<number | null>(null)
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [company, setCompany] = useState<any>(null)
   const [companyJobs, setCompanyJobs] = useState<any[]>([])
   const [companyPhotos, setCompanyPhotos] = useState<any[]>([])
@@ -339,6 +342,49 @@ function CompanyDetailPage() {
     }
   }, [companyId, isFollowing, isAuthenticated])
 
+  // Rating functions
+  const fetchUserRating = useCallback(async () => {
+    if (!isAuthenticated || !companyId) return
+    
+    try {
+      const response = await apiService.getUserCompanyRating(companyId)
+      if (response.success && response.data) {
+        setUserRating(response.data.rating)
+      }
+    } catch (error) {
+      console.error('Error fetching user rating:', error)
+    }
+  }, [companyId, isAuthenticated])
+
+  const handleRatingSubmit = useCallback(async (rating: number) => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true)
+      return
+    }
+
+    // Only allow jobseekers to rate companies
+    if (user && user.userType !== 'jobseeker') {
+      toast.error('Only jobseekers can rate companies')
+      return
+    }
+
+    try {
+      const response = await apiService.rateCompany(companyId, rating)
+      if (response.success) {
+        setUserRating(rating)
+        toast.success('Rating submitted successfully!')
+        setShowRatingDialog(false)
+        // Refresh company data to get updated average rating
+        fetchCompanyData()
+      } else {
+        toast.error(response.message || 'Failed to submit rating')
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error)
+      toast.error('Failed to submit rating')
+    }
+  }, [companyId, isAuthenticated, user])
+
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
     setLoadingCompany(true)
@@ -534,8 +580,9 @@ function CompanyDetailPage() {
       fetchCompanyPhotos()
       fetchAppliedJobs()
       fetchFollowStatus()
+      fetchUserRating()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchCompanyPhotos, fetchAppliedJobs, fetchFollowStatus])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchCompanyPhotos, fetchAppliedJobs, fetchFollowStatus, fetchUserRating])
 
   // Load watch status for expired jobs when jobs or auth changes
   useEffect(() => {
@@ -1096,6 +1143,16 @@ function CompanyDetailPage() {
                           <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
                           {isFollowing ? "Following" : "Follow"}
                         </Button>
+                        {(!user || user.userType === 'jobseeker') && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowRatingDialog(true)}
+                            className={`${userRating ? "bg-yellow-50 border-yellow-200 text-yellow-700" : "bg-white/50 dark:bg-slate-700/50"} backdrop-blur-sm`}
+                          >
+                            <Star className={`w-4 h-4 mr-2 ${userRating ? "fill-current" : ""}`} />
+                            {userRating ? `Rated ${userRating}★` : "Rate"}
+                          </Button>
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
@@ -1876,6 +1933,45 @@ function CompanyDetailPage() {
                 Login
               </Button>
             </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rating Dialog */}
+      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rate {company?.name}</DialogTitle>
+            <DialogDescription>
+              Share your experience by rating this company
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-6 py-6">
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => handleRatingSubmit(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(null)}
+                  className="transition-all duration-200 hover:scale-110"
+                >
+                  <Star
+                    className={`w-10 h-10 ${
+                      (hoverRating || userRating || 0) >= star
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            {userRating && (
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                You rated this company {userRating} {userRating === 1 ? 'star' : 'stars'}
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

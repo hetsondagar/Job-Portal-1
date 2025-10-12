@@ -1110,6 +1110,23 @@ class ApiService {
     return this.handleResponse<{ isFollowing: boolean; followedAt: string | null }>(response);
   }
 
+  // Rate company methods
+  async rateCompany(companyId: string, rating: number): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/rate`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ rating }),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  async getUserCompanyRating(companyId: string): Promise<ApiResponse<{ rating: number | null; hasRated: boolean }>> {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/user-rating`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ rating: number | null; hasRated: boolean }>(response);
+  }
+
   async updateCompany(companyId: string, data: any): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
       method: 'PUT',
