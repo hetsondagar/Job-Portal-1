@@ -3313,7 +3313,13 @@ export default function PostJobPage() {
       </Dialog>
 
       {/* Job Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+      <Dialog open={showSuccessDialog} onOpenChange={(open) => {
+        if (!open) {
+          // When dialog is closed (X button), redirect to dashboard
+          router.push(user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+        }
+        setShowSuccessDialog(open)
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

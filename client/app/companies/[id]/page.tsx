@@ -1262,13 +1262,6 @@ function CompanyDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <Globe className="w-5 h-5 mr-3 text-slate-400" />
-                        <div>
-                          <div className="font-medium">Website</div>
-                          <div className="text-blue-600">{toDisplayText(company.website) || 'Not provided'}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
                         <Building2 className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Headquarters</div>
@@ -1383,28 +1376,12 @@ function CompanyDetailPage() {
                       <span className="font-medium">{toDisplayText(company.employees) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Founded</span>
-                      <span className="font-medium">{toDisplayText(company.founded) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Industry</span>
-                      <span className="font-medium">{toDisplayText(company.industry) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Headquarters</span>
                       <span className="font-medium">{toDisplayText(company.headquarters) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Website</span>
-                      <span className="font-medium text-blue-600">{toDisplayText(company.website) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Revenue</span>
                       <span className="font-medium">{toDisplayText(company.revenue) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Company Type</span>
-                      <span className="font-medium">{toDisplayText(company.companyType) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Total Jobs</span>

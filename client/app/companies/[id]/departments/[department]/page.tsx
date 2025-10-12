@@ -137,10 +137,14 @@ function DepartmentJobsPage() {
         // Filter by department
         const matchesDepartment = (j.department || j.category || '').toString() === departmentName
         
-        // Exclude consultancy jobs - only show direct company jobs
-        const isNotConsultancy = !j.isConsultancy && !j.isAgencyPosted
+        // Exclude ALL consultancy/agency jobs - only show direct company jobs
+        const isDirectCompanyJob = !j.isConsultancy && 
+                                   !j.isAgencyPosted && 
+                                   !j.PostedByAgency && 
+                                   !j.consultancyName &&
+                                   j.postingType !== 'consultancy'
         
-        return matchesDepartment && isNotConsultancy
+        return matchesDepartment && isDirectCompanyJob
       })
       .map((j) => ({
         id: j.id,

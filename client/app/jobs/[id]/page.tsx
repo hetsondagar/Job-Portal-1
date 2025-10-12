@@ -894,7 +894,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Industry Type</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.companyInfo?.industry || job?.industry || 'Not provided'}
+                              {(job?.companyInfo?.industry || job?.industry || 'Not provided').replace(/\s*\(\d+\)\s*$/, '')}
                             </div>
                           </div>
                         </div>
@@ -945,7 +945,14 @@ export default function JobDetailPage() {
                           <div className="flex-1">
                             <div className="font-medium text-slate-900 dark:text-slate-100">Experience Level</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.experienceLevel || job?.experience || 'Not specified'}
+                              {(() => {
+                                const exp = job?.experienceLevel || job?.experience || 'Not specified';
+                                if (exp === 'fresher') return 'Fresher (0-1 years)';
+                                if (exp === 'junior') return 'Junior (1-3 years)';
+                                if (exp === 'mid') return 'Mid-level (3-5 years)';
+                                if (exp === 'senior') return 'Senior (5+ years)';
+                                return exp;
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1482,12 +1489,15 @@ export default function JobDetailPage() {
                           <span className="font-medium text-blue-600">{job.website}</span>
                         </div>
                       </div>
-                      <Link href={`/companies/${job.companyId || ''}`}>
-                        <Button variant="outline" className="w-full bg-transparent">
-                          <Building2 className="w-4 h-4 mr-2" />
-                          View Company Profile
-                        </Button>
-                      </Link>
+                      {/* Only show View Company Profile if it's a direct company job or if consultancy shows hiring company details */}
+                      {(!job?.isConsultancy || job?.showHiringCompanyDetails) && job?.companyId && (
+                        <Link href={`/companies/${job.companyId || ''}`}>
+                          <Button variant="outline" className="w-full bg-transparent">
+                            <Building2 className="w-4 h-4 mr-2" />
+                            View Company Profile
+                          </Button>
+                        </Link>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
