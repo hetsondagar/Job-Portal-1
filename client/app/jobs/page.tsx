@@ -627,7 +627,7 @@ export default function JobsPage() {
               return exp;
             })(),
             salary: job.salary || (job.salaryMin && job.salaryMax 
-            ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
+            ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
             : 'Not specified'),
             skills: job.skills || [],
             logo: job.company?.logo || '/placeholder-logo.png',
@@ -761,7 +761,7 @@ export default function JobsPage() {
               return exp;
             })(),
             salary: job.salary || (job.salaryMin && job.salaryMax 
-              ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
+              ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
               : 'Not specified'),
             skills: job.skills || [],
             logo: job.company?.logo || '/placeholder-logo.png',
@@ -961,12 +961,14 @@ export default function JobsPage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Auth check - Allow employers/admins to view jobs (removed redirect)
-  // Employers can now access /jobs page to preview their posted jobs
+  // Auth check - Block employers from /jobs page (they should use employer dashboard)
+  // Employers can only access specific /jobs/[id] pages for their company jobs via preview
   useEffect(() => {
-    // No redirect needed - employers can view jobs page
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
-      console.log('✅ Employer/Admin accessing jobs page - allowing access for job preview')
+      console.log('🔄 Employer/Admin detected on jobs page, redirecting to employer dashboard')
+      console.log('💡 Employers can preview individual jobs via /jobs/[id] from manage-jobs page')
+      setIsRedirecting(true)
+      window.location.href = user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
     }
   }, [user])
 

@@ -110,7 +110,7 @@ export default function JobDetailPage() {
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
                 experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
                 education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Salary not specified'),
+                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
                 skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
                 posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
                 applicants: res.data.applicationsCount || 0,
@@ -171,7 +171,7 @@ export default function JobDetailPage() {
               experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
               experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
               education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Salary not specified'),
+              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
               skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
               posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
               applicants: res.data.applicationsCount || 0,
@@ -1480,7 +1480,7 @@ export default function JobDetailPage() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Industry</span>
-                          <span className="font-medium">{job.industry}</span>
+                          <span className="font-medium">{job.industry?.replace(/\s*\(\d+\)\s*$/, '') || job.industry}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Company Size</span>
