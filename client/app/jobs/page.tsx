@@ -123,6 +123,15 @@ interface Job {
     industry?: string
     city?: string
   }
+  // Consultancy posting fields
+  isConsultancy?: boolean
+  consultancyName?: string
+  hiringCompany?: {
+    name?: string
+    industry?: string
+    description?: string
+  }
+  showHiringCompanyDetails?: boolean
 }
 
 export default function JobsPage() {
@@ -585,46 +594,60 @@ export default function JobsPage() {
         const nonGulfJobs = response.data.filter((job: any) => job.region !== 'gulf')
         
         // Transform backend jobs to match frontend format
-        const transformedJobs = nonGulfJobs.map((job: any) => ({
-          id: job.id,
-          title: job.title,
-          company: {
-            id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company',
-            // enrich for filtering
-            industry: job.company?.industry,
-            companyType: job.company?.companyType,
-          } as any,
-          location: job.location,
-          experience: job.experienceLevel || job.experience || 'Not specified',
-          salary: job.salary || (job.salaryMin && job.salaryMax 
+        const transformedJobs = nonGulfJobs.map((job: any) => {
+          const metadata = job.metadata || {};
+          const isConsultancy = metadata.postingType === 'consultancy';
+          
+          return {
+            id: job.id,
+            title: job.title,
+            company: {
+              id: job.company?.id || 'unknown',
+              name: isConsultancy && metadata.showHiringCompanyDetails 
+                ? metadata.hiringCompany?.name || 'Unknown Company'
+                : isConsultancy
+                  ? metadata.consultancyName || 'Consultancy'
+                  : metadata.companyName || job.company?.name || 'Unknown Company',
+              // enrich for filtering
+              industry: job.industryType || metadata.hiringCompany?.industry || job.company?.industry,
+              companyType: job.company?.companyType,
+            } as any,
+            // Consultancy metadata
+            isConsultancy: isConsultancy,
+            consultancyName: metadata.consultancyName || null,
+            hiringCompany: metadata.hiringCompany || null,
+            showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
+            location: job.location,
+            experience: job.experienceLevel || job.experience || 'Not specified',
+            salary: job.salary || (job.salaryMin && job.salaryMax 
             ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
             : 'Not specified'),
-          skills: job.skills || [],
-          logo: job.company?.logo || '/placeholder-logo.png',
-          posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
-          applicants: job.applications || job.application_count || 0,
-          description: job.description,
-          type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
-          remote: job.remoteWork === 'remote',
-          urgent: job.isUrgent || false,
-          featured: job.isFeatured || false,
-          companyRating: 4.5, // Default rating
-          category: job.category || 'General',
-          photos: job.photos || [], // Include job photos
-          // Internship-specific fields
-          duration: job.duration,
-          startDate: job.startDate,
-          workMode: job.workMode || job.remoteWork,
-          learningObjectives: job.learningObjectives,
-          mentorship: job.mentorship,
-          // Hot Vacancy Premium Features
-          isHotVacancy: job.isHotVacancy || job.ishotvacancy || false,
-          urgentHiring: job.urgentHiring || job.urgenthiring || false,
-          superFeatured: job.superFeatured || job.superfeatured || false,
-          boostedSearch: job.boostedSearch || job.boostedsearch || false,
-          externalApplyUrl: job.externalApplyUrl || job.externalapplyurl
-        }))
+            skills: job.skills || [],
+            logo: job.company?.logo || '/placeholder-logo.png',
+            posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+            applicants: job.applications || job.application_count || 0,
+            description: job.description,
+            type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
+            remote: job.remoteWork === 'remote',
+            urgent: job.isUrgent || false,
+            featured: job.isFeatured || false,
+            companyRating: 4.5, // Default rating
+            category: job.category || 'General',
+            photos: job.photos || [], // Include job photos
+            // Internship-specific fields
+            duration: job.duration,
+            startDate: job.startDate,
+            workMode: job.workMode || job.remoteWork,
+            learningObjectives: job.learningObjectives,
+            mentorship: job.mentorship,
+            // Hot Vacancy Premium Features
+            isHotVacancy: job.isHotVacancy || job.ishotvacancy || false,
+            urgentHiring: job.urgentHiring || job.urgenthiring || false,
+            superFeatured: job.superFeatured || job.superfeatured || false,
+            boostedSearch: job.boostedSearch || job.boostedsearch || false,
+            externalApplyUrl: job.externalApplyUrl || job.externalapplyurl
+          };
+        })
         
         // Use only real jobs from database, no sample data
         setJobs(transformedJobs)
@@ -699,39 +722,53 @@ export default function JobsPage() {
       const response = await apiService.getMatchingJobs(1, 20)
       
       if (response.success && response.data) {
-        const transformedJobs = response.data.jobs.map((job: any) => ({
-          id: job.id,
-          title: job.title,
-          company: {
-            id: job.company?.id || 'unknown',
-            name: job.company?.name || 'Unknown Company',
-            industry: job.company?.industry,
-            companyType: job.company?.companyType,
-          } as any,
-          location: job.location,
-          experience: job.experienceLevel || job.experience || 'Not specified',
-          salary: job.salary || (job.salaryMin && job.salaryMax 
-            ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
-            : 'Not specified'),
-          skills: job.skills || [],
-          logo: job.company?.logo || '/placeholder-logo.png',
-          posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
-          applicants: job.applications || job.application_count || 0,
-          description: job.description,
-          type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
-          remote: job.remoteWork === 'remote',
-          urgent: job.isUrgent || false,
-          featured: job.isFeatured || false,
-          companyRating: 4.5,
-          category: job.category || 'General',
-          photos: job.photos || [],
-          duration: job.duration,
-          startDate: job.startDate,
-          workMode: job.workMode || job.remoteWork,
-          learningObjectives: job.learningObjectives,
-          mentorship: job.mentorship,
-          isPreferred: true
-        }))
+        const transformedJobs = response.data.jobs.map((job: any) => {
+          const metadata = job.metadata || {};
+          const isConsultancy = metadata.postingType === 'consultancy';
+          
+          return {
+            id: job.id,
+            title: job.title,
+            company: {
+              id: job.company?.id || 'unknown',
+              name: isConsultancy && metadata.showHiringCompanyDetails 
+                ? metadata.hiringCompany?.name || 'Unknown Company'
+                : isConsultancy
+                  ? metadata.consultancyName || 'Consultancy'
+                  : metadata.companyName || job.company?.name || 'Unknown Company',
+              industry: job.industryType || metadata.hiringCompany?.industry || job.company?.industry,
+              companyType: job.company?.companyType,
+            } as any,
+            // Consultancy metadata
+            isConsultancy: isConsultancy,
+            consultancyName: metadata.consultancyName || null,
+            hiringCompany: metadata.hiringCompany || null,
+            showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
+            location: job.location,
+            experience: job.experienceLevel || job.experience || 'Not specified',
+            salary: job.salary || (job.salaryMin && job.salaryMax 
+              ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
+              : 'Not specified'),
+            skills: job.skills || [],
+            logo: job.company?.logo || '/placeholder-logo.png',
+            posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+            applicants: job.applications || job.application_count || 0,
+            description: job.description,
+            type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
+            remote: job.remoteWork === 'remote',
+            urgent: job.isUrgent || false,
+            featured: job.isFeatured || false,
+            companyRating: 4.5,
+            category: job.category || 'General',
+            photos: job.photos || [],
+            duration: job.duration,
+            startDate: job.startDate,
+            workMode: job.workMode || job.remoteWork,
+            learningObjectives: job.learningObjectives,
+            mentorship: job.mentorship,
+            isPreferred: true
+          };
+        })
         
         setPreferredJobs(transformedJobs)
       }
@@ -2028,10 +2065,10 @@ export default function JobsPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
               Find Your Dream Job
             </h1>
-            <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+            <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-8">
               Discover thousands of job opportunities with all the information you need
             </p>
           </div>
@@ -2054,9 +2091,9 @@ export default function JobsPage() {
                 />
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
-                <SelectTrigger className="w-48 h-12 border-0 bg-slate-50 dark:bg-slate-700">
+                <SelectTrigger className="w-full sm:w-48 h-12 border-0 bg-slate-50 dark:bg-slate-700">
                   <MapPin className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
@@ -2071,7 +2108,7 @@ export default function JobsPage() {
               <Button
                 onClick={() => setShowFilters(!showFilters)}
                 variant="outline"
-                className={`h-12 px-6 border-0 hover:bg-slate-100 dark:hover:bg-slate-600 ${
+                className={`h-12 w-full sm:w-auto px-6 border-0 hover:bg-slate-100 dark:hover:bg-slate-600 ${
                   (filters.experienceLevels.length > 0 || 
                    getVisibleJobTypesCount() > 0 || 
                    filters.salaryRange || 
@@ -2357,17 +2394,17 @@ export default function JobsPage() {
         {/* Results Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               {filteredJobs.length} Jobs Found
             </h2>
-            <p className="text-slate-600 dark:text-slate-300">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">
               Showing results for your search
             </p>
           </div>
-          <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-            <span className="text-sm text-slate-600 dark:text-slate-300">Sort by:</span>
+          <div className="flex items-center space-x-2 w-full sm:w-auto mt-4 sm:mt-0">
+            <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">Sort by:</span>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -2432,34 +2469,41 @@ export default function JobsPage() {
                 >
                   <Link href={`/jobs/${job.id}`}>
                     <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-4 flex-1">
-                            <Avatar className="w-12 h-12 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300">
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row items-start gap-4">
+                          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 w-full sm:w-auto">
+                            <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 flex-shrink-0">
                               <AvatarImage src={job.logo} alt={job.company.name} />
-                              <AvatarFallback className="text-sm font-bold">{job.company.name[0]}</AvatarFallback>
+                              <AvatarFallback className="text-xs sm:text-sm font-bold">{job.company.name[0]}</AvatarFallback>
                             </Avatar>
                             
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between mb-2">
+                              <div className="mb-2">
                                 <div className="flex-1 min-w-0">
-                                  <h3 className="font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
+                                  <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
                                     {job.title}
                                   </h3>
-                                  <div className="flex items-center gap-2 mt-1">
+                                  <div className="flex flex-wrap items-center gap-2 mt-1">
                                     <p className="text-slate-600 dark:text-slate-400 text-sm">
-                                      {job.isAgencyPosted && job.HiringCompany 
+                                      {job.isConsultancy && job.showHiringCompanyDetails 
+                                        ? job.hiringCompany?.name || job.company.name
+                                        : job.isAgencyPosted && job.HiringCompany 
                                         ? job.HiringCompany.name 
                                         : job.company.name}
                                     </p>
-                                    {job.isAgencyPosted && job.PostedByAgency && (
-                                      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700">
+                                    {job.isConsultancy && job.consultancyName && (
+                                      <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700 whitespace-nowrap">
+                                        Posted by {job.consultancyName}
+                                      </Badge>
+                                    )}
+                                    {job.isAgencyPosted && job.PostedByAgency && !job.isConsultancy && (
+                                      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700 whitespace-nowrap">
                                         via {job.PostedByAgency.name}
                                       </Badge>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex items-center space-x-2 ml-4">
+                                <div className="flex flex-wrap items-center gap-2 mt-2">
                                   {job.isHotVacancy && (
                                     <Badge className="bg-red-100 text-red-800 border-red-200 text-xs animate-pulse">
                                       🔥 Hot
@@ -2590,7 +2634,7 @@ export default function JobsPage() {
                             </div>
                           </div>
 
-                          <div className="flex flex-col space-y-2 ml-4">
+                          <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:ml-4 mt-4 sm:mt-0">
                             <Button
                               onClick={(e) => {
                                 e.preventDefault()
@@ -2599,17 +2643,17 @@ export default function JobsPage() {
                               }}
                               variant="outline"
                               size="sm"
-                              className="text-xs"
+                              className="text-xs flex-1 sm:flex-none sm:w-24"
                             >
                               {savedJobs.has(job.id) ? (
                                 <>
-                                  <BookmarkCheck className="w-4 h-4 mr-1" />
-                                  Saved
+                                  <BookmarkCheck className="w-4 h-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">Saved</span>
                                 </>
                               ) : (
                                 <>
-                                  <Bookmark className="w-4 h-4 mr-1" />
-                                  Save
+                                  <Bookmark className="w-4 h-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">Save</span>
                                 </>
                               )}
                             </Button>
@@ -2619,7 +2663,7 @@ export default function JobsPage() {
                                 e.stopPropagation()
                                 handleApply(job.id)
                               }}
-                              className={`text-xs sm:text-sm ${
+                              className={`text-xs sm:text-sm flex-1 sm:flex-none sm:w-24 ${
                                 appliedJobs.has(job.id)
                                   ? 'bg-green-600 hover:bg-green-700 cursor-default' 
                                   : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
@@ -2632,7 +2676,10 @@ export default function JobsPage() {
                                   Applied
                                 </>
                               ) : (
-                                'Apply Now'
+                                <>
+                                  Apply
+                                  <ArrowRight className="w-3 h-3 ml-1 hidden sm:inline" />
+                                </>
                               )}
                             </Button>
                             
@@ -2647,10 +2694,10 @@ export default function JobsPage() {
                                 variant="outline"
                                 size="sm"
                                 disabled={withdrawingJobs.has(job.id)}
-                                className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50"
+                                className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50 flex-1 sm:flex-none sm:w-24"
                               >
-                                <X className="w-3 h-3 mr-1" />
-                                {withdrawingJobs.has(job.id) ? 'Withdrawing...' : 'Undo'}
+                                <X className="w-3 h-3 sm:mr-1" />
+                                <span className="hidden sm:inline">{withdrawingJobs.has(job.id) ? 'Withdrawing...' : 'Undo'}</span>
                               </Button>
                             )}
                           </div>

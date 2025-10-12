@@ -234,6 +234,10 @@ export default function PostJobPage() {
             const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
             setSelectedEducation(educationArray)
             
+            // Sync selectedIndustries state
+            const industryArray = jobData.industryType ? jobData.industryType.split(', ').filter((i: string) => i.trim()) : []
+            setSelectedIndustries(industryArray)
+            
             // Extract metadata for consultancy fields
             const metadata = jobData.metadata || {};
             
@@ -251,7 +255,7 @@ export default function PostJobPage() {
               department: jobData.department || '',
               location: jobData.location || '',
               type: jobData.jobType || jobData.type || '',
-              experience: jobData.experience || jobData.experienceLevel || '',
+              experience: jobData.experienceLevel || jobData.experience || '',
               salary: jobData.salary || '',
               description: jobData.description || '',
               requirements: jobData.requirements || '',
@@ -877,24 +881,24 @@ export default function PostJobPage() {
          setShowSuccessDialog(true)
          
          if (!editingJobId) {
-          // Only reset form for new jobs, not when editing
-          setFormData({
-            title: "",
+           // Only reset form for new jobs, not when editing
+           setFormData({
+             title: "",
             companyName: "",
-            department: "",
-            location: "",
-            type: "",
-            experience: "",
-            salary: "",
-            description: "",
-            requirements: "",
-            benefits: "",
-            skills: [],
-            role: "",
-            industryType: "",
-            roleCategory: "",
-            education: [],
-            employmentType: "",
+             department: "",
+             location: "",
+             type: "",
+             experience: "",
+             salary: "",
+             description: "",
+             requirements: "",
+             benefits: "",
+             skills: [],
+             role: "",
+             industryType: "",
+             roleCategory: "",
+             education: [],
+             employmentType: "",
             // Consultancy fields
             postingType: "company",
             consultancyName: "",
@@ -1377,7 +1381,7 @@ export default function PostJobPage() {
                 </button>
               </div>
             </div>
-
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -1424,15 +1428,15 @@ export default function PostJobPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-2">Industry*</label>
-                        <Button
+                <Button
                           type="button"
-                          variant="outline"
-                          className="w-full justify-between"
+                  variant="outline"
+                  className="w-full justify-between"
                           onClick={() => setShowIndustryDropdown(true)}
-                        >
+                >
                           {formData.hiringCompanyIndustry || "Select industry"}
-                          <ChevronDown className="w-4 h-4" />
-                        </Button>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-900 mb-2">Company Description*</label>
@@ -1487,8 +1491,8 @@ export default function PostJobPage() {
                         <Badge variant="secondary" className="text-xs">
                           +{selectedIndustries.length - 3} more
                         </Badge>
-                      )}
-                    </div>
+                )}
+              </div>
                   )}
                 </div>
               )}
@@ -3336,8 +3340,10 @@ export default function PostJobPage() {
             <Button onClick={() => {
               setShowSuccessDialog(false)
               setPostedJobId(null)
+              // Redirect to dashboard
+              router.push(user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
             }}>
-              {editingJobId ? 'Continue Editing' : 'Post Another Job'}
+              Go to Dashboard
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3356,8 +3362,8 @@ export default function PostJobPage() {
               setFormData({ ...formData, hiringCompanyIndustry: industries[0] || "" })
             } else {
               // For regular company, set multiple industries
-              setSelectedIndustries(industries)
-              setFormData({ ...formData, industryType: industries.join(', ') })
+            setSelectedIndustries(industries)
+            setFormData({ ...formData, industryType: industries.join(', ') })
             }
           }}
           onClose={() => setShowIndustryDropdown(false)}

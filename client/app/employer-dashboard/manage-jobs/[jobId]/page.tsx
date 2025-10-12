@@ -246,9 +246,16 @@ export default function JobDetailPage() {
                       <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                         {transformedJob.title}
                       </h1>
-                      <p className="text-lg text-slate-600 dark:text-slate-400 mb-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-lg text-slate-600 dark:text-slate-400">
                         {transformedJob.company}
                       </p>
+                        {transformedJob.isConsultancy && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700">
+                            Posted by {transformedJob.consultancyName}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
                         <div className="flex items-center space-x-1">
                           <MapPin className="w-4 h-4" />
@@ -266,13 +273,28 @@ export default function JobDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const shareUrl = `${window.location.origin}/jobs/${transformedJob.id}`
+                        const shareText = `Check out this job: ${transformedJob.title} at ${transformedJob.company}`
+                        
+                        if (navigator.share) {
+                          navigator.share({
+                            title: transformedJob.title,
+                            text: shareText,
+                            url: shareUrl
+                          }).catch(err => console.log('Error sharing:', err))
+                        } else {
+                          navigator.clipboard.writeText(shareUrl)
+                          toast.success('Job link copied to clipboard!')
+                        }
+                      }}
+                    >
                       <Share2 className="w-4 h-4 mr-2" />
                       Share
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Bookmark className="w-4 h-4 mr-2" />
-                      Save
                     </Button>
                   </div>
                 </div>
@@ -330,6 +352,7 @@ export default function JobDetailPage() {
 
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Benefits & Perks</h3>
+                      {transformedJob.benefits && transformedJob.benefits.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {transformedJob.benefits.map((benefit: string, index: number) => (
                           <div key={index} className="flex items-center space-x-2">
@@ -338,6 +361,9 @@ export default function JobDetailPage() {
                           </div>
                         ))}
                       </div>
+                      ) : (
+                        <p className="text-slate-500 dark:text-slate-400 italic">No benefits information provided</p>
+                      )}
                     </div>
                   </TabsContent>
 
