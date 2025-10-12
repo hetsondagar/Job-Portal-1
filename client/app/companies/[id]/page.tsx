@@ -848,7 +848,21 @@ function CompanyDetailPage() {
     try {
     const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
-      jobs.forEach((job) => {
+      
+      // Filter out consultancy jobs - only count direct company jobs
+      const directCompanyJobs = jobs.filter((job) => {
+        const metadata = job.metadata || {}
+        const isConsultancyJob = metadata.postingType === 'consultancy' || 
+                                 job.isConsultancy || 
+                                 metadata.consultancyName ||
+                                 job.isAgencyPosted ||
+                                 job.PostedByAgency ||
+                                 job.hiringCompanyId ||
+                                 job.postedByAgencyId
+        return !isConsultancyJob
+      })
+      
+      directCompanyJobs.forEach((job) => {
       const deptName = (job.department || job.category || 'Other').toString()
       if (!groups[deptName]) {
         groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
@@ -869,9 +883,22 @@ function CompanyDetailPage() {
     try {
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
       
-      const departments = [...new Set(jobs.map(job => job.department || job.category).filter(Boolean))]
-      const locations = [...new Set(jobs.map(job => job.location || job.city || job.state).filter(Boolean))]
-      const experiences = [...new Set(jobs.map(job => job.experienceLevel || job.experience).filter(Boolean))]
+      // Filter out consultancy jobs - only count direct company jobs
+      const directCompanyJobs = jobs.filter((job) => {
+        const metadata = job.metadata || {}
+        const isConsultancyJob = metadata.postingType === 'consultancy' || 
+                                 job.isConsultancy || 
+                                 metadata.consultancyName ||
+                                 job.isAgencyPosted ||
+                                 job.PostedByAgency ||
+                                 job.hiringCompanyId ||
+                                 job.postedByAgencyId
+        return !isConsultancyJob
+      })
+      
+      const departments = [...new Set(directCompanyJobs.map(job => job.department || job.category).filter(Boolean))]
+      const locations = [...new Set(directCompanyJobs.map(job => job.location || job.city || job.state).filter(Boolean))]
+      const experiences = [...new Set(directCompanyJobs.map(job => job.experienceLevel || job.experience).filter(Boolean))]
       
       return {
         departments: departments.length > 0 ? departments : ['All Departments'],

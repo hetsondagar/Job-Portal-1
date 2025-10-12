@@ -1491,14 +1491,24 @@ export default function JobDetailPage() {
                           <span className="font-medium text-blue-600">{job.website}</span>
                         </div>
                       </div>
-                      {/* Only show View Company Profile if it's a direct company job or if consultancy shows hiring company details */}
-                      {(!job?.isConsultancy || job?.showHiringCompanyDetails) && job?.companyId && (
+                      {/* Only show View Company Profile for direct company jobs with existing company profiles */}
+                      {!job?.isConsultancy && job?.companyId && (
                         <Link href={`/companies/${job.companyId || ''}`}>
                           <Button variant="outline" className="w-full bg-transparent">
                             <Building2 className="w-4 h-4 mr-2" />
                             View Company Profile
                           </Button>
                         </Link>
+                      )}
+                      
+                      {/* For consultancy jobs, show different messaging */}
+                      {job?.isConsultancy && (
+                        <div className="text-center p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                          <Building2 className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Company profile managed by {job.consultancyName}
+                          </p>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

@@ -235,8 +235,11 @@ export default function PostJobPage() {
             const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
             setSelectedEducation(educationArray)
             
-            // Sync selectedIndustries state
-            const industryArray = jobData.industryType ? jobData.industryType.split(', ').filter((i: string) => i.trim()) : []
+            // Sync selectedIndustries state - clean industry names (remove numbers)
+            const industryArray = jobData.industryType ? 
+              jobData.industryType.split(', ')
+                .filter((i: string) => i.trim())
+                .map((i: string) => i.replace(/\s*\(\d+\)\s*$/, '').trim()) : []
             setSelectedIndustries(industryArray)
             
             // Extract metadata for consultancy fields
