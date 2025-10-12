@@ -618,7 +618,14 @@ export default function JobsPage() {
             hiringCompany: metadata.hiringCompany || null,
             showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
             location: job.location,
-            experience: job.experienceLevel || job.experience || 'Not specified',
+            experience: (() => {
+              const exp = job.experienceLevel || job.experience || 'Not specified';
+              if (exp === 'fresher') return 'Fresher (0-1 years)';
+              if (exp === 'junior') return 'Junior (1-3 years)';
+              if (exp === 'mid') return 'Mid-level (3-5 years)';
+              if (exp === 'senior') return 'Senior (5+ years)';
+              return exp;
+            })(),
             salary: job.salary || (job.salaryMin && job.salaryMax 
             ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
             : 'Not specified'),
@@ -745,7 +752,14 @@ export default function JobsPage() {
             hiringCompany: metadata.hiringCompany || null,
             showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
             location: job.location,
-            experience: job.experienceLevel || job.experience || 'Not specified',
+            experience: (() => {
+              const exp = job.experienceLevel || job.experience || 'Not specified';
+              if (exp === 'fresher') return 'Fresher (0-1 years)';
+              if (exp === 'junior') return 'Junior (1-3 years)';
+              if (exp === 'mid') return 'Mid-level (3-5 years)';
+              if (exp === 'senior') return 'Senior (5+ years)';
+              return exp;
+            })(),
             salary: job.salary || (job.salaryMin && job.salaryMax 
               ? `₹${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA`
               : 'Not specified'),
