@@ -947,10 +947,12 @@ export default function JobDetailPage() {
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
                               {(() => {
                                 const exp = job?.experienceLevel || job?.experience || 'Not specified';
-                                if (exp === 'fresher') return 'Fresher (0-1 years)';
+                                if (exp === 'fresher' || exp === 'entry') return 'Fresher (0-1 years)';
                                 if (exp === 'junior') return 'Junior (1-3 years)';
                                 if (exp === 'mid') return 'Mid-level (3-5 years)';
                                 if (exp === 'senior') return 'Senior (5+ years)';
+                                if (exp === 'lead') return 'Lead (7+ years)';
+                                if (exp === 'executive') return 'Executive (10+ years)';
                                 return exp;
                               })()}
                             </div>

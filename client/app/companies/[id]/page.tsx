@@ -1246,13 +1246,6 @@ function CompanyDetailPage() {
                     
                     <div className="grid grid-cols-2 gap-6">
                       <div className="flex items-center">
-                        <Calendar className="w-5 h-5 mr-3 text-slate-400" />
-                        <div>
-                          <div className="font-medium">Founded</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.founded) || 'Not provided'}</div> 
-                        </div>
-                      </div>
-                      <div className="flex items-center">
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Open Positions</div>

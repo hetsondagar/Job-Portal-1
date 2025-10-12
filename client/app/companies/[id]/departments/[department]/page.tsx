@@ -138,11 +138,17 @@ function DepartmentJobsPage() {
         const matchesDepartment = (j.department || j.category || '').toString() === departmentName
         
         // Exclude ALL consultancy/agency jobs - only show direct company jobs
-        const isDirectCompanyJob = !j.isConsultancy && 
-                                   !j.isAgencyPosted && 
-                                   !j.PostedByAgency && 
-                                   !j.consultancyName &&
-                                   j.postingType !== 'consultancy'
+        // Check multiple indicators for consultancy/agency jobs
+        const metadata = j.metadata || {}
+        const isConsultancyJob = metadata.postingType === 'consultancy' || 
+                                 j.isConsultancy || 
+                                 metadata.consultancyName ||
+                                 j.isAgencyPosted ||
+                                 j.PostedByAgency ||
+                                 j.hiringCompanyId ||
+                                 j.postedByAgencyId
+        
+        const isDirectCompanyJob = !isConsultancyJob
         
         return matchesDepartment && isDirectCompanyJob
       })
