@@ -133,7 +133,15 @@ function DepartmentJobsPage() {
 
   const departmentJobs = useMemo(() => {
     return jobs
-      .filter((j) => (j.department || j.category || '').toString() === departmentName)
+      .filter((j) => {
+        // Filter by department
+        const matchesDepartment = (j.department || j.category || '').toString() === departmentName
+        
+        // Exclude consultancy jobs - only show direct company jobs
+        const isNotConsultancy = !j.isConsultancy && !j.isAgencyPosted
+        
+        return matchesDepartment && isNotConsultancy
+      })
       .map((j) => ({
         id: j.id,
         title: j.title,
@@ -378,7 +386,7 @@ function DepartmentJobsPage() {
                           <p className="text-slate-700 dark:text-slate-300 mb-6 leading-relaxed">{job.description}</p>
 
                           <div className="flex flex-wrap gap-2 mb-6">
-                            {job.skills.map((skill, skillIndex) => (
+                            {job.skills.map((skill: string, skillIndex: number) => (
                               <Badge
                                 key={skillIndex}
                                 variant="secondary"

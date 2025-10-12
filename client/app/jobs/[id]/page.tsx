@@ -116,7 +116,13 @@ export default function JobDetailPage() {
                 applicants: res.data.applicationsCount || 0,
                 description: res.data.description || 'No description provided',
                 requirements: Array.isArray(res.data.requirements) ? res.data.requirements : (res.data.requirements ? res.data.requirements.split('\n').filter((r: string) => r.trim()) : []),
-                benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
+                benefits: Array.isArray(res.data.benefits) 
+                  ? res.data.benefits 
+                  : (res.data.benefits 
+                      ? (res.data.benefits.includes(',') 
+                          ? res.data.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b)
+                          : res.data.benefits.split('\n').filter((b: string) => b.trim()))
+                      : []),
                 type: res.data.jobType || res.data.type || 'Full-time',
                 remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
                 companySize: res.data.company?.companySize || res.data.company?.size || res.data.employer?.size || 'Company size not specified',
@@ -171,7 +177,13 @@ export default function JobDetailPage() {
               applicants: res.data.applicationsCount || 0,
               description: res.data.description || 'No description provided',
               requirements: Array.isArray(res.data.requirements) ? res.data.requirements : (res.data.requirements ? res.data.requirements.split('\n').filter((r: string) => r.trim()) : []),
-              benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
+              benefits: Array.isArray(res.data.benefits) 
+                ? res.data.benefits 
+                : (res.data.benefits 
+                    ? (res.data.benefits.includes(',') 
+                        ? res.data.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b)
+                        : res.data.benefits.split('\n').filter((b: string) => b.trim()))
+                    : []),
               type: res.data.jobType || res.data.type || 'Full-time',
               remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
               department: res.data.department || 'Department not specified',

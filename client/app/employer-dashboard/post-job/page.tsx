@@ -120,6 +120,7 @@ export default function PostJobPage() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
   const [selectedEducation, setSelectedEducation] = useState<string[]>([])
+  const [selectedBenefits, setSelectedBenefits] = useState<string[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
   
   // ========== AGENCY CLIENT SELECTION STATE ==========
@@ -613,7 +614,7 @@ export default function PostJobPage() {
         type: formData.type || 'full-time',
         experience: formData.experience || 'fresher',
         salary: formData.salary || '',
-        benefits: formData.benefits || '',
+        benefits: formData.benefits || (selectedBenefits.length > 0 ? selectedBenefits.join(', ') : ''),
         skills: formData.skills || [],
         department: formData.department || '',
         role: formData.role || '',
@@ -800,7 +801,7 @@ export default function PostJobPage() {
         type: formData.type || 'full-time',
         experience: formData.experience || 'fresher',
         salary: formData.salary,
-        benefits: formData.benefits,
+        benefits: formData.benefits || (selectedBenefits.length > 0 ? selectedBenefits.join(', ') : ''),
         skills: formData.skills,
         department: formData.department,
         role: formData.role,
@@ -1533,6 +1534,7 @@ export default function PostJobPage() {
                       {formData.experience === "junior" && "Junior (1-3 years)"}
                       {formData.experience === "mid" && "Mid-level (3-5 years)"}
                       {formData.experience === "senior" && "Senior (5+ years)"}
+                      {!formData.experience && "Select experience level"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -1785,29 +1787,6 @@ export default function PostJobPage() {
               />
               <p className="text-sm text-gray-500 mt-1">Skills highlighted with '' are preferred key skills</p>
             </div>
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Additional Requirements</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="remote" />
-                  <label htmlFor="remote" className="text-sm">
-                    Remote work available
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="travel" />
-                  <label htmlFor="travel" className="text-sm">
-                    Travel required
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="degree" />
-                  <label htmlFor="degree" className="text-sm">
-                    Bachelor's degree required
-                  </label>
-                </div>
-              </div>
-            </div>
           </div>
         )
       case 3:
@@ -1845,7 +1824,17 @@ export default function PostJobPage() {
                   "Stock Options",
                 ].map((benefit) => (
                   <div key={benefit} className="flex items-center space-x-2">
-                    <Checkbox id={benefit} />
+                    <Checkbox 
+                      id={benefit}
+                      checked={selectedBenefits.includes(benefit)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedBenefits([...selectedBenefits, benefit])
+                        } else {
+                          setSelectedBenefits(selectedBenefits.filter(b => b !== benefit))
+                        }
+                      }}
+                    />
                     <label htmlFor={benefit} className="text-sm">
                       {benefit}
                     </label>
