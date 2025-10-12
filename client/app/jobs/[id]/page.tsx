@@ -110,7 +110,7 @@ export default function JobDetailPage() {
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
                 experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
                 education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
+                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Salary not specified'),
                 skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
                 posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
                 applicants: res.data.applicationsCount || 0,
@@ -171,7 +171,7 @@ export default function JobDetailPage() {
               experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
               experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
               education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
+              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Salary not specified'),
               skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
               posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
               applicants: res.data.applicationsCount || 0,
@@ -430,12 +430,12 @@ export default function JobDetailPage() {
     }
   }, [jobIdFromParams, job, jobLoading])
 
-  // Auth check - redirect employers to employer dashboard
+  // Auth check - Allow employers/admins to view job details (removed redirect)
+  // Employers can now access /jobs/[id] page to preview their posted jobs
   useEffect(() => {
+    // No redirect needed - employers can view their company's job details
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
-      console.log('🔄 Employer/Admin detected on job detail page, redirecting to employer dashboard')
-      setIsRedirecting(true)
-      window.location.href = user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+      console.log('✅ Employer/Admin accessing job detail page - allowing access for job preview')
     }
   }, [user])
 
