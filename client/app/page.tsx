@@ -686,9 +686,12 @@ export default function HomePage() {
     const load = async () => {
       let companiesCountLocal = 0
       try {
+        console.log('🔄 Fetching companies from API...')
         const companiesResp = await apiService.listCompanies({ limit: 20, offset: 0 })
+        console.log('📊 Companies API response:', companiesResp)
         if (companiesResp.success && Array.isArray(companiesResp.data)) {
           companiesCountLocal = companiesResp.data.length
+          console.log(`✅ Found ${companiesCountLocal} companies`)
           const baseMapped = companiesResp.data.map((c: any) => ({
             id: c.id,
             name: c.name,
@@ -719,20 +722,26 @@ export default function HomePage() {
             color: getSectorColor(co.sector || 'other')
           }))
           
+          console.log('🏢 Setting companies data:', withColors)
           setTopCompanies(withColors)
           setFeaturedCompanies(withCounts)
         } else {
+          console.log('❌ No companies data found in response')
           setTopCompanies([])
           setFeaturedCompanies([])
         }
-      } catch {
+      } catch (error) {
+        console.error('❌ Error fetching companies:', error)
         setTopCompanies([])
         setFeaturedCompanies([])
       }
 
       try {
+        console.log('🔄 Fetching jobs from API...')
         const jobsResp = await apiService.getJobs({ limit: 12, status: 'active' })
+        console.log('💼 Jobs API response:', jobsResp)
         const list = Array.isArray((jobsResp as any)?.data?.rows) ? (jobsResp as any).data.rows : (Array.isArray((jobsResp as any)?.data) ? (jobsResp as any).data : [])
+        console.log(`✅ Found ${list.length} jobs`)
         const mappedJobs = list.map((j: any) => ({
           id: j.id,
           title: j.title,
@@ -797,30 +806,31 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative pt-20 sm:pt-32 pb-10 lg:pb-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Enhanced Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-800/5 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
         
         {/* Enhanced Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-emerald-400/15 to-cyan-400/15 rounded-full blur-3xl animate-pulse delay-500"></div>
-          <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-br from-orange-400/15 to-red-400/15 rounded-full blur-2xl animate-bounce"></div>
-          <div className="absolute bottom-20 right-20 w-24 h-24 bg-gradient-to-br from-yellow-400/15 to-orange-400/15 rounded-full blur-2xl animate-bounce delay-700"></div>
+          {/* Layer A: far glow */}
+          <div className="absolute -top-40 -right-40 w-[28rem] h-[28rem] rounded-full parallax-far" style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(90,0,242,0.35) 0%, rgba(90,0,242,0) 100%)' }}></div>
+          {/* Layer B: gradient strip */}
+          <div className="absolute top-1/3 left-0 right-0 h-24 opacity-20 gradient-strip"></div>
+          {/* Layer C: small particles placeholder (non-interactive) */}
+          <div className="pointer-events-none absolute inset-0 opacity-20"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto text-center">
+        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Enhanced Animated Hero Text */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="mb-8"
+            className="mb-8 order-2 lg:order-1 text-center lg:text-left"
           >
             <AnimatePresence mode="wait">
               <motion.h1
@@ -829,8 +839,8 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 1.05 }}
                 transition={{ duration: 0.6, ease: "easeInOut" }}
-                className={`text-4xl sm:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r ${heroGradients[currentTextIndex]} bg-clip-text text-transparent drop-shadow-lg`}
-              >
+                className={`serif-heading hero-clamp mb-6 heading-gradient drop-shadow-lg`}
+                >
                 {heroTexts[currentTextIndex]}
               </motion.h1>
             </AnimatePresence>
@@ -842,8 +852,8 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 1.05 }}
                 transition={{ duration: 0.6, delay: 0.1, ease: "easeInOut" }}
-                className="text-xl sm:text-2xl lg:text-3xl text-slate-600 dark:text-slate-300 mb-8 max-w-4xl mx-auto leading-relaxed font-medium"
-              >
+                className="text-[20px] text-[#5B5B6A] dark:text-slate-300 mb-8 max-w-[860px] mx-auto lg:mx-0 leading-relaxed font-medium"
+                >
                 {heroSubtitles[currentTextIndex]}
               </motion.p>
             </AnimatePresence>
@@ -854,9 +864,10 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-            className="mb-12"
+            className="mb-12 order-3 lg:order-2"
           >
-                         <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20 dark:border-slate-700/20 max-w-4xl mx-auto transform hover:scale-[1.02] transition-all duration-300">
+            <div className="glass-20 soft-glow rounded-3xl p-7 max-w-[920px] mx-auto transform hover:-translate-y-1 hover:scale-[1.02] transition-transform duration-200 border-white/30"
+                 style={{ background: "rgba(255,255,255,0.22)" }}>
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="relative flex-1 group">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
@@ -865,7 +876,7 @@ export default function HomePage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-500"
+                    className="pl-12 h-14 border-white/40 dark:border-slate-600 focus:border-blue-500 bg-white/40 dark:bg-slate-700/80 rounded-2xl text-lg font-medium focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 hover:border-white/60 dark:hover:border-slate-500 shadow-[inset_0_2px_8px_rgba(15,23,36,0.04)] focus:-translate-y-[3px] focus:shadow-[0_10px_24px_rgba(90,0,242,0.06)]"
                   />
                 </div>
                 <div className="relative flex-1 group">
@@ -875,12 +886,13 @@ export default function HomePage() {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-500"
+                    className="pl-12 h-14 border-white/40 dark:border-slate-600 focus:border-blue-500 bg-white/40 dark:bg-slate-700/80 rounded-2xl text-lg font-medium focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 hover:border-white/60 dark:hover:border-slate-500 shadow-[inset_0_2px_8px_rgba(15,23,36,0.04)] focus:-translate-y-[3px] focus:shadow-[0_10px_24px_rgba(90,0,242,0.06)]"
                   />
                 </div>
                 <Button 
                   onClick={handleSearch}
-                  className="h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 rounded-2xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="h-14 px-8 rounded-xl font-semibold text-white shadow-[0_12px_30px_rgba(90,0,242,0.18)] transition-transform duration-200 btn-shimmer btn-ripple"
+                  style={{ background: 'var(--gradient-primary)' }}
                 >
                   <Search className="w-5 h-5 mr-2" />
                   Search Jobs
@@ -888,7 +900,7 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Popular:</span>
+                <span className="text-sm smallcaps text-[12px] text-slate-500 dark:text-slate-400 font-medium">Popular:</span>
                 {["Software Engineer", "Sales Manager", "Marketing Specialist", "Business Analyst", "Content Writer", "Operations Manager"].map((skill, index) => (
                   <motion.button
                     key={skill}
@@ -896,117 +908,58 @@ export default function HomePage() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.3 + index * 0.1, duration: 0.4 }}
                     onClick={() => setSearchQuery(skill)}
-                    className="px-4 py-2 text-sm bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all duration-200 font-medium transform hover:scale-105"
+                    className="px-4 py-2 text-sm rounded-full bg-[rgba(10,12,20,0.03)] dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all duration-200 font-medium transform hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-[0_6px_18px_rgba(20,16,48,0.08)] hover:outline hover:outline-1 hover:outline-[rgba(90,0,242,0.08)]"
                   >
                     {skill}
                   </motion.button>
                 ))}
+                <div className="basis-full text-[11px] tracking-wider text-slate-500/80 mt-1 smallcaps">Popular searches — updated daily</div>
               </div>
             </div>
           </motion.div>
 
-          {/* Sticky Search Bar - Appears on scroll */}
+          {/* Image Column */}
           <motion.div
-            initial={{ opacity: 0, y: -100 }}
-            animate={{ 
-              opacity: isStickyVisible ? 1 : 0, 
-              y: isStickyVisible ? 0 : -100 
-            }}
-            transition={{ duration: 0.3 }}
-            className={`fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-lg transform transition-all duration-300 ${
-              isStickyVisible ? 'pointer-events-auto' : 'pointer-events-none'
-            }`}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="hidden"
           >
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex flex-col lg:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input
-                    placeholder="Job title, keywords, or company"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
-                  />
-                </div>
-                <div className="relative flex-1">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input
-                    placeholder="Location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
-                  />
-                </div>
-                <Button 
-                  onClick={handleSearch}
-                  className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 rounded-xl text-sm shadow-lg"
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Enhanced Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8"
-          >
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: 0.5 + index * 0.1, duration: 0.6, ease: "easeOut" }}
-                whileHover={{ scale: 1.05, y: -5 }}
-                className="group text-center"
-              >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 shadow-lg mb-4 group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 transform hover:rotate-3">
-                  <stat.icon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">{stat.value}</div>
-                <div className="text-sm text-slate-600 dark:text-slate-300 font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
+            {/* Image column intentionally hidden to remove empty white box */}
           </motion.div>
         </div>
       </section>
 
       {/* JobAtPace Premium Banner */}
-      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 py-6 sm:py-8 relative overflow-hidden">
-        {/* Animated background elements */}
+      <div className="backdrop-blur-xl bg-white/55 dark:bg-slate-900/55 border-t border-white/30 dark:border-slate-700/40 shadow-[0_-10px_40px_rgba(20,16,48,0.08)] py-8 relative overflow-hidden -mt-10 md:-mt-16">
+        {/* Subtle animated background */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-yellow-400/20 via-orange-500/20 to-red-500/20 animate-pulse"></div>
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-bounce"></div>
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-bounce delay-1000"></div>
+          <div className="absolute top-0 left-0 w-full h-full opacity-40 gradient-strip"></div>
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/30 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/30 rounded-full blur-2xl"></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <Link href="/job-at-pace">
-            <div className="flex flex-col sm:flex-row items-center justify-between text-white cursor-pointer group">
+          <Link href="/job-at-pace">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-slate-900 dark:text-white cursor-pointer group">
               <div className="flex items-center mb-4 sm:mb-0">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
-                  <Zap className="w-6 h-6 text-white" />
-                      </div>
+                <div className="w-12 h-12 bg-white/70 dark:bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mr-4 group-hover:scale-105 transition-transform duration-300 shadow-[0_10px_24px_rgba(20,16,48,0.12)]">
+                  <Zap className="w-6 h-6 text-[#5A00F2]" />
+                </div>
                 <div>
                   <div className="font-bold text-lg sm:text-xl mb-1">JobAtPace Premium</div>
-                  <div className="text-sm sm:text-base opacity-90">Get priority applications & exclusive jobs</div>
+                  <div className="text-sm sm:text-base opacity-80">Get priority applications & exclusive jobs</div>
                 </div>
-                    </div>
-                    <Button
-                      size="lg"
-                className="bg-white text-orange-600 hover:bg-orange-50 shadow-xl transition-all duration-300 group-hover:scale-105 font-semibold px-8 py-3 rounded-full"
-                    >
-                      Upgrade Now
+              </div>
+              <Button
+                size="lg"
+                className="rounded-full px-8 py-3 font-semibold text-white bg-gradient-to-r from-[#5A00F2] to-[#4F9BFF] shadow-[0_0_18px_rgba(79,155,255,0.35)] hover:scale-[1.04] transition-transform"
+              >
+                Upgrade Now
                 <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
-                  </div>
-            </Link>
+              </Button>
+            </div>
+          </Link>
         </div>
       </div>
 
@@ -1019,106 +972,68 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Top Companies Hiring</h2>
+            <h2 className="serif-heading text-4xl font-bold text-slate-900 dark:text-white mb-4">Top Companies Hiring</h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
               Explore opportunities with industry leaders and discover your next career move
             </p>
           </motion.div>
 
-          {/* Companies Carousel */}
-          <div className="relative">
-            {/* Navigation Buttons */}
-            <button
-              onClick={() => scrollCompanies('left')}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200"
-            >
-              <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-300" />
-            </button>
-            
-            <button
-              onClick={() => scrollCompanies('right')}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200"
-            >
-              <ChevronRight className="w-6 h-6 text-slate-600 dark:text-slate-300" />
-            </button>
-
-            {/* Companies Container */}
-            <div
-              id="companies-container"
-              className="flex gap-6 overflow-x-auto scrollbar-hide pb-6 px-4"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {topCompanies.map((company, index) => (
-                <motion.div
-                  key={company.id}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: animatedSections.companies ? 1 : 0, x: animatedSections.companies ? 0 : 50 }}
-                  transition={{ delay: index * 0.1, duration: 0.6 }}
-                  className="flex-shrink-0 w-72 sm:w-80"
-                >
+          {/* Companies Grid (2 per row) */}
+          <div className="grid grid-cols-2 gap-8">
+            {(topCompanies && topCompanies.length > 0 ? topCompanies : Array(4).fill(null)).map((company, index) => (
+              <motion.div
+                key={company ? company.id : `top-skel-${index}`}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: animatedSections.companies ? 1 : 0, y: animatedSections.companies ? 0 : 30 }}
+                transition={{ delay: index * 0.05, duration: 0.5 }}
+              >
+                {company ? (
                   <Link href={`/companies/${company.id}`}>
-                                         <Card className={`h-full bg-gradient-to-br ${company.color} backdrop-blur-xl border-0 shadow-xl hover:shadow-2xl dark:hover:shadow-white/20 transition-all duration-500 group cursor-pointer transform hover:scale-105`}>
-                    <CardContent className="p-6 text-white relative overflow-hidden">
-                      
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-4">
-                          <Avatar className="w-12 h-12 bg-white/90 p-2 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                            <AvatarImage src={company.logo} alt={company.name} className="object-contain" />
-                            <AvatarFallback className="text-lg font-bold bg-white text-slate-700">
-                              {company.name ? company.name.substring(0, 2).toUpperCase() : '??'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <Badge className="bg-black/30 text-white border-0 backdrop-blur-sm">
-                            {company.industry}
-                          </Badge>
-                        </div>
-                        
-                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-white transition-colors duration-200">
-                          {company.name}
-                        </h3>
-                        
-                        <div className="flex items-center space-x-2 mb-4">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 ${
-                                  i < Math.floor(company.rating)
-                                    ? "text-yellow-300 fill-current"
-                                    : "text-white/40"
-                                }`}
-                              />
-                            ))}
+                    <Card className="w-full cursor-pointer border border-white/40 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden h-full">
+                      <CardContent className="p-6 relative h-full">
+                        <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-4">
+                            <Avatar className="w-12 h-12 bg-white/90 p-2 rounded-xl shadow">
+                              <AvatarImage src={company.logo} alt={company.name} className="object-contain" />
+                              <AvatarFallback className="text-lg font-bold bg-white text-slate-700">
+                                {company.name ? company.name.substring(0, 2).toUpperCase() : '??'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0">
+                              {company.industry}
+                            </Badge>
                           </div>
-                          <span className="text-sm text-white/90">
-                            {company.rating}
-                          </span>
-                        </div>
-                        
-                        <div className="space-y-2 mb-6">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/80">Open Positions</span>
-                            <span className="font-semibold text-white">{company.activeJobsCount || company.openings || 0}</span>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{company.name}</h3>
+                          <div className="flex items-center justify-between text-sm mb-4">
+                            <span className="text-slate-600 dark:text-slate-300">Open Positions</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Button className="rounded-full bg-slate-900/80 dark:bg-white/10 text-white hover:bg-slate-900 transition-colors px-5">View Jobs</Button>
+                            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                              <ArrowRight className="w-4 h-4 text-slate-700 dark:text-white" />
+                            </div>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <Button
-                            className="bg-black/30 hover:bg-black/40 text-white border-0 shadow-lg transition-all duration-300 group-hover:scale-105 backdrop-blur-sm"
-                          >
-                            View Jobs
-                          </Button>
-                          <div className="w-8 h-8 bg-black/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <ArrowRight className="w-4 h-4 text-white" />
-                </div>
-                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ) : (
+                  <div className="w-full h-full">
+                    <div className="h-full rounded-2xl border border-white/40 dark:border-slate-700/50 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl shadow-sm p-6 animate-pulse">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-slate-200/70 dark:bg-slate-700/70" />
+                        <div className="w-20 h-6 rounded-full bg-slate-200/70 dark:bg-slate-700/70" />
                       </div>
-                    </CardContent>
-                  </Card>
-                    </Link>
+                      <div className="h-5 w-2/3 rounded bg-slate-200/70 dark:bg-slate-700/70 mb-3" />
+                      <div className="h-4 w-1/2 rounded bg-slate-200/70 dark:bg-slate-700/70 mb-8" />
+                      <div className="h-9 w-full rounded-full bg-slate-200/70 dark:bg-slate-700/70" />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
-            </div>
           </div>
 
           <div className="text-center mt-8">
@@ -1136,62 +1051,73 @@ export default function HomePage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Featured Companies</h2>
+            <h2 className="serif-heading text-4xl font-bold text-slate-900 dark:text-white mb-4">Featured Companies</h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
               Discover opportunities with the most innovative and respected companies
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredCompanies.map((company, index) => (
+          <div className="grid grid-cols-2 gap-8">
+            {(featuredCompanies && featuredCompanies.length > 0 ? featuredCompanies : Array(4).fill(null)).map((company, index) => (
               <div
-                key={company.id}
-                className="group transform transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]"
+                key={company ? company.id : `feat-skel-${index}`}
+                className="group transform transition-transform duration-300 hover:-translate-y-2"
               >
-                <Link href={`/companies/${company.id}`}>
-                  <Card className="cursor-pointer border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden h-full">
-                    <CardContent className="p-6 text-center relative h-full flex flex-col justify-between">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-
-                      <div>
-                        <Avatar className="w-16 h-16 mx-auto mb-4 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg">
-                          <AvatarImage src={company.logo} alt={company.name} />
-                          <AvatarFallback className="text-lg font-bold">{company.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors duration-300">
-                          {company.name}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{company.industry}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-500 mb-4">{company.location}</p>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-center mb-3">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 ${
-                                  i < Math.floor(company.rating)
-                                    ? "text-yellow-400 fill-current"
-                                    : "text-slate-300 dark:text-slate-600"
-                                }`}
-                              />
-                            ))}
+                {company ? (
+                  <Link href={`/companies/${company.id}`}>
+                    <Card className="cursor-pointer border border-white/40 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden h-full">
+                      <CardContent className="p-6 text-center relative h-full flex flex-col justify-between">
+                        <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                        
+                        <div>
+                          <Avatar className="w-16 h-16 mx-auto mb-4 ring-2 ring-white/50 group-hover:ring-[3px] transition-all duration-300 shadow">
+                            <AvatarImage src={company.logo} alt={company.name} />
+                            <AvatarFallback className="text-lg font-bold">{company.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors duration-300">
+                            {company.name}
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{company.industry}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-500 mb-4">{company.location}</p>
                         </div>
-                          <span className="text-sm text-slate-600 dark:text-slate-400 ml-2">
-                            {company.rating} ({company.reviews} reviews)
-                          </span>
+                        
+                        <div>
+                          <div className="flex items-center justify-center mb-3">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < Math.floor(company.rating)
+                                      ? "text-yellow-400 fill-current"
+                                      : "text-slate-300 dark:text-slate-600"
+                                  }`}
+                                />
+                              ))}
                           </div>
-                        <div className="flex items-center justify-between text-sm mb-4">
-                          <span className="text-slate-600 dark:text-slate-400">{company.employees}</span>
-                          <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0} openings</span>
-                          </div>
-                        <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${getSectorColor(company.sector)} transition-all duration-300 mx-auto rounded-full`} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                            <span className="text-sm text-slate-600 dark:text-slate-400 ml-2">
+                              {company.rating} ({company.reviews} reviews)
+                            </span>
+                            </div>
+                          <div className="flex items-center justify-between text-sm mb-4">
+                            <span className="text-slate-600 dark:text-slate-400">{company.employees}</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0} openings</span>
+                            </div>
+                          <div className={`w-0 group-hover:w-full h-[2px] bg-gradient-to-r ${getSectorColor(company.sector)} transition-all duration-300 mx-auto rounded-full`} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ) : (
+                  <div className="w-full h-full">
+                    <div className="h-full rounded-2xl border border-white/40 dark:border-slate-700/50 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl shadow-sm p-6 animate-pulse">
+                      <div className="w-16 h-16 rounded-full bg-slate-200/70 dark:bg-slate-700/70 mx-auto mb-6" />
+                      <div className="h-5 w-1/2 rounded bg-slate-200/70 dark:bg-slate-700/70 mx-auto mb-3" />
+                      <div className="h-4 w-1/3 rounded bg-slate-200/70 dark:bg-slate-700/70 mx-auto mb-8" />
+                      <div className="h-2 w-3/4 rounded bg-slate-200/70 dark:bg-slate-700/70 mx-auto" />
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1212,44 +1138,43 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: animatedSections.features ? 1 : 0, y: animatedSections.features ? 0 : 30 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Trending Job Roles</h2>
+            <h2 className="serif-heading text-4xl font-bold text-slate-900 dark:text-white mb-4">Trending Job Roles</h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
               Explore the most in-demand positions across various industries
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-6">
             {trendingJobRoles.slice(0, showAllJobRoles ? trendingJobRoles.length : 12).map((role, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: animatedSections.features ? 1 : 0, y: animatedSections.features ? 0 : 30 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
-                className="transform transition-all duration-200 ease-out hover:-translate-y-6 hover:scale-110 hover:shadow-2xl will-change-transform group"
+                className="transform transition-transform duration-300 ease-out hover:-translate-y-2 will-change-transform group"
               >
                 <Link href={`/jobs?category=${role.category}`}>
-                  <Card className="group cursor-pointer border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-200 ease-out overflow-hidden h-full">
+                  <Card className="group cursor-pointer border border-white/40 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-shadow duration-300 overflow-hidden h-full">
                     <CardContent className="p-6 text-center relative h-full flex flex-col justify-between">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${role.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-
-                      <div>
-                        <div className="text-4xl mb-4 group-hover:scale-125 group-hover:rotate-3 transition-all duration-200 ease-out">
+                      <div className={`absolute inset-0 bg-gradient-to-br ${role.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                      <div className="relative z-10">
+                        <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 ease-out">
                           {role.icon}
                         </div>
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-all duration-200 ease-out group-hover:scale-105">
+                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors duration-200 ease-out">
                           {role.name}
                         </h3>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 mb-4 font-medium">
+                          {role.openings}
+                        </p>
                       </div>
 
                       <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out transform translate-y-2 group-hover:translate-y-0">
-                          {role.openings}
-                        </p>
-                        <div className={`w-0 group-hover:w-full h-1 bg-gradient-to-r ${role.color} transition-all duration-200 ease-out mx-auto rounded-full`} />
+                        <div className={`w-0 group-hover:w-full h-[2px] bg-gradient-to-r ${role.color} transition-all duration-300 ease-out mx-auto rounded-full relative z-10`} />
                       </div>
                     </CardContent>
                   </Card>
@@ -1299,109 +1224,123 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Featured Jobs</h2>
+            <h2 className="serif-heading text-4xl font-bold text-slate-900 dark:text-white mb-4">Featured Jobs</h2>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
               Hand-picked opportunities from top companies worldwide
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredJobs.map((job, index) => (
+          <div className="grid grid-cols-2 gap-8">
+            {(featuredJobs && featuredJobs.length > 0 ? featuredJobs : Array(4).fill(null)).map((job, index) => (
               <motion.div
-                key={job.id}
+                key={job ? job.id : `job-skel-${index}`}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: animatedSections.featuredJobs ? 1 : 0, y: animatedSections.featuredJobs ? 0 : 30 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
-                className="transform transition-all duration-200 ease-out hover:-translate-y-3 hover:scale-110 hover:shadow-2xl"
+                className="transform transition-transform duration-300 ease-out hover:-translate-y-2"
               >
-                <Link href={`/jobs/${job.id}`}>
-                  <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden h-full">
-                    <CardContent className="p-6 relative h-full flex flex-col justify-between">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(job.sector)} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-
-                      <div>
-                        <div className="flex items-start justify-between mb-4">
-                          <Avatar className="w-12 h-12 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300">
-                            <AvatarImage src={job.logo} alt={job.company} />
-                            <AvatarFallback className="text-sm font-bold">{job.company[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col gap-1">
-                            {(job as any).isHotVacancy && (
-                              <Badge className="bg-red-100 text-red-800 border-red-200 text-xs animate-pulse">
-                                🔥 Hot
-                              </Badge>
-                            )}
-                            {((job as any).urgentHiring || job.urgent) && (
-                              <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                                URGENT
-                              </Badge>
-                            )}
-                            {(job as any).superFeatured && (
-                              <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
-                                ⭐ Super
-                              </Badge>
-                            )}
+                {job ? (
+                  <Link href={`/jobs/${job.id}`}>
+                    <Card className="group cursor-pointer border border-white/40 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden h-full">
+                      <CardContent className="p-6 relative h-full flex flex-col justify-between">
+                        <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(job.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                        
+                        <div>
+                          <div className="flex items-start justify-between mb-4">
+                            <Avatar className="w-12 h-12 ring-2 ring-white/50 group-hover:ring-[3px] transition-all duration-300">
+                              <AvatarImage src={job.logo} alt={job.company} />
+                              <AvatarFallback className="text-sm font-bold">{job.company && job.company[0]}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col gap-1">
+                              {(job as any).isHotVacancy && (
+                                <Badge className="bg-red-100 text-red-800 border-red-200 text-xs animate-pulse">
+                                  🔥 Hot
+                                </Badge>
+                              )}
+                              {((job as any).urgentHiring || job.urgent) && (
+                                <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                  URGENT
+                                </Badge>
+                              )}
+                              {(job as any).superFeatured && (
+                                <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                                  ⭐ Super
+                                </Badge>
+                              )}
+                            </div>
                           </div>
+
+                          <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
+                            {job.title}
+                          </h3>
+                          <p className="text-sm text-slate-700 dark:text-slate-400 mb-3">{job.company}</p>
+
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-center text-sm text-slate-700 dark:text-slate-400">
+                              <MapPin className="w-4 h-4 mr-2" />
+                              {job.location}
+                        </div>
+                            <div className="flex items-center text-sm text-slate-700 dark:text-slate-400">
+                              <Briefcase className="w-4 h-4 mr-2" />
+                              {job.experience}
+                        </div>
+                            <div className="flex items-center text-sm text-slate-700 dark:text-slate-400">
+                              <IndianRupee className="w-4 h-4 mr-2" />
+                              {job.salary}
+                            </div>
                         </div>
 
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
-                          {job.title}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{job.company}</p>
-
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            {job.location}
-                      </div>
-                          <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
-                            <Briefcase className="w-4 h-4 mr-2" />
-                            {job.experience}
-                      </div>
-                          <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
-                            <IndianRupee className="w-4 h-4 mr-2" />
-                            {job.salary}
-                          </div>
-                      </div>
-
                         <div className="flex flex-wrap gap-2 mb-4">
-                        {job.skills.slice(0, 3).map((skill: string, skillIndex: number) => (
-                          <Badge
-                            key={skillIndex}
-                            variant="secondary"
-                              className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                        {job.skills.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{job.skills.length - 3} more
-                          </Badge>
-                        )}
+                          {job.skills.slice(0, 3).map((skill: string, skillIndex: number) => (
+                            <Badge
+                              key={skillIndex}
+                              variant="secondary"
+                                className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                            >
+                              {skill}
+                            </Badge>
+                          ))}
+                          {job.skills.length > 3 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{job.skills.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
                       <div>
                         <div className="flex items-center justify-between text-sm mb-4">
-                          <span className="text-slate-500 dark:text-slate-500">
+                          <span className="text-slate-600 dark:text-slate-500">
                             <Clock className="w-4 h-4 inline mr-1" />
                             {job.posted}
                           </span>
-                          <span className="text-slate-600 dark:text-slate-400">
+                          <span className="text-slate-700 dark:text-slate-400">
                             <Users className="w-4 h-4 inline mr-1" />
                             {job.applicants} applicants
                           </span>
                         </div>
-                    <Button
-                          className={`w-full bg-gradient-to-r ${getSectorColor(job.sector)} hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-lg transition-all duration-300 group-hover:scale-105`}
-                    >
+                        <Button
+                          className={`w-full bg-gradient-to-r ${getSectorColor(job.sector)} hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-md transition-colors duration-300`}
+                        >
                           View Job
-                    </Button>
+                        </Button>
                       </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
                 </Link>
+                ) : (
+                  <div className="w-full h-full">
+                    <div className="h-full rounded-2xl border border-white/40 dark:border-slate-700/50 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl shadow-sm p-6 animate-pulse">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-slate-200/70 dark:bg-slate-700/70" />
+                        <div className="w-20 h-6 rounded-full bg-slate-200/70 dark:bg-slate-700/70" />
+                      </div>
+                      <div className="h-5 w-2/3 rounded bg-slate-200/70 dark:bg-slate-700/70 mb-3" />
+                      <div className="h-4 w-1/2 rounded bg-slate-200/70 dark:bg-slate-700/70 mb-8" />
+                      <div className="h-9 w-full rounded-full bg-slate-200/70 dark:bg-slate-700/70" />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
