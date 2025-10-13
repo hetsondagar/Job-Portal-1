@@ -65,7 +65,122 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: linear-gradient(180deg, #f7f8ff 0%, #eaf1ff 100%);
+    background-attachment: fixed;
   }
+}
+
+/* Design tokens */
+:root {
+  --gradient-primary: linear-gradient(90deg, #5A00F2 0%, #A855F7 55%, #4F9BFF 100%);
+  --gradient-secondary: linear-gradient(90deg, #EEF2FF 0%, #F8F5FF 100%);
+  --accent: #5A00F2;
+  --text-primary: #0F1724;
+  --text-muted: #6B7280;
+  --shadow-large: 0 30px 70px rgba(20,16,48,0.12);
+  --shadow-small: 0 6px 18px rgba(20,16,48,0.08);
+}
+.heading-gradient {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 6px 30px rgba(90,0,242,0.16);
+}
+
+.glass-20 {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.soft-glow {
+  box-shadow: var(--shadow-large);
+}
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: translateX(-120%);
+}
+.btn-shimmer:hover::after {
+  transform: translateX(120%);
+  transition: transform 700ms ease;
+}
+
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.btn-ripple:active::before {
+  content: "";
+  position: absolute;
+  width: 200%;
+  padding-top: 200%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 60%);
+  transition: opacity 420ms ease;
+  opacity: 0;
+}
+
+.bg-animated {
+  background: linear-gradient(120deg, rgba(90,0,242,0.06), rgba(168,85,247,0.06), rgba(79,155,255,0.06));
+  background-size: 200% 200%;
+  animation: bg-move 12s ease infinite;
+}
+
+@keyframes bg-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.heading-font {
+  font-family: var(--font-heading), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.hero-clamp {
+  font-weight: 800;
+  line-height: 0.95;
+  font-size: clamp(36px, 6.5vw, 96px);
+}
+
+.serif-heading {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+}
+
+.smallcaps {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Parallax & animated strips */
+.parallax-far {
+  filter: blur(80px);
+  transform: translateY(-6%) scale(1.05);
+}
+.gradient-strip {
+  background: var(--gradient-primary);
+  background-size: 300% 300%;
+  animation: gradient-slide 30s linear infinite;
+}
+@keyframes gradient-slide {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .bg-animated, .gradient-strip { animation: none !important; }
 }
 
 /* Hide scrollbar for companies carousel */

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Building2, Briefcase, ChevronDown, Menu, Search, MapPin, Users, TrendingUp, Moon, Sun, User, LogOut, Settings, Bell, Bookmark, FileText, Zap, Crown } from "lucide-react"
@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useTheme } from "next-themes"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
+import { motion } from "framer-motion"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -18,6 +19,14 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 50)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   // Handle navbar filter clicks with programmatic navigation
   const handleFilterClick = (filterUrl: string) => {
@@ -41,22 +50,29 @@ export function Navbar() {
   }
 
   return (
-    <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50">
+    <motion.nav
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={`${isScrolled ? "bg-white/80 dark:bg-slate-900/80 shadow-[0_2px_20px_rgba(0,0,0,0.05)] h-16" : "bg-transparent h-20"} w-full fixed top-0 left-0 z-50 backdrop-blur-xl border-b border-white/50 dark:border-slate-700/60 transition-all duration-300`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <Building2 className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold text-slate-900 dark:text-white">JobPortal</span>
+          <Link href="/" className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#5A00F2] to-[#4F9BFF] flex items-center justify-center shadow-[0_8px_24px_rgba(90,0,242,0.25)]">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <span className="serif-heading text-2xl font-semibold text-gray-900 dark:text-white tracking-tight">JobPortal</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-2 lg:space-x-6">
             {/* Jobs Dropdown */}
             <div className="relative group">
               <Button 
                 variant="ghost" 
-                className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative"
+                className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-4 after:right-4 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
                 onClick={() => window.location.href = '/jobs'}
               >
                 Jobs
@@ -198,7 +214,7 @@ export function Navbar() {
             <div className="relative group">
               <Button 
                 variant="ghost" 
-                className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative"
+                className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-4 after:right-4 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
                 onClick={() => window.location.href = '/companies'}
               >
                 Companies
@@ -413,17 +429,17 @@ export function Navbar() {
             ) : (
               <div className="flex items-center space-x-2">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-slate-700 dark:text-slate-300">
+                  <Button variant="ghost" size="sm" className="text-gray-700 dark:text-slate-300 tracking-wider uppercase text-[12px]">
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/employer-login">
-                  <Button variant="ghost" size="sm" className="text-slate-700 dark:text-slate-300">
+                  <Button variant="ghost" size="sm" className="text-gray-700 dark:text-slate-300 tracking-wider uppercase text-[12px]">
                     Employer Login
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button size="sm" className="rounded-full px-5 py-2.5 bg-gradient-to-r from-[#5A00F2] to-[#4F9BFF] text-white font-semibold tracking-widest uppercase text-[11px] shadow-[0_0_15px_rgba(79,155,255,0.4)] hover:scale-[1.05] transition-transform">
                     Sign Up
                   </Button>
                 </Link>
@@ -434,17 +450,17 @@ export function Navbar() {
           {/* Mobile menu button */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="md:hidden">
+              <Button variant="ghost" size="sm" className="md:hidden rounded-full bg-white/40 backdrop-blur-md">
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80">
               <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
               <div className="flex flex-col space-y-6 mt-6">
-                <Link href="/jobs" className="text-lg font-medium text-slate-900 dark:text-white">
+                <Link href="/jobs" className="text-2xl serif-heading text-slate-900 dark:text-white">
                   Jobs
                 </Link>
-                <Link href="/companies" className="text-lg font-medium text-slate-900 dark:text-white">
+                <Link href="/companies" className="text-2xl serif-heading text-slate-900 dark:text-white">
                   Companies
                 </Link>
                 <Link href="/job-at-pace" className="flex items-center space-x-2 text-lg font-medium text-slate-900 dark:text-white">
@@ -505,7 +521,7 @@ export function Navbar() {
                       </Button>
                     </Link>
                     <Link href="/register">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      <Button className="w-full rounded-full px-5 py-2.5 bg-gradient-to-r from-[#5A00F2] to-[#4F9BFF] text-white font-semibold tracking-widest uppercase text-[11px] shadow-[0_0_15px_rgba(79,155,255,0.4)]">
                         Sign Up
                       </Button>
                     </Link>
@@ -516,6 +532,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
-    </nav>
+    </motion.nav>
   )
 }
