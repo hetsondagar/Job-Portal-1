@@ -333,4 +333,13 @@ User.prototype.getInitials = function() {
   return `${this.first_name.charAt(0)}${this.last_name.charAt(0)}`.toUpperCase();
 };
 
+// Define associations
+User.associate = function(models) {
+  // User belongs to Company
+  User.belongsTo(models.Company, {
+    foreignKey: 'companyId',
+    as: 'company'
+  });
+};
+
 module.exports = User; 

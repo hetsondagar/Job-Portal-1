@@ -49,13 +49,8 @@ router.post('/submit', authenticateToken, async (req, res) => {
     const { documents, companyInfo, additionalNotes } = req.body;
     const userId = req.user.id;
 
-    // Get user and company information
-    const user = await User.findByPk(userId, {
-      include: [{
-        model: Company,
-        as: 'company'
-      }]
-    });
+    // Get user information
+    const user = await User.findByPk(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -64,7 +59,9 @@ router.post('/submit', authenticateToken, async (req, res) => {
       });
     }
 
-    const company = user.company;
+    // Get company information directly
+    const companyId = user.company_id || user.companyId;
+    const company = await Company.findByPk(companyId);
 
     if (!company) {
       return res.status(404).json({
@@ -82,7 +79,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
 
     // Update all company users to pending verification status
     const companyUsers = await User.findAll({
-      where: { companyId: companyId }
+      where: { company_id: company.id }
     });
 
     for (const user of companyUsers) {
@@ -189,7 +186,7 @@ router.post('/approve/:companyId', authenticateToken, async (req, res) => {
 
     // Get company users and activate their accounts
     const companyUsers = await User.findAll({
-      where: { companyId: companyId }
+      where: { company_id: company.id }
     });
 
     // Activate all company users and create notifications
@@ -283,7 +280,7 @@ router.post('/reject/:companyId', authenticateToken, async (req, res) => {
 
     // Get company users and set them for re-registration
     const companyUsers = await User.findAll({
-      where: { companyId: companyId }
+      where: { company_id: company.id }
     });
 
     // Set users to rejected status for re-registration and create notifications

@@ -200,12 +200,14 @@ export default function EmployerRegisterPage() {
         // Prepare company data for verification dialog
         const company: any = result?.company
         // Store company data for verification dialog
-        sessionStorage.setItem('verificationCompanyData', JSON.stringify({
-          name: formData.companyId ? company?.name : formData.companyName,
-          industry: formData.industry,
-          website: formData.website,
-          companyAccountType: formData.companyAccountType
-        }))
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('verificationCompanyData', JSON.stringify({
+            name: formData.companyId ? company?.name : formData.companyName,
+            industry: formData.industry,
+            website: formData.website,
+            companyAccountType: formData.companyAccountType
+          }))
+        }
         
         toast.success('Account created successfully! Please upload verification documents.')
       } else {
@@ -929,15 +931,17 @@ export default function EmployerRegisterPage() {
         onOpenChange={setShowVerificationDialog}
         onSuccess={() => {
           // After successful verification submission, redirect to appropriate dashboard
-          const companyData = JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}')
-          if (companyData.companyAccountType === 'agency') {
-            router.push('/employer-dashboard/kyc-verification')
-          } else {
-            router.push('/employer-dashboard')
+          if (typeof window !== 'undefined') {
+            const companyData = JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}')
+            if (companyData.companyAccountType === 'agency') {
+              router.push('/employer-dashboard/kyc-verification')
+            } else {
+              router.push('/employer-dashboard')
+            }
+            sessionStorage.removeItem('verificationCompanyData')
           }
-          sessionStorage.removeItem('verificationCompanyData')
         }}
-        companyData={JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}')}
+        companyData={typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}') : {}}
       />
     </div>
   )

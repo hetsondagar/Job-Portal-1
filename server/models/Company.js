@@ -408,6 +408,12 @@ Company.associate = function(models) {
     foreignKey: 'claimedByUserId',
     as: 'ClaimedByUser'
   });
+
+  // Company has many users
+  Company.hasMany(models.User, {
+    foreignKey: 'companyId',
+    as: 'users'
+  });
 };
 
 module.exports = Company;
