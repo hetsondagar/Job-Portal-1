@@ -66,25 +66,60 @@ async function runProductionMigration() {
       }
     }
 
+    console.log('\n🔄 Adding new notification type values...');
+    
+    // Add verification notification types
+    const notificationTypes = ['verification_approved', 'verification_rejected', 'verification_request'];
+    
+    for (const type of notificationTypes) {
+      try {
+        await client.query(`
+          ALTER TYPE "enum_notifications_type" ADD VALUE IF NOT EXISTS '${type}';
+        `);
+        console.log(`✅ Added "${type}" to notifications_type ENUM`);
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`ℹ️ "${type}" already exists`);
+        } else {
+          console.error(`❌ Error adding ${type}:`, error.message);
+        }
+      }
+    }
+
     // Verify the changes
-    console.log('🔍 Verifying ENUM values after migration...');
-    const finalCheck = await client.query(`
+    console.log('\n🔍 Verifying ENUM values after migration...');
+    
+    // Check account status ENUM
+    const accountStatusCheck = await client.query(`
       SELECT unnest(enum_range(NULL::enum_users_account_status)) as enum_value;
     `);
+    console.log('📋 Account Status ENUM values:', accountStatusCheck.rows.map(r => r.enum_value));
     
-    console.log('📋 Final ENUM values:', finalCheck.rows.map(r => r.enum_value));
+    // Check notification type ENUM
+    const notificationTypeCheck = await client.query(`
+      SELECT unnest(enum_range(NULL::enum_notifications_type)) as enum_value;
+    `);
+    console.log('📋 Notification Type ENUM values:', notificationTypeCheck.rows.map(r => r.enum_value));
     
     // Check if new values are present
-    const hasPendingVerification = finalCheck.rows.some(r => r.enum_value === 'pending_verification');
-    const hasRejected = finalCheck.rows.some(r => r.enum_value === 'rejected');
+    const hasPendingVerification = accountStatusCheck.rows.some(r => r.enum_value === 'pending_verification');
+    const hasRejected = accountStatusCheck.rows.some(r => r.enum_value === 'rejected');
+    const hasVerificationApproved = notificationTypeCheck.rows.some(r => r.enum_value === 'verification_approved');
+    const hasVerificationRejected = notificationTypeCheck.rows.some(r => r.enum_value === 'verification_rejected');
+    const hasVerificationRequest = notificationTypeCheck.rows.some(r => r.enum_value === 'verification_request');
     
-    if (hasPendingVerification && hasRejected) {
-      console.log('🎉 Migration completed successfully!');
+    if (hasPendingVerification && hasRejected && hasVerificationApproved && hasVerificationRejected && hasVerificationRequest) {
+      console.log('\n🎉 Migration completed successfully!');
       console.log('✅ All required ENUM values are now available');
     } else {
-      console.log('⚠️ Migration completed but some values may be missing');
-      console.log(`pending_verification: ${hasPendingVerification ? '✅' : '❌'}`);
-      console.log(`rejected: ${hasRejected ? '✅' : '❌'}`);
+      console.log('\n⚠️ Migration completed but some values may be missing');
+      console.log('Account Status:');
+      console.log(`  pending_verification: ${hasPendingVerification ? '✅' : '❌'}`);
+      console.log(`  rejected: ${hasRejected ? '✅' : '❌'}`);
+      console.log('Notification Types:');
+      console.log(`  verification_approved: ${hasVerificationApproved ? '✅' : '❌'}`);
+      console.log(`  verification_rejected: ${hasVerificationRejected ? '✅' : '❌'}`);
+      console.log(`  verification_request: ${hasVerificationRequest ? '✅' : '❌'}`);
     }
 
     // Test the ENUM by checking if we can create a user with new status
