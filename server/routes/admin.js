@@ -1164,30 +1164,40 @@ router.delete('/companies/:id', async (req, res) => {
       });
     }
 
-    // Delete company users first (foreign key constraint)
-    await User.destroy({ 
+    // Get all company users to delete their jobs
+    const companyUsers = await User.findAll({
       where: { company_id: id },
-      transaction 
+      transaction
     });
+    const userIds = companyUsers.map(u => u.id);
 
-    // Delete company jobs
+    // Delete jobs by employerId (user foreign key)
+    if (userIds.length > 0) {
+      await Job.destroy({ 
+        where: { employerId: userIds },
+        transaction 
+      });
+    }
+
+    // Delete company jobs (by companyId)
     await Job.destroy({ 
       where: { companyId: id },
       transaction 
     });
 
-    // Delete other related data
+    // Delete job applications
     await JobApplication.destroy({ 
       where: { companyId: id },
       transaction 
     });
 
+    // Delete company follows
     await CompanyFollow.destroy({ 
       where: { companyId: id },
       transaction 
     });
 
-    // Delete company photos if they exist
+    // Delete company photos
     const { CompanyPhoto } = require('../models');
     if (CompanyPhoto) {
       await CompanyPhoto.destroy({ 
@@ -1195,6 +1205,12 @@ router.delete('/companies/:id', async (req, res) => {
         transaction 
       });
     }
+
+    // Delete company users (after jobs are deleted)
+    await User.destroy({ 
+      where: { company_id: id },
+      transaction 
+    });
 
     // Finally delete the company
     await company.destroy({ transaction });

@@ -20,7 +20,8 @@ import {
   UserCheck,
   UserX,
   CheckCircle2,
-  Clock
+  Clock,
+  FileCheck
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -258,7 +259,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -344,6 +345,36 @@ export default function AdminDashboardPage() {
                       <div className="bg-white/5 rounded p-2">
                         <div className="text-gray-400">Inactive</div>
                         <div className="text-lg font-bold">{stats?.jobs?.inactive || 0}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FileCheck className="w-5 h-5" />
+                      <span>Verifications</span>
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                      Review employer verification requests
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Link href="/admin/dashboard/verifications">
+                      <Button className="w-full justify-between bg-amber-600 hover:bg-amber-700">
+                        Check Verifications
+                        <FileCheck className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/5 rounded p-2">
+                        <div className="text-gray-400">Pending</div>
+                        <div className="text-lg font-bold">{stats?.companies?.unverified || 0}</div>
+                      </div>
+                      <div className="bg-white/5 rounded p-2">
+                        <div className="text-gray-400">Verified</div>
+                        <div className="text-lg font-bold">{stats?.companies?.verified || 0}</div>
                       </div>
                     </div>
                   </CardContent>
