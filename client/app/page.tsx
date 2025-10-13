@@ -656,35 +656,35 @@ export default function HomePage() {
   const getSectorColor = (sector: string) => {
     switch (sector) {
       case "technology":
-        return "from-blue-400 to-cyan-400"
+        return "from-blue-200 to-cyan-200"
       case "finance":
-        return "from-emerald-400 to-teal-400"
+        return "from-emerald-200 to-teal-200"
       case "healthcare":
-        return "from-blue-400 to-indigo-400"
+        return "from-pink-200 to-rose-200"
       case "ecommerce":
-        return "from-orange-400 to-amber-400"
+        return "from-orange-200 to-amber-200"
       case "automotive":
-        return "from-slate-400 to-gray-400"
+        return "from-slate-200 to-gray-200"
       case "oil-gas":
-        return "from-purple-400 to-violet-400"
+        return "from-purple-200 to-violet-200"
       case "education":
-        return "from-green-400 to-emerald-400"
+        return "from-green-200 to-emerald-200"
       case "manufacturing":
-        return "from-amber-400 to-orange-400"
+        return "from-amber-200 to-orange-200"
       case "retail":
-        return "from-pink-400 to-rose-400"
+        return "from-pink-200 to-rose-200"
       case "consulting":
-        return "from-indigo-400 to-blue-400"
+        return "from-indigo-200 to-blue-200"
       case "media":
-        return "from-purple-400 to-pink-400"
+        return "from-purple-200 to-pink-200"
       case "real-estate":
-        return "from-yellow-400 to-amber-400"
+        return "from-yellow-200 to-amber-200"
       case "hospitality":
-        return "from-rose-400 to-pink-400"
+        return "from-rose-200 to-pink-200"
       case "government":
-        return "from-slate-400 to-blue-400"
+        return "from-slate-200 to-blue-200"
       default:
-        return "from-slate-400 to-gray-400"
+        return "from-slate-200 to-gray-200"
     }
   }
 
@@ -693,49 +693,49 @@ export default function HomePage() {
       case "technology":
       case "software":
       case "it":
-        return "from-blue-200/95 via-cyan-200/90 to-indigo-200/95"
+        return "from-blue-50/40 via-cyan-50/30 to-indigo-50/40"
       case "finance":
       case "banking":
       case "fintech":
-        return "from-emerald-200/95 via-teal-200/90 to-green-200/95"
+        return "from-emerald-50/40 via-teal-50/30 to-green-50/40"
       case "healthcare":
       case "medical":
       case "pharmaceutical":
-        return "from-blue-200/95 via-indigo-200/90 to-purple-200/95"
+        return "from-pink-50/40 via-rose-50/30 to-red-50/40"
       case "ecommerce":
       case "retail":
       case "shopping":
-        return "from-orange-200/95 via-amber-200/90 to-yellow-200/95"
+        return "from-orange-50/40 via-amber-50/30 to-yellow-50/40"
       case "automotive":
       case "transportation":
-        return "from-slate-200/95 via-gray-200/90 to-zinc-200/95"
+        return "from-slate-50/40 via-gray-50/30 to-zinc-50/40"
       case "oil-gas":
       case "energy":
       case "utilities":
-        return "from-purple-200/95 via-violet-200/90 to-pink-200/95"
+        return "from-purple-50/40 via-violet-50/30 to-pink-50/40"
       case "education":
       case "training":
-        return "from-green-200/95 via-emerald-200/90 to-teal-200/95"
+        return "from-green-50/40 via-emerald-50/30 to-teal-50/40"
       case "manufacturing":
       case "production":
-        return "from-amber-200/95 via-orange-200/90 to-red-200/95"
+        return "from-amber-50/40 via-orange-50/30 to-red-50/40"
       case "consulting":
       case "professional services":
-        return "from-indigo-200/95 via-blue-200/90 to-cyan-200/95"
+        return "from-indigo-50/40 via-blue-50/30 to-cyan-50/40"
       case "media":
       case "entertainment":
-        return "from-purple-200/95 via-pink-200/90 to-rose-200/95"
+        return "from-purple-50/40 via-pink-50/30 to-rose-50/40"
       case "real estate":
       case "construction":
-        return "from-yellow-200/95 via-amber-200/90 to-orange-200/95"
+        return "from-yellow-50/40 via-amber-50/30 to-orange-50/40"
       case "hospitality":
       case "tourism":
-        return "from-rose-200/95 via-pink-200/90 to-purple-200/95"
+        return "from-rose-50/40 via-pink-50/30 to-purple-50/40"
       case "government":
       case "public sector":
-        return "from-slate-200/95 via-blue-200/90 to-indigo-200/95"
+        return "from-slate-50/40 via-blue-50/30 to-indigo-50/40"
       default:
-        return "from-slate-200/95 via-blue-200/90 to-indigo-200/95"
+        return "from-slate-50/40 via-blue-50/30 to-indigo-50/40"
     }
   }
 
@@ -1033,12 +1033,12 @@ export default function HomePage() {
       {/* Top Companies Hiring Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Dynamic gradient background based on companies */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${topCompanies.length > 0 ? getIndustryBackgroundGradient(topCompanies[0]?.industry || 'technology') : 'from-slate-200/95 via-blue-200/90 to-indigo-200/95'} dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-800`}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-cyan-50/20 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-800"></div>
         {/* Industry-specific animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-20 left-20 w-40 h-40 bg-gradient-to-br ${topCompanies.length > 0 ? getSectorColor(topCompanies[0]?.sector || 'technology') + '/8' : 'from-emerald-400/8 to-cyan-400/8'} rounded-full blur-3xl animate-pulse`}></div>
-          <div className={`absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br ${topCompanies.length > 1 ? getSectorColor(topCompanies[1]?.sector || 'technology') + '/8' : 'from-violet-400/8 to-purple-400/8'} rounded-full blur-3xl animate-pulse delay-500`}></div>
-          <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br ${topCompanies.length > 2 ? getSectorColor(topCompanies[2]?.sector || 'technology') + '/5' : 'from-blue-400/5 to-indigo-400/5'} rounded-full blur-3xl animate-pulse delay-1000`}></div>
+          <div className={`absolute top-20 left-20 w-40 h-40 bg-gradient-to-br ${topCompanies.length > 0 ? getSectorColor(topCompanies[0]?.sector || 'technology') + '/4' : 'from-emerald-200/4 to-cyan-200/4'} rounded-full blur-3xl animate-pulse`}></div>
+          <div className={`absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br ${topCompanies.length > 1 ? getSectorColor(topCompanies[1]?.sector || 'technology') + '/4' : 'from-violet-200/4 to-purple-200/4'} rounded-full blur-3xl animate-pulse delay-500`}></div>
+          <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br ${topCompanies.length > 2 ? getSectorColor(topCompanies[2]?.sector || 'technology') + '/3' : 'from-blue-200/3 to-indigo-200/3'} rounded-full blur-3xl animate-pulse delay-1000`}></div>
         </div>
         <div className="relative max-w-7xl mx-auto">
           <motion.div
@@ -1125,13 +1125,13 @@ export default function HomePage() {
       {/* Featured Jobs */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Dynamic gradient background based on jobs */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${featuredJobs.length > 0 ? getIndustryBackgroundGradient(featuredJobs[0]?.company || 'technology') : 'from-slate-200/95 via-indigo-200/90 to-purple-200/95'} dark:from-slate-900 dark:via-slate-800/70 dark:to-slate-800`}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/30 via-teal-50/20 to-green-50/30 dark:from-slate-900 dark:via-slate-800/70 dark:to-slate-800"></div>
         {/* Industry-specific animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-12 left-12 w-36 h-36 bg-gradient-to-br ${featuredJobs.length > 0 ? getSectorColor(featuredJobs[0]?.sector || 'technology') + '/6' : 'from-indigo-400/6 to-purple-400/6'} rounded-full blur-3xl animate-pulse`}></div>
-          <div className={`absolute bottom-12 right-12 w-40 h-40 bg-gradient-to-br ${featuredJobs.length > 1 ? getSectorColor(featuredJobs[1]?.sector || 'technology') + '/6' : 'from-blue-400/6 to-cyan-400/6'} rounded-full blur-3xl animate-pulse delay-500`}></div>
-          <div className={`absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-br ${featuredJobs.length > 2 ? getSectorColor(featuredJobs[2]?.sector || 'technology') + '/4' : 'from-violet-400/4 to-pink-400/4'} rounded-full blur-2xl animate-pulse delay-1000`}></div>
-          <div className={`absolute bottom-1/3 right-1/4 w-28 h-28 bg-gradient-to-br ${featuredJobs.length > 3 ? getSectorColor(featuredJobs[3]?.sector || 'technology') + '/5' : 'from-emerald-400/5 to-teal-400/5'} rounded-full blur-2xl animate-pulse delay-300`}></div>
+          <div className={`absolute top-12 left-12 w-36 h-36 bg-gradient-to-br ${featuredJobs.length > 0 ? getSectorColor(featuredJobs[0]?.sector || 'technology') + '/3' : 'from-indigo-200/3 to-purple-200/3'} rounded-full blur-3xl animate-pulse`}></div>
+          <div className={`absolute bottom-12 right-12 w-40 h-40 bg-gradient-to-br ${featuredJobs.length > 1 ? getSectorColor(featuredJobs[1]?.sector || 'technology') + '/3' : 'from-blue-200/3 to-cyan-200/3'} rounded-full blur-3xl animate-pulse delay-500`}></div>
+          <div className={`absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-br ${featuredJobs.length > 2 ? getSectorColor(featuredJobs[2]?.sector || 'technology') + '/2' : 'from-violet-200/2 to-pink-200/2'} rounded-full blur-2xl animate-pulse delay-1000`}></div>
+          <div className={`absolute bottom-1/3 right-1/4 w-28 h-28 bg-gradient-to-br ${featuredJobs.length > 3 ? getSectorColor(featuredJobs[3]?.sector || 'technology') + '/2' : 'from-emerald-200/2 to-teal-200/2'} rounded-full blur-2xl animate-pulse delay-300`}></div>
         </div>
         <div className="relative max-w-7xl mx-auto">
           <motion.div
@@ -1275,12 +1275,12 @@ export default function HomePage() {
       {/* Featured Companies */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Dynamic gradient background based on featured companies */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${featuredCompanies.length > 0 ? getIndustryBackgroundGradient(featuredCompanies[0]?.industry || 'technology') : 'from-emerald-100/75 via-teal-100/65 to-green-100/75'} dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-800`}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 via-pink-50/20 to-rose-50/30 dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-800"></div>
         {/* Industry-specific animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-20 left-20 w-40 h-40 bg-gradient-to-br ${featuredCompanies.length > 0 ? getSectorColor(featuredCompanies[0]?.sector || 'technology') + '/6' : 'from-emerald-400/6 to-teal-400/6'} rounded-full blur-3xl animate-pulse`}></div>
-          <div className={`absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br ${featuredCompanies.length > 1 ? getSectorColor(featuredCompanies[1]?.sector || 'technology') + '/6' : 'from-green-400/6 to-emerald-400/6'} rounded-full blur-3xl animate-pulse delay-500`}></div>
-          <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br ${featuredCompanies.length > 2 ? getSectorColor(featuredCompanies[2]?.sector || 'technology') + '/4' : 'from-teal-400/4 to-cyan-400/4'} rounded-full blur-3xl animate-pulse delay-1000`}></div>
+          <div className={`absolute top-20 left-20 w-40 h-40 bg-gradient-to-br ${featuredCompanies.length > 0 ? getSectorColor(featuredCompanies[0]?.sector || 'technology') + '/3' : 'from-emerald-200/3 to-teal-200/3'} rounded-full blur-3xl animate-pulse`}></div>
+          <div className={`absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br ${featuredCompanies.length > 1 ? getSectorColor(featuredCompanies[1]?.sector || 'technology') + '/3' : 'from-green-200/3 to-emerald-200/3'} rounded-full blur-3xl animate-pulse delay-500`}></div>
+          <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br ${featuredCompanies.length > 2 ? getSectorColor(featuredCompanies[2]?.sector || 'technology') + '/2' : 'from-teal-200/2 to-cyan-200/2'} rounded-full blur-3xl animate-pulse delay-1000`}></div>
         </div>
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center mb-16">
