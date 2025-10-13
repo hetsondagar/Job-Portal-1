@@ -135,7 +135,14 @@ export default function EmployerLoginPage() {
       console.error('❌ Login error:', error)
       
       // Handle specific error types
-      if (error.message?.includes('This account is registered as a jobseeker')) {
+      if (error.message?.includes('verification is pending')) {
+        toast.error('Your account is pending verification. Please wait for admin approval.')
+      } else if (error.message?.includes('verification was rejected')) {
+        toast.error('Your account verification was rejected. Please re-register with correct documents.')
+        setTimeout(() => {
+          router.push('/employer-register')
+        }, 3000)
+      } else if (error.message?.includes('This account is registered as a jobseeker')) {
         toast.error(error.message)
         setTimeout(() => {
           router.push('/login')

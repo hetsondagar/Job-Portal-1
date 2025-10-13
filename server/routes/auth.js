@@ -639,7 +639,26 @@ router.post('/login', validateLogin, async (req, res) => {
 
     console.log('✅ User found:', { id: user.id, email: user.email, userType: user.user_type });
 
-    // Check if account is active
+    // Check account status
+    if (user.account_status === 'pending_verification') {
+      console.log('❌ Account pending verification:', user.account_status);
+      return res.status(403).json({
+        success: false,
+        message: 'Your account verification is pending. Please wait for admin approval.',
+        status: 'pending_verification'
+      });
+    }
+    
+    if (user.account_status === 'rejected') {
+      console.log('❌ Account rejected:', user.account_status);
+      return res.status(403).json({
+        success: false,
+        message: 'Your account verification was rejected. Please contact support or re-register with correct documents.',
+        status: 'rejected',
+        redirectTo: '/employer-register'
+      });
+    }
+    
     if (user.account_status !== 'active') {
       console.log('❌ Account not active:', user.account_status);
       return res.status(401).json({
@@ -728,8 +747,8 @@ router.post('/login', validateLogin, async (req, res) => {
       redirectTo: getRedirectUrl(user.user_type, user.region)
     };
 
-    // If user is an employer, include company information
-    if (user.user_type === 'employer' && user.company_id) {
+    // If user is an employer or admin, include company information
+    if ((user.user_type === 'employer' || user.user_type === 'admin') && user.company_id) {
       const company = await Company.findByPk(user.company_id);
       if (company) {
         responseData.company = {
@@ -739,7 +758,9 @@ router.post('/login', validateLogin, async (req, res) => {
           companySize: company.companySize,
           website: company.website,
           email: company.contactEmail,
-          phone: company.contactPhone
+          phone: company.contactPhone,
+          verificationStatus: company.verificationStatus,
+          companyAccountType: company.companyAccountType
         };
       }
     }
