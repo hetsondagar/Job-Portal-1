@@ -294,11 +294,12 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
     // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      // Check if the user's company is rejected - allow re-registration
+      // Check if the user's company is rejected OR user account is rejected - allow re-registration
       const existingCompany = await Company.findByPk(existingUser.companyId);
       
-      if (existingCompany && existingCompany.verificationStatus === 'rejected') {
-        console.log('🔄 Allowing re-registration for rejected company:', email);
+      if ((existingCompany && existingCompany.verificationStatus === 'rejected') || 
+          existingUser.account_status === 'rejected') {
+        console.log('🔄 Allowing re-registration for rejected company/user:', email);
         // Continue with registration - will update existing company
       } else {
         console.log('❌ User already exists:', email);
@@ -431,7 +432,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       // Create or update employer user
       let user;
       
-      if (existingUser && existingUser.verificationStatus === 'rejected') {
+      if (existingUser && (existingCompany?.verificationStatus === 'rejected' || existingUser.account_status === 'rejected')) {
         // Update existing user for re-registration
         console.log('🔄 Updating existing user for re-registration:', email);
         await existingUser.update({
@@ -441,7 +442,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           phone,
           user_type: userType,
           designation: designation,
-          account_status: 'active',
+          account_status: 'pending_verification', // Reset to pending verification
           company_id: company.id,
           preferences: {
             employerRole: companyId ? (role || 'recruiter') : 'admin',
@@ -469,7 +470,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           phone,
           user_type: userType,
           designation: designation,
-          account_status: 'active',
+          account_status: 'pending_verification', // User cannot access dashboard until verified
           is_email_verified: false,
           company_id: company.id,
           oauth_provider: 'local',

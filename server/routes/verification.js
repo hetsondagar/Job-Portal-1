@@ -170,13 +170,18 @@ router.post('/approve/:companyId', authenticateToken, async (req, res) => {
       verificationMethod: 'admin_approval'
     });
 
-    // Get company users
+    // Get company users and activate their accounts
     const companyUsers = await User.findAll({
       where: { companyId: companyId }
     });
 
-    // Create notifications for all company users
+    // Activate all company users and create notifications
     for (const user of companyUsers) {
+      // Activate user account
+      await user.update({
+        account_status: 'active'
+      });
+
       await Notification.create({
         userId: user.id,
         type: 'verification_approved',
@@ -254,13 +259,18 @@ router.post('/reject/:companyId', authenticateToken, async (req, res) => {
       companyStatus: 'inactive'
     });
 
-    // Get company users
+    // Get company users and set them for re-registration
     const companyUsers = await User.findAll({
       where: { companyId: companyId }
     });
 
-    // Create notifications for all company users
+    // Set users to rejected status for re-registration and create notifications
     for (const user of companyUsers) {
+      // Set user account status to allow re-registration
+      await user.update({
+        account_status: 'rejected'
+      });
+
       await Notification.create({
         userId: user.id,
         type: 'verification_rejected',
