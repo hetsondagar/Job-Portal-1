@@ -33,12 +33,7 @@ uploadDirs.forEach(dir => {
 });
 
 // Clean up orphaned photos on startup (in production)
-if (process.env.NODE_ENV === 'production') {
-  const { cleanupOrphanedPhotos } = require('./scripts/cleanup-orphaned-photos');
-  cleanupOrphanedPhotos().catch(err => {
-    console.error('❌ Failed to cleanup orphaned photos:', err);
-  });
-}
+// Note: cleanupOrphanedPhotos script was removed during cleanup
 
 // Import database configuration
 const { sequelize, testConnection } = require('./config/sequelize');
@@ -62,14 +57,7 @@ const hotVacanciesRoutes = require('./routes/hot-vacancies');
 const featuredJobsRoutes = require('./routes/featured-jobs');
 const usageRoutes = require('./routes/usage');
 // Test notifications routes (mounted only in non-production)
-let testNotificationsRoutes = null;
-if (process.env.NODE_ENV !== 'production') {
-  try {
-    testNotificationsRoutes = require('./routes/test-notifications');
-  } catch (e) {
-    console.warn('Test notifications routes not available:', e?.message || e);
-  }
-}
+// Note: test-notifications route was removed during cleanup
 const gulfJobsRoutes = require('./routes/gulf-jobs');
 const salaryRoutes = require('./routes/salary');
 const agencyRoutes = require('./routes/agency');
@@ -332,11 +320,7 @@ app.use('/api/jobs', jobsRoutes);
 app.use('/api/requirements', requirementsRoutes);
 app.use('/api/job-alerts', jobAlertsRoutes);
 app.use('/api/agency', agencyRoutes);
-// Mount test routes for notifications in non-production
-if (testNotificationsRoutes) {
-  app.use('/api/test/notifications', testNotificationsRoutes);
-  console.log('🧪 Test notification routes mounted at /api/test/notifications');
-}
+// Test notifications routes removed during cleanup
 app.use('/api/job-templates', jobTemplatesRoutes);
 app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
@@ -502,21 +486,8 @@ const startServer = async () => {
       console.warn('⚠️ Skipping default template seeding:', seedError?.message || seedError);
     }
 
-    // Create job preferences table if it doesn't exist
-    try {
-      const { createJobPreferencesTable } = require('./scripts/create-job-preferences-table');
-      await createJobPreferencesTable();
-    } catch (tableError) {
-      console.warn('⚠️ Skipping job preferences table creation:', tableError?.message || tableError);
-    }
-
-    // Seed admin user
-    try {
-      const { seedAdminUser } = require('./scripts/seedAdminUser');
-      await seedAdminUser();
-    } catch (adminSeedError) {
-      console.warn('⚠️ Skipping admin user seeding:', adminSeedError?.message || adminSeedError);
-    }
+    // Job preferences table and admin seeding scripts removed during cleanup
+    // These features are now handled by migrations and the admin-setup route
     
     app.listen(PORT, () => {
       console.log(`🚀 Job Portal API server running on port: ${PORT}`);
