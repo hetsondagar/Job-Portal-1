@@ -12,6 +12,7 @@ const {
   Education,
   CompanyPhoto,
   CompanyReview,
+  CompanyFollow,
   Subscription,
   SubscriptionPlan,
   Payment,
@@ -21,6 +22,7 @@ const {
   Requirement
 } = require('../config');
 const { Op, Sequelize } = require('sequelize');
+const { sequelize } = require('../config/sequelize');
 const { authenticateToken } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/adminAuth');
 

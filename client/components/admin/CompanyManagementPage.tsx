@@ -295,6 +295,8 @@ export default function CompanyManagementPage({ portal, title, description, icon
                     <SelectItem value="all">All Verification</SelectItem>
                     <SelectItem value="verified">Verified</SelectItem>
                     <SelectItem value="unverified">Unverified</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
@@ -366,10 +368,10 @@ export default function CompanyManagementPage({ portal, title, description, icon
                             </Badge>
                           )}
                           <Badge 
-                            variant={company.isVerified ? 'default' : 'destructive'}
-                            className={company.isVerified ? 'bg-green-600' : 'bg-red-600'}
+                            variant={(company.verificationStatus === 'verified' || company.verificationStatus === 'premium_verified' || company.isVerified) ? 'default' : 'destructive'}
+                            className={(company.verificationStatus === 'verified' || company.verificationStatus === 'premium_verified' || company.isVerified) ? 'bg-green-600' : 'bg-red-600'}
                           >
-                            {company.isVerified ? (
+                            {(company.verificationStatus === 'verified' || company.verificationStatus === 'premium_verified' || company.isVerified) ? (
                               <>
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Verified
@@ -377,7 +379,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
                             ) : (
                               <>
                                 <XCircle className="w-3 h-3 mr-1" />
-                                Unverified
+                                {company.verificationStatus === 'pending' ? 'Pending' : (company.verificationStatus === 'rejected' ? 'Rejected' : 'Unverified')}
                               </>
                             )}
                           </Badge>
