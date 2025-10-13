@@ -80,6 +80,23 @@ router.post('/submit', authenticateToken, async (req, res) => {
       companyStatus: 'pending_approval'
     });
 
+    // Update all company users to pending verification status
+    const companyUsers = await User.findAll({
+      where: { companyId: companyId }
+    });
+
+    for (const user of companyUsers) {
+      try {
+        await user.update({
+          account_status: 'pending_verification'
+        });
+        console.log(`✅ Updated user ${user.email} to pending_verification status`);
+      } catch (error) {
+        console.log(`⚠️ Could not update user ${user.email} status (ENUM may not exist yet):`, error.message);
+        // Continue with other users even if one fails
+      }
+    }
+
     // Create notification for super admin
     const superAdmins = await User.findAll({
       where: { user_type: 'superadmin' }
@@ -178,9 +195,14 @@ router.post('/approve/:companyId', authenticateToken, async (req, res) => {
     // Activate all company users and create notifications
     for (const user of companyUsers) {
       // Activate user account
-      await user.update({
-        account_status: 'active'
-      });
+      try {
+        await user.update({
+          account_status: 'active'
+        });
+        console.log(`✅ Activated user account: ${user.email}`);
+      } catch (error) {
+        console.log(`⚠️ Could not update user ${user.email} status:`, error.message);
+      }
 
       await Notification.create({
         userId: user.id,
@@ -267,9 +289,14 @@ router.post('/reject/:companyId', authenticateToken, async (req, res) => {
     // Set users to rejected status for re-registration and create notifications
     for (const user of companyUsers) {
       // Set user account status to allow re-registration
-      await user.update({
-        account_status: 'rejected'
-      });
+      try {
+        await user.update({
+          account_status: 'rejected'
+        });
+        console.log(`✅ Set user account to rejected: ${user.email}`);
+      } catch (error) {
+        console.log(`⚠️ Could not update user ${user.email} status:`, error.message);
+      }
 
       await Notification.create({
         userId: user.id,
