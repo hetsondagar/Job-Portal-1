@@ -968,7 +968,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: animatedSections.stats ? 1 : 0, y: animatedSections.stats ? 0 : 30 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
@@ -978,13 +978,13 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          {/* Companies Grid (2 per row) */}
+          {/* Companies Grid (2 per row) - Show only 4 */}
           <div className="grid grid-cols-2 gap-8">
-            {(topCompanies && topCompanies.length > 0 ? topCompanies : Array(4).fill(null)).map((company, index) => (
+            {(topCompanies && topCompanies.length > 0 ? topCompanies.slice(0, 4) : Array(4).fill(null)).map((company, index) => (
               <motion.div
                 key={company ? company.id : `top-skel-${index}`}
                 initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: animatedSections.companies ? 1 : 0, y: animatedSections.companies ? 0 : 30 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.5 }}
               >
                 {company ? (
@@ -1039,7 +1039,7 @@ export default function HomePage() {
           <div className="text-center mt-8">
             <Link href="/companies">
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
-                View All Companies
+                View More Companies
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -1058,7 +1058,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-8">
-            {(featuredCompanies && featuredCompanies.length > 0 ? featuredCompanies : Array(4).fill(null)).map((company, index) => (
+            {(featuredCompanies && featuredCompanies.length > 0 ? featuredCompanies.slice(0, 4) : Array(4).fill(null)).map((company, index) => (
               <div
                 key={company ? company.id : `feat-skel-${index}`}
                 className="group transform transition-transform duration-300 hover:-translate-y-2"
@@ -1125,7 +1125,7 @@ export default function HomePage() {
           <div className="text-center mt-12">
             <Link href="/companies?featured=true">
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
-                View All Companies
+                View More Companies
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -1231,11 +1231,11 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid grid-cols-2 gap-8">
-            {(featuredJobs && featuredJobs.length > 0 ? featuredJobs : Array(4).fill(null)).map((job, index) => (
+            {(featuredJobs && featuredJobs.length > 0 ? featuredJobs.slice(0, 4) : Array(4).fill(null)).map((job, index) => (
               <motion.div
                 key={job ? job.id : `job-skel-${index}`}
                 initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: animatedSections.featuredJobs ? 1 : 0, y: animatedSections.featuredJobs ? 0 : 30 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
                 className="transform transition-transform duration-300 ease-out hover:-translate-y-2"
               >
@@ -1348,7 +1348,7 @@ export default function HomePage() {
           <div className="text-center mt-12">
             <Link href="/jobs">
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
-                View All Jobs
+                View More Jobs
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -1357,47 +1357,70 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-white" />
+      <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-600/5"></div>
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-gradient-to-br from-indigo-500/10 to-pink-500/10 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            <div className="lg:col-span-1">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-bold">JobPortal</span>
+                <span className="text-2xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">JobPortal</span>
               </div>
-              <p className="text-slate-300 text-sm leading-relaxed">
+              <p className="text-slate-300 text-sm leading-relaxed mb-6">
                 India's leading job portal connecting talent with opportunities. Find your dream job or hire the perfect
                 candidate.
               </p>
+              <div className="flex space-x-4">
+                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-blue-600/20 transition-colors cursor-pointer">
+                  <span className="text-sm font-bold">f</span>
                 </div>
+                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-blue-600/20 transition-colors cursor-pointer">
+                  <span className="text-sm font-bold">t</span>
+                </div>
+                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-blue-600/20 transition-colors cursor-pointer">
+                  <span className="text-sm font-bold">in</span>
+                </div>
+              </div>
+            </div>
 
             <div>
-              <h3 className="font-semibold mb-4">For Job Seekers</h3>
-              <ul className="space-y-2 text-sm text-slate-300">
+              <h3 className="font-semibold mb-6 text-white">For Job Seekers</h3>
+              <ul className="space-y-3 text-sm">
                 <li>
-                  <Link href="/jobs" className="hover:text-white transition-colors">
+                  <Link href="/jobs" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Browse Jobs
                   </Link>
                 </li>
                 <li>
-                  <Link href="/companies" className="hover:text-white transition-colors">
+                  <Link href="/companies" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Browse Companies
                   </Link>
                 </li>
                 <li>
-                  <Link href="/job-at-pace" className="hover:text-white transition-colors font-medium">
-                    Job at Pace Premium
+                  <Link href="/job-at-pace" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent font-medium">Job at Pace Premium</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/register" className="hover:text-white transition-colors">
+                  <Link href="/register" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Create Account
                   </Link>
                 </li>
                 <li>
-                  <Link href="/login" className="hover:text-white transition-colors">
+                  <Link href="/login" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Login
                   </Link>
                 </li>
@@ -1405,43 +1428,69 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h3 className="font-semibold mb-4">For Employers</h3>
-              <ul className="space-y-2 text-sm text-slate-300">
+              <h3 className="font-semibold mb-6 text-white">For Employers</h3>
+              <ul className="space-y-3 text-sm">
                 <li>
-                  <Link href="/employer-dashboard/post-job" className="hover:text-white transition-colors">
+                  <Link href="/employer-dashboard/post-job" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Post a Job
-                      </Link>
-                    </li>
+                  </Link>
+                </li>
                 <li>
-                  <Link href="/employer-dashboard/requirements" className="hover:text-white transition-colors">
+                  <Link href="/employer-dashboard/requirements" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Search Resume Database
                   </Link>
                 </li>
                 <li>
-                  <Link href="/employer-dashboard/manage-jobs" className="hover:text-white transition-colors">
+                  <Link href="/employer-dashboard/manage-jobs" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Manage Jobs
                   </Link>
                 </li>
                 <li>
-                  <Link href="/employer-register" className="hover:text-white transition-colors">
+                  <Link href="/employer-register" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     Employer Registration
                   </Link>
                 </li>
-                </ul>
-              </div>
+              </ul>
+            </div>
 
             <div>
-              <h3 className="font-semibold mb-4">Contact Us</h3>
-              <div className="space-y-2 text-sm text-slate-300">
-                <p>Email: support@jobportal.com</p>
-                <p>Phone: +91 80-4040-0000</p>
-                <p>Address: Bangalore, India</p>
+              <h3 className="font-semibold mb-6 text-white">Contact Us</h3>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center text-slate-300">
+                  <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-xs">📧</span>
+                  </div>
+                  <span>support@jobportal.com</span>
+                </div>
+                <div className="flex items-center text-slate-300">
+                  <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-xs">📞</span>
+                  </div>
+                  <span>+91 80-4040-0000</span>
+                </div>
+                <div className="flex items-center text-slate-300">
+                  <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-xs">📍</span>
+                  </div>
+                  <span>Bangalore, India</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-sm text-slate-400">
-            <p>© 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
+          <div className="border-t border-slate-700/50 pt-8 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-slate-400">
+              <p>© 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
+              <div className="flex items-center space-x-6 mt-4 sm:mt-0">
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+                <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
