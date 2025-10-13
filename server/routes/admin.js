@@ -975,15 +975,17 @@ router.get('/companies', async (req, res) => {
     if (verification && verification !== 'all') {
       // Support both old isVerified and new verificationStatus
       if (verification === 'verified' || verification === 'approved') {
-        whereClause.verificationStatus = 'approved';
+        whereClause.verificationStatus = 'verified';
       } else if (verification === 'pending') {
         whereClause.verificationStatus = 'pending';
       } else if (verification === 'rejected') {
         whereClause.verificationStatus = 'rejected';
+      } else if (verification === 'unverified') {
+        whereClause.verificationStatus = 'unverified';
       }
     } else {
-      // By default, show only approved companies in the list
-      whereClause.verificationStatus = 'approved';
+      // By default, show only verified companies in the list
+      whereClause.verificationStatus = 'verified';
     }
 
     if (search) {

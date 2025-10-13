@@ -4,9 +4,12 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     // Add 'rejected' value to enum_companies_verificationStatus ENUM
+    // Note: The ENUM currently has: 'unverified', 'pending', 'verified', 'premium_verified'
     await queryInterface.sequelize.query(`
       ALTER TYPE "enum_companies_verificationStatus" ADD VALUE IF NOT EXISTS 'rejected';
     `);
+    
+    console.log('✅ Added "rejected" to verificationStatus ENUM');
   },
 
   async down(queryInterface, Sequelize) {
