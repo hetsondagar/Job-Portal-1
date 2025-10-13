@@ -605,14 +605,14 @@ export default function JobDetailPage() {
                         <div>
                           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{job?.title || 'Job'}</h1>
                           <div className="flex items-center gap-2 flex-wrap mb-3">
-                            {job?.company && (
-                              <Link
-                                href={`/companies/${job?.companyId || ''}`}
+                          {job?.company && (
+                            <Link
+                              href={`/companies/${job?.companyId || ''}`}
                                 className="text-xl text-blue-600 hover:text-blue-700 font-medium"
-                              >
-                                {typeof job.company === 'string' ? job.company : job.company?.name}
-                              </Link>
-                            )}
+                            >
+                              {typeof job.company === 'string' ? job.company : job.company?.name}
+                            </Link>
+                          )}
                             {job?.isConsultancy && job?.consultancyName && (
                               <Badge variant="outline" className="text-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700">
                                 Posted by {job.consultancyName}
@@ -1493,12 +1493,12 @@ export default function JobDetailPage() {
                       </div>
                       {/* Only show View Company Profile for direct company jobs with existing company profiles */}
                       {!job?.isConsultancy && job?.companyId && (
-                        <Link href={`/companies/${job.companyId || ''}`}>
-                          <Button variant="outline" className="w-full bg-transparent">
-                            <Building2 className="w-4 h-4 mr-2" />
-                            View Company Profile
-                          </Button>
-                        </Link>
+                      <Link href={`/companies/${job.companyId || ''}`}>
+                        <Button variant="outline" className="w-full bg-transparent">
+                          <Building2 className="w-4 h-4 mr-2" />
+                          View Company Profile
+                        </Button>
+                      </Link>
                       )}
                       
                       {/* For consultancy jobs, show different messaging */}

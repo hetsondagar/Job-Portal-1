@@ -65,13 +65,23 @@ export default function EmployerRegisterPage() {
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
 
   useEffect(() => {
-    const load = async () => {
-      setLoadingCompanies(true)
-      const res = await apiService.listCompanies({ search: companySearch, limit: 10 })
-      if (res.success && res.data) setCompanyOptions(res.data)
-      setLoadingCompanies(false)
+    // Only search when user has typed at least 2 characters
+    if (companySearch.trim().length >= 2) {
+      const load = async () => {
+        setLoadingCompanies(true)
+        const res = await apiService.listCompanies({ search: companySearch, limit: 10 })
+        if (res.success && res.data) {
+          setCompanyOptions(res.data)
+        } else {
+          setCompanyOptions([])
+        }
+        setLoadingCompanies(false)
+      }
+      load()
+    } else {
+      // Clear options when search is too short or empty
+      setCompanyOptions([])
     }
-    load()
   }, [companySearch])
 
   // Real-time validation function
@@ -317,18 +327,18 @@ export default function EmployerRegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <EmployerAuthNavbar variant="register" />
 
-      <div className="flex items-center justify-center p-4 pt-8">
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="flex items-center justify-center p-4 pt-4">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* Left Side - Benefits */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="hidden lg:block space-y-8"
+            className="hidden lg:block space-y-6"
           >
             <div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Hire the Best Talent</h1>
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8">
+              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-6">
                 Join 50,000+ companies that trust JobPortal for their hiring needs
               </p>
             </div>
@@ -368,7 +378,7 @@ export default function EmployerRegisterPage() {
                 <p className="text-slate-600 dark:text-slate-300 mt-2">Start hiring top talent in minutes</p>
               </CardHeader>
 
-                             <CardContent className="space-y-6">
+                             <CardContent className="space-y-4">
                 <div className="text-center text-sm text-slate-600 dark:text-slate-300">
                   Already have a company in the system?{' '}
                   <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
@@ -380,7 +390,7 @@ export default function EmployerRegisterPage() {
                   <Label className="text-slate-700 dark:text-slate-300">Join Existing Company</Label>
                   <div className="space-y-2">
                     <Input value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} placeholder="Search companies" className="h-10" />
-                    {companySearch.trim().length > 0 && (
+                    {companySearch.trim().length >= 2 && (
                       <div className="border rounded max-h-48 overflow-auto bg-white dark:bg-slate-800">
                         {loadingCompanies ? (
                           <div className="p-2 text-sm text-slate-500">Searching companies...</div>
@@ -390,9 +400,14 @@ export default function EmployerRegisterPage() {
                             <div className="text-xs text-slate-500">{c.industry} • {c.companySize}</div>
                           </button>
                         ))}
-                        {(!loadingCompanies && companyOptions.length === 0 && companySearch.trim().length > 0) && (
+                        {(!loadingCompanies && companyOptions.length === 0 && companySearch.trim().length >= 2) && (
                           <div className="p-2 text-sm text-slate-500">No companies found matching "{companySearch}"</div>
                         )}
+                      </div>
+                    )}
+                    {companySearch.trim().length > 0 && companySearch.trim().length < 2 && (
+                      <div className="text-xs text-slate-500 p-2">
+                        Type at least 2 characters to search companies
                       </div>
                     )}
                     {formData.companyId && (
