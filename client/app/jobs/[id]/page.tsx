@@ -705,7 +705,7 @@ export default function JobDetailPage() {
                         <IndianRupee className="w-5 h-5 mr-2 text-slate-400" />
                         <div>
                           <div className="font-medium">{job?.salary || '—'}</div>
-                          <div className="text-sm text-slate-500">Per Annum</div>
+                          <div className="text-sm text-slate-500">LPA</div>
                         </div>
                       </div>
                       <div className="flex items-center text-slate-600 dark:text-slate-300">

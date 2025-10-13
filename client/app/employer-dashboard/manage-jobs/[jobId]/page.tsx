@@ -191,7 +191,7 @@ export default function JobDetailPage() {
     location: job.location || 'Location not specified',
     type: job.jobType || job.type || 'Full-time',
     experience: job.experienceLevel || job.experience || 'Experience not specified',
-    salary: job.salary || (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Salary not specified'),
+    salary: job.salary || (job.salaryMin && job.salaryMax ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
     postedDate: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Date not available',
     applications: (job.applicationsCount ?? applications.length) || applications.length || 0,
     views: job.views || 0,
@@ -575,7 +575,7 @@ export default function JobDetailPage() {
                             <MapPin className="w-3 h-3 mr-1" />
                             {recJob.location}
                           </span>
-                          <span>{recJob.salary || (recJob.salaryMin && recJob.salaryMax ? `₹${recJob.salaryMin}-${recJob.salaryMax} LPA` : '')}</span>
+                          <span>{recJob.salary || (recJob.salaryMin && recJob.salaryMax ? `${(recJob.salaryMin / 100000).toFixed(0)}-${(recJob.salaryMax / 100000).toFixed(0)} LPA` : '')}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
                           <span className="flex items-center">

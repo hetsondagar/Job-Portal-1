@@ -18,7 +18,10 @@ const uploadDirs = [
   'uploads/resumes',
   'uploads/job-photos',
   'uploads/hot-vacancy-photos',
-  'uploads/agency-documents'
+  'uploads/agency-documents',
+  'uploads/verification-documents',
+  'uploads/profile-photos',
+  'uploads/general'
 ];
 
 uploadDirs.forEach(dir => {
@@ -74,6 +77,8 @@ const adminAgencyRoutes = require('./routes/admin-agency');
 const clientVerificationRoutes = require('./routes/client-verification');
 const companyClaimRoutes = require('./routes/company-claim');
 const paymentRoutes = require('./routes/payment');
+const verificationRoutes = require('./routes/verification');
+const uploadRoutes = require('./routes/upload');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -346,6 +351,10 @@ app.use('/api/job-preferences', require('./routes/job-preferences'));
 app.use('/api/payment', paymentRoutes);
 // Client verification routes (public with token)
 app.use('/api/client', clientVerificationRoutes);
+// Verification routes (authenticated)
+app.use('/api/verification', verificationRoutes);
+// Upload routes (authenticated)
+app.use('/api/upload', uploadRoutes);
 // Admin routes (secure)
 app.use('/api/admin', adminAgencyRoutes);
 app.use('/api/admin', require('./routes/admin'));

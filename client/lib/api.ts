@@ -1210,6 +1210,65 @@ class ApiService {
   }
 
   /**
+   * Submit verification request with documents
+   */
+  async submitVerificationRequest(data: any): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/verification/submit`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Upload verification document
+   */
+  async uploadFile(formData: FormData): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/upload/verification-document`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.getToken()}`,
+      },
+      body: formData,
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Get pending verification requests (Admin only)
+   */
+  async getPendingVerifications(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/verification/pending`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  /**
+   * Approve company verification (Admin only)
+   */
+  async approveVerification(companyId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/verification/approve/${companyId}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Reject company verification (Admin only)
+   */
+  async rejectVerification(companyId: string, data: { reason: string; notes?: string }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/verification/reject/${companyId}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<any>(response);
+  }
+
+  /**
    * Add a new client (create authorization request)
    */
   async addClient(formData: FormData): Promise<ApiResponse<any>> {
