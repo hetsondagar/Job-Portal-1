@@ -973,7 +973,17 @@ router.get('/companies', async (req, res) => {
     }
 
     if (verification && verification !== 'all') {
-      whereClause.isVerified = verification === 'verified';
+      // Support both old isVerified and new verificationStatus
+      if (verification === 'verified' || verification === 'approved') {
+        whereClause.verificationStatus = 'approved';
+      } else if (verification === 'pending') {
+        whereClause.verificationStatus = 'pending';
+      } else if (verification === 'rejected') {
+        whereClause.verificationStatus = 'rejected';
+      }
+    } else {
+      // By default, show only approved companies in the list
+      whereClause.verificationStatus = 'approved';
     }
 
     if (search) {
@@ -1136,24 +1146,63 @@ router.patch('/companies/:id/verification', async (req, res) => {
 
 // Delete company
 router.delete('/companies/:id', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
 
-    const company = await Company.findByPk(id);
+    const company = await Company.findByPk(id, { transaction });
     if (!company) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Company not found'
       });
     }
 
-    await company.destroy();
+    // Delete company users first (foreign key constraint)
+    await User.destroy({ 
+      where: { company_id: id },
+      transaction 
+    });
+
+    // Delete company jobs
+    await Job.destroy({ 
+      where: { companyId: id },
+      transaction 
+    });
+
+    // Delete other related data
+    await JobApplication.destroy({ 
+      where: { companyId: id },
+      transaction 
+    });
+
+    await CompanyFollow.destroy({ 
+      where: { companyId: id },
+      transaction 
+    });
+
+    // Delete company photos if they exist
+    const { CompanyPhoto } = require('../models');
+    if (CompanyPhoto) {
+      await CompanyPhoto.destroy({ 
+        where: { companyId: id },
+        transaction 
+      });
+    }
+
+    // Finally delete the company
+    await company.destroy({ transaction });
+
+    await transaction.commit();
 
     res.json({
       success: true,
-      message: 'Company deleted successfully'
+      message: 'Company and all related data deleted successfully'
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error deleting company:', error);
     res.status(500).json({
       success: false,
