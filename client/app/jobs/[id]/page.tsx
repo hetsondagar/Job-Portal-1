@@ -81,33 +81,59 @@ export default function JobDetailPage() {
             
             if (res.success && res.data) {
               // Transform the job data to match the expected format
+              const metadata = res.data.metadata || {};
+              const isConsultancy = metadata.postingType === 'consultancy';
+              
               const transformedJob = {
                 id: res.data.id,
                 title: res.data.title || 'Untitled Job',
-                company: res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
+                // Company name handling - check metadata first, then Company relation
+                company: isConsultancy && metadata.showHiringCompanyDetails 
+                  ? metadata.hiringCompany?.name || 'Hiring Company'
+                  : isConsultancy 
+                    ? metadata.hiringCompany?.name || 'Hiring Company'
+                    : metadata.companyName || res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
                 companyId: res.data.companyId || res.data.employerId || '',
                 companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
+                // Consultancy-specific data
+                isConsultancy: isConsultancy,
+                consultancyName: metadata.consultancyName || null,
+                hiringCompany: metadata.hiringCompany || null,
+                showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
+                // Industry from multiple sources
+                industryType: res.data.industryType || metadata.hiringCompany?.industry || res.data.company?.industry || 'Not specified',
+                department: res.data.department || 'Not specified',
+                role: res.data.role || null,
+                roleCategory: res.data.roleCategory || null,
+                employmentType: res.data.employmentType || null,
                 location: res.data.location || 'Location not specified',
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
                 experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
                 education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
+                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
                 skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
                 posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
                 applicants: res.data.applicationsCount || 0,
                 description: res.data.description || 'No description provided',
                 requirements: Array.isArray(res.data.requirements) ? res.data.requirements : (res.data.requirements ? res.data.requirements.split('\n').filter((r: string) => r.trim()) : []),
-                benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
+                benefits: Array.isArray(res.data.benefits) 
+                  ? res.data.benefits 
+                  : (res.data.benefits 
+                      ? (res.data.benefits.includes(',') 
+                          ? res.data.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b)
+                          : res.data.benefits.split('\n').filter((b: string) => b.trim()))
+                      : []),
                 type: res.data.jobType || res.data.type || 'Full-time',
                 remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
-                department: res.data.department || 'Department not specified',
                 companySize: res.data.company?.companySize || res.data.company?.size || res.data.employer?.size || 'Company size not specified',
                 companyRating: res.data.company?.rating || res.data.employer?.rating || 0,
                 companyReviews: res.data.company?.reviews || res.data.employer?.reviews || 0,
-                industry: res.data.company?.industry || res.data.employer?.industry || res.data.industry || 'Industry not specified',
+                industry: res.data.industryType || metadata.hiringCompany?.industry || res.data.company?.industry || res.data.employer?.industry || res.data.industry || 'Industry not specified',
                 founded: res.data.company?.founded || res.data.employer?.founded || 'Founded date not available',
                 website: res.data.company?.website || res.data.employer?.website || '',
-                aboutCompany: res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
+                aboutCompany: isConsultancy && metadata.showHiringCompanyDetails 
+                  ? metadata.hiringCompany?.description || 'Company description not available'
+                  : res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
                 photos: res.data.photos || [],
               // Hot Vacancy Premium Features
               isHotVacancy: res.data.isHotVacancy || false,
@@ -145,13 +171,19 @@ export default function JobDetailPage() {
               experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
               experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
               education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `₹${res.data.salaryMin}-${res.data.salaryMax} LPA` : 'Salary not specified'),
+              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
               skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
               posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
               applicants: res.data.applicationsCount || 0,
               description: res.data.description || 'No description provided',
               requirements: Array.isArray(res.data.requirements) ? res.data.requirements : (res.data.requirements ? res.data.requirements.split('\n').filter((r: string) => r.trim()) : []),
-              benefits: Array.isArray(res.data.benefits) ? res.data.benefits : (res.data.benefits ? res.data.benefits.split('\n').filter((b: string) => b.trim()) : []),
+              benefits: Array.isArray(res.data.benefits) 
+                ? res.data.benefits 
+                : (res.data.benefits 
+                    ? (res.data.benefits.includes(',') 
+                        ? res.data.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b)
+                        : res.data.benefits.split('\n').filter((b: string) => b.trim()))
+                    : []),
               type: res.data.jobType || res.data.type || 'Full-time',
               remote: res.data.remoteWork === 'remote' || res.data.remoteWork === 'hybrid',
               department: res.data.department || 'Department not specified',
@@ -398,12 +430,12 @@ export default function JobDetailPage() {
     }
   }, [jobIdFromParams, job, jobLoading])
 
-  // Auth check - redirect employers to employer dashboard
+  // Auth check - Allow employers/admins to view job details (removed redirect)
+  // Employers can now access /jobs/[id] page to preview their posted jobs
   useEffect(() => {
+    // No redirect needed - employers can view their company's job details
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
-      console.log('🔄 Employer/Admin detected on job detail page, redirecting to employer dashboard')
-      setIsRedirecting(true)
-      window.location.href = user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'
+      console.log('✅ Employer/Admin accessing job detail page - allowing access for job preview')
     }
   }, [user])
 
@@ -572,14 +604,21 @@ export default function JobDetailPage() {
                         </Avatar>
                         <div>
                           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{job?.title || 'Job'}</h1>
+                          <div className="flex items-center gap-2 flex-wrap mb-3">
                           {job?.company && (
                             <Link
                               href={`/companies/${job?.companyId || ''}`}
-                              className="text-xl text-blue-600 hover:text-blue-700 font-medium mb-3 inline-block"
+                                className="text-xl text-blue-600 hover:text-blue-700 font-medium"
                             >
                               {typeof job.company === 'string' ? job.company : job.company?.name}
                             </Link>
                           )}
+                            {job?.isConsultancy && job?.consultancyName && (
+                              <Badge variant="outline" className="text-sm bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700">
+                                Posted by {job.consultancyName}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center space-x-1 mb-4">
                             <Star className="w-4 h-4 text-yellow-400 fill-current" />
                             <span className="font-semibold">{job?.companyRating || 0}</span>
@@ -666,7 +705,7 @@ export default function JobDetailPage() {
                         <IndianRupee className="w-5 h-5 mr-2 text-slate-400" />
                         <div>
                           <div className="font-medium">{job?.salary || '—'}</div>
-                          <div className="text-sm text-slate-500">Per Annum</div>
+                          <div className="text-sm text-slate-500">LPA</div>
                         </div>
                       </div>
                       <div className="flex items-center text-slate-600 dark:text-slate-300">
@@ -843,7 +882,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Role</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.title || 'Not provided'}
+                              {job?.role || job?.title || 'Not provided'}
                             </div>
                           </div>
                         </div>
@@ -855,7 +894,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Industry Type</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.companyInfo?.industry || job?.industry || 'Not provided'}
+                              {(job?.companyInfo?.industry || job?.industry || 'Not provided').replace(/\s*\(\d+\)\s*$/, '')}
                             </div>
                           </div>
                         </div>
@@ -879,7 +918,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Employment Type</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.type ? `${job.type.replace('-', ' ')}${job?.remoteWork ? `, ${job.remoteWork}` : ''}` : 'Not provided'}
+                              {job?.employmentType || job?.type ? `${(job?.employmentType || job.type).replace('-', ' ')}${job?.remoteWork ? `, ${job.remoteWork}` : ''}` : 'Not provided'}
                             </div>
                           </div>
                         </div>
@@ -894,7 +933,7 @@ export default function JobDetailPage() {
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Role Category</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.category || job?.department || 'Not provided'}
+                              {job?.roleCategory || job?.category || job?.department || 'Not provided'}
                             </div>
                           </div>
                         </div>
@@ -906,7 +945,16 @@ export default function JobDetailPage() {
                           <div className="flex-1">
                             <div className="font-medium text-slate-900 dark:text-slate-100">Experience Level</div>
                             <div className="text-slate-600 dark:text-slate-400 capitalize">
-                              {job?.experienceLevel || job?.experience || 'Not specified'}
+                              {(() => {
+                                const exp = job?.experienceLevel || job?.experience || 'Not specified';
+                                if (exp === 'fresher' || exp === 'entry') return 'Fresher (0-1 years)';
+                                if (exp === 'junior') return 'Junior (1-3 years)';
+                                if (exp === 'mid') return 'Mid-level (3-5 years)';
+                                if (exp === 'senior') return 'Senior (5+ years)';
+                                if (exp === 'lead') return 'Lead (7+ years)';
+                                if (exp === 'executive') return 'Executive (10+ years)';
+                                return exp;
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1222,15 +1270,35 @@ export default function JobDetailPage() {
                     <CardHeader>
                       <CardTitle className="text-2xl flex items-center gap-2">
                         <Building2 className="h-6 w-6 text-blue-600" />
-                        About the Company
+                        {job?.isConsultancy && job?.showHiringCompanyDetails ? 'About the Hiring Company' : 'About the Company'}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-6">
+                        {/* Consultancy Job Badge */}
+                        {job?.isConsultancy && (
+                          <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Building2 className="w-5 h-5 text-purple-600" />
+                              <span className="font-semibold text-purple-900 dark:text-purple-100">Consultancy Job</span>
+                            </div>
+                            <p className="text-sm text-purple-800 dark:text-purple-200">
+                              Posted by: <span className="font-medium">{job.consultancyName}</span>
+                            </p>
+                            {!job.showHiringCompanyDetails && (
+                              <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
+                                Hiring company details are confidential
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                         {/* Company Description */}
                         {job?.aboutCompany && (
                           <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Company Overview</h4>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                              {job?.isConsultancy && job?.showHiringCompanyDetails ? 'Hiring Company Overview' : 'Company Overview'}
+                            </h4>
                             <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                               {job.aboutCompany}
                             </p>
@@ -1412,27 +1480,36 @@ export default function JobDetailPage() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Industry</span>
-                          <span className="font-medium">{job.industry}</span>
+                          <span className="font-medium">{job.industry?.replace(/\s*\(\d+\)\s*$/, '') || job.industry}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Company Size</span>
                           <span className="font-medium">{job.companySize}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500">Founded</span>
-                          <span className="font-medium">{job.founded}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Website</span>
                           <span className="font-medium text-blue-600">{job.website}</span>
                         </div>
                       </div>
+                      {/* Only show View Company Profile for direct company jobs with existing company profiles */}
+                      {!job?.isConsultancy && job?.companyId && (
                       <Link href={`/companies/${job.companyId || ''}`}>
                         <Button variant="outline" className="w-full bg-transparent">
                           <Building2 className="w-4 h-4 mr-2" />
                           View Company Profile
                         </Button>
                       </Link>
+                      )}
+                      
+                      {/* For consultancy jobs, show different messaging */}
+                      {job?.isConsultancy && (
+                        <div className="text-center p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                          <Building2 className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Company profile managed by {job.consultancyName}
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>

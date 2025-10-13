@@ -245,10 +245,10 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
   const handleCheckboxChange = (industryName: string, checked: boolean) => {
     const cleanName = cleanIndustryName(industryName)
     if (checked) {
-      // Add both clean name and full name to handle both formats
+      // Add clean name only (without numbers)
       const newSelections = [...tempSelectedIndustries]
       if (!newSelections.includes(cleanName) && !newSelections.includes(industryName)) {
-        newSelections.push(industryName) // Keep the full name with count
+        newSelections.push(cleanName) // Store clean name without count
       }
       setTempSelectedIndustries(newSelections)
     } else {
@@ -261,7 +261,7 @@ export default function IndustryDropdown({ selectedIndustries, onIndustryChange,
 
   const handleSelectAll = () => {
     const allIndustryNames = industryCategories.flatMap(cat => 
-      cat.industries.map(industry => industry) // Keep full names with counts
+      cat.industries.map(industry => cleanIndustryName(industry)) // Store clean names without counts
     )
     setTempSelectedIndustries(allIndustryNames)
   }

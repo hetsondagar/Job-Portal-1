@@ -90,6 +90,22 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       }
       return
     }
+
+    // Check if user account is pending verification
+    if (user.accountStatus === 'pending_verification') {
+      console.log('⏳ EmployerAuthGuard - Account pending verification:', user.accountStatus)
+      clearTimeout(timeout)
+      setIsChecking(false)
+      return
+    }
+
+    // Check if user account is rejected
+    if (user.accountStatus === 'rejected') {
+      console.log('❌ EmployerAuthGuard - Account rejected:', user.accountStatus)
+      clearTimeout(timeout)
+      router.replace('/employer-register')
+      return
+    }
       
     // Auth OK
     console.log('✅ EmployerAuthGuard - Auth OK, user is employer/admin')
@@ -136,6 +152,43 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
                 Refresh Page
               </Button>
             )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show verification pending message
+  if (user && user.accountStatus === 'pending_verification') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center">
+        <Card className="w-full max-w-md border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="text-center pb-6">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/20 rounded-xl flex items-center justify-center">
+                <Shield className="w-7 h-7 text-amber-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+              Verification Pending
+            </CardTitle>
+            <p className="text-slate-600 dark:text-slate-300 mt-2">
+              Your employer account is being verified
+            </p>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-slate-600 dark:text-slate-300">
+              We are reviewing your submitted documents. You will be notified once verification is complete.
+            </p>
+            <div className="space-y-2">
+              <Button 
+                onClick={() => router.push('/employer-login')}
+                variant="outline"
+                className="w-full"
+              >
+                Back to Login
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

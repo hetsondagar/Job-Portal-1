@@ -34,6 +34,7 @@ export default function PostJobPage() {
   const [editingJobId, setEditingJobId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
+    companyName: "", // NEW: Company name field
     department: "",
     location: "",
     type: "",
@@ -48,6 +49,13 @@ export default function PostJobPage() {
     roleCategory: "",
     education: [] as string[],
     employmentType: "",
+    // NEW: Consultancy fields
+    postingType: "company" as "company" | "consultancy",
+    consultancyName: "",
+    hiringCompanyName: "",
+    hiringCompanyIndustry: "",
+    hiringCompanyDescription: "",
+    showHiringCompanyDetails: false,
     // Hot Vacancy Premium Features
     isHotVacancy: false,
     urgentHiring: false,
@@ -112,6 +120,7 @@ export default function PostJobPage() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
   const [selectedEducation, setSelectedEducation] = useState<string[]>([])
+  const [selectedBenefits, setSelectedBenefits] = useState<string[]>([])
   const [currentEmail, setCurrentEmail] = useState("")
   
   // ========== AGENCY CLIENT SELECTION STATE ==========
@@ -226,13 +235,31 @@ export default function PostJobPage() {
             const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
             setSelectedEducation(educationArray)
             
+            // Sync selectedIndustries state - clean industry names (remove numbers)
+            const industryArray = jobData.industryType ? 
+              jobData.industryType.split(', ')
+                .filter((i: string) => i.trim())
+                .map((i: string) => i.replace(/\s*\(\d+\)\s*$/, '').trim()) : []
+            setSelectedIndustries(industryArray)
+            
+            // Extract metadata for consultancy fields
+            const metadata = jobData.metadata || {};
+            
             setFormData((prev) => ({
               ...prev,
               title: jobData.title || '',
+              // Consultancy fields from metadata
+              companyName: metadata.companyName || '',
+              postingType: metadata.postingType || 'company',
+              consultancyName: metadata.consultancyName || '',
+              hiringCompanyName: metadata.hiringCompany?.name || '',
+              hiringCompanyIndustry: metadata.hiringCompany?.industry || '',
+              hiringCompanyDescription: metadata.hiringCompany?.description || '',
+              showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
               department: jobData.department || '',
               location: jobData.location || '',
               type: jobData.jobType || jobData.type || '',
-              experience: jobData.experience || jobData.experienceLevel || '',
+              experience: jobData.experienceLevel || jobData.experience || '',
               salary: jobData.salary || '',
               description: jobData.description || '',
               requirements: jobData.requirements || '',
@@ -464,6 +491,7 @@ export default function PostJobPage() {
         
         const newFormData = {
           title: template.templateData.title || '',
+          companyName: template.templateData.companyName || '',
           department: template.templateData.department || '',
           location: template.templateData.location || '',
           type: template.templateData.type || '',
@@ -478,6 +506,13 @@ export default function PostJobPage() {
           roleCategory: template.templateData.roleCategory || '',
           education: Array.isArray(template.templateData.education) ? template.templateData.education : (template.templateData.education ? [template.templateData.education] : []),
           employmentType: template.templateData.employmentType || '',
+          // Consultancy fields
+          postingType: template.templateData.postingType || 'company',
+          consultancyName: template.templateData.consultancyName || '',
+          hiringCompanyName: template.templateData.hiringCompanyName || '',
+          hiringCompanyIndustry: template.templateData.hiringCompanyIndustry || '',
+          hiringCompanyDescription: template.templateData.hiringCompanyDescription || '',
+          showHiringCompanyDetails: template.templateData.showHiringCompanyDetails || false,
           // Hot Vacancy Premium Features - PRESERVE hot vacancy mode from URL or current state
           isHotVacancy: isHotVacancyMode,
           urgentHiring: template.templateData.urgentHiring || (isHotVacancyMode ? true : false),
@@ -582,10 +617,25 @@ export default function PostJobPage() {
         type: formData.type || 'full-time',
         experience: formData.experience || 'fresher',
         salary: formData.salary || '',
-        benefits: formData.benefits || '',
+        benefits: formData.benefits || (selectedBenefits.length > 0 ? selectedBenefits.join(', ') : ''),
         skills: formData.skills || [],
         department: formData.department || '',
+        role: formData.role || '',
+        industryType: formData.industryType || '',
+        roleCategory: formData.roleCategory || '',
+        education: Array.isArray(formData.education) ? formData.education.join(', ') : formData.education || '',
+        employmentType: formData.employmentType || '',
         status: editingJobId ? undefined : 'draft', // Only set to draft for new jobs, preserve existing status for edits
+        // ========== CONSULTANCY POSTING FIELDS ==========
+        companyName: formData.companyName || '',
+        postingType: formData.postingType || 'company',
+        ...(formData.postingType === 'consultancy' && {
+          consultancyName: formData.consultancyName,
+          hiringCompanyName: formData.hiringCompanyName,
+          hiringCompanyIndustry: formData.hiringCompanyIndustry,
+          hiringCompanyDescription: formData.hiringCompanyDescription,
+          showHiringCompanyDetails: formData.showHiringCompanyDetails
+        }),
         // Include hot vacancy fields if it's a hot vacancy
         ...(formData.isHotVacancy && {
           isHotVacancy: formData.isHotVacancy,
@@ -694,6 +744,27 @@ export default function PostJobPage() {
     if (!formData.title || formData.title.trim() === '') {
       validationErrors.push('Job title is required')
     }
+    
+    // Validate posting type specific fields
+    if (formData.postingType === 'consultancy') {
+      if (!formData.consultancyName || formData.consultancyName.trim() === '') {
+        validationErrors.push('Consultancy name is required')
+      }
+      if (!formData.hiringCompanyName || formData.hiringCompanyName.trim() === '') {
+        validationErrors.push('Hiring company name is required')
+      }
+      if (!formData.hiringCompanyIndustry || formData.hiringCompanyIndustry.trim() === '') {
+        validationErrors.push('Hiring company industry is required')
+      }
+      if (!formData.hiringCompanyDescription || formData.hiringCompanyDescription.trim() === '') {
+        validationErrors.push('Hiring company description is required')
+      }
+    } else {
+      if (!formData.companyName || formData.companyName.trim() === '') {
+        validationErrors.push('Company name is required')
+      }
+    }
+    
     if (!formData.description || formData.description.trim() === '') {
       validationErrors.push('Job description is required')
     }
@@ -733,15 +804,25 @@ export default function PostJobPage() {
         type: formData.type || 'full-time',
         experience: formData.experience || 'fresher',
         salary: formData.salary,
-        benefits: formData.benefits,
+        benefits: formData.benefits || (selectedBenefits.length > 0 ? selectedBenefits.join(', ') : ''),
         skills: formData.skills,
         department: formData.department,
         role: formData.role,
         industryType: formData.industryType,
         roleCategory: formData.roleCategory,
-        education: formData.education,
+        education: Array.isArray(formData.education) ? formData.education.join(', ') : formData.education,
         employmentType: formData.employmentType,
         status: 'active', // Explicitly set status to active for publishing
+        // ========== CONSULTANCY POSTING FIELDS ==========
+        companyName: formData.companyName,
+        postingType: formData.postingType,
+        ...(formData.postingType === 'consultancy' && {
+          consultancyName: formData.consultancyName,
+          hiringCompanyName: formData.hiringCompanyName,
+          hiringCompanyIndustry: formData.hiringCompanyIndustry,
+          hiringCompanyDescription: formData.hiringCompanyDescription,
+          showHiringCompanyDetails: formData.showHiringCompanyDetails
+        }),
         // ========== AGENCY POSTING FIELDS ==========
         ...(isAgency && selectedClient !== 'own' && {
           isAgencyPosted: true,
@@ -807,6 +888,7 @@ export default function PostJobPage() {
            // Only reset form for new jobs, not when editing
            setFormData({
              title: "",
+            companyName: "",
              department: "",
              location: "",
              type: "",
@@ -821,6 +903,13 @@ export default function PostJobPage() {
              roleCategory: "",
              education: [],
              employmentType: "",
+            // Consultancy fields
+            postingType: "company",
+            consultancyName: "",
+            hiringCompanyName: "",
+            hiringCompanyIndustry: "",
+            hiringCompanyDescription: "",
+            showHiringCompanyDetails: false,
              // Hot Vacancy Premium Features
              isHotVacancy: false,
              urgentHiring: false,
@@ -1152,6 +1241,7 @@ export default function PostJobPage() {
                         setSelectedTemplate("");
                         setFormData({
                           title: "",
+                          companyName: "",
                           department: "",
                           location: "",
                           type: "",
@@ -1166,6 +1256,13 @@ export default function PostJobPage() {
                           roleCategory: "",
                           education: [],
                           employmentType: "",
+                          // Consultancy fields
+                          postingType: "company",
+                          consultancyName: "",
+                          hiringCompanyName: "",
+                          hiringCompanyIndustry: "",
+                          hiringCompanyDescription: "",
+                          showHiringCompanyDetails: false,
                           // Hot Vacancy Premium Features
                           isHotVacancy: false,
                           urgentHiring: false,
@@ -1256,6 +1353,39 @@ export default function PostJobPage() {
               )}
             </div>
             
+            {/* Posting Type Selection */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                You are posting for*
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, postingType: "company" })}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    formData.postingType === "company"
+                      ? "border-blue-600 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <Building2 className={`w-6 h-6 mx-auto mb-2 ${formData.postingType === "company" ? "text-blue-600" : "text-gray-400"}`} />
+                  <div className="font-medium text-sm">Your Company/Business</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, postingType: "consultancy" })}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    formData.postingType === "consultancy"
+                      ? "border-purple-600 bg-purple-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <ExternalLink className={`w-6 h-6 mx-auto mb-2 ${formData.postingType === "consultancy" ? "text-purple-600" : "text-gray-400"}`} />
+                  <div className="font-medium text-sm">Consultancy</div>
+                </button>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -1270,33 +1400,106 @@ export default function PostJobPage() {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 />
               </div>
+              
+              {/* Company Name or Consultancy Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Department*</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  {formData.postingType === "consultancy" ? "Consultancy Name*" : "Company Name*"}
+                </label>
+                <Input
+                  placeholder={formData.postingType === "consultancy" ? "e.g. ABC Consultants" : "e.g. Tech Solutions Pvt Ltd"}
+                  value={formData.postingType === "consultancy" ? formData.consultancyName : formData.companyName}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    [formData.postingType === "consultancy" ? "consultancyName" : "companyName"]: e.target.value 
+                  })}
+                />
+              </div>
+
+              {/* Consultancy Hiring Company Fields */}
+              {formData.postingType === "consultancy" && (
+                <>
+                  <div className="md:col-span-2 mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h3 className="text-sm font-semibold text-purple-900 mb-4">Company You're Hiring For</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Company Name*</label>
+                        <Input
+                          placeholder="e.g. Client Company Pvt Ltd"
+                          value={formData.hiringCompanyName}
+                          onChange={(e) => setFormData({ ...formData, hiringCompanyName: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Industry*</label>
                 <Button
+                          type="button"
                   variant="outline"
                   className="w-full justify-between"
-                  onClick={() => setShowDepartmentDropdown(true)}
+                          onClick={() => setShowIndustryDropdown(true)}
                 >
-                  <span>{formData.department || "Select department"}</span>
+                          {formData.hiringCompanyIndustry || "Select industry"}
                   <ChevronDown className="w-4 h-4" />
                 </Button>
-                
-                {showDepartmentDropdown && (
-                  <DepartmentDropdown
-                    selectedDepartments={formData.department ? [formData.department] : []}
-                    onDepartmentChange={(departments: string[]) => {
-                      // For job posting, we only allow single selection
-                      if (departments.length > 0) {
-                        setFormData({ ...formData, department: departments[0] })
-                      } else {
-                        setFormData({ ...formData, department: "" })
-                      }
-                    }}
-                    onClose={() => setShowDepartmentDropdown(false)}
-                    hideSelectAllButtons={true}
-                  />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Company Description*</label>
+                        <Textarea
+                          placeholder="Brief description about the company you're hiring for..."
+                          className="min-h-20"
+                          value={formData.hiringCompanyDescription}
+                          onChange={(e) => setFormData({ ...formData, hiringCompanyDescription: e.target.value })}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="showHiringCompanyDetails"
+                            checked={formData.showHiringCompanyDetails}
+                            onCheckedChange={(checked) => setFormData({ ...formData, showHiringCompanyDetails: checked as boolean })}
+                          />
+                          <label htmlFor="showHiringCompanyDetails" className="text-sm text-gray-700">
+                            Show company details to candidates (if unchecked, only consultancy name will be shown)
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Industry Type - Moved from Step 2 */}
+              {formData.postingType !== "consultancy" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Industry Type*</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => setShowIndustryDropdown(true)}
+                  >
+                    {selectedIndustries.length > 0 
+                      ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
+                      : "Select industry type"
+                    }
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                  {selectedIndustries.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {selectedIndustries.slice(0, 3).map((industry, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {industry.replace(/\s*\(\d+\)\s*$/, '')}
+                        </Badge>
+                      ))}
+                      {selectedIndustries.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{selectedIndustries.length - 3} more
+                        </Badge>
                 )}
               </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Location*</label>
                 <Input
@@ -1321,9 +1524,21 @@ export default function PostJobPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Experience Level*</label>
-                <Select value={formData.experience} onValueChange={(value) => setFormData({ ...formData, experience: value })}>
+                <Select 
+                  value={formData.experience || undefined} 
+                  onValueChange={(value) => {
+                    console.log('Experience level selected:', value);
+                    setFormData({ ...formData, experience: value });
+                  }}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select experience" />
+                    <SelectValue placeholder="Select experience level">
+                      {formData.experience === "fresher" && "Fresher (0-1 years)"}
+                      {formData.experience === "junior" && "Junior (1-3 years)"}
+                      {formData.experience === "mid" && "Mid-level (3-5 years)"}
+                      {formData.experience === "senior" && "Senior (5+ years)"}
+                      {!formData.experience && "Select experience level"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fresher">Fresher (0-1 years)</SelectItem>
@@ -1379,39 +1594,36 @@ export default function PostJobPage() {
               <p className="text-sm text-gray-500 mt-1">Enter the specific role title</p>
             </div>
 
-            {/* Industry Type */}
+            {/* Department - Moved from Step 1 */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Industry Type*
-              </label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Department*</label>
               <Button
-                type="button"
                 variant="outline"
                 className="w-full justify-between"
-                onClick={() => setShowIndustryDropdown(true)}
+                onClick={() => setShowDepartmentDropdown(true)}
               >
-                {selectedIndustries.length > 0 
-                  ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
-                  : "Select industry type"
-                }
+                <span>{formData.department || "Select department"}</span>
                 <ChevronDown className="w-4 h-4" />
               </Button>
-              {selectedIndustries.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {selectedIndustries.slice(0, 3).map((industry, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {industry.replace(/\s*\(\d+\)\s*$/, '')}
-                    </Badge>
-                  ))}
-                  {selectedIndustries.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{selectedIndustries.length - 3} more
-                    </Badge>
-                  )}
-                </div>
+              
+              {showDepartmentDropdown && (
+                <DepartmentDropdown
+                  selectedDepartments={formData.department ? [formData.department] : []}
+                  onDepartmentChange={(departments: string[]) => {
+                    // For job posting, we only allow single selection
+                    if (departments.length > 0) {
+                      setFormData({ ...formData, department: departments[0] })
+                    } else {
+                      setFormData({ ...formData, department: "" })
+                    }
+                  }}
+                  onClose={() => setShowDepartmentDropdown(false)}
+                  hideSelectAllButtons={true}
+                />
               )}
             </div>
 
+            {/* Industry Type field removed - now in Step 1 */}
 
             {/* Employment Type */}
             <div>
@@ -1578,29 +1790,6 @@ export default function PostJobPage() {
               />
               <p className="text-sm text-gray-500 mt-1">Skills highlighted with '' are preferred key skills</p>
             </div>
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Additional Requirements</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="remote" />
-                  <label htmlFor="remote" className="text-sm">
-                    Remote work available
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="travel" />
-                  <label htmlFor="travel" className="text-sm">
-                    Travel required
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="degree" />
-                  <label htmlFor="degree" className="text-sm">
-                    Bachelor's degree required
-                  </label>
-                </div>
-              </div>
-            </div>
           </div>
         )
       case 3:
@@ -1638,7 +1827,17 @@ export default function PostJobPage() {
                   "Stock Options",
                 ].map((benefit) => (
                   <div key={benefit} className="flex items-center space-x-2">
-                    <Checkbox id={benefit} />
+                    <Checkbox 
+                      id={benefit}
+                      checked={selectedBenefits.includes(benefit)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedBenefits([...selectedBenefits, benefit])
+                        } else {
+                          setSelectedBenefits(selectedBenefits.filter(b => b !== benefit))
+                        }
+                      }}
+                    />
                     <label htmlFor={benefit} className="text-sm">
                       {benefit}
                     </label>
@@ -3117,7 +3316,13 @@ export default function PostJobPage() {
       </Dialog>
 
       {/* Job Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+      <Dialog open={showSuccessDialog} onOpenChange={(open) => {
+        if (!open) {
+          // When dialog is closed (X button), redirect to dashboard
+          router.push(user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
+        }
+        setShowSuccessDialog(open)
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -3144,8 +3349,10 @@ export default function PostJobPage() {
             <Button onClick={() => {
               setShowSuccessDialog(false)
               setPostedJobId(null)
+              // Redirect to dashboard
+              router.push(user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
             }}>
-              {editingJobId ? 'Continue Editing' : 'Post Another Job'}
+              Go to Dashboard
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3154,13 +3361,22 @@ export default function PostJobPage() {
       {/* Industry Dropdown */}
       {showIndustryDropdown && (
         <IndustryDropdown
-          selectedIndustries={selectedIndustries}
+          selectedIndustries={formData.postingType === "consultancy" && formData.hiringCompanyIndustry 
+            ? [formData.hiringCompanyIndustry] 
+            : selectedIndustries
+          }
           onIndustryChange={(industries) => {
+            if (formData.postingType === "consultancy") {
+              // For consultancy, set hiring company industry (single selection)
+              setFormData({ ...formData, hiringCompanyIndustry: industries[0] || "" })
+            } else {
+              // For regular company, set multiple industries
             setSelectedIndustries(industries)
             setFormData({ ...formData, industryType: industries.join(', ') })
+            }
           }}
           onClose={() => setShowIndustryDropdown(false)}
-          hideSelectAllButtons={true}
+          hideSelectAllButtons={formData.postingType === "consultancy"}
         />
       )}
 

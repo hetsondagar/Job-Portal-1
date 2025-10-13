@@ -248,7 +248,7 @@ const User = sequelize.define('User', {
   },
   // Account status & verification
   account_status: {
-    type: DataTypes.ENUM('active', 'suspended', 'deleted'),
+    type: DataTypes.ENUM('active', 'suspended', 'deleted', 'pending_verification', 'rejected'),
     defaultValue: 'active'
   },
   verification_level: {
@@ -332,5 +332,8 @@ User.prototype.getFullName = function() {
 User.prototype.getInitials = function() {
   return `${this.first_name.charAt(0)}${this.last_name.charAt(0)}`.toUpperCase();
 };
+
+// Note: User-Company association is automatically created by Company.hasMany
+// No need to manually define User.belongsTo here as it causes duplicate alias error
 
 module.exports = User; 

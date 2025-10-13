@@ -67,7 +67,20 @@ export default function JobDetailPage() {
       
       if (response.success && response.data) {
         console.log('✅ Job details fetched:', response.data)
-        setJob(response.data)
+        
+        // Extract consultancy metadata
+        const metadata = response.data.metadata || {};
+        const enrichedJob = {
+          ...response.data,
+          isConsultancy: metadata.postingType === 'consultancy',
+          consultancyName: metadata.consultancyName || null,
+          hiringCompany: metadata.hiringCompany || null,
+          showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
+          companyName: metadata.companyName || response.data.company?.name || null,
+          industryType: response.data.industryType || metadata.hiringCompany?.industry || response.data.company?.industry || null,
+        };
+        
+        setJob(enrichedJob)
         
         // Fetch other jobs from same company
         const companyId = (response.data as any).companyId || response.data?.company?.id
@@ -163,12 +176,22 @@ export default function JobDetailPage() {
   const transformedJob = {
     id: job.id,
     title: job.title || 'Untitled Job',
-    company: job.company?.name || 'Company Name',
+    // Company name - check for consultancy first
+    company: job.isConsultancy && job.showHiringCompanyDetails
+      ? job.hiringCompany?.name || 'Hiring Company'
+      : job.isConsultancy
+        ? job.consultancyName || 'Consultancy'
+        : job.companyName || job.company?.name || 'Company Name',
     companyLogo: job.company?.logo || "/placeholder-logo.png",
+    // Consultancy-specific fields
+    isConsultancy: job.isConsultancy || false,
+    consultancyName: job.consultancyName || null,
+    hiringCompany: job.hiringCompany || null,
+    showHiringCompanyDetails: job.showHiringCompanyDetails || false,
     location: job.location || 'Location not specified',
     type: job.jobType || job.type || 'Full-time',
     experience: job.experienceLevel || job.experience || 'Experience not specified',
-    salary: job.salary || (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Salary not specified'),
+    salary: job.salary || (job.salaryMin && job.salaryMax ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
     postedDate: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Date not available',
     applications: (job.applicationsCount ?? applications.length) || applications.length || 0,
     views: job.views || 0,
@@ -178,10 +201,12 @@ export default function JobDetailPage() {
     description: job.description || 'No description provided',
     benefits: Array.isArray(job.benefits) ? job.benefits : (job.benefits ? job.benefits.split('\n').filter((b: string) => b.trim()) : []),
     companyInfo: {
-      description: job.company?.description || 'Company description not available',
+      description: job.isConsultancy && job.showHiringCompanyDetails
+        ? job.hiringCompany?.description || 'Company description not available'
+        : job.company?.description || 'Company description not available',
       founded: job.company?.founded || 'N/A',
       employees: job.company?.employees || 'N/A',
-      industry: job.company?.industry || 'N/A',
+      industry: job.industryType || job.hiringCompany?.industry || job.company?.industry || 'N/A',
       website: job.company?.website || '',
       linkedin: job.company?.linkedin || '',
       location: job.company?.location || job.location || 'Location not specified'
@@ -221,9 +246,16 @@ export default function JobDetailPage() {
                       <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                         {transformedJob.title}
                       </h1>
-                      <p className="text-lg text-slate-600 dark:text-slate-400 mb-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-lg text-slate-600 dark:text-slate-400">
                         {transformedJob.company}
                       </p>
+                        {transformedJob.isConsultancy && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700">
+                            Posted by {transformedJob.consultancyName}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
                         <div className="flex items-center space-x-1">
                           <MapPin className="w-4 h-4" />
@@ -241,13 +273,28 @@ export default function JobDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const shareUrl = `${window.location.origin}/jobs/${transformedJob.id}`
+                        const shareText = `Check out this job: ${transformedJob.title} at ${transformedJob.company}`
+                        
+                        if (navigator.share) {
+                          navigator.share({
+                            title: transformedJob.title,
+                            text: shareText,
+                            url: shareUrl
+                          }).catch(err => console.log('Error sharing:', err))
+                        } else {
+                          navigator.clipboard.writeText(shareUrl)
+                          toast.success('Job link copied to clipboard!')
+                        }
+                      }}
+                    >
                       <Share2 className="w-4 h-4 mr-2" />
                       Share
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Bookmark className="w-4 h-4 mr-2" />
-                      Save
                     </Button>
                   </div>
                 </div>
@@ -305,6 +352,7 @@ export default function JobDetailPage() {
 
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Benefits & Perks</h3>
+                      {transformedJob.benefits && transformedJob.benefits.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {transformedJob.benefits.map((benefit: string, index: number) => (
                           <div key={index} className="flex items-center space-x-2">
@@ -313,12 +361,35 @@ export default function JobDetailPage() {
                           </div>
                         ))}
                       </div>
+                      ) : (
+                        <p className="text-slate-500 dark:text-slate-400 italic">No benefits information provided</p>
+                      )}
                     </div>
                   </TabsContent>
 
                   <TabsContent value="company" className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">About {transformedJob.company}</h3>
+                      {/* Consultancy Job Badge */}
+                      {transformedJob.isConsultancy && (
+                        <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Building2 className="w-5 h-5 text-purple-600" />
+                            <span className="font-semibold text-purple-900 dark:text-purple-100">Consultancy Job</span>
+                          </div>
+                          <p className="text-sm text-purple-800 dark:text-purple-200">
+                            Posted by: <span className="font-medium">{transformedJob.consultancyName}</span>
+                          </p>
+                          {!transformedJob.showHiringCompanyDetails && (
+                            <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
+                              Hiring company details are confidential
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                        About {transformedJob.isConsultancy && transformedJob.showHiringCompanyDetails ? 'the Hiring Company' : transformedJob.company}
+                      </h3>
                       <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
                         {transformedJob.companyInfo.description}
                       </p>
@@ -504,7 +575,7 @@ export default function JobDetailPage() {
                             <MapPin className="w-3 h-3 mr-1" />
                             {recJob.location}
                           </span>
-                          <span>{recJob.salary || (recJob.salaryMin && recJob.salaryMax ? `₹${recJob.salaryMin}-${recJob.salaryMax} LPA` : '')}</span>
+                          <span>{recJob.salary || (recJob.salaryMin && recJob.salaryMax ? `${(recJob.salaryMin / 100000).toFixed(0)}-${(recJob.salaryMax / 100000).toFixed(0)} LPA` : '')}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
                           <span className="flex items-center">

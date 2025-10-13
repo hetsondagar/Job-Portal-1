@@ -4,7 +4,38 @@
 
 const express = require('express');
 const router = express.Router();
-const { ensureAdminUser } = require('../scripts/ensureAdminUser');
+const { User } = require('../models');
+
+// Admin setup function (inline since ensureAdminUser script was removed)
+const ensureAdminUser = async () => {
+  try {
+    // Check if admin user already exists
+    const existingAdmin = await User.findOne({
+      where: { user_type: 'superadmin' }
+    });
+
+    if (existingAdmin) {
+      console.log('✅ Admin user already exists:', existingAdmin.email);
+      return existingAdmin;
+    }
+
+    // Create default admin user
+    const adminUser = await User.create({
+      email: 'admin@jobportal.com',
+      first_name: 'Super',
+      last_name: 'Admin',
+      user_type: 'superadmin',
+      is_email_verified: true,
+      account_status: 'active'
+    });
+
+    console.log('✅ Admin user created:', adminUser.email);
+    return adminUser;
+  } catch (error) {
+    console.error('❌ Error ensuring admin user:', error);
+    throw error;
+  }
+};
 
 // Endpoint to ensure admin user exists (no auth required for setup)
 router.post('/ensure-admin', async (req, res) => {

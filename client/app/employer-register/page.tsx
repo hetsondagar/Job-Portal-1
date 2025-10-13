@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Building2, CheckCircle, Globe } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Building2, CheckCircle, Globe, Users, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,8 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import EmployerAuthNavbar from "@/components/employer-auth-navbar"
 import EmployerAuthFooter from "@/components/employer-auth-footer"
+import { DocumentVerificationDialog } from "@/components/document-verification-dialog"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
 
 export default function EmployerRegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -58,15 +60,28 @@ export default function EmployerRegisterPage() {
   const [companySearch, setCompanySearch] = useState('')
   const [companyOptions, setCompanyOptions] = useState<any[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(false)
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false)
+  const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
 
   useEffect(() => {
-    const load = async () => {
-      setLoadingCompanies(true)
-      const res = await apiService.listCompanies({ search: companySearch, limit: 10 })
-      if (res.success && res.data) setCompanyOptions(res.data)
-      setLoadingCompanies(false)
+    // Only search when user has typed at least 2 characters
+    if (companySearch.trim().length >= 2) {
+      const load = async () => {
+        setLoadingCompanies(true)
+        const res = await apiService.listCompanies({ search: companySearch, limit: 10 })
+        if (res.success && res.data) {
+          setCompanyOptions(res.data)
+        } else {
+          setCompanyOptions([])
+        }
+        setLoadingCompanies(false)
+      }
+      load()
+    } else {
+      // Clear options when search is too short or empty
+      setCompanyOptions([])
     }
-    load()
   }, [companySearch])
 
   // Real-time validation function
@@ -178,29 +193,23 @@ export default function EmployerRegisterPage() {
       })
       
       if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {
-        // Check region for dashboard redirect
-        // Check if agency needs KYC verification
+        // Show document verification dialog for all employer registrations
+        setRegistrationSuccess(true)
+        setShowVerificationDialog(true)
+        
+        // Prepare company data for verification dialog
         const company: any = result?.company
-        const isAgency = company?.companyAccountType === 'recruiting_agency' || 
-                        company?.companyAccountType === 'consulting_firm'
-        const needsVerification = company?.verificationStatus === 'pending'
-
-        if (isAgency && needsVerification) {
-          toast.success('🎉 Agency account created! Please complete KYC verification to start posting jobs...')
-          setTimeout(() => {
-            router.push('/employer-dashboard/kyc-verification')
-          }, 2000)
-        } else if (result?.company?.region === 'gulf') {
-          toast.success('Employer account created successfully! Redirecting to Gulf dashboard...')
-          setTimeout(() => {
-            router.push('/gulf-dashboard')
-          }, 2000)
-        } else {
-          toast.success('Employer account created successfully! Redirecting to employer dashboard...')
-          setTimeout(() => {
-            router.push('/employer-dashboard')
-          }, 2000)
+        // Store company data for verification dialog
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('verificationCompanyData', JSON.stringify({
+            name: formData.companyId ? company?.name : formData.companyName,
+            industry: formData.industry,
+            website: formData.website,
+            companyAccountType: formData.companyAccountType
+          }))
         }
+        
+        toast.success('Account created successfully! Please upload verification documents.')
       } else {
         toast.error('Failed to create employer account. Please try again.')
       }
@@ -320,18 +329,18 @@ export default function EmployerRegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <EmployerAuthNavbar variant="register" />
 
-      <div className="flex items-center justify-center p-4 pt-8">
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="flex items-center justify-center p-4 pt-2">
+        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Side - Benefits */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="hidden lg:block space-y-8"
+            className="space-y-6"
           >
-            <div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Hire the Best Talent</h1>
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8">
+            <div className="text-center lg:text-left">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">Hire the Best Talent</h1>
+              <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
                 Join 50,000+ companies that trust JobPortal for their hiring needs
               </p>
             </div>
@@ -343,12 +352,12 @@ export default function EmployerRegisterPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-                  className="flex items-center space-x-3"
+                  className="flex items-center space-x-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
-                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <CheckCircle className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
+                  <span className="text-lg text-slate-700 dark:text-slate-300 font-medium">{benefit}</span>
                 </motion.div>
               ))}
             </div>
@@ -363,15 +372,15 @@ export default function EmployerRegisterPage() {
 
           {/* Right Side - Registration Form */}
           <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-            <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">
+            <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl shadow-2xl rounded-2xl">
+              <CardHeader className="text-center pb-6 pt-8">
+                <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
                   Create Employer Account
                 </CardTitle>
-                <p className="text-slate-600 dark:text-slate-300 mt-2">Start hiring top talent in minutes</p>
+                <p className="text-slate-600 dark:text-slate-300 mt-2 text-lg">Start hiring top talent in minutes</p>
               </CardHeader>
 
-                             <CardContent className="space-y-6">
+                             <CardContent className="space-y-4">
                 <div className="text-center text-sm text-slate-600 dark:text-slate-300">
                   Already have a company in the system?{' '}
                   <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
@@ -383,19 +392,31 @@ export default function EmployerRegisterPage() {
                   <Label className="text-slate-700 dark:text-slate-300">Join Existing Company</Label>
                   <div className="space-y-2">
                     <Input value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} placeholder="Search companies" className="h-10" />
-                    <div className="border rounded max-h-48 overflow-auto bg-white dark:bg-slate-800">
-                      {loadingCompanies ? (
-                        <div className="p-2 text-sm text-slate-500">Loading...</div>
-                      ) : companyOptions.map((c) => (
-                        <button key={c.id} type="button" onClick={() => handleInputChange('companyId', c.id)} className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${formData.companyId === c.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                          <div className="font-medium">{c.name}</div>
-                          <div className="text-xs text-slate-500">{c.industry} • {c.companySize}</div>
-                        </button>
-                      ))}
-                      {(!loadingCompanies && companyOptions.length === 0) && (
-                        <div className="p-2 text-sm text-slate-500">No companies found</div>
-                      )}
-                    </div>
+                    {companySearch.trim().length >= 2 && companyOptions.length > 0 && (
+                      <div className="border rounded max-h-48 overflow-auto bg-white dark:bg-slate-800 shadow-lg">
+                        {loadingCompanies ? (
+                          <div className="p-3 text-sm text-slate-500 flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                            Searching companies...
+                          </div>
+                        ) : companyOptions.map((c) => (
+                          <button key={c.id} type="button" onClick={() => handleInputChange('companyId', c.id)} className={`w-full text-left px-3 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 ${formData.companyId === c.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                            <div className="font-medium text-slate-900 dark:text-white">{c.name}</div>
+                            <div className="text-xs text-slate-500 mt-1">{c.industry} • {c.companySize}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {companySearch.trim().length >= 2 && !loadingCompanies && companyOptions.length === 0 && (
+                      <div className="border rounded p-3 text-sm text-slate-500 bg-white dark:bg-slate-800 shadow-lg">
+                        No companies found matching "{companySearch}"
+                      </div>
+                    )}
+                    {companySearch.trim().length > 0 && companySearch.trim().length < 2 && (
+                      <div className="text-xs text-slate-500 p-2">
+                        Type at least 2 characters to search companies
+                      </div>
+                    )}
                     {formData.companyId && (
                       <div className="text-xs text-green-700">Selected company ID: {formData.companyId}</div>
                     )}
@@ -422,62 +443,46 @@ export default function EmployerRegisterPage() {
                     {/* Account Type Selection - NEW */}
                   <div className="space-y-2">
                       <Label className="text-slate-700 dark:text-slate-300 font-semibold">Account Type *</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                           type="button"
                           onClick={() => handleInputChange("companyAccountType", "direct")}
-                          className={`p-4 border-2 rounded-lg transition-all ${
+                          className={`p-6 border-2 rounded-lg transition-all ${
                             formData.companyAccountType === "direct"
                               ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
                               : "border-slate-200 dark:border-slate-600 hover:border-blue-300"
                           }`}
                         >
                           <div className="flex flex-col items-center text-center">
-                            <Building2 className={`w-8 h-8 mb-2 ${formData.companyAccountType === "direct" ? "text-blue-600" : "text-slate-400"}`} />
-                            <span className="font-medium text-sm">Direct Employer</span>
-                            <span className="text-xs text-slate-500 mt-1">Hiring for your own company</span>
+                            <Building2 className={`w-10 h-10 mb-3 ${formData.companyAccountType === "direct" ? "text-blue-600" : "text-slate-400"}`} />
+                            <span className="font-semibold text-base">Direct Employer</span>
+                            <span className="text-xs text-slate-500 mt-2">Hiring for your own company</span>
                           </div>
                         </button>
                         
                         <button
                           type="button"
-                          onClick={() => handleInputChange("companyAccountType", "recruiting_agency")}
-                          className={`p-4 border-2 rounded-lg transition-all ${
-                            formData.companyAccountType === "recruiting_agency"
+                          onClick={() => handleInputChange("companyAccountType", "agency")}
+                          className={`p-6 border-2 rounded-lg transition-all ${
+                            formData.companyAccountType === "agency"
                               ? "border-purple-600 bg-purple-50 dark:bg-purple-900/20"
                               : "border-slate-200 dark:border-slate-600 hover:border-purple-300"
                           }`}
                         >
                           <div className="flex flex-col items-center text-center">
-                            <User className={`w-8 h-8 mb-2 ${formData.companyAccountType === "recruiting_agency" ? "text-purple-600" : "text-slate-400"}`} />
-                            <span className="font-medium text-sm">Recruiting Agency</span>
-                            <span className="text-xs text-slate-500 mt-1">Post for multiple clients</span>
-                          </div>
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={() => handleInputChange("companyAccountType", "consulting_firm")}
-                          className={`p-4 border-2 rounded-lg transition-all ${
-                            formData.companyAccountType === "consulting_firm"
-                              ? "border-green-600 bg-green-50 dark:bg-green-900/20"
-                              : "border-slate-200 dark:border-slate-600 hover:border-green-300"
-                          }`}
-                        >
-                          <div className="flex flex-col items-center text-center">
-                            <Globe className={`w-8 h-8 mb-2 ${formData.companyAccountType === "consulting_firm" ? "text-green-600" : "text-slate-400"}`} />
-                            <span className="font-medium text-sm">Consulting Firm</span>
-                            <span className="text-xs text-slate-500 mt-1">Staff augmentation services</span>
+                            <Users className={`w-10 h-10 mb-3 ${formData.companyAccountType === "agency" ? "text-purple-600" : "text-slate-400"}`} />
+                            <span className="font-semibold text-base">Agency/Consultancy</span>
+                            <span className="text-xs text-slate-500 mt-2">Recruiting agencies & consulting firms - Post for multiple clients</span>
                           </div>
                         </button>
                       </div>
                       
                       {/* Agency Info Banner */}
-                      {(formData.companyAccountType === "recruiting_agency" || formData.companyAccountType === "consulting_firm") && (
+                      {formData.companyAccountType === "agency" && (
                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-3">
                           <h4 className="text-amber-900 dark:text-amber-200 font-medium mb-2 flex items-center">
                             <span className="mr-2">ℹ️</span>
-                            Agency Account - Additional Verification Required
+                            Agency/Consultancy Account - Additional Verification Required
                           </h4>
                           <ul className="text-amber-800 dark:text-amber-300 text-sm space-y-1">
                             <li>• You'll need to upload GST certificate & business documents</li>
@@ -648,21 +653,25 @@ export default function EmployerRegisterPage() {
                       <Label htmlFor="industry" className="text-slate-700 dark:text-slate-300">
                         Industry
                       </Label>
-                      <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
-                        <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
-                          <SelectValue placeholder="Select industry" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="technology">Technology</SelectItem>
-                          <SelectItem value="finance">Finance</SelectItem>
-                          <SelectItem value="healthcare">Healthcare</SelectItem>
-                          <SelectItem value="education">Education</SelectItem>
-                          <SelectItem value="retail">Retail</SelectItem>
-                          <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                          <SelectItem value="consulting">Consulting</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={`w-full h-12 justify-between border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${formData.industry ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}
+                        onClick={() => setShowIndustryDropdown(true)}
+                      >
+                        <span>{formData.industry || 'Select industry'}</span>
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                      
+                      {showIndustryDropdown && (
+                        <IndustryDropdown
+                          selectedIndustries={formData.industry ? [formData.industry] : []}
+                          onIndustryChange={(industries: string[]) => {
+                            handleInputChange("industry", industries[0] || '')
+                          }}
+                          onClose={() => setShowIndustryDropdown(false)}
+                        />
+                      )}
                     </div>
                   </div>
                   )}
@@ -915,6 +924,25 @@ export default function EmployerRegisterPage() {
 
       {/* Enhanced Footer */}
       <EmployerAuthFooter />
+
+      {/* Document Verification Dialog */}
+      <DocumentVerificationDialog
+        open={showVerificationDialog}
+        onOpenChange={setShowVerificationDialog}
+        onSuccess={() => {
+          // After successful verification submission, redirect to appropriate dashboard
+          if (typeof window !== 'undefined') {
+            const companyData = JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}')
+            if (companyData.companyAccountType === 'agency') {
+              router.push('/employer-dashboard/kyc-verification')
+            } else {
+              router.push('/employer-dashboard')
+            }
+            sessionStorage.removeItem('verificationCompanyData')
+          }
+        }}
+        companyData={typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}') : {}}
+      />
     </div>
   )
 }

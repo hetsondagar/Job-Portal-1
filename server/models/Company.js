@@ -288,7 +288,7 @@ const Company = sequelize.define('Company', {
     allowNull: true,
     defaultValue: 'direct',
     field: 'company_account_type',
-    comment: 'direct | recruiting_agency | consulting_firm'
+    comment: 'direct | agency (agency includes recruiting agencies & consulting firms)'
   },
   agencyLicense: {
     type: DataTypes.STRING(255),
@@ -383,7 +383,7 @@ Company.prototype.getCompanySizeRange = function() {
 
 // Agency-specific methods
 Company.prototype.isAgency = function() {
-  return this.companyAccountType === 'recruiting_agency' || this.companyAccountType === 'consulting_firm';
+  return this.companyAccountType === 'agency' || this.companyAccountType === 'recruiting_agency' || this.companyAccountType === 'consulting_firm';
 };
 
 Company.prototype.isVerifiedAgency = function() {
@@ -407,6 +407,12 @@ Company.associate = function(models) {
   Company.belongsTo(models.User, {
     foreignKey: 'claimedByUserId',
     as: 'ClaimedByUser'
+  });
+
+  // Company has many users
+  Company.hasMany(models.User, {
+    foreignKey: 'companyId',
+    as: 'users'
   });
 };
 

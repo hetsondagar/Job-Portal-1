@@ -3538,7 +3538,7 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     
     // Fallback to local file storage (ephemeral on Render)
     const filename = metadata.filename;
-    
+
     if (!filename) {
       console.log('❌ No filename in resume metadata');
       return res.status(404).json({

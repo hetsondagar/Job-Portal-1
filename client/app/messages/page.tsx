@@ -109,7 +109,7 @@ export default function MessagesPage() {
                   <option key={u.id} value={u.id}>{u.name || u.email}</option>
                 ))}
               </select>
-              <button onClick={startConversation} className="px-3 py-1 border rounded text-sm">Start</button>
+              <button onClick={() => startConversation()} className="px-3 py-1 border rounded text-sm">Start</button>
             </div>
             {/* Quick coworker list */}
             <div className="mt-3 grid grid-cols-1 gap-2">

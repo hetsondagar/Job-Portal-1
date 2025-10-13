@@ -120,11 +120,30 @@ exports.createJob = async (req, res, next) => {
       hiringCompanyId, // The actual hiring company (for agency jobs)
       postedByAgencyId, // The agency that posted the job
       agencyDescription, // Short description about the agency
-      authorizationId // Link to the authorization record
+      authorizationId, // Link to the authorization record
+      // CONSULTANCY POSTING FIELDS
+      companyName, // Company name for display
+      postingType = 'company', // 'company' or 'consultancy'
+      consultancyName, // Name of the consultancy
+      hiringCompanyName, // Company the consultancy is hiring for
+      hiringCompanyIndustry, // Industry of hiring company
+      hiringCompanyDescription, // Description of hiring company
+      showHiringCompanyDetails = false // Whether to show hiring company details to candidates
     } = req.body || {};
 
     // Basic validation - only require fields for active jobs, not drafts
     const errors = [];
+    
+    // Validate education field type (must not be array or object) - FIX THIS FIRST
+    if (education !== undefined && education !== null) {
+      if (Array.isArray(education)) {
+        // Convert array to string
+        req.body.education = education.join(', ');
+      } else if (typeof education === 'object') {
+        errors.push('education cannot be an array or an object');
+      }
+    }
+    
     if (status === 'active') {
       // For active jobs, require all essential fields
       if (!title || String(title).trim() === '') errors.push('Job title is required');
@@ -427,7 +446,7 @@ exports.createJob = async (req, res, next) => {
       travelRequired: Boolean(travelRequired),
       shiftTiming: shiftTiming && shiftTiming.trim() ? shiftTiming : 'day',
       noticePeriod,
-      education,
+      education: req.body.education && req.body.education.trim ? req.body.education.trim() : null, // Use converted value from validation
       certifications: Array.isArray(certifications) ? certifications : [],
       languages: Array.isArray(languages) ? languages : [],
       status,
@@ -435,7 +454,8 @@ exports.createJob = async (req, res, next) => {
       isFeatured: Boolean(isFeatured),
       // New fields from step 2
       role: role && role.trim() ? role.trim() : null,
-      industryType: industryType && industryType.trim() ? industryType.trim() : null,
+      // For consultancy jobs, use hiringCompanyIndustry if industryType is not provided
+      industryType: (industryType && industryType.trim() ? industryType.trim() : null) || (postingType === 'consultancy' && hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null),
       roleCategory: roleCategory && roleCategory.trim() ? roleCategory.trim() : null,
       employmentType: employmentType && employmentType.trim() ? employmentType.trim() : null,
       isPremium: Boolean(isPremium),
@@ -487,7 +507,21 @@ exports.createJob = async (req, res, next) => {
       validTill: resolvedValidTill,
       publishedAt,
       tags: Array.isArray(tags) ? tags : [],
-      metadata,
+      metadata: {
+        ...metadata,
+        // CONSULTANCY POSTING FIELDS - Store in metadata
+        postingType: postingType || 'company',
+        companyName: companyName && companyName.trim() ? companyName.trim() : null,
+        ...(postingType === 'consultancy' && {
+          consultancyName: consultancyName && consultancyName.trim() ? consultancyName.trim() : null,
+          hiringCompany: {
+            name: hiringCompanyName && hiringCompanyName.trim() ? hiringCompanyName.trim() : null,
+            industry: hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null,
+            description: hiringCompanyDescription && hiringCompanyDescription.trim() ? hiringCompanyDescription.trim() : null
+          },
+          showHiringCompanyDetails: Boolean(showHiringCompanyDetails)
+        })
+      },
       city,
       state,
       country,
@@ -1786,7 +1820,65 @@ exports.updateJob = async (req, res, next) => {
       });
     }
 
-    await job.update(updateData);
+    // Validate and convert education field (same as createJob)
+    if (updateData.education !== undefined && updateData.education !== null) {
+      if (Array.isArray(updateData.education)) {
+        // Convert array to string
+        updateData.education = updateData.education.join(', ');
+      } else if (typeof updateData.education === 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: ['education cannot be an array or an object']
+        });
+      }
+    }
+
+    // Handle consultancy metadata fields
+    const {
+      companyName,
+      postingType,
+      consultancyName,
+      hiringCompanyName,
+      hiringCompanyIndustry,
+      hiringCompanyDescription,
+      showHiringCompanyDetails,
+      industryType,
+      ...otherUpdateData
+    } = updateData;
+
+    // Prepare metadata update
+    const existingMetadata = job.metadata || {};
+    const metadataUpdate = {
+      ...existingMetadata,
+      postingType: postingType || existingMetadata.postingType || 'company',
+      companyName: companyName || existingMetadata.companyName || null,
+    };
+
+    // Add consultancy fields if postingType is 'consultancy'
+    if (postingType === 'consultancy' || existingMetadata.postingType === 'consultancy') {
+      metadataUpdate.consultancyName = consultancyName || existingMetadata.consultancyName || null;
+      metadataUpdate.hiringCompany = {
+        name: hiringCompanyName || existingMetadata.hiringCompany?.name || null,
+        industry: hiringCompanyIndustry || existingMetadata.hiringCompany?.industry || null,
+        description: hiringCompanyDescription || existingMetadata.hiringCompany?.description || null
+      };
+      metadataUpdate.showHiringCompanyDetails = showHiringCompanyDetails !== undefined 
+        ? Boolean(showHiringCompanyDetails) 
+        : existingMetadata.showHiringCompanyDetails || false;
+    }
+
+    // Prepare final update data with metadata
+    const finalUpdateData = {
+      ...otherUpdateData,
+      metadata: metadataUpdate,
+      // For consultancy jobs, use hiringCompanyIndustry if industryType is not provided
+      industryType: (industryType && industryType.trim() ? industryType.trim() : null) || 
+                    (postingType === 'consultancy' && hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null) ||
+                    job.industryType
+    };
+
+    await job.update(finalUpdateData);
 
     return res.status(200).json({
       success: true,
@@ -1873,12 +1965,23 @@ exports.deleteJob = async (req, res, next) => {
 exports.getJobsByEmployer = async (req, res, next) => {
   try {
     console.log('🔍 Fetching jobs for employer:', req.user.id, req.user.email);
+    console.log('🔍 User companyId:', req.user.companyId);
     console.log('🔍 Query parameters:', req.query);
     
     const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
     const offset = (page - 1) * limit;
     
-    const whereClause = { employerId: req.user.id };
+    // Filter by companyId if user has one (employers/admins), otherwise by employerId
+    const whereClause = {};
+    if (req.user.companyId) {
+      // Employers and admins see all jobs from their company
+      whereClause.companyId = req.user.companyId;
+      console.log('🔍 Filtering by companyId:', req.user.companyId);
+    } else {
+      // Fallback to employerId for users without companyId
+      whereClause.employerId = req.user.id;
+      console.log('🔍 Filtering by employerId:', req.user.id);
+    }
     
     // Add region filtering to ensure Gulf employers only see Gulf jobs
     if (req.user.region === 'gulf') {
@@ -2402,6 +2505,8 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     console.log('🔍 Fetching jobs for employer:', req.user.id, req.user.email);
 
+    console.log('🔍 User companyId:', req.user.companyId);
+
     console.log('🔍 Query parameters:', req.query);
 
     
@@ -2412,7 +2517,17 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     
 
-    const whereClause = { employerId: req.user.id };
+    // Filter by companyId if user has one (employers/admins), otherwise by employerId
+    const whereClause = {};
+    if (req.user.companyId) {
+      // Employers and admins see all jobs from their company
+      whereClause.companyId = req.user.companyId;
+      console.log('🔍 Filtering by companyId:', req.user.companyId);
+    } else {
+      // Fallback to employerId for users without companyId
+      whereClause.employerId = req.user.id;
+      console.log('🔍 Filtering by employerId:', req.user.id);
+    }
     
     // Add region filtering to ensure Gulf employers only see Gulf jobs
     if (req.user.region === 'gulf') {

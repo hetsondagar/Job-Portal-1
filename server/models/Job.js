@@ -78,6 +78,10 @@ const Job = sequelize.define('Job', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  benefits: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   jobType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: false,

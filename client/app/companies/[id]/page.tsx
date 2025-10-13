@@ -110,6 +110,9 @@ function CompanyDetailPage() {
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [hoverRating, setHoverRating] = useState<number | null>(null)
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [company, setCompany] = useState<any>(null)
   const [companyJobs, setCompanyJobs] = useState<any[]>([])
   const [companyPhotos, setCompanyPhotos] = useState<any[]>([])
@@ -339,6 +342,49 @@ function CompanyDetailPage() {
     }
   }, [companyId, isFollowing, isAuthenticated])
 
+  // Rating functions
+  const fetchUserRating = useCallback(async () => {
+    if (!isAuthenticated || !companyId) return
+    
+    try {
+      const response = await apiService.getUserCompanyRating(companyId)
+      if (response.success && response.data) {
+        setUserRating(response.data.rating)
+      }
+    } catch (error) {
+      console.error('Error fetching user rating:', error)
+    }
+  }, [companyId, isAuthenticated])
+
+  const handleRatingSubmit = useCallback(async (rating: number) => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true)
+      return
+    }
+
+    // Only allow jobseekers to rate companies
+    if (user && user.userType !== 'jobseeker') {
+      toast.error('Only jobseekers can rate companies')
+      return
+    }
+
+    try {
+      const response = await apiService.rateCompany(companyId, rating)
+      if (response.success) {
+        setUserRating(rating)
+        toast.success('Rating submitted successfully!')
+        setShowRatingDialog(false)
+        // Refresh company data to get updated average rating
+        fetchCompanyData()
+      } else {
+        toast.error(response.message || 'Failed to submit rating')
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error)
+      toast.error('Failed to submit rating')
+    }
+  }, [companyId, isAuthenticated, user])
+
   // Fetch company data (public fallback via listCompanies if direct endpoint is protected)
   const fetchCompanyData = useCallback(async () => {
     setLoadingCompany(true)
@@ -534,8 +580,9 @@ function CompanyDetailPage() {
       fetchCompanyPhotos()
       fetchAppliedJobs()
       fetchFollowStatus()
+      fetchUserRating()
     }
-  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchCompanyPhotos, fetchAppliedJobs, fetchFollowStatus])
+  }, [companyId, fetchCompanyData, fetchCompanyJobs, fetchCompanyPhotos, fetchAppliedJobs, fetchFollowStatus, fetchUserRating])
 
   // Load watch status for expired jobs when jobs or auth changes
   useEffect(() => {
@@ -801,7 +848,21 @@ function CompanyDetailPage() {
     try {
     const groups: Record<string, { name: string; openings: number; description: string; growth: string }> = {}
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
-      jobs.forEach((job) => {
+      
+      // Filter out consultancy jobs - only count direct company jobs
+      const directCompanyJobs = jobs.filter((job) => {
+        const metadata = job.metadata || {}
+        const isConsultancyJob = metadata.postingType === 'consultancy' || 
+                                 job.isConsultancy || 
+                                 metadata.consultancyName ||
+                                 job.isAgencyPosted ||
+                                 job.PostedByAgency ||
+                                 job.hiringCompanyId ||
+                                 job.postedByAgencyId
+        return !isConsultancyJob
+      })
+      
+      directCompanyJobs.forEach((job) => {
       const deptName = (job.department || job.category || 'Other').toString()
       if (!groups[deptName]) {
         groups[deptName] = { name: deptName, openings: 0, description: '', growth: '' }
@@ -822,9 +883,22 @@ function CompanyDetailPage() {
     try {
       const jobs = Array.isArray(companyJobs) ? companyJobs : []
       
-      const departments = [...new Set(jobs.map(job => job.department || job.category).filter(Boolean))]
-      const locations = [...new Set(jobs.map(job => job.location || job.city || job.state).filter(Boolean))]
-      const experiences = [...new Set(jobs.map(job => job.experienceLevel || job.experience).filter(Boolean))]
+      // Filter out consultancy jobs - only count direct company jobs
+      const directCompanyJobs = jobs.filter((job) => {
+        const metadata = job.metadata || {}
+        const isConsultancyJob = metadata.postingType === 'consultancy' || 
+                                 job.isConsultancy || 
+                                 metadata.consultancyName ||
+                                 job.isAgencyPosted ||
+                                 job.PostedByAgency ||
+                                 job.hiringCompanyId ||
+                                 job.postedByAgencyId
+        return !isConsultancyJob
+      })
+      
+      const departments = [...new Set(directCompanyJobs.map(job => job.department || job.category).filter(Boolean))]
+      const locations = [...new Set(directCompanyJobs.map(job => job.location || job.city || job.state).filter(Boolean))]
+      const experiences = [...new Set(directCompanyJobs.map(job => job.experienceLevel || job.experience).filter(Boolean))]
       
       return {
         departments: departments.length > 0 ? departments : ['All Departments'],
@@ -1096,6 +1170,16 @@ function CompanyDetailPage() {
                           <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
                           {isFollowing ? "Following" : "Follow"}
                         </Button>
+                        {(!user || user.userType === 'jobseeker') && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowRatingDialog(true)}
+                            className={`${userRating ? "bg-yellow-50 border-yellow-200 text-yellow-700" : "bg-white/50 dark:bg-slate-700/50"} backdrop-blur-sm`}
+                          >
+                            <Star className={`w-4 h-4 mr-2 ${userRating ? "fill-current" : ""}`} />
+                            {userRating ? `Rated ${userRating}★` : "Rate"}
+                          </Button>
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
@@ -1189,26 +1273,12 @@ function CompanyDetailPage() {
                     
                     <div className="grid grid-cols-2 gap-6">
                       <div className="flex items-center">
-                        <Calendar className="w-5 h-5 mr-3 text-slate-400" />
-                        <div>
-                          <div className="font-medium">Founded</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.founded) || 'Not provided'}</div> 
-                        </div>
-                      </div>
-                      <div className="flex items-center">
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
                         <div>
                           <div className="font-medium">Open Positions</div>
                           <div className="text-slate-600 dark:text-slate-400">
                             {companyStats?.activeJobs ?? company.activeJobsCount ?? companyJobs.length}
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <Globe className="w-5 h-5 mr-3 text-slate-400" />
-                        <div>
-                          <div className="font-medium">Website</div>
-                          <div className="text-blue-600">{toDisplayText(company.website) || 'Not provided'}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -1326,28 +1396,12 @@ function CompanyDetailPage() {
                       <span className="font-medium">{toDisplayText(company.employees) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Founded</span>
-                      <span className="font-medium">{toDisplayText(company.founded) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Industry</span>
-                      <span className="font-medium">{toDisplayText(company.industry) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Headquarters</span>
                       <span className="font-medium">{toDisplayText(company.headquarters) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Website</span>
-                      <span className="font-medium text-blue-600">{toDisplayText(company.website) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Revenue</span>
                       <span className="font-medium">{toDisplayText(company.revenue) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Company Type</span>
-                      <span className="font-medium">{toDisplayText(company.companyType) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Total Jobs</span>
@@ -1876,6 +1930,45 @@ function CompanyDetailPage() {
                 Login
               </Button>
             </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rating Dialog */}
+      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rate {company?.name}</DialogTitle>
+            <DialogDescription>
+              Share your experience by rating this company
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-6 py-6">
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => handleRatingSubmit(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(null)}
+                  className="transition-all duration-200 hover:scale-110"
+                >
+                  <Star
+                    className={`w-10 h-10 ${
+                      (hoverRating || userRating || 0) >= star
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            {userRating && (
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                You rated this company {userRating} {userRating === 1 ? 'star' : 'stars'}
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

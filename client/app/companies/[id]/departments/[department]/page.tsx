@@ -133,7 +133,25 @@ function DepartmentJobsPage() {
 
   const departmentJobs = useMemo(() => {
     return jobs
-      .filter((j) => (j.department || j.category || '').toString() === departmentName)
+      .filter((j) => {
+        // Filter by department
+        const matchesDepartment = (j.department || j.category || '').toString() === departmentName
+        
+        // Exclude ALL consultancy/agency jobs - only show direct company jobs
+        // Check multiple indicators for consultancy/agency jobs
+        const metadata = j.metadata || {}
+        const isConsultancyJob = metadata.postingType === 'consultancy' || 
+                                 j.isConsultancy || 
+                                 metadata.consultancyName ||
+                                 j.isAgencyPosted ||
+                                 j.PostedByAgency ||
+                                 j.hiringCompanyId ||
+                                 j.postedByAgencyId
+        
+        const isDirectCompanyJob = !isConsultancyJob
+        
+        return matchesDepartment && isDirectCompanyJob
+      })
       .map((j) => ({
         id: j.id,
         title: j.title,
@@ -378,7 +396,7 @@ function DepartmentJobsPage() {
                           <p className="text-slate-700 dark:text-slate-300 mb-6 leading-relaxed">{job.description}</p>
 
                           <div className="flex flex-wrap gap-2 mb-6">
-                            {job.skills.map((skill, skillIndex) => (
+                            {job.skills.map((skill: string, skillIndex: number) => (
                               <Badge
                                 key={skillIndex}
                                 variant="secondary"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Briefcase, MapPin, Clock, DollarSign, Users, Eye, Edit, Trash2, Plus, Loader2, RefreshCw } from "lucide-react"
+import { Briefcase, MapPin, Clock, IndianRupee, Users, Eye, Edit, Trash2, Plus, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -190,8 +190,12 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                       </div>
                       
                       <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
-                        <DollarSign className="w-4 h-4" />
-                        <span>{job.salary || job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Salary not specified'}</span>
+                        <IndianRupee className="w-4 h-4" />
+                        <span>
+                          {job.salary ? job.salary : job.salaryMin && job.salaryMax 
+                            ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA` 
+                            : 'Not specified'}
+                        </span>
                       </div>
                       
                       <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">

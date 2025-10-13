@@ -54,7 +54,6 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
               <NavigationMenuList>
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
-                    <DollarSign className="w-4 h-4 mr-1" />
                     Pricing
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>

@@ -291,14 +291,34 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
 
     const { email, password, fullName, companyName, companyId, phone, companySize, industry, website, region, role, companyAccountType } = req.body;
 
-    // Check if user already exists
+    // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      console.log('❌ User already exists:', email);
-      return res.status(409).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
+      // Check if the user's company is rejected OR user account is rejected - allow re-registration
+      const existingCompany = await Company.findByPk(existingUser.companyId);
+      
+      // Allow re-registration if:
+      // 1. Company verification is rejected
+      // 2. User account is rejected  
+      // 3. User account is pending verification (in case of incomplete registration)
+      // 4. Company verification is pending (incomplete registration)
+      const allowReRegistration = (
+        (existingCompany && existingCompany.verificationStatus === 'rejected') || 
+        existingUser.account_status === 'rejected' ||
+        existingUser.account_status === 'pending_verification' ||
+        (existingCompany && existingCompany.verificationStatus === 'pending')
+      );
+      
+      if (allowReRegistration) {
+        console.log('🔄 Allowing re-registration for user:', email, 'Status:', existingUser.account_status, 'Company status:', existingCompany?.verificationStatus);
+        // Continue with registration - will update existing company
+      } else {
+        console.log('❌ User already exists with active account:', email);
+        return res.status(409).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
     }
 
     // Split full name into first and last name
@@ -363,65 +383,125 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           console.log('✅ Joining existing company:', company.id);
         }
       } else {
-      const companySlug = await generateSlug(companyName);
-      // Create company record
-      console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug, companyAccountType });
-        company = await Company.create({
-        name: companyName,
-        slug: companySlug,
-        industry: industry || 'Other',
-        companySize: companySize || '1-50',
-        website: website,
-        email: email,
-        phone: phone,
-          region: region || 'india',
-        contactPerson: fullName,
-        contactEmail: email,
-        contactPhone: phone,
-        companyStatus: 'pending_approval',
-        isActive: true,
-        companyAccountType: companyAccountType || 'direct', // NEW: Agency support
-        verificationStatus: (companyAccountType === 'recruiting_agency' || companyAccountType === 'consulting_firm') ? 'pending' : 'unverified',
-        // Mark as claimed (created by owner themselves)
-        isClaimed: true,
-        claimedAt: new Date()
-      }, { transaction });
-      console.log('✅ Company created successfully:', company.id);
+        // Handle new company creation or re-registration
+        
+        if (existingUser && existingUser.companyId) {
+          // Update existing company for re-registration
+          company = await Company.findByPk(existingUser.companyId, { transaction });
+          if (company && company.verificationStatus === 'rejected') {
+            console.log('🔄 Updating rejected company for re-registration:', company.name);
+            await company.update({
+              name: companyName,
+              industry: industry || company.industry,
+              companySize: companySize || company.companySize,
+              website: website || company.website,
+              email: email,
+              phone: phone,
+              contactPerson: fullName,
+              contactEmail: email,
+              contactPhone: phone,
+              companyStatus: 'pending_approval',
+              verificationStatus: 'pending',
+              companyAccountType: companyAccountType || 'direct'
+            }, { transaction });
+          }
+        }
+        
+        if (!company) {
+          // Create new company record
+          const companySlug = await generateSlug(companyName);
+          console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug, companyAccountType });
+          company = await Company.create({
+            name: companyName,
+            slug: companySlug,
+            industry: industry || 'Other',
+            companySize: companySize || '1-50',
+            website: website,
+            email: email,
+            phone: phone,
+            region: region || 'india',
+            contactPerson: fullName,
+            contactEmail: email,
+            contactPhone: phone,
+            companyStatus: 'pending_approval',
+            isActive: true,
+            companyAccountType: companyAccountType || 'direct',
+            verificationStatus: 'pending', // All new registrations need verification
+            isClaimed: true,
+            claimedAt: new Date()
+          }, { transaction });
+        }
+        
+        console.log('✅ Company created/updated successfully:', company?.id);
+      }
+
+      // Ensure company exists before proceeding
+      if (!company) {
+        throw new Error('Company creation/retrieval failed');
       }
 
       // Determine user type and designation based on whether they're creating a new company or joining existing one
       const userType = companyId ? 'employer' : 'admin'; // New company = admin, existing company = employer
       const designation = companyId ? 'Recruiter' : 'Hiring Manager'; // Set proper designation
       
-      // Create new employer user
-      console.log('📝 Creating employer user with data:', {
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        user_type: userType,
-        account_status: 'active',
-        company_id: company.id
-      });
+      // Create or update employer user
+      let user;
       
-      const user = await User.create({
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        user_type: userType, // ✅ Dynamic user type based on company creation/joining
-        designation: designation, // ✅ Set proper designation
-        account_status: 'active',
-        is_email_verified: false,
-        company_id: company.id,
-        oauth_provider: 'local', // Ensure this is set for regular registrations
-        // Store additional preferences
-        preferences: {
-          employerRole: companyId ? (role || 'recruiter') : 'admin',
-          ...req.body.preferences
-        }
-      }, { transaction });
+      const allowUserUpdate = (
+        (existingUser && existingCompany?.verificationStatus === 'rejected') || 
+        (existingUser && existingUser.account_status === 'rejected') ||
+        (existingUser && existingUser.account_status === 'pending_verification') ||
+        (existingUser && existingCompany?.verificationStatus === 'pending')
+      );
+      
+      if (existingUser && allowUserUpdate) {
+        // Update existing user for re-registration
+        console.log('🔄 Updating existing user for re-registration:', email);
+        await existingUser.update({
+          password,
+          first_name: firstName,
+          last_name: lastName,
+          phone,
+          user_type: userType,
+          designation: designation,
+          account_status: 'active', // Set to active initially, will be updated by verification system
+          company_id: company.id,
+          preferences: {
+            employerRole: companyId ? (role || 'recruiter') : 'admin',
+            ...req.body.preferences
+          }
+        }, { transaction });
+        user = existingUser;
+      } else {
+        // Create new employer user
+        console.log('📝 Creating employer user with data:', {
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          phone,
+          user_type: userType,
+          account_status: 'active',
+          company_id: company.id
+        });
+        
+        user = await User.create({
+          email,
+          password,
+          first_name: firstName,
+          last_name: lastName,
+          phone,
+          user_type: userType,
+          designation: designation,
+          account_status: 'active', // Set to active initially, will be updated by verification system
+          is_email_verified: false,
+          company_id: company.id,
+          oauth_provider: 'local',
+          preferences: {
+            employerRole: companyId ? (role || 'recruiter') : 'admin',
+            ...req.body.preferences
+          }
+        }, { transaction });
+      }
       
       console.log('✅ Employer user created successfully:', user.id);
 
