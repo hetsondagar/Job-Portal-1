@@ -297,12 +297,23 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       // Check if the user's company is rejected OR user account is rejected - allow re-registration
       const existingCompany = await Company.findByPk(existingUser.companyId);
       
-      if ((existingCompany && existingCompany.verificationStatus === 'rejected') || 
-          existingUser.account_status === 'rejected') {
-        console.log('🔄 Allowing re-registration for rejected company/user:', email);
+      // Allow re-registration if:
+      // 1. Company verification is rejected
+      // 2. User account is rejected  
+      // 3. User account is pending verification (in case of incomplete registration)
+      // 4. Company verification is pending (incomplete registration)
+      const allowReRegistration = (
+        (existingCompany && existingCompany.verificationStatus === 'rejected') || 
+        existingUser.account_status === 'rejected' ||
+        existingUser.account_status === 'pending_verification' ||
+        (existingCompany && existingCompany.verificationStatus === 'pending')
+      );
+      
+      if (allowReRegistration) {
+        console.log('🔄 Allowing re-registration for user:', email, 'Status:', existingUser.account_status, 'Company status:', existingCompany?.verificationStatus);
         // Continue with registration - will update existing company
       } else {
-        console.log('❌ User already exists:', email);
+        console.log('❌ User already exists with active account:', email);
         return res.status(409).json({
           success: false,
           message: 'User with this email already exists'
@@ -373,7 +384,6 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         }
       } else {
         // Handle new company creation or re-registration
-        let company;
         
         if (existingUser && existingUser.companyId) {
           // Update existing company for re-registration
@@ -422,7 +432,12 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           }, { transaction });
         }
         
-        console.log('✅ Company created/updated successfully:', company.id);
+        console.log('✅ Company created/updated successfully:', company?.id);
+      }
+
+      // Ensure company exists before proceeding
+      if (!company) {
+        throw new Error('Company creation/retrieval failed');
       }
 
       // Determine user type and designation based on whether they're creating a new company or joining existing one
@@ -432,7 +447,14 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       // Create or update employer user
       let user;
       
-      if (existingUser && (existingCompany?.verificationStatus === 'rejected' || existingUser.account_status === 'rejected')) {
+      const allowUserUpdate = (
+        (existingUser && existingCompany?.verificationStatus === 'rejected') || 
+        (existingUser && existingUser.account_status === 'rejected') ||
+        (existingUser && existingUser.account_status === 'pending_verification') ||
+        (existingUser && existingCompany?.verificationStatus === 'pending')
+      );
+      
+      if (existingUser && allowUserUpdate) {
         // Update existing user for re-registration
         console.log('🔄 Updating existing user for re-registration:', email);
         await existingUser.update({
@@ -442,7 +464,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           phone,
           user_type: userType,
           designation: designation,
-          account_status: 'pending_verification', // Reset to pending verification
+          account_status: 'active', // Set to active initially, will be updated by verification system
           company_id: company.id,
           preferences: {
             employerRole: companyId ? (role || 'recruiter') : 'admin',
@@ -470,7 +492,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           phone,
           user_type: userType,
           designation: designation,
-          account_status: 'pending_verification', // User cannot access dashboard until verified
+          account_status: 'active', // Set to active initially, will be updated by verification system
           is_email_verified: false,
           company_id: company.id,
           oauth_provider: 'local',
