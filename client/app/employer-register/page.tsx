@@ -329,7 +329,7 @@ export default function EmployerRegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <EmployerAuthNavbar variant="register" />
 
-      <div className="flex items-center justify-center p-4 pt-8">
+      <div className="flex items-center justify-center p-4 pt-2">
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Side - Benefits */}
           <motion.div
