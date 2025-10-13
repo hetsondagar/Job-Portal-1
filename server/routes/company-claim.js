@@ -35,7 +35,7 @@ router.get('/search', async (req, res) => {
     });
     
     res.json({
-      success: true,
+        success: true,
       data: companies,
       message: companies.length > 0 ? 'Companies found' : 'No unclaimed companies found'
     });
