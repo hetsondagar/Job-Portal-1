@@ -930,16 +930,17 @@ export default function EmployerRegisterPage() {
         open={showVerificationDialog}
         onOpenChange={setShowVerificationDialog}
         onSuccess={() => {
-          // After successful verification submission, redirect to appropriate dashboard
+          // After successful verification submission, show success message
           if (typeof window !== 'undefined') {
-            const companyData = JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}')
-            if (companyData.companyAccountType === 'agency') {
-              router.push('/employer-dashboard/kyc-verification')
-            } else {
-              router.push('/employer-dashboard')
-            }
             sessionStorage.removeItem('verificationCompanyData')
           }
+          // Redirect to login with a message
+          toast.success('Your documents have been submitted successfully! Our admin team will review your submission within 2-4 business hours. You will receive an email notification once your account is verified. Please check back later to access your employer dashboard.', {
+            duration: 8000
+          })
+          setTimeout(() => {
+            router.push('/employer-login')
+          }, 2000)
         }}
         companyData={typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('verificationCompanyData') || '{}') : {}}
       />

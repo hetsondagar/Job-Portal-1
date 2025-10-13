@@ -133,41 +133,55 @@ export function DocumentVerificationDialog({
     try {
       setUploading(true)
       
+      // Check if at least one document is uploaded
+      const uploadedDocs = documents.filter(doc => doc.uploaded)
+      if (uploadedDocs.length === 0) {
+        toast.error('Please upload at least one document before submitting')
+        setUploading(false)
+        return
+      }
+      
       // Check required documents
       const requiredDocTypes = requiredDocuments.filter(doc => doc.required).map(doc => doc.id)
-      const uploadedDocTypes = documents.filter(doc => doc.uploaded).map(doc => doc.id)
+      const uploadedDocTypes = uploadedDocs.map(doc => doc.id)
       
       const missingDocs = requiredDocTypes.filter(type => !uploadedDocTypes.includes(type))
       
       if (missingDocs.length > 0) {
-        toast.error(`Please upload required documents: ${missingDocs.join(', ')}`)
+        const missingNames = missingDocs.map(id => 
+          requiredDocuments.find(doc => doc.id === id)?.name || id
+        ).join(', ')
+        toast.error(`Please upload required documents: ${missingNames}`)
+        setUploading(false)
         return
       }
       
-      // Submit verification request
+      // Submit verification request with all form data
       const verificationData = {
-        documents: documents.filter(doc => doc.uploaded).map(doc => ({
+        documents: uploadedDocs.map(doc => ({
           type: doc.type,
           url: doc.url,
           name: doc.file.name
         })),
         companyInfo: companyData,
+        gstNumber: formData.gstNumber,
+        panNumber: formData.panNumber,
         additionalNotes: formData.additionalNotes
       }
       
       const response = await apiService.submitVerificationRequest(verificationData)
       
       if (response.success) {
-        toast.success('Verification request submitted successfully! You will be notified once approved.')
+        toast.success('Documents submitted successfully! Please wait for admin verification.')
         onSuccess()
         onOpenChange(false)
       } else {
         toast.error(response.message || 'Failed to submit verification request')
+        setUploading(false)
       }
     } catch (error) {
       console.error('Verification submission error:', error)
       toast.error('Failed to submit verification request')
-    } finally {
       setUploading(false)
     }
   }
@@ -359,10 +373,11 @@ export function DocumentVerificationDialog({
               <div>
                 <h4 className="font-medium text-blue-900 mb-2">Important Notice</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Your account will remain inactive until documents are verified</li>
-                  <li>• Verification typically takes 1-3 business days</li>
-                  <li>• You will receive email notifications about the verification status</li>
-                  <li>• All documents are securely stored and encrypted</li>
+                  <li>• Your account access will be restricted until documents are verified by our admin team</li>
+                  <li>• Verification typically takes 2-4 business hours during working days</li>
+                  <li>• You will receive email and in-app notifications about the verification status</li>
+                  <li>• Please do not attempt to access the employer dashboard until verification is complete</li>
+                  <li>• All documents are securely stored and encrypted for your protection</li>
                 </ul>
               </div>
             </div>

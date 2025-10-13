@@ -333,8 +333,80 @@ export default function AdminVerificationsPage() {
                 </CardContent>
               </Card>
 
-              {/* Verification Documents */}
-              {selectedCompany.verificationDocuments && selectedCompany.verificationDocuments.length > 0 && (
+              {/* Additional Verification Information */}
+              {selectedCompany.verificationDocuments && typeof selectedCompany.verificationDocuments === 'object' && (
+                <>
+                  {(selectedCompany.verificationDocuments.gstNumber || selectedCompany.verificationDocuments.panNumber || selectedCompany.verificationDocuments.additionalNotes) && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Additional Information</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedCompany.verificationDocuments.gstNumber && (
+                            <div>
+                              <Label className="text-sm font-medium">GST Number</Label>
+                              <p className="text-sm text-slate-600 font-mono">{selectedCompany.verificationDocuments.gstNumber}</p>
+                            </div>
+                          )}
+                          {selectedCompany.verificationDocuments.panNumber && (
+                            <div>
+                              <Label className="text-sm font-medium">PAN Number</Label>
+                              <p className="text-sm text-slate-600 font-mono">{selectedCompany.verificationDocuments.panNumber}</p>
+                            </div>
+                          )}
+                          {selectedCompany.verificationDocuments.additionalNotes && (
+                            <div className="md:col-span-2">
+                              <Label className="text-sm font-medium">Additional Notes</Label>
+                              <p className="text-sm text-slate-600 mt-1 p-3 bg-slate-50 rounded-lg">{selectedCompany.verificationDocuments.additionalNotes}</p>
+                            </div>
+                          )}
+                          {selectedCompany.verificationDocuments.submittedBy && (
+                            <div className="md:col-span-2">
+                              <Label className="text-sm font-medium">Submitted By</Label>
+                              <p className="text-sm text-slate-600">
+                                {selectedCompany.verificationDocuments.submittedBy.userName} ({selectedCompany.verificationDocuments.submittedBy.userEmail})
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Verification Documents */}
+                  {selectedCompany.verificationDocuments.documents && selectedCompany.verificationDocuments.documents.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Verification Documents</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedCompany.verificationDocuments.documents.map((doc, index) => (
+                            <div key={index} className="border rounded-lg p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <FileText className="w-4 h-4 text-blue-600" />
+                                <span className="font-medium text-sm capitalize">{doc.type.replace('_', ' ')}</span>
+                              </div>
+                              <p className="text-sm text-slate-600 mb-3">{doc.name}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(doc.url, '_blank')}
+                              >
+                                View Document
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Fallback for old format */}
+              {selectedCompany.verificationDocuments && Array.isArray(selectedCompany.verificationDocuments) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Verification Documents</CardTitle>
@@ -345,7 +417,7 @@ export default function AdminVerificationsPage() {
                         <div key={index} className="border rounded-lg p-4">
                           <div className="flex items-center gap-2 mb-2">
                             <FileText className="w-4 h-4 text-blue-600" />
-                            <span className="font-medium text-sm">{doc.type.replace('_', ' ')}</span>
+                            <span className="font-medium text-sm capitalize">{doc.type.replace('_', ' ')}</span>
                           </div>
                           <p className="text-sm text-slate-600 mb-3">{doc.name}</p>
                           <Button
