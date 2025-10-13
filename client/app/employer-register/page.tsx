@@ -327,18 +327,18 @@ export default function EmployerRegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <EmployerAuthNavbar variant="register" />
 
-      <div className="flex items-center justify-center p-4 pt-4">
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="flex items-center justify-center p-4 pt-8">
+        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Side - Benefits */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="hidden lg:block space-y-6"
+            className="space-y-6"
           >
-            <div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Hire the Best Talent</h1>
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-6">
+            <div className="text-center lg:text-left">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">Hire the Best Talent</h1>
+              <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
                 Join 50,000+ companies that trust JobPortal for their hiring needs
               </p>
             </div>
@@ -350,12 +350,12 @@ export default function EmployerRegisterPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-                  className="flex items-center space-x-3"
+                  className="flex items-center space-x-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
-                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <CheckCircle className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
+                  <span className="text-lg text-slate-700 dark:text-slate-300 font-medium">{benefit}</span>
                 </motion.div>
               ))}
             </div>
@@ -370,12 +370,12 @@ export default function EmployerRegisterPage() {
 
           {/* Right Side - Registration Form */}
           <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-            <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">
+            <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl shadow-2xl rounded-2xl">
+              <CardHeader className="text-center pb-6 pt-8">
+                <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
                   Create Employer Account
                 </CardTitle>
-                <p className="text-slate-600 dark:text-slate-300 mt-2">Start hiring top talent in minutes</p>
+                <p className="text-slate-600 dark:text-slate-300 mt-2 text-lg">Start hiring top talent in minutes</p>
               </CardHeader>
 
                              <CardContent className="space-y-4">
@@ -390,19 +390,24 @@ export default function EmployerRegisterPage() {
                   <Label className="text-slate-700 dark:text-slate-300">Join Existing Company</Label>
                   <div className="space-y-2">
                     <Input value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} placeholder="Search companies" className="h-10" />
-                    {companySearch.trim().length >= 2 && (
-                      <div className="border rounded max-h-48 overflow-auto bg-white dark:bg-slate-800">
+                    {companySearch.trim().length >= 2 && companyOptions.length > 0 && (
+                      <div className="border rounded max-h-48 overflow-auto bg-white dark:bg-slate-800 shadow-lg">
                         {loadingCompanies ? (
-                          <div className="p-2 text-sm text-slate-500">Searching companies...</div>
+                          <div className="p-3 text-sm text-slate-500 flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                            Searching companies...
+                          </div>
                         ) : companyOptions.map((c) => (
-                          <button key={c.id} type="button" onClick={() => handleInputChange('companyId', c.id)} className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${formData.companyId === c.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                            <div className="font-medium">{c.name}</div>
-                            <div className="text-xs text-slate-500">{c.industry} • {c.companySize}</div>
+                          <button key={c.id} type="button" onClick={() => handleInputChange('companyId', c.id)} className={`w-full text-left px-3 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 ${formData.companyId === c.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                            <div className="font-medium text-slate-900 dark:text-white">{c.name}</div>
+                            <div className="text-xs text-slate-500 mt-1">{c.industry} • {c.companySize}</div>
                           </button>
                         ))}
-                        {(!loadingCompanies && companyOptions.length === 0 && companySearch.trim().length >= 2) && (
-                          <div className="p-2 text-sm text-slate-500">No companies found matching "{companySearch}"</div>
-                        )}
+                      </div>
+                    )}
+                    {companySearch.trim().length >= 2 && !loadingCompanies && companyOptions.length === 0 && (
+                      <div className="border rounded p-3 text-sm text-slate-500 bg-white dark:bg-slate-800 shadow-lg">
+                        No companies found matching "{companySearch}"
                       </div>
                     )}
                     {companySearch.trim().length > 0 && companySearch.trim().length < 2 && (
