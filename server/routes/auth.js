@@ -88,8 +88,10 @@ const validateEmployerSignup = [
     .withMessage('Invalid company size'),
   body('industry')
     .optional({ checkFalsy: true })
-    .isIn(['technology', 'finance', 'healthcare', 'education', 'retail', 'manufacturing', 'consulting', 'other'])
-    .withMessage('Invalid industry'),
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Industry must be between 2 and 100 characters'),
   body('region')
     .optional()
     .isIn(['india', 'gulf', 'other'])
