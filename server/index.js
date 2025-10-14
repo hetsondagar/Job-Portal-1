@@ -56,8 +56,15 @@ const interviewsRoutes = require('./routes/interviews');
 const hotVacanciesRoutes = require('./routes/hot-vacancies');
 const featuredJobsRoutes = require('./routes/featured-jobs');
 const usageRoutes = require('./routes/usage');
-// Test notifications routes (mounted only in non-production)
-// Note: test-notifications route was removed during cleanup
+// Test notifications routes (for development and testing)
+let testNotificationsRoutes = null;
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    testNotificationsRoutes = require('./routes/test-notifications');
+  } catch (e) {
+    console.warn('⚠️ Test notifications routes not available:', e?.message || e);
+  }
+}
 const gulfJobsRoutes = require('./routes/gulf-jobs');
 const salaryRoutes = require('./routes/salary');
 const agencyRoutes = require('./routes/agency');
@@ -317,7 +324,11 @@ app.use('/api/jobs', jobsRoutes);
 app.use('/api/requirements', requirementsRoutes);
 app.use('/api/job-alerts', jobAlertsRoutes);
 app.use('/api/agency', agencyRoutes);
-// Test notifications routes removed during cleanup
+// Mount test routes for notifications in non-production
+if (testNotificationsRoutes) {
+  app.use('/api/test/notifications', testNotificationsRoutes);
+  console.log('🔔 Test notification routes mounted at /api/test/notifications');
+}
 app.use('/api/job-templates', jobTemplatesRoutes);
 app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
