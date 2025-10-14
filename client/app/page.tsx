@@ -897,7 +897,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="mb-6 order-2 lg:order-1 text-center lg:text-left px-2 sm:px-4 lg:px-0 lg:pr-8"
+            className="mb-6 order-2 lg:order-1 text-center lg:text-left px-2 sm:px-4 lg:px-0 lg:pr-8 overflow-visible"
           >
             <AnimatePresence mode="wait">
               <motion.h1
@@ -906,7 +906,7 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 1.05 }}
                 transition={{ duration: 0.6, ease: "easeInOut" }}
-                className={`serif-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mb-4 heading-gradient drop-shadow-lg leading-normal`}
+                className={`serif-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mb-4 heading-gradient drop-shadow-lg leading-[1.35] pb-2 tracking-tight text-[#1E1E2F] dark:text-white inline-block`}
               >
                 {heroTexts[currentTextIndex]}
               </motion.h1>

@@ -273,12 +273,19 @@ export default function EmployerLoginPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-200/40 via-cyan-200/30 to-indigo-200/40 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Enhanced Navbar */}
       <EmployerAuthNavbar variant="login" />
 
-      <div className="flex items-center justify-center p-4 pt-8">
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/8 to-cyan-300/8 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-violet-300/8 to-purple-300/8 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-blue-300/6 to-indigo-300/6 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="relative flex items-center justify-center p-4 pt-8 min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-center">
           {/* Left Side - Features & Hero */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -286,10 +293,17 @@ export default function EmployerLoginPage() {
             transition={{ duration: 0.8 }}
             className="space-y-8"
           >
-            <div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">Employer Portal</h1>
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8">
-                Access your recruiter dashboard and manage your hiring process
+   
+          <div className="px-2 sm:px-4 lg:px-0 lg:pr-16 overflow-visible">
+            <h1
+              className="serif-heading text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl 
+               font-bold heading-gradient mb-6 leading-[1.35] pb-2 tracking-tight 
+               text-[#1E1E2F] dark:text-white inline-block"
+              >
+              Employer Portal
+             </h1>
+              <p className="text-base sm:text-lg lg:text-xl text-[#5B5B6A] dark:text-slate-300 mb-8 max-w-lg leading-relaxed font-medium">
+                Access your recruiter dashboard and manage your hiring process with our advanced tools
               </p>
             </div>
 
@@ -300,311 +314,337 @@ export default function EmployerLoginPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-                  className="flex items-start space-x-4"
+                  className="flex items-start space-x-4 group"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-300 to-cyan-300 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                     <feature.icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h3>
-                    <p className="text-slate-600 dark:text-slate-300">{feature.description}</p>
+                    <h3 className="font-semibold text-[#1E1E2F] dark:text-white mb-2">{feature.title}</h3>
+                    <p className="text-[#5B5B6A] dark:text-slate-300 leading-relaxed">{feature.description}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
-              <h3 className="text-xl font-bold mb-2">Trusted by 50K+ Companies</h3>
-              <p className="text-blue-100">
+            <div className="glass-20 soft-glow rounded-3xl p-6">
+              <h3 className="text-xl font-semibold text-[#1E1E2F] dark:text-white mb-2">Trusted by 50K+ Companies</h3>
+              <p className="text-[#5B5B6A] dark:text-slate-300 leading-relaxed">
                 From startups to Fortune 500 companies, employers trust us to find the best talent
               </p>
             </div>
           </motion.div>
 
           {/* Right Side - Login Form */}
-          <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-            <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Employer Sign In</CardTitle>
-                <p className="text-slate-600 dark:text-slate-300 mt-2">Access your recruiter dashboard</p>
-              </CardHeader>
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }} 
+            animate={{ opacity: 1, x: 0 }} 
+            transition={{ duration: 0.8 }}
+            className="relative"
+          >
+            <div className="bg-white/50 backdrop-blur-xl border border-white/40 rounded-3xl p-8 max-w-lg mx-auto shadow-2xl">
+              <div className="text-center mb-8">
+                <h2 className="serif-heading text-3xl font-bold text-[#1E1E2F] dark:text-white mb-2">Employer Sign In</h2>
+                <p className="text-[#5B5B6A] dark:text-slate-300 leading-relaxed">Access your recruiter dashboard</p>
+              </div>
 
-              <CardContent className="space-y-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
-                      Company Email
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your company email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                        required
-                      />
-                    </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-[#1E1E2F] dark:text-slate-300 font-semibold">
+                    Company Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#5B5B6A] w-5 h-5" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your company email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-12 border-white/30 bg-white/50 backdrop-blur-md focus:border-blue-500 focus:bg-white/60 transition-all duration-300 rounded-xl"
+                      required
+                    />
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 pr-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="remember"
-                        checked={rememberMe}
-                        onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                      />
-                      <Label htmlFor="remember" className="text-sm text-slate-600 dark:text-slate-400">
-                        Keep me signed in
-                      </Label>
-                    </div>
-                    <Link
-                      href="/employer-forgot-password"
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-[#1E1E2F] dark:text-slate-300 font-semibold">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#5B5B6A] w-5 h-5" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 h-12 border-white/30 bg-white/50 backdrop-blur-md focus:border-blue-500 focus:bg-white/60 transition-all duration-300 rounded-xl"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#5B5B6A] hover:text-[#1E1E2F] transition-colors duration-300"
                     >
-                      Forgot password?
-                    </Link>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                    disabled={loading}
-                  >
-                    {loading ? 'Signing In...' : 'Sign In to Dashboard'}
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-
-                  {error && (
-                    <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-                      {error}
-                    </div>
-                  )}
-                </form>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator className="w-full" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">Or continue with</span>
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600"
-                    onClick={() => handleOAuthLogin('google')}
-                    disabled={oauthLoading === 'google'}
-                  >
-                    {oauthLoading === 'google' ? (
-                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path
-                          fill="currentColor"
-                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                        />
-                        <path
-                          fill="currentColor"
-                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        />
-                        <path
-                          fill="currentColor"
-                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                        />
-                        <path
-                          fill="currentColor"
-                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                        />
-                      </svg>
-                    )}
-                    Google
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600"
-                    onClick={() => handleOAuthLogin('facebook')}
-                    disabled={oauthLoading === 'facebook'}
-                  >
-                    {oauthLoading === 'facebook' ? (
-                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                    )}
-                    Facebook
-                  </Button>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator className="w-full" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    />
+                    <Label htmlFor="remember" className="text-sm text-[#5B5B6A] dark:text-slate-400">
+                      Keep me signed in
+                    </Label>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">New to JobPortal?</span>
-                  </div>
-                </div>
-
-                <div className="text-center space-y-4">
-                  <Link href="/employer-register">
-                    <Button variant="outline" className="w-full h-12 bg-white dark:bg-slate-700">
-                      Create Employer Account
-                    </Button>
+                  <Link
+                    href="/employer-forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300"
+                  >
+                    Forgot password?
                   </Link>
-
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    Need to link to an existing company?{' '}
-                    <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
-                      Join company
-                    </Link>
-                  </div>
-
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    Need help? Contact our{" "}
-                    <Link href="/sales-support" className="text-blue-600 hover:text-blue-700 font-medium">
-                      sales team
-                    </Link>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 btn-shimmer btn-ripple text-base font-semibold rounded-xl"
+                  disabled={loading}
+                >
+                  {loading ? 'Signing In...' : 'Sign In to Dashboard'}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+
+                {error && (
+                  <div className="text-red-600 text-sm text-center bg-red-50/80 dark:bg-red-900/20 p-3 rounded-xl backdrop-blur-sm">
+                    {error}
+                  </div>
+                )}
+              </form>
+
+              <div className="relative mt-6">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white/50 backdrop-blur-md px-2 text-[#5B5B6A]">Or continue with</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 bg-white/50 backdrop-blur-md hover:bg-white/60 border-white/30 transition-all duration-300 rounded-xl"
+                  onClick={() => handleOAuthLogin('google')}
+                  disabled={oauthLoading === 'google'}
+                >
+                  {oauthLoading === 'google' ? (
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                      <path
+                        fill="currentColor"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="currentColor"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="currentColor"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      />
+                      <path
+                        fill="currentColor"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      />
+                    </svg>
+                  )}
+                  Google
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 bg-white/50 backdrop-blur-md hover:bg-white/60 border-white/30 transition-all duration-300 rounded-xl"
+                  onClick={() => handleOAuthLogin('facebook')}
+                  disabled={oauthLoading === 'facebook'}
+                >
+                  {oauthLoading === 'facebook' ? (
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  )}
+                  Facebook
+                </Button>
+              </div>
+
+              <div className="relative mt-6">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white/50 backdrop-blur-md px-2 text-[#5B5B6A]">New to JobPortal?</span>
+                </div>
+              </div>
+
+              <div className="text-center space-y-4 mt-6">
+                <Link href="/employer-register">
+                  <Button variant="outline" className="w-full h-12 bg-white/60 backdrop-blur-sm hover:bg-white/80 border-white/30 transition-all duration-300 rounded-xl">
+                    Create Employer Account
+                  </Button>
+                </Link>
+
+                <div className="text-sm text-[#5B5B6A] dark:text-slate-400">
+                  Need to link to an existing company?{' '}
+                  <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300">
+                    Join company
+                  </Link>
+                </div>
+
+                <div className="text-sm text-[#5B5B6A] dark:text-slate-400">
+                  Need help? Contact our{" "}
+                  <Link href="/sales-support" className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300">
+                    sales team
+                  </Link>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </div>
 
       {/* Premium Services Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Premium Hiring Solutions</h2>
-          <p className="text-xl text-slate-600 dark:text-slate-300">
-            Supercharge your hiring with our advanced tools and services
-          </p>
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-12 left-12 w-36 h-36 bg-gradient-to-br from-indigo-300/6 to-purple-300/6 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-12 right-12 w-40 h-40 bg-gradient-to-br from-blue-300/6 to-cyan-300/6 rounded-full blur-3xl animate-pulse delay-500"></div>
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-br from-violet-300/4 to-pink-300/4 rounded-full blur-2xl animate-pulse delay-1000"></div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {premiumServices.map((service, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-            >
-              <Card className="h-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-slate-200/50 dark:border-slate-700/50 hover:shadow-xl transition-all duration-300">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mb-4">
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="serif-heading text-4xl font-bold text-[#1E1E2F] dark:text-white mb-4">Premium Hiring Solutions</h2>
+            <p className="text-base sm:text-lg lg:text-xl text-[#5B5B6A] dark:text-slate-300 max-w-3xl mx-auto leading-relaxed font-medium">
+              Supercharge your hiring with our advanced tools and services
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {premiumServices.map((service, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+                className="group"
+              >
+                <div className="h-full bg-white/50 backdrop-blur-xl border border-white/40 rounded-3xl p-6 hover:-translate-y-2 hover:shadow-xl transition-all duration-300">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-300 to-cyan-300 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                     <service.icon className="w-6 h-6 text-white" />
                   </div>
-                  <CardTitle className="text-xl text-slate-900 dark:text-white">{service.title}</CardTitle>
-                  <p className="text-slate-600 dark:text-slate-300">{service.description}</p>
-                </CardHeader>
-                <CardContent>
+                  <h3 className="text-xl font-semibold text-[#1E1E2F] dark:text-white mb-2">{service.title}</h3>
+                  <p className="text-[#5B5B6A] dark:text-slate-300 mb-4 leading-relaxed">{service.description}</p>
+                  
                   <ul className="space-y-2 mb-4">
                     {service.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center text-sm text-slate-600 dark:text-slate-300">
+                      <li key={featureIndex} className="flex items-center text-sm text-[#5B5B6A] dark:text-slate-300">
                         <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
                         {feature}
                       </li>
                     ))}
                   </ul>
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">{service.price}</div>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  
+                  <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400 mb-4">{service.price}</div>
+                  <Button className="w-full btn-shimmer btn-ripple rounded-xl font-semibold">
                     Learn More
                   </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* FAQ Section */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Frequently Asked Questions</h2>
-          <p className="text-xl text-slate-600 dark:text-slate-300">
-            Get answers to common questions about our employer services
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <Card
-              key={index}
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-slate-200/50 dark:border-slate-700/50"
-            >
-              <Collapsible
-                open={expandedFaq === index}
-                onOpenChange={() => setExpandedFaq(expandedFaq === index ? null : index)}
-              >
-                <CollapsibleTrigger className="w-full p-6 text-left">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{faq.question}</h3>
-                    {expandedFaq === index ? (
-                      <ChevronUp className="w-5 h-5 text-slate-500" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-slate-500" />
-                    )}
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 pb-6">
-                  <p className="text-slate-600 dark:text-slate-300">{faq.answer}</p>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <p className="text-slate-600 dark:text-slate-300 mb-4">Still have questions? We're here to help!</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="outline" className="flex items-center bg-transparent">
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Live Chat
-            </Button>
-            <Button variant="outline" className="flex items-center bg-transparent">
-              <Phone className="w-4 h-4 mr-2" />
-              Call 1800-102-2558
-            </Button>
-            <Button variant="outline" className="flex items-center bg-transparent">
-              <HelpCircle className="w-4 h-4 mr-2" />
-              Help Center
-            </Button>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-emerald-300/6 to-teal-300/6 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-green-300/6 to-emerald-300/6 rounded-full blur-3xl animate-pulse delay-500"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-teal-300/4 to-cyan-300/4 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        <div className="relative max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="serif-heading text-4xl font-bold text-[#1E1E2F] dark:text-white mb-4">Frequently Asked Questions</h2>
+            <p className="text-base sm:text-lg lg:text-xl text-[#5B5B6A] dark:text-slate-300 max-w-3xl mx-auto leading-relaxed font-medium">
+              Get answers to common questions about our employer services
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+              >
+                <div className="bg-white/50 backdrop-blur-xl border border-white/40 rounded-3xl overflow-hidden hover:shadow-lg transition-all duration-300">
+                  <Collapsible
+                    open={expandedFaq === index}
+                    onOpenChange={() => setExpandedFaq(expandedFaq === index ? null : index)}
+                  >
+                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-white/70 transition-colors duration-300">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-[#1E1E2F] dark:text-white">{faq.question}</h3>
+                        {expandedFaq === index ? (
+                          <ChevronUp className="w-5 h-5 text-[#5B5B6A]" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-[#5B5B6A]" />
+                        )}
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-6 pb-6">
+                      <p className="text-[#5B5B6A] dark:text-slate-300 leading-relaxed">{faq.answer}</p>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-[#5B5B6A] dark:text-slate-300 mb-6 leading-relaxed">Still have questions? We're here to help!</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button variant="outline" className="flex items-center bg-white/60 backdrop-blur-sm hover:bg-white/80 border-white/30 transition-all duration-300 rounded-xl font-semibold">
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Live Chat
+              </Button>
+              <Button variant="outline" className="flex items-center bg-white/60 backdrop-blur-sm hover:bg-white/80 border-white/30 transition-all duration-300 rounded-xl font-semibold">
+                <Phone className="w-4 h-4 mr-2" />
+                Call 1800-102-2558
+              </Button>
+              <Button variant="outline" className="flex items-center bg-white/60 backdrop-blur-sm hover:bg-white/80 border-white/30 transition-all duration-300 rounded-xl font-semibold">
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Help Center
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Enhanced Footer */}
       <EmployerAuthFooter />
