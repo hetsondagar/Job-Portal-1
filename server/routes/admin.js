@@ -12,6 +12,7 @@ const {
   Education,
   CompanyPhoto,
   CompanyReview,
+  CompanyFollow,
   Subscription,
   SubscriptionPlan,
   Payment,
@@ -21,6 +22,7 @@ const {
   Requirement
 } = require('../config');
 const { Op, Sequelize } = require('sequelize');
+const { sequelize } = require('../config/sequelize');
 const { authenticateToken } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/adminAuth');
 
@@ -973,7 +975,19 @@ router.get('/companies', async (req, res) => {
     }
 
     if (verification && verification !== 'all') {
-      whereClause.isVerified = verification === 'verified';
+      // Support both old isVerified and new verificationStatus
+      if (verification === 'verified' || verification === 'approved') {
+        whereClause.verificationStatus = 'verified';
+      } else if (verification === 'pending') {
+        whereClause.verificationStatus = 'pending';
+      } else if (verification === 'rejected') {
+        whereClause.verificationStatus = 'rejected';
+      } else if (verification === 'unverified') {
+        whereClause.verificationStatus = 'unverified';
+      }
+    } else {
+      // By default, show only verified companies in the list
+      whereClause.verificationStatus = 'verified';
     }
 
     if (search) {
@@ -1136,24 +1150,79 @@ router.patch('/companies/:id/verification', async (req, res) => {
 
 // Delete company
 router.delete('/companies/:id', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
 
-    const company = await Company.findByPk(id);
+    const company = await Company.findByPk(id, { transaction });
     if (!company) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Company not found'
       });
     }
 
-    await company.destroy();
+    // Get all company users to delete their jobs
+    const companyUsers = await User.findAll({
+      where: { company_id: id },
+      transaction
+    });
+    const userIds = companyUsers.map(u => u.id);
+
+    // Delete jobs by employerId (user foreign key)
+    if (userIds.length > 0) {
+      await Job.destroy({ 
+        where: { employerId: userIds },
+        transaction 
+      });
+    }
+
+    // Delete company jobs (by companyId)
+    await Job.destroy({ 
+      where: { companyId: id },
+      transaction 
+    });
+
+    // Delete job applications
+    await JobApplication.destroy({ 
+      where: { companyId: id },
+      transaction 
+    });
+
+    // Delete company follows
+    await CompanyFollow.destroy({ 
+      where: { companyId: id },
+      transaction 
+    });
+
+    // Delete company photos
+    const { CompanyPhoto } = require('../models');
+    if (CompanyPhoto) {
+      await CompanyPhoto.destroy({ 
+        where: { companyId: id },
+        transaction 
+      });
+    }
+
+    // Delete company users (after jobs are deleted)
+    await User.destroy({ 
+      where: { company_id: id },
+      transaction 
+    });
+
+    // Finally delete the company
+    await company.destroy({ transaction });
+
+    await transaction.commit();
 
     res.json({
       success: true,
-      message: 'Company deleted successfully'
+      message: 'Company and all related data deleted successfully'
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error deleting company:', error);
     res.status(500).json({
       success: false,

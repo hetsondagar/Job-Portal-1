@@ -46,8 +46,16 @@ const upload = multer({
  */
 router.post('/submit', authenticateToken, async (req, res) => {
   try {
-    const { documents, companyInfo, additionalNotes } = req.body;
+    const { documents, companyInfo, additionalNotes, gstNumber, panNumber } = req.body;
     const userId = req.user.id;
+
+    // Validate documents
+    if (!documents || documents.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one document is required for verification'
+      });
+    }
 
     // Get user information
     const user = await User.findByPk(userId);
@@ -70,10 +78,25 @@ router.post('/submit', authenticateToken, async (req, res) => {
       });
     }
 
+    // Prepare comprehensive verification metadata
+    const verificationMetadata = {
+      documents: documents,
+      gstNumber: gstNumber || null,
+      panNumber: panNumber || null,
+      additionalNotes: additionalNotes || null,
+      submittedBy: {
+        userId: userId,
+        userName: `${user.first_name} ${user.last_name}`,
+        userEmail: user.email,
+        userPhone: user.phone
+      },
+      submittedAt: new Date().toISOString()
+    };
+
     // Update company verification status and documents
     await company.update({
       verificationStatus: 'pending',
-      verificationDocuments: documents,
+      verificationDocuments: verificationMetadata,
       companyStatus: 'pending_approval'
     });
 
@@ -102,17 +125,20 @@ router.post('/submit', authenticateToken, async (req, res) => {
     for (const admin of superAdmins) {
       await Notification.create({
         userId: admin.id,
-        type: 'system',
+        type: 'verification_request',
         title: 'New Employer Verification Request',
-        message: `New employer "${user.first_name} ${user.last_name}" from company "${company.name}" has submitted verification documents and is waiting for approval.`,
+        message: `New employer "${user.first_name} ${user.last_name}" from company "${company.name}" has submitted verification documents. Review the documents including GST${gstNumber ? ': ' + gstNumber : ''}, PAN${panNumber ? ': ' + panNumber : ''}, and additional notes to approve or reject the registration.`,
         priority: 'high',
-        actionUrl: `/admin/verification/${company.id}`,
+        actionUrl: `/admin/dashboard/verifications`,
         actionText: 'Review Documents',
         icon: 'building',
         metadata: {
           companyId: company.id,
           userId: userId,
-          verificationType: 'employer_registration'
+          verificationType: 'employer_registration',
+          gstNumber: gstNumber,
+          panNumber: panNumber,
+          documentCount: documents.length
         }
       });
     }
