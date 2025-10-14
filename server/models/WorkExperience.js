@@ -10,6 +10,7 @@ const WorkExperience = sequelize.define('WorkExperience', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -17,11 +18,13 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   companyName: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'company'
   },
   jobTitle: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'title'
   },
   department: {
     type: DataTypes.STRING,
@@ -33,15 +36,18 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: false,
+    field: 'start_date'
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date'
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_current'
   },
   description: {
     type: DataTypes.TEXT,
@@ -70,12 +76,14 @@ const WorkExperience = sequelize.define('WorkExperience', {
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'salary_currency'
   },
   employmentType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: true,
-    defaultValue: 'full-time'
+    defaultValue: 'full-time',
+    field: 'employment_type'
   },
   industry: {
     type: DataTypes.STRING,
@@ -83,7 +91,8 @@ const WorkExperience = sequelize.define('WorkExperience', {
   },
   companySize: {
     type: DataTypes.ENUM('1-50', '51-200', '201-500', '500-1000', '1000+'),
-    allowNull: true
+    allowNull: true,
+    field: 'company_size'
   },
   isVerified: {
     type: DataTypes.BOOLEAN,

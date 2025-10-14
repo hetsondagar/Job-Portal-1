@@ -37,6 +37,22 @@ router.get('/', authenticateToken, async (req, res) => {
       ];
     }
     const list = await JobTemplate.findAll({
+      attributes: [
+        'id',
+        'companyId',
+        'name',
+        'description',
+        'category',
+        [require('sequelize').col('template_data'), 'templateData'],
+        'tags',
+        [require('sequelize').col('is_public'), 'isPublic'],
+        [require('sequelize').col('created_by'), 'createdBy'],
+        [require('sequelize').col('last_used_at'), 'lastUsedAt'],
+        [require('sequelize').col('usage_count'), 'usageCount'],
+        'version',
+        [require('sequelize').col('created_at'), 'createdAt'],
+        [require('sequelize').col('updated_at'), 'updatedAt']
+      ],
       where: {
         ...where,
         [Op.or]: [
@@ -44,7 +60,7 @@ router.get('/', authenticateToken, async (req, res) => {
           { isPublic: true }
         ]
       },
-      order: [['updatedAt', 'DESC']]
+      order: [[require('sequelize').col('updated_at'), 'DESC']]
     });
     res.json({ success: true, data: list });
   } catch (error) {

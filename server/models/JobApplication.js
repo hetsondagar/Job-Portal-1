@@ -20,7 +20,7 @@ const JobApplication = sequelize.define('JobApplication', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'user_id',
+    field: 'applicant_id',
     references: {
       model: 'users',
       key: 'id'

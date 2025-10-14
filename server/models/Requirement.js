@@ -18,6 +18,7 @@ const Requirement = sequelize.define('Requirement', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -26,151 +27,104 @@ const Requirement = sequelize.define('Requirement', {
   createdBy: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'posted_by',
     references: {
       model: 'users',
       key: 'id'
     }
   },
-  experience: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
+  experience: { type: DataTypes.VIRTUAL },
   experienceMin: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    field: 'experience_min'
   },
   experienceMax: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    field: 'experience_max'
   },
-  salary: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
+  salary: { type: DataTypes.VIRTUAL },
   salaryMin: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'salary_min'
   },
   salaryMax: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'salary_max'
   },
   currency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'salary_currency'
   },
-  jobType: {
-    type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
-    allowNull: false,
-    defaultValue: 'full-time',
-  },
+  jobType: { type: DataTypes.VIRTUAL },
   skills: {
     type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    field: 'required_skills'
   },
   keySkills: {
     type: DataTypes.JSONB,
     defaultValue: [],
+    field: 'preferred_skills'
   },
-  education: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
+  education: { type: DataTypes.VIRTUAL },
   validTill: {
     type: DataTypes.DATE,
     allowNull: true,
+    field: 'deadline'
   },
-  noticePeriod: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
+  noticePeriod: { type: DataTypes.VIRTUAL },
   remoteWork: {
     type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
     allowNull: true,
     defaultValue: 'on-site',
+    field: 'location_type'
   },
-  travelRequired: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
-  shiftTiming: {
-    type: DataTypes.ENUM('day', 'night', 'rotational', 'flexible'),
-    allowNull: true,
-    defaultValue: 'day',
-  },
-  benefits: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  candidateDesignations: {
-    type: DataTypes.JSONB,
-    defaultValue: [],
-  },
-  candidateLocations: {
-    type: DataTypes.JSONB,
-    defaultValue: [],
-  },
-  includeWillingToRelocate: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
-  currentSalaryMin: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true,
-  },
-  currentSalaryMax: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true,
-  },
-  includeNotMentioned: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
+  travelRequired: { type: DataTypes.VIRTUAL },
+  shiftTiming: { type: DataTypes.VIRTUAL },
+  benefits: { type: DataTypes.VIRTUAL },
+  candidateDesignations: { type: DataTypes.VIRTUAL },
+  candidateLocations: { type: DataTypes.VIRTUAL },
+  includeWillingToRelocate: { type: DataTypes.VIRTUAL },
+  currentSalaryMin: { type: DataTypes.VIRTUAL },
+  currentSalaryMax: { type: DataTypes.VIRTUAL },
+  includeNotMentioned: { type: DataTypes.VIRTUAL },
   status: {
-    type: DataTypes.ENUM('draft', 'active', 'paused', 'closed'),
+    type: DataTypes.ENUM('draft', 'active', 'paused', 'closed', 'filled'),
     allowNull: false,
     defaultValue: 'draft'
   },
-  isUrgent: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
-  isFeatured: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
+  isUrgent: { type: DataTypes.VIRTUAL },
+  isFeatured: { type: DataTypes.VIRTUAL },
   views: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'view_count'
   },
-  matches: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
+  matches: { type: DataTypes.VIRTUAL },
   applications: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'application_count'
   },
   publishedAt: {
     type: DataTypes.DATE,
     allowNull: true,
+    field: 'published_at'
   },
-  closedAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-  },
-  tags: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  }
+  closedAt: { type: DataTypes.VIRTUAL },
+  tags: { type: DataTypes.VIRTUAL },
+  metadata: { type: DataTypes.VIRTUAL }
 }, {
   tableName: 'requirements',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   hooks: {
     beforeCreate: async (requirement) => {
       if (requirement.status === 'active' && !requirement.publishedAt) {

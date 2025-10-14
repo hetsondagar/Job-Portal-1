@@ -10,6 +10,7 @@ const Interview = sequelize.define('Interview', {
   jobApplicationId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'job_application_id',
     references: {
       model: 'job_applications',
       key: 'id'
@@ -18,6 +19,7 @@ const Interview = sequelize.define('Interview', {
   employerId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'employer_id',
     references: {
       model: 'users',
       key: 'id'
@@ -26,6 +28,7 @@ const Interview = sequelize.define('Interview', {
   candidateId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'candidate_id',
     references: {
       model: 'users',
       key: 'id'
@@ -34,6 +37,7 @@ const Interview = sequelize.define('Interview', {
   jobId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'job_id',
     references: {
       model: 'jobs',
       key: 'id'
@@ -50,7 +54,8 @@ const Interview = sequelize.define('Interview', {
   interviewType: {
     type: DataTypes.ENUM('phone', 'video', 'in_person', 'technical', 'hr', 'final'),
     allowNull: false,
-    defaultValue: 'phone'
+    defaultValue: 'phone',
+    field: 'interview_type'
   },
   status: {
     type: DataTypes.ENUM('scheduled', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled', 'in_progress', 'no_show'),
@@ -59,7 +64,8 @@ const Interview = sequelize.define('Interview', {
   },
   scheduledAt: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    field: 'scheduled_at'
   },
   duration: {
     type: DataTypes.INTEGER, // in minutes
@@ -77,11 +83,13 @@ const Interview = sequelize.define('Interview', {
   },
   meetingLink: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'meeting_link'
   },
   meetingPassword: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'meeting_password'
   },
   notes: {
     type: DataTypes.TEXT,
@@ -117,19 +125,23 @@ const Interview = sequelize.define('Interview', {
   },
   nextRoundDetails: {
     type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'next_round_details'
   },
   reminderSent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'reminder_sent'
   },
   reminderSentAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'reminder_sent_at'
   },
   cancelledBy: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'cancelled_by',
     references: {
       model: 'users',
       key: 'id'
@@ -137,11 +149,13 @@ const Interview = sequelize.define('Interview', {
   },
   cancelledAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'cancelled_at'
   },
   cancellationReason: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'cancellation_reason'
   },
   metadata: {
     type: DataTypes.JSONB,
@@ -149,11 +163,13 @@ const Interview = sequelize.define('Interview', {
   },
   createdAt: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    field: 'created_at'
   },
   updatedAt: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    field: 'updated_at'
   }
 }, {
   sequelize,
@@ -161,16 +177,16 @@ const Interview = sequelize.define('Interview', {
   tableName: 'interviews',
   indexes: [
     {
-      fields: ['jobApplicationId']
+      fields: ['job_application_id']
     },
     {
-      fields: ['employerId']
+      fields: ['employer_id']
     },
     {
-      fields: ['candidateId']
+      fields: ['candidate_id']
     },
     {
-      fields: ['jobId']
+      fields: ['job_id']
     },
     {
       fields: ['status']

@@ -100,13 +100,13 @@ const JobAlert = sequelize.define('JobAlert', {
     type: DataTypes.STRING,
     allowNull: true,
     defaultValue: 'INR',
-    field: 'currency'
+    field: 'salary_currency'
   },
   remoteWork: {
-    type: DataTypes.ENUM('any', 'remote', 'on-site', 'hybrid'),
+    type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: 'any',
-    field: 'remote_work'
+    defaultValue: [],
+    field: 'location_type'
   },
   nextSendAt: {
     type: DataTypes.DATE,

@@ -94,7 +94,7 @@ class EmailService {
   }
 
   async sendVerificationEmail(email, token) {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app'}/verify-email?token=${token}`;
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
     
     return this.sendEmail({
       to: email,
@@ -114,7 +114,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(email, token) {
-    const resetUrl = `${process.env.FRONTEND_URL || 'https://job-portal-nine-rouge.vercel.app'}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
     return this.sendEmail({
       to: email,

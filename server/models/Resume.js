@@ -23,67 +23,64 @@ const Resume = sequelize.define('Resume', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
     }
   },
   objective: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: DataTypes.VIRTUAL
   },
   languages: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   certifications: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   projects: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   achievements: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    type: DataTypes.VIRTUAL
   },
   isDefault: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_primary'
   },
   isPublic: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: true
+    defaultValue: true,
+    field: 'is_public'
   },
   views: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'view_count'
   },
   downloads: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'download_count'
   },
   lastUpdated: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    field: 'updated_at'
   },
   metadata: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: {}
+    type: DataTypes.VIRTUAL
   }
 }, {
   tableName: 'resumes',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   underscored: false,
   hooks: {
     beforeCreate: async (resume) => {
@@ -159,15 +156,18 @@ const Resume = sequelize.define('Resume', {
 
 // Instance methods
 Resume.prototype.getSkillsString = function() {
-  return this.skills.join(', ');
+  const skills = Array.isArray(this.skills) ? this.skills : [];
+  return skills.join(', ');
 };
 
 Resume.prototype.getLanguagesString = function() {
-  return this.languages.map(lang => `${lang.name} (${lang.proficiency})`).join(', ');
+  const languages = Array.isArray(this.languages) ? this.languages : [];
+  return languages.map(lang => `${lang.name} (${lang.proficiency})`).join(', ');
 };
 
 Resume.prototype.getCertificationsString = function() {
-  return this.certifications.map(cert => `${cert.name} - ${cert.issuer}`).join(', ');
+  const certifications = Array.isArray(this.certifications) ? this.certifications : [];
+  return certifications.map(cert => `${cert.name} - ${cert.issuer}`).join(', ');
 };
 
 Resume.prototype.getTotalExperience = function() {

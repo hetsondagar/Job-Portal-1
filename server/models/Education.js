@@ -10,6 +10,7 @@ const Education = sequelize.define('Education', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -25,19 +26,23 @@ const Education = sequelize.define('Education', {
   },
   fieldOfStudy: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'field_of_study'
   },
   startDate: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: false,
+    field: 'start_date'
   },
   endDate: {
     type: DataTypes.DATEONLY,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date'
   },
   isCurrent: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_current'
   },
   grade: {
     type: DataTypes.STRING,
@@ -53,7 +58,8 @@ const Education = sequelize.define('Education', {
   },
   cgpa: {
     type: DataTypes.DECIMAL(3, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'gpa'
   },
   description: {
     type: DataTypes.TEXT,
@@ -61,7 +67,8 @@ const Education = sequelize.define('Education', {
   },
   activities: {
     type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    field: 'relevant_courses'
   },
   achievements: {
     type: DataTypes.JSONB,
@@ -73,11 +80,13 @@ const Education = sequelize.define('Education', {
   },
   educationType: {
     type: DataTypes.ENUM('bachelor', 'master', 'phd', 'diploma', 'certification', 'high-school', 'other'),
-    allowNull: true
+    allowNull: true,
+    field: 'education_type'
   },
   isVerified: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_verified'
   },
   verificationDate: {
     type: DataTypes.DATE,
