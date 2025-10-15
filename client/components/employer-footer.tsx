@@ -3,7 +3,7 @@ import { Building2, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram,
 
 export function EmployerFooter() {
   return (
-    <footer className="bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 border-t border-slate-200 dark:border-gray-700 mt-12">
+    <footer className="bg-gradient-to-br from-emerald-50 via-lime-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900/20 border-t border-white/30 backdrop-blur-xl mt-12 rounded-t-3xl shadow-[0_-10px_40px_rgba(16,185,129,0.08)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Footer Content */}
@@ -12,15 +12,15 @@ export function EmployerFooter() {
           {/* Brand Section */}
           <div className="space-y-4 lg:col-span-1">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-lime-600 rounded-xl flex items-center justify-center shadow-lg">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-lime-600 bg-clip-text text-transparent">
                 JobPortal
               </span>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-xs">
-              India's #1 job portal connecting employers with top talent. Hire smarter, faster, better.
+              Hire smarter in the Gulf region with translucent, fast and modern tools.
             </p>
             <div className="flex space-x-3">
               <Link href="#" className="w-9 h-9 rounded-lg bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 flex items-center justify-center hover:border-blue-500 hover:text-blue-600 transition-all">
@@ -41,7 +41,7 @@ export function EmployerFooter() {
           {/* Recruiter Solutions */}
           <div className="space-y-4">
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center">
-              <Briefcase className="w-4 h-4 mr-2 text-blue-600" />
+              <Briefcase className="w-4 h-4 mr-2 text-emerald-600" />
               Recruiter Solutions
             </h3>
             <ul className="space-y-2.5">
@@ -81,7 +81,7 @@ export function EmployerFooter() {
           {/* Premium Services */}
           <div className="space-y-4">
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center">
-              <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
+              <TrendingUp className="w-4 h-4 mr-2 text-emerald-600" />
               Premium Services
             </h3>
             <ul className="space-y-2.5">
@@ -121,7 +121,7 @@ export function EmployerFooter() {
           {/* Company Info */}
           <div className="space-y-4">
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center">
-              <Users className="w-4 h-4 mr-2 text-blue-600" />
+              <Users className="w-4 h-4 mr-2 text-emerald-600" />
               Company
             </h3>
             <ul className="space-y-2.5">
@@ -161,7 +161,7 @@ export function EmployerFooter() {
           {/* Legal & Support */}
           <div className="space-y-4">
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center">
-              <Shield className="w-4 h-4 mr-2 text-blue-600" />
+              <Shield className="w-4 h-4 mr-2 text-emerald-600" />
               Legal & Support
             </h3>
             <ul className="space-y-2.5">

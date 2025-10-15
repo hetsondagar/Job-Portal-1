@@ -326,11 +326,20 @@ export default function EmployerRegisterPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <EmployerAuthNavbar variant="register" />
 
-      <div className="flex items-center justify-center p-4 pt-2">
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/8 to-cyan-300/8 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-violet-300/8 to-purple-300/8 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-blue-300/6 to-indigo-300/6 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+
+      <div className="relative flex items-start justify-center p-4 pt-8 min-h-[calc(100vh-80px)] bg-gradient-to-br from-blue-200/40 via-cyan-200/30 to-indigo-200/40">
+        <div className="relative w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-start pt-8">
           {/* Left Side - Benefits */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -339,8 +348,8 @@ export default function EmployerRegisterPage() {
             className="space-y-6"
           >
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">Hire the Best Talent</h1>
-              <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+              <h1 className="serif-heading text-4xl sm:text-5xl md:text-6xl font-bold heading-gradient mb-6 leading-normal">Hire the Best Talent</h1>
+              <p className="text-base sm:text-lg lg:text-xl text-[#5B5B6A] dark:text-slate-300 mb-8 leading-relaxed font-medium">
                 Join 50,000+ companies that trust JobPortal for their hiring needs
               </p>
             </div>
@@ -357,7 +366,7 @@ export default function EmployerRegisterPage() {
                   <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
                     <CheckCircle className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-lg text-slate-700 dark:text-slate-300 font-medium">{benefit}</span>
+                  <span className="text-lg text-[#5B5B6A] dark:text-slate-300 font-semibold">{benefit}</span>
                 </motion.div>
               ))}
             </div>
@@ -372,26 +381,26 @@ export default function EmployerRegisterPage() {
 
           {/* Right Side - Registration Form */}
           <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-            <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl shadow-2xl rounded-2xl">
+            <Card className="border-0 bg-white/50 backdrop-blur-2xl border border-white/30 shadow-2xl rounded-3xl">
               <CardHeader className="text-center pb-6 pt-8">
-                <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
+                <CardTitle className="serif-heading text-3xl font-bold text-[#1E1E2F]">
                   Create Employer Account
                 </CardTitle>
-                <p className="text-slate-600 dark:text-slate-300 mt-2 text-lg">Start hiring top talent in minutes</p>
+                <p className="text-[#5B5B6A] dark:text-slate-300 mt-2 text-lg leading-relaxed">Start hiring top talent in minutes</p>
               </CardHeader>
 
                              <CardContent className="space-y-4">
-                <div className="text-center text-sm text-slate-600 dark:text-slate-300">
+                <div className="text-center text-sm text-[#5B5B6A] dark:text-slate-300">
                   Already have a company in the system?{' '}
-                  <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-medium">
+                  <Link href="/employer-join-company" className="text-blue-600 hover:text-blue-700 font-semibold">
                     Join existing company
                   </Link>
                 </div>
                 {/* Company selection or creation */}
                 <div className="space-y-2">
-                  <Label className="text-slate-700 dark:text-slate-300">Join Existing Company</Label>
+                  <Label className="font-semibold text-[#1E1E2F] dark:text-slate-300">Join Existing Company</Label>
                   <div className="space-y-2">
-                    <Input value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} placeholder="Search companies" className="h-10" />
+                    <Input value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} placeholder="Search companies" className="h-12 border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl" />
                     {companySearch.trim().length >= 2 && companyOptions.length > 0 && (
                       <div className="border rounded max-h-48 overflow-auto bg-white dark:bg-slate-800 shadow-lg">
                         {loadingCompanies ? (
@@ -426,7 +435,7 @@ export default function EmployerRegisterPage() {
 
                 {formData.companyId ? (
                   <div className="space-y-2">
-                    <Label className="text-slate-700 dark:text-slate-300">Your Role</Label>
+                    <Label className="font-semibold text-[#1E1E2F] dark:text-slate-300">Your Role</Label>
                     <Select value={formData.role} onValueChange={(v) => handleInputChange('role', v)}>
                       <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600">
                         <SelectValue placeholder="Select your role" />
@@ -442,7 +451,7 @@ export default function EmployerRegisterPage() {
                   <>
                     {/* Account Type Selection - NEW */}
                   <div className="space-y-2">
-                      <Label className="text-slate-700 dark:text-slate-300 font-semibold">Account Type *</Label>
+                      <Label className="font-semibold text-[#1E1E2F] dark:text-slate-300">Account Type *</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                           type="button"
@@ -479,23 +488,37 @@ export default function EmployerRegisterPage() {
                       
                       {/* Agency Info Banner */}
                       {formData.companyAccountType === "agency" && (
-                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-3">
-                          <h4 className="text-amber-900 dark:text-amber-200 font-medium mb-2 flex items-center">
-                            <span className="mr-2">ℹ️</span>
+                        <div className="bg-amber-100/30 backdrop-blur-xl border border-amber-200/50 rounded-2xl p-6 mt-4 shadow-lg">
+                          <h4 className="text-amber-900 dark:text-amber-200 font-semibold mb-3 flex items-center text-base">
+                            <div className="w-7 h-7 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-white text-xs">ℹ</span>
+                            </div>
                             Agency/Consultancy Account - Additional Verification Required
                           </h4>
-                          <ul className="text-amber-800 dark:text-amber-300 text-sm space-y-1">
-                            <li>• You'll need to upload GST certificate & business documents</li>
-                            <li>• Each client requires separate authorization</li>
-                            <li>• Verification usually takes 1-3 business days</li>
-                            <li>• Once verified, you can post jobs for multiple clients</li>
+                          <ul className="text-amber-800 dark:text-amber-300 text-sm space-y-2">
+                            <li className="flex items-start">
+                              <span className="w-1.5 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                              You'll need to upload GST certificate & business documents
+                            </li>
+                            <li className="flex items-start">
+                              <span className="w-1.5 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                              Each client requires separate authorization
+                            </li>
+                            <li className="flex items-start">
+                              <span className="w-1.5 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                              Verification usually takes 1-3 business days
+                            </li>
+                            <li className="flex items-start">
+                              <span className="w-1.5 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                              Once verified, you can post jobs for multiple clients
+                            </li>
                           </ul>
                         </div>
                       )}
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="companyName" className="text-slate-700 dark:text-slate-300">
+                      <Label htmlFor="companyName" className="font-semibold text-[#1E1E2F] dark:text-slate-300">
                         {formData.companyAccountType === "direct" ? "Company Name" : "Agency Name"} *
                       </Label>
                     <div className="relative">
@@ -506,7 +529,7 @@ export default function EmployerRegisterPage() {
                           placeholder={formData.companyAccountType === "direct" ? "Enter your company name" : "Enter your agency name"} 
                           value={formData.companyName} 
                           onChange={(e) => handleInputChange("companyName", e.target.value)} 
-                          className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700" 
+                          className="pl-10 h-12 border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl" 
                           required
                         />
                     </div>
@@ -550,7 +573,7 @@ export default function EmployerRegisterPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fullName" className="text-slate-700 dark:text-slate-300">
+                      <Label htmlFor="fullName" className="font-semibold text-[#1E1E2F] dark:text-slate-300">
                         Your Full Name
                       </Label>
                       <div className="relative">
@@ -561,14 +584,14 @@ export default function EmployerRegisterPage() {
                           placeholder="Enter your full name"
                           value={formData.fullName}
                           onChange={(e) => handleInputChange("fullName", e.target.value)}
-                          className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700"
+                          className="pl-10 h-12 border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl"
                           required
                         />
                       </div>
                     </div>
 
                                          <div className="space-y-2">
-                       <Label htmlFor="phone" className="text-slate-700 dark:text-slate-300">
+                       <Label htmlFor="phone" className="font-semibold text-[#1E1E2F] dark:text-slate-300">
                          Phone Number
                        </Label>
                        <div className="relative">
@@ -579,7 +602,7 @@ export default function EmployerRegisterPage() {
                            placeholder="e.g., +1234567890 or 123-456-7890"
                            value={formData.phone}
                            onChange={(e) => handleInputChange("phone", e.target.value)}
-                           className={`pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                           className={`pl-10 h-12 border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl ${
                              validationErrors.phone ? 'border-red-500 focus:border-red-500' : ''
                            }`}
                            required
@@ -598,7 +621,7 @@ export default function EmployerRegisterPage() {
                   </div>
 
                                      <div className="space-y-2">
-                     <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
+                     <Label htmlFor="email" className="font-semibold text-[#1E1E2F] dark:text-slate-300">
                        Work Email Address
                      </Label>
                      <div className="relative">
@@ -609,7 +632,7 @@ export default function EmployerRegisterPage() {
                          placeholder="Enter your work email"
                          value={formData.email}
                          onChange={(e) => handleInputChange("email", e.target.value)}
-                         className={`pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${
+                         className={`pl-10 h-12 border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl ${
                            validationErrors.email ? 'border-red-500 focus:border-red-500' : ''
                          }`}
                          required
@@ -636,7 +659,7 @@ export default function EmployerRegisterPage() {
                         value={formData.companySize}
                         onValueChange={(value) => handleInputChange("companySize", value)}
                       >
-                        <SelectTrigger className="h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700">
+                        <SelectTrigger className="h-12 border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl">
                           <SelectValue placeholder="Select company size" />
                         </SelectTrigger>
                         <SelectContent>
@@ -656,7 +679,7 @@ export default function EmployerRegisterPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className={`w-full h-12 justify-between border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 ${formData.industry ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}
+                        className={`w-full h-12 justify-between border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl ${formData.industry ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}
                         onClick={() => setShowIndustryDropdown(true)}
                       >
                         <span>{formData.industry || 'Select industry'}</span>
@@ -811,7 +834,7 @@ export default function EmployerRegisterPage() {
 
                   <Button
                     type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="w-full h-12 btn-shimmer btn-ripple text-base font-semibold rounded-xl"
                     disabled={loading}
                   >
                     {loading ? 'Creating Account...' : 'Create Employer Account'}
@@ -826,26 +849,40 @@ export default function EmployerRegisterPage() {
                  </form>
 
                  {/* Helpful Tips */}
-                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                   <h3 className="text-blue-800 dark:text-blue-200 font-medium mb-2 flex items-center">
-                     <span className="mr-2">💡</span>
+                 <div className="bg-white/20 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-lg">
+                   <h3 className="text-[#1E1E2F] dark:text-white font-semibold mb-3 text-lg">
                      Registration Tips
                    </h3>
-                   <ul className="text-blue-700 dark:text-blue-300 text-sm space-y-1">
-                     <li>• Use your work email address for better verification</li>
-                     <li>• Phone number can include country code, spaces, and dashes</li>
-                     <li>• Password must be strong: 8+ characters with uppercase, lowercase, and number</li>
-                     <li>• Company name should be your official business name</li>
-                     <li>• All fields marked with * are required</li>
+                   <ul className="text-[#5B5B6A] dark:text-slate-300 text-sm space-y-2">
+                     <li className="flex items-start">
+                       <span className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                       Use your work email address for better verification
+                     </li>
+                     <li className="flex items-start">
+                       <span className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                       Phone number can include country code, spaces, and dashes
+                     </li>
+                     <li className="flex items-start">
+                       <span className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                       Password must be strong: 8+ characters with uppercase, lowercase, and number
+                     </li>
+                     <li className="flex items-start">
+                       <span className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                       Company name should be your official business name
+                     </li>
+                     <li className="flex items-start">
+                       <span className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                       All fields marked with * are required
+                     </li>
                    </ul>
                  </div>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <Separator className="w-full" />
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">Or continue with</span>
+                  <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                    <span className="bg-white/20 backdrop-blur-md px-4 py-1 rounded-full text-[#5B5B6A] font-medium">Or continue with</span>
                   </div>
                 </div>
 
@@ -853,7 +890,7 @@ export default function EmployerRegisterPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600"
+                    className="h-12 bg-white/10 backdrop-blur-md hover:bg-white/20 border-white/30 transition-all duration-300 rounded-xl"
                     onClick={() => handleOAuthSignup('google')}
                     disabled={oauthLoading === 'google'}
                   >
@@ -885,7 +922,7 @@ export default function EmployerRegisterPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600"
+                    className="h-12 bg-white/10 backdrop-blur-md hover:bg-white/20 border-white/30 transition-all duration-300 rounded-xl"
                     onClick={() => handleOAuthSignup('facebook')}
                     disabled={oauthLoading === 'facebook'}
                   >
@@ -902,16 +939,16 @@ export default function EmployerRegisterPage() {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <Separator className="w-full" />
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white dark:bg-slate-800 px-2 text-slate-500">Already have an account?</span>
+                  <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                    <span className="bg-white/20 backdrop-blur-md px-4 py-1 rounded-full text-[#5B5B6A] font-medium">Already have an account?</span>
                   </div>
                 </div>
 
                 <div className="text-center">
                   <Link href="/employer-login">
-                    <Button variant="outline" className="w-full h-12 bg-white dark:bg-slate-700">
+                    <Button variant="outline" className="w-full h-12 bg-white/10 backdrop-blur-md hover:bg-white/20 border-white/30 transition-all duration-300 rounded-xl">
                       Sign In to Your Account
                     </Button>
                   </Link>

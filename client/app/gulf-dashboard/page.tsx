@@ -571,27 +571,38 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-lime-50/40 to-yellow-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       <EmployerNavbar />
 
+      {/* Background Effects - Gulf theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base green gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/45 via-lime-200/35 to-yellow-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-emerald-300/10 to-lime-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-yellow-300/10 to-amber-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-lime-300/10 to-emerald-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent green-yellow gradient strip (raised a bit like hero strip) */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-emerald-400/20 via-lime-400/20 to-yellow-400/20"></div>
+      </div>
+
               {/* Welcome Banner */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="relative bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-8 text-white overflow-hidden mb-8"
+            className="relative rounded-3xl p-8 text-white overflow-hidden mb-8 bg-gradient-to-br from-emerald-600/90 via-teal-600/90 to-emerald-500/90 backdrop-blur-xl border border-white/20 shadow-[0_20px_60px_rgba(16,185,129,0.25)]"
           >
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center space-x-3 mb-2">
                     <Globe className="w-8 h-8 text-emerald-200" />
-                    <h1 className="text-3xl font-bold">
+                    <h1 className="serif-heading text-3xl sm:text-4xl font-bold drop-shadow">
                       Gulf Region Dashboard
                     </h1>
                   </div>
-                  <p className="text-emerald-100 text-lg mb-4">
+                  <p className="text-emerald-100/90 text-lg mb-6 leading-relaxed">
                     Welcome back, {user?.firstName ? user.firstName.toUpperCase() : 'EMPLOYER'}! Ready to hire in the Gulf region?
                   </p>
                   <div className="flex items-center space-x-6">
@@ -606,13 +617,14 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                   </div>
                 </div>
                 <div className="hidden lg:block">
-                  <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center">
+                  <div className="w-32 h-32 bg-white/10 ring-1 ring-white/30 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(255,255,255,0.15)]">
                     <Globe className="w-16 h-16 text-white/80" />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/90 to-teal-600/90"></div>
+            <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-emerald-400/20 blur-3xl"></div>
+            <div className="absolute -bottom-16 -left-20 w-72 h-72 rounded-full bg-yellow-400/10 blur-3xl"></div>
           </motion.div>
 
         {/* Company Registration Section */}
@@ -642,40 +654,45 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
           </motion.div>
         )}
 
-        {/* Stats Cards */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-slate-900">Gulf Region Statistics</h2>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={async () => {
-                try {
-                  // Clear the timestamp to force refresh
-                  localStorage.removeItem('lastUserRefresh')
-                  await refreshUser()
-                  localStorage.setItem('lastUserRefresh', Date.now().toString())
-                  toast.success('User data refreshed!')
-                } catch (error) {
-                  toast.error('Failed to refresh user data')
-                }
-              }}
-              className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Refresh user data (admin status, etc.)"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="text-sm">Refresh User</span>
-            </button>
-            <button
-              onClick={loadDashboardData}
-              disabled={loading || isRefreshing}
-              className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-              title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="text-sm">Refresh Data</span>
-            </button>
+        {/* Stats Cards - Premium glass analytics */}
+        <div className="relative mb-8">
+          {/* subtle animated bg behind stats */}
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -top-10 -left-10 w-64 h-64 bg-gradient-to-br from-emerald-300/20 to-lime-300/20 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-gradient-to-br from-yellow-300/20 to-amber-300/20 rounded-full blur-3xl animate-pulse delay-500" />
           </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 uppercase">Gulf Region Statistics</h2>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={async () => {
+                  try {
+                    localStorage.removeItem('lastUserRefresh')
+                    await refreshUser()
+                    localStorage.setItem('lastUserRefresh', Date.now().toString())
+                    toast.success('User data refreshed!')
+                  } catch (error) {
+                    toast.error('Failed to refresh user data')
+                  }
+                }}
+                className="flex items-center space-x-2 px-3 py-2 text-slate-700/80 rounded-xl bg-white/40 backdrop-blur-md border border-white/30 hover:bg-white/60 transition-colors"
+                title="Refresh user data (admin status, etc.)"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm">Refresh User</span>
+              </button>
+              <button
+                onClick={loadDashboardData}
+                disabled={loading || isRefreshing}
+                className="flex items-center space-x-2 px-3 py-2 text-slate-700/80 rounded-xl bg-white/40 backdrop-blur-md border border-white/30 hover:bg-white/60 transition-colors disabled:opacity-50"
+                title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="text-sm">Refresh Data</span>
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {loading ? (
             <div className="col-span-full flex justify-center items-center py-12">
               <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
@@ -686,40 +703,39 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
+                transition={{ delay: index * 0.06, duration: 0.45 }}
+                className="group"
               >
                 {stat.link ? (
                   <Link href={stat.link}>
-                    <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105">
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(16,185,129,0.08)] hover:shadow-[0_18px_60px_rgba(16,185,129,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02]">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                            <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                            <p className="text-sm text-green-600">{stat.change}</p>
+                            <p className="text-[11px] tracking-widest uppercase text-slate-500">{stat.title}</p>
+                            <p className="text-4xl font-extrabold leading-tight text-slate-900 group-hover:brightness-110 transition-all">{stat.value}</p>
+                            <p className="text-xs font-medium text-emerald-700/90 mt-1">{stat.change}</p>
                           </div>
-                          <div
-                            className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                          >
-                            <stat.icon className="w-6 h-6 text-white" />
+                          <div className={`relative w-12 h-12 rounded-2xl bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)]`}>
+                            <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                            <stat.icon className="relative w-6 h-6 text-white" />
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   </Link>
                 ) : (
-                  <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
+                  <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(16,185,129,0.08)] hover:shadow-[0_18px_60px_rgba(16,185,129,0.16)] transition-all duration-300">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                          <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                          <p className="text-sm text-green-600">{stat.change}</p>
+                          <p className="text-[11px] tracking-widest uppercase text-slate-500">{stat.title}</p>
+                          <p className="text-4xl font-extrabold leading-tight text-slate-900">{stat.value}</p>
+                          <p className="text-xs font-medium text-emerald-700/90 mt-1">{stat.change}</p>
                         </div>
-                        <div
-                          className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                        >
-                          <stat.icon className="w-6 h-6 text-white" />
+                        <div className={`relative w-12 h-12 rounded-2xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}>
+                          <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                          <stat.icon className="relative w-6 h-6 text-white" />
                         </div>
                       </div>
                     </CardContent>
@@ -732,6 +748,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
               <p className="text-slate-600">No dashboard data available.</p>
             </div>
           )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -755,7 +772,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
             )}
 
             {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -782,7 +799,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                       transition={{ delay: index * 0.1, duration: 0.3 }}
                     >
                       <Link href={action.href}>
-                        <Card className="h-full hover:shadow-md transition-all duration-300 hover:scale-105 cursor-pointer border-slate-200">
+                        <Card className="h-full transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] cursor-pointer bg-white/50 backdrop-blur-xl border-white/40 hover:shadow-[0_18px_50px_rgba(16,185,129,0.14)]">
                           <CardContent className="p-6">
                             <div className="flex items-start space-x-4">
                               <div
@@ -791,8 +808,8 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                                 <action.icon className="w-6 h-6 text-white" />
                               </div>
                               <div>
-                                <h3 className="font-semibold text-slate-900 mb-1">{action.title}</h3>
-                                <p className="text-sm text-slate-600">{action.description}</p>
+                                <h3 className="font-semibold text-slate-900 mb-1 tracking-tight">{action.title}</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed">{action.description}</p>
                               </div>
                             </div>
                           </CardContent>
@@ -805,7 +822,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
             </Card>
 
             {/* Recent Activity */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-gradient-to-br from-emerald-500/10 to-lime-500/10 backdrop-blur-xl border-white/30 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -827,14 +844,14 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                   {recentActivity.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-start space-x-4 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="flex items-start space-x-4 p-4 rounded-xl bg-white/50 backdrop-blur-md border border-white/30 hover:bg-white/70 transition-colors"
                     >
-                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                        <activity.icon className="w-5 h-5 text-emerald-600" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-lime-500/90 flex items-center justify-center shadow-sm">
+                        <activity.icon className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium text-slate-900">{activity.title}</h4>
-                        <p className="text-sm text-slate-600">{activity.description}</p>
+                        <p className="text-sm text-slate-600 leading-relaxed">{activity.description}</p>
                         <p className="text-xs text-slate-500 mt-1">{activity.time}</p>
                       </div>
                     </div>
@@ -854,7 +871,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
 
 
             {/* Profile Completion */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -878,7 +895,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                       <span className="text-sm text-slate-600">Company Profile</span>
                       <span className="text-sm font-medium text-slate-900">{calculateProfileCompletion()}%</span>
                     </div>
-                    <Progress value={calculateProfileCompletion()} className="h-2" />
+                    <Progress value={calculateProfileCompletion()} className="h-2 bg-white/60" />
                   </div>
                   <div className="text-sm text-slate-600">
                     {calculateProfileCompletion() >= 80 ? 'Great! Your profile is well completed.' : 'Complete your profile to attract better candidates'}
@@ -896,7 +913,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
             </Card>
 
             {/* Upcoming Events */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -917,7 +934,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                 <div className="space-y-3">
                   {upcomingInterviews.length > 0 ? (
                     upcomingInterviews.slice(0, 3).map((interview, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-emerald-50 rounded-lg">
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-white/50 backdrop-blur-md border border-white/40 rounded-xl">
                         <div className="w-2 h-2 bg-emerald-600 rounded-full mt-2"></div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-slate-900">{interview.title}</p>
@@ -931,7 +948,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                             {new Date(interview.scheduledAt).toLocaleDateString()} at {new Date(interview.scheduledAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </p>
                           {interview.interviewType && (
-                            <span className="inline-block mt-1 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full">
+                            <span className="inline-block mt-1 px-2 py-1 text-xs bg-emerald-100/70 text-emerald-800 rounded-full">
                               {interview.interviewType.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                             </span>
                           )}
@@ -952,7 +969,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
             </Card>
 
             {/* Contact Support */}
-            <Card className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+            <Card className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-3xl shadow-[0_20px_60px_rgba(16,185,129,0.25)]">
               <CardContent className="p-6">
                 <h3 className="font-bold text-lg mb-2">Gulf Region Support</h3>
                 <p className="text-emerald-100 text-sm mb-4">Our Gulf region support team is here to help you succeed</p>
@@ -960,7 +977,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 rounded-xl"
                   >
                     <Phone className="w-4 h-4 mr-2" />
                     Call Gulf Support
@@ -968,7 +985,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 rounded-xl"
                   >
                     <Mail className="w-4 h-4 mr-2" />
                     Email Gulf Team
@@ -980,7 +997,9 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
         </div>
       </div>
 
-      <EmployerFooter />
+      <div className="relative z-10">
+        <EmployerFooter />
+      </div>
 
       {/* Profile Completion Dialog */}
       {user && (

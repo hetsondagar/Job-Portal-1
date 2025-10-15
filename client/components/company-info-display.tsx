@@ -103,7 +103,7 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
 
   if (loading) {
     return (
-      <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+      <Card className="bg-white/50 backdrop-blur-xl border-white/40">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Building2 className="w-5 h-5 mr-2" />
@@ -131,7 +131,7 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
 
   if (error || !company) {
     return (
-      <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+      <Card className="bg-white/50 backdrop-blur-xl border-white/40">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Building2 className="w-5 h-5 mr-2" />
@@ -153,7 +153,7 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
   }
 
   return (
-    <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+    <Card className="bg-white/50 backdrop-blur-xl border-white/40">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center">
@@ -173,9 +173,9 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
       <CardContent className="space-y-6">
         {/* Company Header */}
         <div className="flex items-center space-x-4">
-          <Avatar className="w-16 h-16">
+          <Avatar className="w-16 h-16 ring-1 ring-white/40 bg-white/60 backdrop-blur">
             <AvatarImage src="/placeholder-logo.png" alt={company.name} />
-            <AvatarFallback className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+            <AvatarFallback className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-lime-600 text-white">
               {getInitials(company.name)}
             </AvatarFallback>
           </Avatar>
@@ -183,7 +183,7 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
             <div className="flex items-center space-x-2 mb-2">
               <h3 className="text-xl font-semibold text-slate-900">{company.name}</h3>
               {company.isVerified && (
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
                   <Star className="w-3 h-3 mr-1" />
                   Verified
                 </Badge>

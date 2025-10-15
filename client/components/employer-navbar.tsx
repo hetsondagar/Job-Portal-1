@@ -137,15 +137,15 @@ export function EmployerNavbar() {
   ]
 
   return (
-    <nav className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-gray-800/50 sticky top-0 z-50">
+    <nav className="bg-gradient-to-r from-emerald-200/60 via-lime-200/50 to-yellow-200/60 dark:from-gray-900/80 dark:via-gray-800/70 dark:to-gray-900/80 backdrop-blur-xl border-b border-white/30 dark:border-gray-700/50 fixed top-0 left-0 right-0 z-50 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href={user?.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard'} className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-lime-600 rounded-xl flex items-center justify-center shadow-sm">
               <Building2 className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-serif font-bold bg-gradient-to-r from-emerald-600 to-lime-600 bg-clip-text text-transparent tracking-tight">
               JobPortal
             </span>
           </Link>

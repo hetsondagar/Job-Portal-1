@@ -31,15 +31,15 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50">
+    <nav className="bg-gradient-to-r from-blue-200/40 via-cyan-200/30 to-indigo-200/40 backdrop-blur-xl border-b border-white/20 sticky top-0 z-50 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-serif font-semibold text-gray-900">
               JobPortal
             </span>
             <span className="text-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full font-medium">
@@ -53,7 +53,7 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+                  <NavigationMenuTrigger className="text-gray-700 hover:text-indigo-600 font-medium tracking-wide uppercase text-sm transition-colors duration-300">
                     Pricing
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
@@ -114,7 +114,7 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+                  <NavigationMenuTrigger className="text-gray-700 hover:text-indigo-600 font-medium tracking-wide uppercase text-sm transition-colors duration-300">
                     <Sparkles className="w-4 h-4 mr-1" />
                     Integrations
                   </NavigationMenuTrigger>
@@ -223,7 +223,7 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
             </NavigationMenu>
 
             {/* Contact */}
-            <Button variant="ghost" className="text-slate-600 dark:text-slate-300 hover:text-blue-600">
+            <Button variant="ghost" className="text-gray-700 hover:text-indigo-600 font-medium tracking-wide uppercase text-sm transition-colors duration-300">
               <Phone className="w-4 h-4 mr-2" />
               1800-102-2558
             </Button>
@@ -231,13 +231,13 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
             {/* CTA Button */}
             {variant === "login" ? (
               <Link href="/employer-register">
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Button className="rounded-full px-5 py-2.5 bg-gradient-to-r from-[#5A00F2] to-[#4F9BFF] hover:scale-105 hover:shadow-[0_0_15px_rgba(79,155,255,0.4)] text-white font-bold uppercase text-sm transition-all duration-300">
                   Register
                 </Button>
               </Link>
             ) : (
               <Link href="/employer-login">
-                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                <Button variant="outline" className="rounded-full px-5 py-2.5 border-[#5A00F2] text-[#5A00F2] hover:bg-[#5A00F2] hover:text-white transition-all duration-300">
                   Login
                 </Button>
               </Link>
