@@ -250,16 +250,26 @@ Interview.prototype.canBeRescheduled = function() {
   return this.status === 'scheduled' && hoursUntilInterview > 24;
 };
 
-module.exports = Interview; 
 // Define associations in a safe, late-binding manner if associate is used elsewhere
 Interview.associate = (models) => {
   try {
-    Interview.belongsTo(models.JobApplication, { as: 'jobApplication', foreignKey: 'jobApplicationId' });
-    Interview.belongsTo(models.User, { as: 'employer', foreignKey: 'employerId' });
-    Interview.belongsTo(models.User, { as: 'candidate', foreignKey: 'candidateId' });
-    Interview.belongsTo(models.Job, { as: 'job', foreignKey: 'jobId' });
+    // Only define if not already defined to prevent duplicate association errors
+    if (!Interview.associations.jobApplication) {
+      Interview.belongsTo(models.JobApplication, { as: 'jobApplication', foreignKey: 'jobApplicationId' });
+    }
+    if (!Interview.associations.employer) {
+      Interview.belongsTo(models.User, { as: 'employer', foreignKey: 'employerId' });
+    }
+    if (!Interview.associations.candidate) {
+      Interview.belongsTo(models.User, { as: 'candidate', foreignKey: 'candidateId' });
+    }
+    if (!Interview.associations.job) {
+      Interview.belongsTo(models.Job, { as: 'job', foreignKey: 'jobId' });
+    }
   } catch (e) {
     // Avoid crash if models not fully initialized yet
     console.warn('Interview association setup warning:', e?.message || e);
   }
 };
+
+module.exports = Interview;

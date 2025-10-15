@@ -201,16 +201,28 @@ JobApplication.prototype.canUpdateStatus = function(newStatus) {
   return validTransitions[this.status]?.includes(newStatus) || false;
 };
 
-module.exports = JobApplication;
 // Define associations so includes work across routes
 JobApplication.associate = (models) => {
   try {
-    JobApplication.belongsTo(models.Job, { as: 'job', foreignKey: 'jobId' });
-    JobApplication.belongsTo(models.User, { as: 'applicant', foreignKey: 'userId' });
-    JobApplication.belongsTo(models.User, { as: 'employer', foreignKey: 'employerId' });
-    JobApplication.belongsTo(models.Resume, { as: 'jobResume', foreignKey: 'resumeId' });
-    JobApplication.belongsTo(models.CoverLetter, { as: 'jobCoverLetter', foreignKey: 'coverLetterId' });
+    // Only define if not already defined to prevent duplicate association errors
+    if (!JobApplication.associations.job) {
+      JobApplication.belongsTo(models.Job, { as: 'job', foreignKey: 'jobId' });
+    }
+    if (!JobApplication.associations.applicant) {
+      JobApplication.belongsTo(models.User, { as: 'applicant', foreignKey: 'userId' });
+    }
+    if (!JobApplication.associations.employer) {
+      JobApplication.belongsTo(models.User, { as: 'employer', foreignKey: 'employerId' });
+    }
+    if (!JobApplication.associations.jobResume) {
+      JobApplication.belongsTo(models.Resume, { as: 'jobResume', foreignKey: 'resumeId' });
+    }
+    if (!JobApplication.associations.jobCoverLetter) {
+      JobApplication.belongsTo(models.CoverLetter, { as: 'jobCoverLetter', foreignKey: 'coverLetterId' });
+    }
   } catch (e) {
     console.warn('JobApplication association setup warning:', e?.message || e);
   }
 };
+
+module.exports = JobApplication;

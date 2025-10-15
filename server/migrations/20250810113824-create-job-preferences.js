@@ -127,18 +127,42 @@ module.exports = {
     });
 
     // Add indexes
-    await queryInterface.addIndex('job_preferences', ['user_id'], {
-      unique: true,
-      name: 'job_preferences_user_id_unique'
-    });
+    try {
+      await queryInterface.addIndex('job_preferences', ['user_id'], {
+        unique: true,
+        name: 'job_preferences_user_id_unique'
+      });
+    } catch (error) {
+      if ((error && String(error.message || '').includes('already exists')) || (error && String(error).includes('already exists'))) {
+        console.log('ℹ️  Index job_preferences_user_id_unique already exists, skipping');
+      } else {
+        throw error;
+      }
+    }
 
-    await queryInterface.addIndex('job_preferences', ['region'], {
-      name: 'job_preferences_region_idx'
-    });
+    try {
+      await queryInterface.addIndex('job_preferences', ['region'], {
+        name: 'job_preferences_region_idx'
+      });
+    } catch (error) {
+      if ((error && String(error.message || '').includes('already exists')) || (error && String(error).includes('already exists'))) {
+        console.log('ℹ️  Index job_preferences_region_idx already exists, skipping');
+      } else {
+        throw error;
+      }
+    }
 
-    await queryInterface.addIndex('job_preferences', ['is_active'], {
-      name: 'job_preferences_is_active_idx'
-    });
+    try {
+      await queryInterface.addIndex('job_preferences', ['is_active'], {
+        name: 'job_preferences_is_active_idx'
+      });
+    } catch (error) {
+      if ((error && String(error.message || '').includes('already exists')) || (error && String(error).includes('already exists'))) {
+        console.log('ℹ️  Index job_preferences_is_active_idx already exists, skipping');
+      } else {
+        throw error;
+      }
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

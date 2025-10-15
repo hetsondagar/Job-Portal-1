@@ -145,10 +145,22 @@ module.exports = {
     });
 
     // Add indexes
-    await queryInterface.addIndex('user_dashboard', ['userId']);
-    await queryInterface.addIndex('user_dashboard', ['lastActivityDate']);
-    await queryInterface.addIndex('user_dashboard', ['totalApplications']);
-    await queryInterface.addIndex('user_dashboard', ['totalBookmarks']);
+    const safeAddIndex = async (table, cols, options) => {
+      try {
+        await queryInterface.addIndex(table, cols, options);
+      } catch (error) {
+        if ((error && String(error.message || '').includes('already exists')) || (error && String(error).includes('already exists'))) {
+          console.log(`ℹ️  Index ${options && options.name ? options.name : cols} already exists, skipping`);
+        } else {
+          throw error;
+        }
+      }
+    };
+
+    await safeAddIndex('user_dashboard', ['userId'], { name: 'user_dashboard_user_id' });
+    await safeAddIndex('user_dashboard', ['lastActivityDate'], { name: 'user_dashboard_last_activity' });
+    await safeAddIndex('user_dashboard', ['totalApplications'], { name: 'user_dashboard_total_applications' });
+    await safeAddIndex('user_dashboard', ['totalBookmarks'], { name: 'user_dashboard_total_bookmarks' });
   },
 
   down: async (queryInterface, Sequelize) => {

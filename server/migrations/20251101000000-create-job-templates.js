@@ -37,32 +37,32 @@ module.exports = {
         defaultValue: 'custom',
         comment: 'Template category for organization'
       },
-      isPublic: {
+      is_public: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
         comment: 'Whether template is available to all employers'
       },
-      isDefault: {
+      is_default: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
         comment: 'Whether this is a system default template'
       },
-      templateData: {
+      template_data: {
         type: Sequelize.JSONB,
         allowNull: false,
         comment: 'Structured template data including all job fields'
       },
-      usageCount: {
+      usage_count: {
         type: Sequelize.INTEGER,
         defaultValue: 0,
         comment: 'Number of times this template has been used'
       },
-      lastUsedAt: {
+      last_used_at: {
         type: Sequelize.DATE,
         allowNull: true,
         comment: 'Last time this template was used'
       },
-      isActive: {
+      is_active: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         comment: 'Whether template is active and available'
@@ -77,7 +77,7 @@ module.exports = {
         defaultValue: 1,
         comment: 'Template version for tracking changes'
       },
-      createdBy: {
+      created_by: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
@@ -88,12 +88,12 @@ module.exports = {
         onDelete: 'CASCADE',
         comment: 'User who created this template'
       },
-      createdAt: {
+      created_at: {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
-      updatedAt: {
+      updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
@@ -125,11 +125,11 @@ module.exports = {
       console.log(`⚠️ Skipping index ${name} - no matching column variant found`);
     };
 
-    await tryIndex([['createdBy'], ['created_by']], 'job_templates_created_by');
-    await tryIndex([['isPublic'], ['is_public']], 'job_templates_is_public');
+    await tryIndex([['created_by']], 'job_templates_created_by');
+    await tryIndex([['is_public']], 'job_templates_is_public');
     await tryIndex([['category']], 'job_templates_category');
-    await tryIndex([['isActive'], ['is_active']], 'job_templates_is_active');
-    await tryIndex([['createdAt'], ['created_at']], 'job_templates_created_at');
+    await tryIndex([['is_active']], 'job_templates_is_active');
+    await tryIndex([['created_at']], 'job_templates_created_at');
 
     // Insert some default templates only if users exist
     const [users] = await queryInterface.sequelize.query('SELECT id FROM "users" LIMIT 1');
@@ -155,18 +155,18 @@ module.exports = {
             "skills": ["Java", "Python", "JavaScript", "AWS", "Microservices", "Docker", "Kubernetes"]
           }'::jsonb`),
           tags: Sequelize.literal(`'["engineering", "senior", "full-stack", "remote"]'::jsonb`),
-          createdBy: users[0].id,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_by: users[0].id,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           id: Sequelize.literal('gen_random_uuid()'),
           name: 'Marketing Manager',
           description: 'Template for marketing management roles with strategic focus',
           category: 'non-technical',
-          isPublic: true,
-          isDefault: true,
-          templateData: Sequelize.literal(`'{
+          is_public: true,
+          is_default: true,
+          template_data: Sequelize.literal(`'{
             "title": "Marketing Manager",
             "department": "marketing",
             "location": "Hybrid",
@@ -179,18 +179,18 @@ module.exports = {
             "skills": ["Digital Marketing", "Brand Management", "Marketing Automation", "Analytics", "Social Media"]
           }'::jsonb`),
           tags: Sequelize.literal(`'["marketing", "management", "strategy", "digital"]'::jsonb`),
-          createdBy: users[0].id,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_by: users[0].id,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           id: Sequelize.literal('gen_random_uuid()'),
           name: 'Frontend Developer',
           description: 'Template for frontend development positions',
           category: 'technical',
-          isPublic: true,
-          isDefault: true,
-          templateData: Sequelize.literal(`'{
+          is_public: true,
+          is_default: true,
+          template_data: Sequelize.literal(`'{
             "title": "Frontend Developer",
             "department": "engineering",
             "location": "On-site / Hybrid",
@@ -203,9 +203,9 @@ module.exports = {
             "skills": ["HTML", "CSS", "JavaScript", "React", "Vue.js", "Responsive Design"]
           }'::jsonb`),
           tags: Sequelize.literal(`'["frontend", "react", "javascript", "web-development"]'::jsonb`),
-          createdBy: users[0].id,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_by: users[0].id,
+          created_at: new Date(),
+          updated_at: new Date()
         }
       ]);
     }
