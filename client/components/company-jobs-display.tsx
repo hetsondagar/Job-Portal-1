@@ -106,7 +106,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-white/50 backdrop-blur-xl border-white/40">
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -118,7 +118,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
   }
 
   return (
-    <Card>
+    <Card className="bg-white/50 backdrop-blur-xl border-white/40">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -166,7 +166,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
         ) : (
           <div className="space-y-4">
             {jobs.map((job) => (
-              <div key={job.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={job.id} className="rounded-xl p-4 bg-white/50 backdrop-blur-md border border-white/40 hover:bg-white/60 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
