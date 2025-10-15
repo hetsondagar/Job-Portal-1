@@ -289,6 +289,8 @@ export default function EmployerLoginPage() {
         <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/8 to-cyan-300/8 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-violet-300/8 to-purple-300/8 rounded-full blur-3xl animate-pulse delay-500"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-blue-300/6 to-indigo-300/6 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
       </div>
 
       <div className="relative flex items-center justify-center p-4 pt-8 min-h-[calc(100vh-80px)]">

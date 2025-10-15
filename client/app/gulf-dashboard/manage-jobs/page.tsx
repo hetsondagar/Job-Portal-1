@@ -125,8 +125,16 @@ function GulfManageJobsContent({ user }: { user: any }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-lime-50/40 to-yellow-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       <EmployerNavbar />
+
+      {/* Background Effects - Gulf theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-emerald-300/10 to-lime-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-yellow-300/10 to-amber-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-lime-300/10 to-emerald-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-emerald-400/20 via-lime-400/20 to-yellow-400/20"></div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -185,7 +193,7 @@ function GulfManageJobsContent({ user }: { user: any }) {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-6"
         >
-          <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+          <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
@@ -226,7 +234,7 @@ function GulfManageJobsContent({ user }: { user: any }) {
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           {loading ? (
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
               <CardContent className="p-12 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
                 <p className="text-slate-600">Loading jobs...</p>
@@ -241,7 +249,7 @@ function GulfManageJobsContent({ user }: { user: any }) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-all duration-200">
+                  <Card className="bg-white/60 backdrop-blur-xl border-white/40 hover:shadow-[0_18px_50px_rgba(16,185,129,0.14)] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02]">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -282,12 +290,12 @@ function GulfManageJobsContent({ user }: { user: any }) {
                           {job.skills && job.skills.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-4">
                               {job.skills.slice(0, 5).map((skill: string, skillIndex: number) => (
-                                <Badge key={skillIndex} variant="secondary" className="text-xs">
+                                <Badge key={skillIndex} variant="secondary" className="text-xs bg-emerald-50 text-emerald-700">
                                   {skill}
                                 </Badge>
                               ))}
                               {job.skills.length > 5 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs bg-emerald-50 text-emerald-700">
                                   +{job.skills.length - 5} more
                                 </Badge>
                               )}
@@ -326,7 +334,7 @@ function GulfManageJobsContent({ user }: { user: any }) {
               ))}
             </div>
           ) : (
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
               <CardContent className="p-12 text-center">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Briefcase className="w-8 h-8 text-emerald-600" />
@@ -340,7 +348,7 @@ function GulfManageJobsContent({ user }: { user: any }) {
                 </p>
                 <Button
                   onClick={() => router.push('/gulf-dashboard/post-job')}
-                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Post Your First Job

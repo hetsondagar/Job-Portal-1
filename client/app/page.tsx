@@ -939,7 +939,7 @@ export default function HomePage() {
                 <div className="relative flex-1 group">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
                   <Input
-                    placeholder="Job title, keywords, or company"
+                    placeholder="Job title"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
