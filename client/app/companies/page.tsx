@@ -2544,14 +2544,14 @@ export default function CompaniesPage() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-200 to-indigo-300 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
 
       <Navbar />
 
       {/* Hero Section */}
       <section className="relative pt-16 sm:pt-20 pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Enhanced Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/25 via-purple-500/30 to-indigo-600/35 dark:from-blue-600/30 dark:via-purple-600/30 dark:to-indigo-800/30"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-300/25 via-purple-300/25 to-indigo-400/25 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
         
         {/* Enhanced Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -2964,7 +2964,7 @@ export default function CompaniesPage() {
 
       <div className="relative">
         {/* Background gradient for main content */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/70 via-purple-200/50 to-indigo-300/70 dark:from-slate-900/50 dark:via-slate-800/30 dark:to-slate-900/50"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/40 via-purple-200/30 to-indigo-200/40 dark:from-slate-900/50 dark:via-slate-800/30 dark:to-slate-900/50"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         <div className="flex gap-6 sm:gap-8">
