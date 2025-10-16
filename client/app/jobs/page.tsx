@@ -4148,7 +4148,7 @@ export default function JobsPage() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-blue-300 via-purple-400 to-indigo-500 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
 
       <Navbar />
 
@@ -4157,7 +4157,7 @@ export default function JobsPage() {
       {/* Hero Section */}
       <section className="relative pt-20 sm:pt-24 pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Enhanced Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/40 via-purple-600/50 to-indigo-700/60 dark:from-blue-600/30 dark:via-purple-600/30 dark:to-indigo-800/30"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/15 via-purple-200/15 to-indigo-200/15 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
         
         {/* Enhanced Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
