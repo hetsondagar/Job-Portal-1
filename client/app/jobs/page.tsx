@@ -4148,7 +4148,7 @@ export default function JobsPage() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-300 via-purple-400 to-indigo-500 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
 
       <Navbar />
 
@@ -4157,7 +4157,7 @@ export default function JobsPage() {
       {/* Hero Section */}
       <section className="relative pt-20 sm:pt-24 pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Enhanced Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-800/5 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/40 via-purple-600/50 to-indigo-700/60 dark:from-blue-600/30 dark:via-purple-600/30 dark:to-indigo-800/30"></div>
         
         {/* Enhanced Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -4258,7 +4258,7 @@ export default function JobsPage() {
 
         {/* Search Bar */}
 
-        <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8 transition-all duration-300 ${isStickyVisible ? 'sticky top-4 z-50' : ''}`}>
+        <div className={`bg-white/50 dark:bg-white/10 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8 transition-all duration-300 border border-white/30 dark:border-white/10 ${isStickyVisible ? 'sticky top-4 z-50' : ''}`}>
 
           <div className="flex flex-col lg:flex-row gap-4">
 
@@ -4432,7 +4432,7 @@ export default function JobsPage() {
 
             exit={{ opacity: 0, height: 0 }}
 
-            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8 relative z-50"
+            className="bg-white/50 dark:bg-white/10 backdrop-blur-xl rounded-2xl shadow-xl p-6 mb-8 relative z-50 border border-white/30 dark:border-white/10"
 
           >
 
@@ -4950,7 +4950,7 @@ export default function JobsPage() {
 
               {[1, 2, 3, 4].map((i) => (
 
-                <Card key={i} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+                <Card key={i} className="bg-white/50 dark:bg-white/10 backdrop-blur-xl border-white/30 dark:border-white/10">
 
                   <CardContent className="p-6">
 
@@ -4990,7 +4990,7 @@ export default function JobsPage() {
 
           ) : filteredJobs.length === 0 ? (
 
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <Card className="bg-white/50 dark:bg-white/10 backdrop-blur-xl border-white/30 dark:border-white/10">
 
               <CardContent className="p-12 text-center">
 
@@ -5038,7 +5038,7 @@ export default function JobsPage() {
 
                   <Link href={`/jobs/${job.id}`}>
 
-                    <Card className="group cursor-pointer border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                    <Card className="group cursor-pointer border-0 bg-white/50 dark:bg-white/10 backdrop-blur-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-white/30 dark:border-white/10">
 
                       <CardContent className="p-4 sm:p-6">
 
