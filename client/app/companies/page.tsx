@@ -2544,10 +2544,105 @@ export default function CompaniesPage() {
 
   return (
 
-    <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-200 to-indigo-300 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
 
       <Navbar />
 
+      {/* Hero Section */}
+      <section className="relative pt-16 sm:pt-20 pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Enhanced Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/25 via-purple-500/30 to-indigo-600/35 dark:from-blue-600/30 dark:via-purple-600/30 dark:to-indigo-800/30"></div>
+        
+        {/* Enhanced Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Layer A: far glow */}
+          <div className="absolute -top-40 -right-40 w-[28rem] h-[28rem] rounded-full parallax-far" style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(90,0,242,0.35) 0%, rgba(90,0,242,0) 100%)' }}></div>
+          {/* Layer B: gradient strip */}
+          <div className="absolute top-1/3 left-0 right-0 h-24 opacity-20 gradient-strip"></div>
+          {/* Layer C: small particles placeholder (non-interactive) */}
+          <div className="pointer-events-none absolute inset-0 opacity-20"></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center py-8 lg:py-12">
+          {/* Enhanced Animated Hero Text */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="mb-6 order-2 lg:order-1 text-center lg:text-left px-2 sm:px-4 lg:px-0 lg:pr-8 overflow-visible"
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="serif-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mb-4 heading-gradient drop-shadow-lg leading-[1.35] pb-2 tracking-tight text-[#1E1E2F] dark:text-white inline-block"
+            >
+              Find Your Dream Company
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: "easeInOut" }}
+              className="text-base sm:text-lg lg:text-xl text-[#5B5B6A] dark:text-slate-300 mb-4 sm:mb-6 max-w-[860px] mx-auto lg:mx-0 leading-relaxed font-medium px-4 sm:px-0"
+            >
+              Connect with industry leaders and explore opportunities at the world's most innovative companies
+            </motion.p>
+          </motion.div>
+
+          {/* Enhanced Search Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+            className="mb-8 order-3 lg:order-2"
+          >
+            <div className="glass-20 soft-glow rounded-3xl p-4 sm:p-6 lg:p-7 max-w-[920px] mx-auto transform hover:-translate-y-1 hover:scale-[1.02] transition-transform duration-200 border-white/30"
+                 style={{ background: "rgba(255,255,255,0.22)" }}>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
+                  <Input
+                    placeholder="Search companies..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange("search", e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const companiesSection = document.getElementById('companies-section')
+                        if (companiesSection) {
+                          companiesSection.scrollIntoView({ behavior: 'smooth' })
+                        }
+                      }
+                    }}
+                    className="pl-12 pr-4 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium shadow-lg"
+                  />
+                </div>
+                <div className="relative flex-1 group">
+                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
+                  <Input
+                    placeholder="Location"
+                    value={filters.location}
+                    onChange={(e) => handleFilterChange("location", e.target.value)}
+                    className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium shadow-lg"
+                  />
+                </div>
+                <Button 
+                  className="h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 sm:px-8 rounded-2xl text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  onClick={() => {
+                    const companiesSection = document.getElementById('companies-section')
+                    if (companiesSection) {
+                      companiesSection.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }}
+                >
+                  <Search className="w-5 h-5 mr-2" />
+                  Search
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
 
 
@@ -2777,7 +2872,7 @@ export default function CompaniesPage() {
 
                             ? `${sectorColors.light} ring-2 ${sectorColors.ring} shadow-2xl ${sectorColors.glow}`
 
-                            : "bg-white/50 dark:bg-slate-800/50 hover:shadow-2xl hover:shadow-blue-500/10"
+                            : "bg-white/50 dark:bg-white/10 hover:shadow-2xl hover:shadow-blue-500/10"
 
                         } backdrop-blur-xl overflow-hidden relative`}
 
@@ -2867,7 +2962,10 @@ export default function CompaniesPage() {
 
 
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="relative">
+        {/* Background gradient for main content */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/70 via-purple-200/50 to-indigo-300/70 dark:from-slate-900/50 dark:via-slate-800/30 dark:to-slate-900/50"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         <div className="flex gap-6 sm:gap-8">
 
@@ -2877,7 +2975,7 @@ export default function CompaniesPage() {
 
             <div className="sticky top-32 z-10 h-fit">
 
-              <Card className="border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl shadow-lg">
+              <Card className="border-white/30 dark:border-white/10 bg-white/50 dark:bg-white/10 backdrop-blur-xl shadow-xl">
 
                 <CardHeader className="pb-4">
 
@@ -3521,7 +3619,7 @@ export default function CompaniesPage() {
 
             {/* Company Grid */}
 
-            <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
               {loadError && (
 
@@ -3541,7 +3639,7 @@ export default function CompaniesPage() {
 
                     <div key={i} className="animate-pulse">
 
-                      <Card className="border-0 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl">
+                      <Card className="border-0 bg-white/50 dark:bg-white/10 backdrop-blur-xl border-white/30 dark:border-white/10">
 
                         <CardContent className="p-6">
 
@@ -3631,11 +3729,11 @@ export default function CompaniesPage() {
 
                         company.urgent
 
-                          ? "bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 ring-2 ring-red-200 dark:ring-red-800"
+                          ? "bg-gradient-to-r from-red-50/50 to-orange-50/50 dark:from-red-900/20 dark:to-orange-900/20 ring-2 ring-red-200 dark:ring-red-800"
 
-                          : "bg-white/50 dark:bg-slate-800/50"
+                          : "bg-white/50 dark:bg-white/10"
 
-                      } ${sectorColors.border}`}
+                      } border-white/30 dark:border-white/10 backdrop-blur-xl`}
 
                     >
 
@@ -4132,6 +4230,8 @@ export default function CompaniesPage() {
           </div>
 
         </div>
+
+      </div>
 
       </div>
 

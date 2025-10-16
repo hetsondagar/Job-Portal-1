@@ -3231,7 +3231,7 @@ export default function JobsPage() {
           jobLocation.includes(searchLower)
         
         
-
+        
         // Check for original search term as well (in case no processing was done)
 
         const originalMatch = 
@@ -3249,7 +3249,7 @@ export default function JobsPage() {
           jobLocation.includes(originalSearchLower)
         
         
-
+        
         // Check for partial word matches and synonyms
 
         const words = searchLower.split(/\s+/)
@@ -4155,32 +4155,100 @@ export default function JobsPage() {
       
       
       {/* Hero Section */}
-
-      <div className="relative pt-16 pb-12">
-
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="text-center">
-
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-
-              Find Your Dream Job
-
-            </h1>
-
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-8">
-
-              Discover thousands of job opportunities with all the information you need
-
-            </p>
-
-          </div>
-
+      <section className="relative pt-20 sm:pt-24 pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Enhanced Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-800/5 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
+        
+        {/* Enhanced Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Layer A: far glow */}
+          <div className="absolute -top-40 -right-40 w-[28rem] h-[28rem] rounded-full parallax-far" style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(90,0,242,0.35) 0%, rgba(90,0,242,0) 100%)' }}></div>
+          {/* Layer B: gradient strip */}
+          <div className="absolute top-1/3 left-0 right-0 h-24 opacity-20 gradient-strip"></div>
+          {/* Layer C: small particles placeholder (non-interactive) */}
+          <div className="pointer-events-none absolute inset-0 opacity-20"></div>
         </div>
 
+        <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center py-8 lg:py-12">
+          {/* Enhanced Animated Hero Text */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="mb-6 order-2 lg:order-1 text-center lg:text-left px-2 sm:px-4 lg:px-0 lg:pr-8 overflow-visible"
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="serif-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mb-4 heading-gradient drop-shadow-lg leading-[1.35] pb-2 tracking-tight text-[#1E1E2F] dark:text-white inline-block"
+            >
+              Find Your Dream Job
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: "easeInOut" }}
+              className="text-base sm:text-lg lg:text-xl text-[#5B5B6A] dark:text-slate-300 mb-4 sm:mb-6 max-w-[860px] mx-auto lg:mx-0 leading-relaxed font-medium px-4 sm:px-0"
+            >
+              Discover thousands of job opportunities with all the information you need
+            </motion.p>
+          </motion.div>
+
+          {/* Enhanced Search Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+            className="mb-8 order-3 lg:order-2"
+          >
+            <div className="glass-20 soft-glow rounded-3xl p-4 sm:p-6 lg:p-7 max-w-[920px] mx-auto transform hover:-translate-y-1 hover:scale-[1.02] transition-transform duration-200 border-white/30"
+                 style={{ background: "rgba(255,255,255,0.22)" }}>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
+                  <Input
+                    placeholder="Job title"
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange("search", e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const jobsSection = document.getElementById('jobs-section')
+                        if (jobsSection) {
+                          jobsSection.scrollIntoView({ behavior: 'smooth' })
+                        }
+                      }
+                    }}
+                    className="pl-12 pr-4 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium shadow-lg"
+                  />
+          </div>
+                <div className="relative flex-1 group">
+                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
+                  <Input
+                    placeholder="Location"
+                    value={filters.location}
+                    onChange={(e) => handleFilterChange("location", e.target.value)}
+                    className="pl-12 h-14 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-2xl text-lg font-medium shadow-lg"
+                  />
+        </div>
+                <Button 
+                  className="h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 sm:px-8 rounded-2xl text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  onClick={() => {
+                    const jobsSection = document.getElementById('jobs-section')
+                    if (jobsSection) {
+                      jobsSection.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }}
+                >
+                  <Search className="w-5 h-5 mr-2" />
+                  Search
+                </Button>
       </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
 
 
@@ -4952,7 +5020,7 @@ export default function JobsPage() {
 
           ) : (
 
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {filteredJobs.map((job, index) => (
 
