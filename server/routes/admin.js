@@ -441,14 +441,14 @@ router.get('/users/:userId/details', async (req, res) => {
         as: 'plan',
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get payment history
     const payments = await Payment.findAll({
       where: { userId },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
     });
 
@@ -524,8 +524,8 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const jobIds = companyJobs.map(job => job.id);
     const jobApplications = jobIds.length > 0 ? await JobApplication.findAll({
       where: { jobId: jobIds },
-      attributes: ['id', 'jobId', 'status', 'createdAt'],
-      order: [['createdAt', 'DESC']]
+        attributes: ['id', 'jobId', 'status', 'createdAt'],
+        order: [['created_at', 'DESC']]
     }) : [];
 
     // Get applicants separately to avoid complex includes
