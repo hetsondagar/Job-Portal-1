@@ -514,11 +514,11 @@ router.get('/companies/:companyId/details', async (req, res) => {
     }
 
     // Get company's jobs using raw SQL to avoid column name issues
-    const [companyJobsRows] = await sequelize.query(
+    const companyJobsRows = await sequelize.query(
       'SELECT id, title, location, salary, "jobType", status, "createdAt", "validTill" FROM jobs WHERE "companyId" = :companyId ORDER BY "createdAt" DESC',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
-    const companyJobs = companyJobsRows;
+    const companyJobs = companyJobsRows || [];
 
     // Get job applications separately for each job
     const jobIds = companyJobs.map(job => job.id);
@@ -694,7 +694,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
               required: false
             }]
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,

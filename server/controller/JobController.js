@@ -997,7 +997,7 @@ exports.getAllJobs = async (req, res, next) => {
       },
       {
         model: JobPhoto,
-        as: 'JobPhotos',
+        as: 'photos',
         attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
         where: { isActive: true },
         required: false
@@ -1092,7 +1092,7 @@ exports.getJobById = async (req, res, next) => {
         },
         {
           model: JobPhoto,
-          as: 'JobPhotos',
+          as: 'photos',
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { isActive: true },
           required: false
