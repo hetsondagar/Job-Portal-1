@@ -447,7 +447,7 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get payment history
     const payments = await Payment.findAll({
       where: { userId },
-      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
     });
@@ -463,7 +463,7 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get user sessions
     const sessions = await UserSession.findAll({
       where: { userId },
-      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivityAt', 'createdAt'],
+      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivityAt', 'created_at'],
       order: [['lastActivityAt', 'DESC']],
       limit: 10
     });
@@ -524,7 +524,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const jobIds = companyJobs.map(job => job.id);
     const jobApplications = jobIds.length > 0 ? await JobApplication.findAll({
       where: { jobId: jobIds },
-        attributes: ['id', 'jobId', 'status', 'createdAt'],
+        attributes: ['id', 'jobId', 'status', 'created_at'],
         order: [['created_at', 'DESC']]
     }) : [];
 
@@ -613,7 +613,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
       where: { 
         userId: firstUserId
       },
-      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
     }) : [];
@@ -631,7 +631,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     // Get company analytics
     const analytics = await Analytics.findAll({
       where: { companyId },
-      attributes: ['id', 'eventType', 'metadata', 'createdAt'],
+      attributes: ['id', 'eventType', 'metadata', 'created_at'],
       order: [['created_at', 'DESC']],
       limit: 50
     });
@@ -743,7 +743,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         jobId,
         eventType: ['job_view', 'job_apply', 'job_bookmark']
       },
-      attributes: ['id', 'eventType', 'metadata', 'createdAt'],
+      attributes: ['id', 'eventType', 'metadata', 'created_at'],
       order: [['created_at', 'DESC']],
       limit: 100
     });
