@@ -251,6 +251,10 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('active', 'suspended', 'deleted', 'pending_verification', 'rejected'),
     defaultValue: 'active'
   },
+  session_version: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1
+  },
   verification_level: {
     type: DataTypes.ENUM('unverified', 'basic', 'premium'),
     defaultValue: 'unverified'

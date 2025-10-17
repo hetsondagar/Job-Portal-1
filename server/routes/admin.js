@@ -285,7 +285,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
+          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'createdAt']
         },
         {
           model: JobApplication,
@@ -350,7 +350,35 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get additional statistics
     const totalApplications = await JobApplication.count({ where: { userId } });
     const totalBookmarks = await JobBookmark.count({ where: { userId } });
-    const totalJobsPosted = user.user_type === 'employer' ? await Job.count({ where: { companyId: user.company?.id } }) : 0;
+    
+    // Get posted jobs for employers/admins/recruiters
+    let postedJobs = [];
+    let totalJobsPosted = 0;
+    if ((user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company?.id) {
+      postedJobs = await Job.findAll({
+        where: { companyId: user.company.id },
+        attributes: ['id', 'title', 'location', 'status', 'createdAt'],
+        limit: 20,
+        order: [['createdAt', 'DESC']],
+        include: [{
+          model: JobApplication,
+          as: 'jobApplications',
+          attributes: ['id']
+        }]
+      });
+      
+      // Add application count to each job
+      postedJobs = postedJobs.map(job => {
+        const jobData = job.toJSON();
+        return {
+          ...jobData,
+          applicationCount: jobData.jobApplications?.length || 0,
+          jobApplications: undefined // Remove the full array, we only need the count
+        };
+      });
+      
+      totalJobsPosted = postedJobs.length;
+    }
     
     // Get pricing/subscription information if available
     const subscription = await Subscription.findOne({
@@ -389,6 +417,7 @@ router.get('/users/:userId/details', async (req, res) => {
 
     const userDetails = {
       ...user.toJSON(),
+      postedJobs: postedJobs || [],
       statistics: {
         totalApplications,
         totalBookmarks,

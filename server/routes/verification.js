@@ -220,7 +220,8 @@ router.post('/approve/:companyId', authenticateToken, async (req, res) => {
       // Activate user account
       try {
         await user.update({
-          account_status: 'active'
+          account_status: 'active',
+          session_version: user.session_version + 1 // Invalidate existing tokens
         });
         console.log(`✅ Activated user account: ${user.email}`);
       } catch (error) {
@@ -231,7 +232,7 @@ router.post('/approve/:companyId', authenticateToken, async (req, res) => {
         userId: user.id,
         type: 'verification_approved',
         title: 'Verification Approved',
-        message: `Your company "${company.name}" has been verified and approved! You can now access all features.`,
+        message: `Your company "${company.name}" has been verified and approved! Please log out and log back in to access all features.`,
         priority: 'high',
         actionUrl: '/employer-dashboard',
         actionText: 'Access Dashboard',
@@ -314,7 +315,8 @@ router.post('/reject/:companyId', authenticateToken, async (req, res) => {
       // Set user account status to allow re-registration
       try {
         await user.update({
-          account_status: 'rejected'
+          account_status: 'rejected',
+          session_version: user.session_version + 1 // Invalidate existing tokens
         });
         console.log(`✅ Set user account to rejected: ${user.email}`);
       } catch (error) {
