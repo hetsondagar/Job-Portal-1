@@ -365,14 +365,14 @@ router.get('/users/:userId/details', async (req, res) => {
           as: 'jobApplications',
           attributes: ['id', 'status', 'createdAt'],
           limit: 10,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
           as: 'jobBookmarks',
           attributes: ['id', 'createdAt'],
           limit: 10,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: Resume,
@@ -580,7 +580,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const activeJobs = activeJobsResult.count;
     
     const [totalApplicationsResult] = await sequelize.query(
-      'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja."jobId" = j.id WHERE j."companyId" = :companyId',
+      'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j."companyId" = :companyId',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
     const totalApplications = totalApplicationsResult.count;
@@ -694,7 +694,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
               required: false
             }]
           }],
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         },
         {
           model: JobBookmark,

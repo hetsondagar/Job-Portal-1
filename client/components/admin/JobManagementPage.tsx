@@ -43,7 +43,7 @@ interface JobManagementPageProps {
 }
 
 export default function JobManagementPage({ portal, title, description, icon }: JobManagementPageProps) {
-  const { user, authLoading } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
   
   const [jobs, setJobs] = useState<any[]>([])
@@ -57,15 +57,13 @@ export default function JobManagementPage({ portal, title, description, icon }: 
   const [showJobDialog, setShowJobDialog] = useState(false)
 
   useEffect(() => {
-    if (authLoading) return
-
     if (!user || (user.userType !== 'admin' && user.userType !== 'superadmin')) {
       router.push('/admin-login')
       return
     }
 
     loadJobs()
-  }, [user, authLoading, router, currentPage, filterStatus, filterType])
+  }, [user, router, currentPage, filterStatus, filterType])
 
   const loadJobs = async () => {
     try {
@@ -163,7 +161,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
         region: portal === 'all' ? undefined : (portal === 'gulf' ? 'gulf' : 'india')
       })
       
-      if (response.success) {
+      if (response.success && response.data) {
         const blob = new Blob([response.data], { type: 'text/csv' })
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -231,24 +229,24 @@ export default function JobManagementPage({ portal, title, description, icon }: 
               variant="ghost"
               size="sm"
               onClick={() => router.push('/super-admin/dashboard')}
-              className="text-white hover:bg-white/10 border border-white/20"
+              className="text-gray-900 hover:bg-gray-100 border border-gray-300"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center">
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
                 {icon}
                 <span className="ml-3">{title}</span>
               </h1>
-              <p className="text-blue-200 mt-2">{description}</p>
+              <p className="text-gray-600 mt-2">{description}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <Button
               onClick={exportJobs}
               variant="outline"
-              className="text-white border-white/20 hover:bg-white/10 bg-white/5"
+              className="text-gray-900 border-gray-300 hover:bg-gray-100 bg-white"
             >
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -256,7 +254,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
             <Button
               onClick={loadJobs}
               variant="outline"
-              className="text-white border-white/20 hover:bg-white/10 bg-white/5"
+              className="text-gray-900 border-gray-300 hover:bg-gray-100 bg-white"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
@@ -265,7 +263,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
         </div>
 
         {/* Filters */}
-        <Card className="mb-6 bg-white/5 border-white/10">
+        <Card className="mb-6 bg-white border-gray-200">
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -275,13 +273,13 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                     placeholder="Search jobs by title or company..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
               </div>
               <div className="flex gap-2">
                 <Select value={filterStatus} onValueChange={(value) => { setFilterStatus(value); handleFilterChange() }}>
-                  <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="w-40 bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -295,7 +293,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                   </SelectContent>
                 </Select>
                 <Select value={filterType} onValueChange={(value) => { setFilterType(value); handleFilterChange() }}>
-                  <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="w-40 bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="Job Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -317,13 +315,13 @@ export default function JobManagementPage({ portal, title, description, icon }: 
         </Card>
 
         {/* Jobs List */}
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-gray-900 flex items-center">
               <Briefcase className="w-5 h-5 mr-2" />
               {title} ({jobs.length})
             </CardTitle>
-            <CardDescription className="text-blue-200">
+            <CardDescription className="text-gray-600">
               {description}
             </CardDescription>
           </CardHeader>
@@ -331,20 +329,20 @@ export default function JobManagementPage({ portal, title, description, icon }: 
             {jobs.length === 0 ? (
               <div className="text-center py-12">
                 <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-white mb-2">No jobs found</h3>
-                <p className="text-blue-200">No {title.toLowerCase()} match your current filters.</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No jobs found</h3>
+                <p className="text-gray-600">No {title.toLowerCase()} match your current filters.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {jobs.map((job) => (
-                  <div key={job.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                  <div key={job.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center space-x-4">
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <Briefcase className="w-8 h-8 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-white text-lg">{job.title}</h3>
-                        <p className="text-blue-200 text-sm">{job.company?.name || 'Unknown Company'}</p>
+                        <h3 className="font-semibold text-gray-900 text-lg">{job.title}</h3>
+                        <p className="text-gray-600 text-sm">{job.company?.name || 'Unknown Company'}</p>
                         <div className="flex items-center space-x-2 mt-2">
                           <Badge className={getStatusColor(job.status)}>
                             {job.status}
@@ -353,7 +351,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                             {job.jobType}
                           </Badge>
                           {job.location && (
-                            <Badge variant="outline" className="text-blue-200 border-blue-200">
+                            <Badge variant="outline" className="text-gray-600 border-gray-300">
                               <MapPin className="w-3 h-3 mr-1" />
                               {job.location}
                             </Badge>
@@ -406,7 +404,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                         onClick={() => {
                           router.push(`/super-admin/jobs/${job.id}`)
                         }}
-                        className="text-white hover:bg-white/10 border-white/20 bg-white/5"
+                        className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -414,15 +412,15 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                         variant="outline"
                         size="sm"
                         onClick={() => toggleJobStatus(job.id, job.status)}
-                        className={`text-white hover:bg-white/10 border-white/20 bg-white/5 ${
-                          job.status === 'active' ? 'hover:text-red-400' : 'hover:text-green-400'
+                        className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
+                          job.status === 'active' ? 'hover:text-red-600' : 'hover:text-green-600'
                         }`}
                       >
                         {job.status === 'active' ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-white hover:bg-white/10 border-white/20 bg-white/5">
+                          <Button variant="outline" size="sm" className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -448,7 +446,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => deleteJob(job.id)}
-                            className="text-red-400"
+                            className="text-red-600"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete
@@ -464,7 +462,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-6">
-                <p className="text-blue-200 text-sm">
+                <p className="text-gray-600 text-sm">
                   Page {currentPage} of {totalPages}
                 </p>
                 <div className="flex items-center space-x-2">
@@ -473,7 +471,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="text-white border-white/20 hover:bg-white/10 bg-white/5"
+                    className="text-gray-900 border-gray-300 hover:bg-gray-100 bg-white"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     Previous
@@ -483,7 +481,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="text-white border-white/20 hover:bg-white/10 bg-white/5"
+                    className="text-gray-900 border-gray-300 hover:bg-gray-100 bg-white"
                   >
                     Next
                     <ChevronRight className="w-4 h-4" />
@@ -496,7 +494,7 @@ export default function JobManagementPage({ portal, title, description, icon }: 
 
         {/* Job Details Dialog */}
         <Dialog open={showJobDialog} onOpenChange={setShowJobDialog}>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <Briefcase className="w-5 h-5 mr-2" />
