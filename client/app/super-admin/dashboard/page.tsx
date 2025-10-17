@@ -78,9 +78,9 @@ export default function AdminDashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-white flex items-center justify-center">
+        <div className="text-gray-800 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p>Loading Admin Dashboard...</p>
         </div>
       </div>
@@ -92,25 +92,25 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-white">
       {/* Header */}
-      <div className="border-b border-white/10 bg-black/20 backdrop-blur-sm sticky top-0 z-50">
+      <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8 text-blue-400" />
+              <Shield className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-                <p className="text-sm text-gray-400">System Administration Portal</p>
+                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-sm text-gray-600">System Administration Portal</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge className="bg-green-600 text-white">
+              <Badge className="bg-green-100 text-green-800 border border-green-200">
                 <UserCheck className="w-3 h-3 mr-1" />
                 Admin
               </Badge>
-              <span className="text-sm text-gray-300">
-                {user.first_name} {user.last_name}
+              <span className="text-sm text-gray-600">
+                {user.firstName} {user.lastName}
               </span>
               <Button
                 variant="outline"
@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
                   localStorage.clear()
                   router.push('/admin-login')
                 }}
-                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
               >
                 <LogOut className="w-4 h-4 mr-1" />
                 Logout
@@ -131,20 +131,20 @@ export default function AdminDashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white/10 border-white/20">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
+          <TabsList className="grid w-full grid-cols-4 bg-white border-gray-200 shadow-sm">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Users className="w-4 h-4 mr-2" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="companies" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="companies" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Building2 className="w-4 h-4 mr-2" />
               Companies
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Briefcase className="w-4 h-4 mr-2" />
               Jobs
             </TabsTrigger>
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
               {/* Quick Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Total Users */}
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white">
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center justify-between">
                       Total Users
@@ -186,7 +186,7 @@ export default function AdminDashboardPage() {
                 </Card>
 
                 {/* Total Companies */}
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white">
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center justify-between">
                       Companies
@@ -212,7 +212,7 @@ export default function AdminDashboardPage() {
                 </Card>
 
                 {/* Total Jobs */}
-                <Card className="bg-gradient-to-br from-green-500 to-green-600 border-0 text-white">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center justify-between">
                       Jobs Posted
@@ -242,7 +242,7 @@ export default function AdminDashboardPage() {
                 </Card>
 
                 {/* Applications */}
-                <Card className="bg-gradient-to-br from-orange-500 to-orange-600 border-0 text-white">
+                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center justify-between">
                       Applications
@@ -260,18 +260,18 @@ export default function AdminDashboardPage() {
 
               {/* Quick Actions */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Users className="w-5 h-5" />
                       <span>User Management</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-300">
+                    <CardDescription className="text-gray-600">
                       Manage all users, jobseekers, and employers
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/admin/users/normal">
+                    <Link href="/super-admin/users/normal">
                       <Button className="w-full justify-between bg-blue-600 hover:bg-blue-700">
                         Manage Users
                         <Users className="w-4 h-4" />
@@ -290,18 +290,18 @@ export default function AdminDashboardPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Building2 className="w-5 h-5" />
                       <span>Company Management</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-300">
+                    <CardDescription className="text-gray-600">
                       Verify and manage company accounts
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/admin/companies/all">
+                    <Link href="/super-admin/companies/all">
                       <Button className="w-full justify-between bg-purple-600 hover:bg-purple-700">
                         Manage Companies
                         <Building2 className="w-4 h-4" />
@@ -320,18 +320,18 @@ export default function AdminDashboardPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Briefcase className="w-5 h-5" />
                       <span>Job Management</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-300">
+                    <CardDescription className="text-gray-600">
                       Manage job postings and approvals
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/admin/jobs/all">
+                    <Link href="/super-admin/jobs/all">
                       <Button className="w-full justify-between bg-green-600 hover:bg-green-700">
                         Manage Jobs
                         <Briefcase className="w-4 h-4" />
@@ -350,18 +350,18 @@ export default function AdminDashboardPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <FileCheck className="w-5 h-5" />
                       <span>Verifications</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-300">
+                    <CardDescription className="text-gray-600">
                       Review employer verification requests
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/admin/dashboard/verifications">
+                    <Link href="/super-admin/dashboard/verifications">
                       <Button className="w-full justify-between bg-amber-600 hover:bg-amber-700">
                         Check Verifications
                         <FileCheck className="w-4 h-4" />
@@ -382,15 +382,15 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Security Notice */}
-              <Card className="bg-red-500/10 border-red-500/50 text-white">
+              <Card className="bg-red-50 border-red-200 text-gray-800">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-red-400">
+                  <CardTitle className="flex items-center space-x-2 text-red-600">
                     <AlertCircle className="w-5 h-5" />
                     <span>Security Notice</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-300">
+                  <p className="text-sm text-gray-600">
                     This is a secure admin portal. All actions are logged and monitored. 
                     Never share this URL with unauthorized users. If you notice any suspicious activity, 
                     change your password immediately.
@@ -404,22 +404,22 @@ export default function AdminDashboardPage() {
           <TabsContent value="users" className="mt-6">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">User Management</h2>
+                <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
                 <div className="flex space-x-2">
-                  <Link href="/admin/users/normal">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/users/normal">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <Building2 className="w-4 h-4 mr-2" />
                       Normal Portal
                     </Button>
                   </Link>
-                  <Link href="/admin/users/gulf-portal">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/users/gulf-portal">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <Globe className="w-4 h-4 mr-2" />
                       Gulf Portal
                     </Button>
                   </Link>
-                  <Link href="/admin/users/both">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/users/both">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <Users className="w-4 h-4 mr-2" />
                       Both Portals
                     </Button>
@@ -427,10 +427,10 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
                     <CardTitle>All Users Overview</CardTitle>
-                    <CardDescription className="text-gray-300">
+                    <CardDescription className="text-gray-600">
                       Manage users across different portals: Normal Portal, Gulf Portal, and Both Portals
                     </CardDescription>
                   </CardHeader>
@@ -466,7 +466,7 @@ export default function AdminDashboardPage() {
                   </div>
                   
                   <div className="mt-6">
-                    <Link href="/admin/users/normal">
+                    <Link href="/super-admin/users/normal">
                       <Button className="w-full bg-blue-600 hover:bg-blue-700">
                         <Users className="w-4 h-4 mr-2" />
                         View All Users
@@ -482,16 +482,16 @@ export default function AdminDashboardPage() {
           <TabsContent value="companies" className="mt-6">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">Company Management</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Company Management</h2>
                 <div className="flex space-x-2">
-                  <Link href="/admin/companies/india">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/companies/india">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <MapPin className="w-4 h-4 mr-2" />
                       India Companies
                     </Button>
                   </Link>
-                  <Link href="/admin/companies/gulf">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/companies/gulf">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <Globe className="w-4 h-4 mr-2" />
                       Gulf Companies
                     </Button>
@@ -499,10 +499,10 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               
-              <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+              <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                 <CardHeader>
                   <CardTitle>All Companies Overview</CardTitle>
-                  <CardDescription className="text-gray-300">
+                  <CardDescription className="text-gray-600">
                     Manage all companies across India and Gulf regions
                   </CardDescription>
                 </CardHeader>
@@ -538,7 +538,7 @@ export default function AdminDashboardPage() {
                   </div>
                   
                   <div className="mt-6">
-                    <Link href="/admin/companies/all">
+                    <Link href="/super-admin/companies/all">
                       <Button className="w-full bg-purple-600 hover:bg-purple-700">
                         <Building2 className="w-4 h-4 mr-2" />
                         View All Companies
@@ -554,16 +554,16 @@ export default function AdminDashboardPage() {
           <TabsContent value="jobs" className="mt-6">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">Job Management</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Job Management</h2>
                 <div className="flex space-x-2">
-                  <Link href="/admin/jobs/india">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/jobs/india">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <MapPin className="w-4 h-4 mr-2" />
                       India Jobs
                     </Button>
                   </Link>
-                  <Link href="/admin/jobs/gulf">
-                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/20 bg-white/5">
+                  <Link href="/super-admin/jobs/gulf">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white">
                       <Globe className="w-4 h-4 mr-2" />
                       Gulf Jobs
                     </Button>
@@ -571,10 +571,10 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               
-              <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+              <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                 <CardHeader>
                   <CardTitle>All Jobs Overview</CardTitle>
-                  <CardDescription className="text-gray-300">
+                  <CardDescription className="text-gray-600">
                     Manage all jobs across India and Gulf regions
                   </CardDescription>
                 </CardHeader>
@@ -619,7 +619,7 @@ export default function AdminDashboardPage() {
                   </div>
                   
                   <div className="mt-6">
-                    <Link href="/admin/jobs/all">
+                    <Link href="/super-admin/jobs/all">
                       <Button className="w-full bg-green-600 hover:bg-green-700">
                         <Briefcase className="w-4 h-4 mr-2" />
                         View All Jobs

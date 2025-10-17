@@ -69,15 +69,19 @@ export default function UserManagementPage({ portal, title, description, icon }:
         status: filterStatus === 'all' ? undefined : filterStatus
       })
       
-      if (response.success) {
-        setUsers(response.data.users)
-        setTotalPages(response.data.totalPages)
+      if (response.success && response.data) {
+        setUsers(response.data.users || [])
+        setTotalPages(response.data.totalPages || 1)
       } else {
         toast.error(`Failed to load ${title.toLowerCase()} users`)
+        setUsers([])
+        setTotalPages(1)
       }
     } catch (error) {
       console.error(`Failed to load ${title.toLowerCase()} users:`, error)
       toast.error(`Failed to load ${title.toLowerCase()} users`)
+      setUsers([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
@@ -141,9 +145,9 @@ export default function UserManagementPage({ portal, title, description, icon }:
 
   if (loading && users.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
+        <div className="text-gray-900 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p>Loading {title.toLowerCase()} users...</p>
         </div>
       </div>
@@ -155,7 +159,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -163,18 +167,18 @@ export default function UserManagementPage({ portal, title, description, icon }:
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push('/admin/dashboard')}
-              className="text-white hover:bg-white/10"
+              onClick={() => router.push('/super-admin/dashboard')}
+              className="text-gray-900 hover:bg-gray-100"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center">
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
                 {icon}
                 <span className="ml-3">{title}</span>
               </h1>
-              <p className="text-blue-200 mt-2">{description}</p>
+              <p className="text-gray-600 mt-2">{description}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -198,7 +202,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
         </div>
 
         {/* Filters */}
-        <Card className="mb-6 bg-white/5 border-white/10">
+        <Card className="mb-6 bg-white border-gray-200">
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -208,13 +212,13 @@ export default function UserManagementPage({ portal, title, description, icon }:
                     placeholder="Search users by name or email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
               </div>
               <div className="flex gap-2">
                 <Select value={filterType} onValueChange={(value) => { setFilterType(value); handleFilterChange() }}>
-                  <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="w-40 bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="User Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -224,7 +228,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={(value) => { setFilterStatus(value); handleFilterChange() }}>
-                  <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="w-40 bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -243,13 +247,13 @@ export default function UserManagementPage({ portal, title, description, icon }:
         </Card>
 
         {/* Users List */}
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-gray-900 flex items-center">
               <Users className="w-5 h-5 mr-2" />
               {title} ({users.length})
             </CardTitle>
-            <CardDescription className="text-blue-200">
+            <CardDescription className="text-gray-600">
               {description}
             </CardDescription>
           </CardHeader>
@@ -263,7 +267,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
             ) : (
               <div className="space-y-4">
                 {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                  <div key={user.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-semibold">
@@ -271,13 +275,13 @@ export default function UserManagementPage({ portal, title, description, icon }:
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white">
+                        <h3 className="font-semibold text-gray-900">
                           {user.first_name && user.last_name 
                             ? `${user.first_name} ${user.last_name}` 
                             : user.email
                           }
                         </h3>
-                        <p className="text-blue-200 text-sm">{user.email}</p>
+                        <p className="text-gray-600 text-sm">{user.email}</p>
                         <div className="flex items-center space-x-4 mt-1">
                           <Badge 
                             variant={user.user_type === 'employer' ? 'default' : 'secondary'}
@@ -309,9 +313,9 @@ export default function UserManagementPage({ portal, title, description, icon }:
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          router.push(`/admin/users/${user.id}`)
+                          router.push(`/super-admin/users/${user.id}`)
                         }}
-                        className="text-white hover:bg-white/10"
+                        className="text-gray-900 hover:bg-gray-100"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -341,7 +345,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="text-white border-white/20 hover:bg-white/10"
+                    className="text-gray-900 border-gray-300 hover:bg-gray-100"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     Previous
@@ -351,7 +355,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="text-white border-white/20 hover:bg-white/10"
+                    className="text-gray-900 border-gray-300 hover:bg-gray-100"
                   >
                     Next
                     <ChevronRight className="w-4 h-4" />
@@ -364,7 +368,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
 
         {/* User Details Dialog */}
         <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <Users className="w-5 h-5 mr-2" />
@@ -440,7 +444,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
                   <Button
                     variant="outline"
                     onClick={() => setShowUserDialog(false)}
-                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
                   >
                     Close
                   </Button>

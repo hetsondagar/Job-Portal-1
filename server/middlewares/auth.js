@@ -24,6 +24,15 @@ const authenticateToken = async (req, res, next) => {
       attributes: { exclude: ['password'] }
     });
 
+    // Check session version for token invalidation
+    if (decoded.sessionVersion && user.session_version && decoded.sessionVersion !== user.session_version) {
+      console.log('❌ [AUTH] Session version mismatch - token invalidated');
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please log in again.'
+      });
+    }
+
     if (!user) {
       console.log('❌ [AUTH] User not found in database');
       return res.status(401).json({

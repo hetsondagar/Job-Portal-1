@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
     if (authLoading) return
     
     if (user && user.userType === 'superadmin') {
-      router.push('/admin/dashboard')
+      router.push('/super-admin/dashboard')
     }
   }, [user, authLoading, router])
 
@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
         toast.success("Login successful!")
         
         // ALWAYS redirect to admin dashboard - no checks needed since backend validates superadmin
-        router.push('/admin/dashboard')
+        router.push('/super-admin/dashboard')
       } else {
         toast.error(response.message || "Login failed")
       }

@@ -193,7 +193,7 @@ export default function AgencyVerificationsPage() {
                 Manage recruiting agency and client authorization verifications
               </p>
             </div>
-            <Button onClick={() => router.push('/admin/dashboard')} variant="outline">
+            <Button onClick={() => router.push('/super-admin/dashboard')} variant="outline">
               Back to Dashboard
             </Button>
           </div>

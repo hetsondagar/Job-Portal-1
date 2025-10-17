@@ -23,6 +23,7 @@ const Job = sequelize.define('Job', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'companyId',
     references: {
       model: 'companies',
       key: 'id'
@@ -681,13 +682,13 @@ Job.associate = function(models) {
   // Main company (employer who owns the job - could be agency or direct)
   Job.belongsTo(models.Company, {
     foreignKey: 'companyId',
-    as: 'Company'
+    as: 'company'
   });
   
   // Employer user
   Job.belongsTo(models.User, {
     foreignKey: 'employerId',
-    as: 'Employer'
+    as: 'employer'
   });
   
   // NEW: Hiring company (the actual company hiring - for agency jobs)
@@ -704,10 +705,52 @@ Job.associate = function(models) {
     constraints: false // Optional relationship
   });
   
+  // Job applications
+  Job.hasMany(models.JobApplication, {
+    foreignKey: 'jobId',
+    as: 'jobApplications'
+  });
+  
+  // Job bookmarks
+  Job.hasMany(models.JobBookmark, {
+    foreignKey: 'jobId',
+    as: 'bookmarks'
+  });
+  
   // Job photos
   Job.hasMany(models.JobPhoto, {
     foreignKey: 'jobId',
-    as: 'JobPhotos'
+    as: 'photos'
+  });
+  
+  // Interviews
+  Job.hasMany(models.Interview, {
+    foreignKey: 'jobId',
+    as: 'interviews'
+  });
+  
+  // Conversations
+  Job.hasMany(models.Conversation, {
+    foreignKey: 'jobId',
+    as: 'conversations'
+  });
+  
+  // Analytics
+  Job.hasMany(models.Analytics, {
+    foreignKey: 'jobId',
+    as: 'analytics'
+  });
+  
+  // Featured jobs
+  Job.hasMany(models.FeaturedJob, {
+    foreignKey: 'jobId',
+    as: 'featuredPromotions'
+  });
+  
+  // Secure job taps
+  Job.hasMany(models.SecureJobTap, {
+    foreignKey: 'jobId',
+    as: 'secureJobTaps'
   });
 };
 

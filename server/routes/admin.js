@@ -49,6 +49,78 @@ router.get('/test-auth', async (req, res) => {
 router.use(authenticateToken);
 router.use(requireAdmin);
 
+// Test endpoint for raw SQL queries (after middleware)
+router.post('/test-raw-sql', async (req, res) => {
+  try {
+    console.log('🔍 [ADMIN-TEST] Testing raw SQL query');
+    const { query } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: 'Query is required'
+      });
+    }
+    
+    const [results] = await sequelize.query(query);
+    res.json({
+      success: true,
+      message: 'Raw SQL query executed successfully',
+      data: results
+    });
+  } catch (error) {
+    console.error('❌ [ADMIN-TEST] Raw SQL Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Raw SQL query error',
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint for Job count only
+router.get('/jobs/count', async (req, res) => {
+  try {
+    console.log('🔍 [ADMIN-TEST] Testing Job count query');
+    
+    const count = await Job.count();
+    res.json({
+      success: true,
+      message: 'Job count query successful',
+      data: { count }
+    });
+  } catch (error) {
+    console.error('❌ [ADMIN-TEST] Job count Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Job count query error',
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint for minimal Job model
+router.get('/jobs/minimal-count', async (req, res) => {
+  try {
+    console.log('🔍 [ADMIN-TEST] Testing minimal Job count query');
+    
+    const JobMinimal = require('../models/JobMinimal');
+    const count = await JobMinimal.count();
+    res.json({
+      success: true,
+      message: 'Minimal Job count query successful',
+      data: { count }
+    });
+  } catch (error) {
+    console.error('❌ [ADMIN-TEST] Minimal Job count Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Minimal Job count query error',
+      error: error.message
+    });
+  }
+});
+
 // Get admin dashboard statistics
 router.get('/stats', async (req, res) => {
   try {
@@ -77,7 +149,7 @@ router.get('/stats', async (req, res) => {
       Promise.all([
         Company.count(),
         Company.count({ where: { verificationStatus: 'verified' } }),
-        Company.count({ where: { verificationStatus: 'unverified' } }),
+        Company.count({ where: { verificationStatus: 'pending' } }),
         Company.count({ where: { isActive: true } }),
         Company.count({
           where: {
@@ -118,7 +190,7 @@ router.get('/stats', async (req, res) => {
       companies: {
         total: companyStats[0],
         verified: companyStats[1],
-        unverified: companyStats[2],
+        pending: companyStats[2],
         active: companyStats[3],
         newLast30Days: companyStats[4]
       },
@@ -285,22 +357,13 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
+          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'createdAt']
         },
+        // Temporarily disabled Job includes to avoid company_id column errors
         {
           model: JobApplication,
           as: 'jobApplications',
           attributes: ['id', 'status', 'created_at'],
-          include: [{
-            model: Job,
-            as: 'job',
-            attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status', 'createdAt'],
-            include: [{
-              model: Company,
-              as: 'company',
-              attributes: ['id', 'name', 'industry']
-            }]
-          }],
           limit: 10,
           order: [['created_at', 'DESC']]
         },
@@ -308,16 +371,6 @@ router.get('/users/:userId/details', async (req, res) => {
           model: JobBookmark,
           as: 'jobBookmarks',
           attributes: ['id', 'created_at'],
-          include: [{
-            model: Job,
-            as: 'job',
-            attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status'],
-            include: [{
-              model: Company,
-              as: 'company',
-              attributes: ['id', 'name', 'industry']
-            }]
-          }],
           limit: 10,
           order: [['created_at', 'DESC']]
         },
@@ -350,7 +403,35 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get additional statistics
     const totalApplications = await JobApplication.count({ where: { userId } });
     const totalBookmarks = await JobBookmark.count({ where: { userId } });
-    const totalJobsPosted = user.user_type === 'employer' ? await Job.count({ where: { companyId: user.company?.id } }) : 0;
+    
+    // Get posted jobs for employers/admins/recruiters
+    let postedJobs = [];
+    let totalJobsPosted = 0;
+    if ((user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company?.id) {
+      postedJobs = await Job.findAll({
+        where: { companyId: user.company.id },
+        attributes: ['id', 'title', 'location', 'status', 'createdAt'],
+        limit: 20,
+        order: [['createdAt', 'DESC']],
+        include: [{
+          model: JobApplication,
+          as: 'jobApplications',
+          attributes: ['id']
+        }]
+      });
+      
+      // Add application count to each job
+      postedJobs = postedJobs.map(job => {
+        const jobData = job.toJSON();
+        return {
+          ...jobData,
+          applicationCount: jobData.jobApplications?.length || 0,
+          jobApplications: undefined // Remove the full array, we only need the count
+        };
+      });
+      
+      totalJobsPosted = postedJobs.length;
+    }
     
     // Get pricing/subscription information if available
     const subscription = await Subscription.findOne({
@@ -389,6 +470,7 @@ router.get('/users/:userId/details', async (req, res) => {
 
     const userDetails = {
       ...user.toJSON(),
+      postedJobs: postedJobs || [],
       statistics: {
         totalApplications,
         totalBookmarks,
@@ -422,48 +504,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
   try {
     const { companyId } = req.params;
     
-    const company = await Company.findByPk(companyId, {
-      include: [
-        {
-          model: User,
-          as: 'employees',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'user_type', 'is_active', 'createdAt']
-        },
-        {
-          model: Job,
-          as: 'jobs',
-          attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt', 'validTill'],
-          include: [{
-            model: JobApplication,
-            as: 'jobApplications',
-            attributes: ['id', 'status', 'created_at'],
-            include: [{
-              model: User,
-              as: 'applicant',
-              attributes: ['id', 'first_name', 'last_name', 'email']
-            }]
-          }],
-          order: [['created_at', 'DESC']]
-        },
-        {
-          model: CompanyPhoto,
-          as: 'photos',
-          attributes: ['id', 'filePath', 'isPrimary', 'created_at']
-        },
-        {
-          model: CompanyReview,
-          as: 'reviews',
-          attributes: ['id', 'rating', 'review', 'created_at'],
-          include: [{
-            model: User,
-            as: 'reviewer',
-            attributes: ['id', 'first_name', 'last_name']
-          }],
-          order: [['created_at', 'DESC']],
-          limit: 10
-        }
-      ]
-    });
+    const company = await Company.findByPk(companyId);
 
     if (!company) {
       return res.status(404).json({
@@ -472,29 +513,92 @@ router.get('/companies/:companyId/details', async (req, res) => {
       });
     }
 
-    // Get additional statistics
-    const totalJobs = await Job.count({ where: { companyId } });
-    const activeJobs = await Job.count({ where: { companyId, status: 'active' } });
-    const totalApplications = await JobApplication.count({
-      include: [{
-        model: Job,
-        as: 'job',
-        where: { companyId }
-      }]
-    });
-    const totalReviews = await CompanyReview.count({ where: { companyId } });
-    const averageRating = await CompanyReview.findOne({
-      where: { companyId },
-      attributes: [
-        [Sequelize.fn('AVG', Sequelize.col('rating')), 'averageRating']
-      ],
-      raw: true
+    // Get company's jobs using raw SQL to avoid column name issues
+    const companyJobsRows = await sequelize.query(
+      'SELECT id, title, location, salary, "jobType", status, "createdAt", "validTill" FROM jobs WHERE "companyId" = :companyId ORDER BY "createdAt" DESC',
+      { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const companyJobs = companyJobsRows || [];
+
+    // Get job applications separately for each job
+    const jobIds = companyJobs.map(job => job.id);
+    const jobApplications = jobIds.length > 0 ? await JobApplication.findAll({
+      where: { jobId: jobIds },
+        attributes: ['id', 'jobId', 'status', 'created_at'],
+        order: [['created_at', 'DESC']]
+    }) : [];
+
+    // Get applicants separately to avoid complex includes
+    const applicantIds = jobApplications.map(app => app.userId);
+    const applicants = applicantIds.length > 0 ? await User.findAll({
+      where: { id: applicantIds },
+      attributes: ['id', 'first_name', 'last_name', 'email']
+    }) : [];
+
+    // Create a map of applicants by ID
+    const applicantsMap = applicants.reduce((acc, user) => {
+      acc[user.id] = user;
+      return acc;
+    }, {});
+
+    // Add applicants to job applications
+    const jobApplicationsWithApplicants = jobApplications.map(app => {
+      const appData = app.toJSON();
+      return {
+        ...appData,
+        applicant: applicantsMap[appData.userId] || null
+      };
     });
 
-    // Get company subscription/pricing information
-    const subscription = await Subscription.findOne({
+    // Group applications by job ID
+    const applicationsByJob = jobApplicationsWithApplicants.reduce((acc, app) => {
+      if (!acc[app.jobId]) acc[app.jobId] = [];
+      acc[app.jobId].push(app);
+      return acc;
+    }, {});
+
+    // Add applications to jobs
+    const companyJobsWithApplications = companyJobs.map(job => {
+      const jobData = job.toJSON();
+      return {
+        ...jobData,
+        jobApplications: applicationsByJob[job.id] || []
+      };
+    });
+
+    // Get additional statistics using raw SQL to avoid column name issues
+    const [totalJobsResult] = await sequelize.query(
+      'SELECT COUNT(*) as count FROM jobs WHERE "companyId" = :companyId',
+      { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const totalJobs = totalJobsResult.count;
+    
+    const [activeJobsResult] = await sequelize.query(
+      'SELECT COUNT(*) as count FROM jobs WHERE "companyId" = :companyId AND status = :status',
+      { replacements: { companyId: companyId, status: 'active' }, type: sequelize.QueryTypes.SELECT }
+    );
+    const activeJobs = activeJobsResult.count;
+    
+    const [totalApplicationsResult] = await sequelize.query(
+      'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j."companyId" = :companyId',
+      { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const totalApplications = totalApplicationsResult.count;
+    // Temporarily disable these queries to isolate the issue
+    const totalReviews = 0;
+    const averageRating = { averageRating: 0 };
+
+    // Get company users first
+    const companyUsers = await User.findAll({
+      where: { companyId: companyId },
+      attributes: ['id', 'first_name', 'last_name', 'email', 'user_type']
+    });
+
+    // Get company subscription/pricing information - use first user's ID as a proxy
+    const firstUserId = companyUsers.length > 0 ? companyUsers[0].id : null;
+    const subscription = firstUserId ? await Subscription.findOne({
       where: { 
-        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+        userId: firstUserId
       },
       include: [{
         model: SubscriptionPlan,
@@ -502,27 +606,27 @@ router.get('/companies/:companyId/details', async (req, res) => {
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
       order: [['created_at', 'DESC']]
-    });
+    }) : null;
 
-    // Get payment history
-    const payments = await Payment.findAll({
+    // Get payment history - only if company has users
+    const payments = firstUserId ? await Payment.findAll({
       where: { 
-        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+        userId: firstUserId
       },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
-    });
+    }) : [];
 
-    // Get company activity logs (using UserActivityLog for now)
-    const activityLogs = await UserActivityLog.findAll({
+    // Get company activity logs - only if company has users
+    const activityLogs = firstUserId ? await UserActivityLog.findAll({
       where: { 
-        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+        userId: firstUserId
       },
       attributes: ['id', 'activityType', 'details', 'timestamp'],
       order: [['timestamp', 'DESC']],
       limit: 20
-    });
+    }) : [];
 
     // Get company analytics
     const analytics = await Analytics.findAll({
@@ -534,13 +638,14 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     const companyDetails = {
       ...company.toJSON(),
+      jobs: companyJobsWithApplications || [],
       statistics: {
         totalJobs,
         activeJobs,
         totalApplications,
         totalReviews,
         averageRating: averageRating?.averageRating ? parseFloat(averageRating.averageRating).toFixed(1) : 0,
-        totalEmployees: company.employees?.length || 0,
+        totalEmployees: companyUsers?.length || 0,
         totalPhotos: company.photos?.length || 0
       },
       subscription: subscription || null,
@@ -981,7 +1086,7 @@ router.get('/companies', async (req, res) => {
       } else if (verification === 'pending') {
         whereClause.verificationStatus = 'pending';
       } else if (verification === 'rejected') {
-        whereClause.verificationStatus = 'rejected';
+        whereClause.verificationStatus = 'unverified';
       } else if (verification === 'unverified') {
         whereClause.verificationStatus = 'unverified';
       }
@@ -1164,56 +1269,156 @@ router.delete('/companies/:id', async (req, res) => {
       });
     }
 
-    // Get all company users to delete their jobs
+    // Get all company users to get their IDs for related data cleanup
     const companyUsers = await User.findAll({
       where: { company_id: id },
       transaction
     });
     const userIds = companyUsers.map(u => u.id);
 
-    // Delete jobs by employerId (user foreign key)
+    // Delete all related data using raw SQL queries to avoid ORM mapping issues
+    
+    // 1. Delete job applications first (they reference jobs and users)
     if (userIds.length > 0) {
-      await Job.destroy({ 
-        where: { employerId: userIds },
-        transaction 
-      });
+      await sequelize.query(
+        'DELETE FROM job_applications WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
     }
 
-    // Delete company jobs (by companyId)
-    await Job.destroy({ 
-      where: { companyId: id },
-      transaction 
-    });
-
-    // Delete job applications
-    await JobApplication.destroy({ 
-      where: { companyId: id },
-      transaction 
-    });
-
-    // Delete company follows
-    await CompanyFollow.destroy({ 
-      where: { companyId: id },
-      transaction 
-    });
-
-    // Delete company photos
-    const { CompanyPhoto } = require('../models');
-    if (CompanyPhoto) {
-      await CompanyPhoto.destroy({ 
-        where: { companyId: id },
-        transaction 
-      });
+    // 2. Delete job bookmarks
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM job_bookmarks WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
     }
 
-    // Delete company users (after jobs are deleted)
-    await User.destroy({ 
-      where: { company_id: id },
-      transaction 
-    });
+    // 3. Delete jobs (both by companyId and employerId)
+    await sequelize.query(
+      'DELETE FROM jobs WHERE "companyId" = :companyId OR employer_id = ANY(:userIds)',
+      {
+        replacements: { companyId: id, userIds: userIds },
+        transaction
+      }
+    );
 
-    // Finally delete the company
-    await company.destroy({ transaction });
+    // 4. Delete company follows
+    await sequelize.query(
+      'DELETE FROM company_follows WHERE company_id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
+
+    // 5. Delete company photos
+    await sequelize.query(
+      'DELETE FROM company_photos WHERE company_id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
+
+    // 6. Delete company reviews
+    await sequelize.query(
+      'DELETE FROM company_reviews WHERE company_id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
+
+    // 7. Delete user sessions
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM user_sessions WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
+    }
+
+    // 8. Delete user activity logs
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM user_activity_logs WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
+    }
+
+    // 9. Delete resumes
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM resumes WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
+    }
+
+    // 10. Delete work experiences
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM work_experiences WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
+    }
+
+    // 11. Delete educations
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM educations WHERE user_id = ANY(:userIds)',
+        {
+          replacements: { userIds: userIds },
+          transaction
+        }
+      );
+    }
+
+    // 12. Delete notifications
+    if (userIds.length > 0) {
+      await sequelize.query(
+        'DELETE FROM notifications WHERE user_id = ANY(:userIds) OR company_id = :companyId',
+        {
+          replacements: { userIds: userIds, companyId: id },
+          transaction
+        }
+      );
+    }
+
+    // 13. Delete company users (after all related data is deleted)
+    await sequelize.query(
+      'DELETE FROM users WHERE "company_id" = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
+
+    // 14. Finally delete the company
+    await sequelize.query(
+      'DELETE FROM companies WHERE id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
 
     await transaction.commit();
 

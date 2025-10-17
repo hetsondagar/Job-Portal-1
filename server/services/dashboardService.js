@@ -243,7 +243,7 @@ class DashboardService {
       try {
         recentBookmarks = await JobBookmark.findAll({
           where: { userId },
-          order: [['created_at', 'DESC']],
+          order: [['createdAt', 'DESC']],
           limit: 5,
           include: [{
             model: require('../models/Job'),
@@ -270,7 +270,7 @@ class DashboardService {
       try {
         jobAlerts = await JobAlert.findAll({
           where: { userId },
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         });
       } catch (error) {
         console.error('Error fetching job alerts:', error);
@@ -678,8 +678,8 @@ class DashboardService {
     // Recent profile views (if ViewTracking exists)
     if (ViewTracking) {
       const recentViews = await safeFindAll(() => ViewTracking.findAll({
-        where: { userId, viewType: 'profile_view', created_at: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-        order: [['created_at', 'DESC']],
+        where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+        order: [['createdAt', 'DESC']],
         limit: 3
       }));
       

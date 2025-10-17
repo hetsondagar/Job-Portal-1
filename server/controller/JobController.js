@@ -958,7 +958,7 @@ exports.getAllJobs = async (req, res, next) => {
     const include = [
       {
         model: Company,
-        as: 'Company',
+        as: 'company',
         attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
         where: (() => {
@@ -991,13 +991,13 @@ exports.getAllJobs = async (req, res, next) => {
       },
       {
         model: User,
-        as: 'Employer',
+        as: 'employer',
         attributes: ['id', 'first_name', 'last_name', 'email', 'company_id'],
         required: Boolean(recruiterType) || false
       },
       {
         model: JobPhoto,
-        as: 'JobPhotos',
+        as: 'photos',
         attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
         where: { isActive: true },
         required: false
@@ -1069,7 +1069,7 @@ exports.getJobById = async (req, res, next) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone'],
           required: false // Make it optional since companyId can be NULL
         },
@@ -1087,12 +1087,12 @@ exports.getJobById = async (req, res, next) => {
         },
         {
           model: User,
-          as: 'Employer',
+          as: 'employer',
           attributes: ['id', 'first_name', 'last_name', 'email']
         },
         {
           model: JobPhoto,
-          as: 'JobPhotos',
+          as: 'photos',
           attributes: ['id', 'filename', 'fileUrl', 'altText', 'caption', 'displayOrder', 'isPrimary', 'isActive'],
           where: { isActive: true },
           required: false

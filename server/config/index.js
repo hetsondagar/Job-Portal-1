@@ -74,12 +74,7 @@ Company.hasMany(CompanyFollow, { foreignKey: 'companyId', as: 'followers' });
 Company.hasMany(User, { foreignKey: 'company_id', as: 'employees' });
 Company.hasMany(CompanyPhoto, { foreignKey: 'companyId', as: 'photos' });
 
-// Job associations
-Job.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
-Job.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
-Job.hasMany(JobApplication, { foreignKey: 'jobId', as: 'jobApplications' });
-Job.hasMany(JobBookmark, { foreignKey: 'jobId', as: 'bookmarks' });
-Job.hasMany(JobPhoto, { foreignKey: 'jobId', as: 'photos' });
+// Job associations - defined in Job model associate function
 
 // JobCategory associations
 JobCategory.belongsTo(JobCategory, { foreignKey: 'parent_id', as: 'parent' });
@@ -168,7 +163,6 @@ Interview.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
 Interview.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 User.hasMany(Interview, { foreignKey: 'employerId', as: 'conductedInterviews' });
 User.hasMany(Interview, { foreignKey: 'candidateId', as: 'attendedInterviews' });
-Job.hasMany(Interview, { foreignKey: 'jobId', as: 'interviews' });
 
 // Conversation associations
 Conversation.belongsTo(User, { foreignKey: 'participant1_id', as: 'participant1' });
@@ -177,7 +171,6 @@ Conversation.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 Conversation.belongsTo(JobApplication, { foreignKey: 'jobApplicationId', as: 'jobApplication' });
 User.hasMany(Conversation, { foreignKey: 'participant1_id', as: 'conversationsAsParticipant1' });
 User.hasMany(Conversation, { foreignKey: 'participant2_id', as: 'conversationsAsParticipant2' });
-Job.hasMany(Conversation, { foreignKey: 'jobId', as: 'conversations' });
 JobApplication.hasMany(Conversation, { foreignKey: 'jobApplicationId', as: 'conversations' });
 
 // Message associations
@@ -201,19 +194,16 @@ Analytics.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 Analytics.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
 Analytics.belongsTo(JobApplication, { foreignKey: 'applicationId', as: 'application' });
 User.hasMany(Analytics, { foreignKey: 'userId', as: 'analytics' });
-Job.hasMany(Analytics, { foreignKey: 'jobId', as: 'analytics' });
 Company.hasMany(Analytics, { foreignKey: 'companyId', as: 'analytics' });
 JobApplication.hasMany(Analytics, { foreignKey: 'applicationId', as: 'analytics' });
 
 // FeaturedJob associations
 FeaturedJob.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
-Job.hasMany(FeaturedJob, { foreignKey: 'jobId', as: 'featuredPromotions' });
 
 // SecureJobTap associations
 SecureJobTap.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 SecureJobTap.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 User.hasMany(SecureJobTap, { foreignKey: 'userId', as: 'secureJobTaps' });
-Job.hasMany(SecureJobTap, { foreignKey: 'jobId', as: 'secureJobTaps' });
 
 // Sync database function
 // In local development we prefer alter:true to create/update tables non-destructively

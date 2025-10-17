@@ -33,7 +33,7 @@ export default function AdminLayout({
 
       // If accessing admin-login while already logged in as admin or superadmin, redirect to dashboard
       if (pathname === '/admin-login' && (user.userType === 'admin' || user.userType === 'superadmin')) {
-        router.push('/admin/dashboard')
+        router.push('/super-admin/dashboard')
         return
       }
 

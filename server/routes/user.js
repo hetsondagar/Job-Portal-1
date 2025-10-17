@@ -2423,7 +2423,7 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
     
     const alerts = await JobAlert.findAll({
       where: { userId: req.user.id },
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     res.json({
@@ -4935,7 +4935,7 @@ router.delete('/account', authenticateToken, async (req, res) => {
 
     // Load user with all associations
     const user = await User.findByPk(userId, {
-      include: [{ model: require('../models/Company'), as: 'Company' }],
+      include: [{ model: require('../models/Company'), as: 'company' }],
       transaction
     });
 

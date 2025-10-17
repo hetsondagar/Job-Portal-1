@@ -82,6 +82,28 @@ interface UserDetail {
       features: string[]
     }
   }
+  // Employer/Admin/Recruiter specific fields
+  company?: {
+    id: string
+    name: string
+    email?: string
+    industry?: string
+    companySize?: string
+    region?: string
+    companyAccountType?: string
+    contactEmail?: string
+    website?: string
+    description?: string
+    verificationStatus?: string
+    verificationDocuments?: any
+  }
+  postedJobs?: Array<{
+    id: string
+    title: string
+    location: string
+    status: string
+    applicationCount?: number
+  }>
   payments: Array<{
     id: string
     amount: number
@@ -403,18 +425,56 @@ export default function UserDetailPage() {
           </Card>
         </div>
 
-        {/* Detailed Information Tabs */}
+        {/* Detailed Information Tabs - Dynamic based on user type */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-white/5 border-white/10">
             <TabsTrigger value="overview" className="text-white data-[state=active]:bg-white/10">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="applications" className="text-white data-[state=active]:bg-white/10">
-              Applications
-            </TabsTrigger>
-            <TabsTrigger value="experience" className="text-white data-[state=active]:bg-white/10">
-              Experience
-            </TabsTrigger>
+            
+            {/* Jobseeker-specific tabs */}
+            {user.user_type === 'jobseeker' && (
+              <>
+                <TabsTrigger value="applications" className="text-white data-[state=active]:bg-white/10">
+                  Applications
+                </TabsTrigger>
+                <TabsTrigger value="experience" className="text-white data-[state=active]:bg-white/10">
+                  Experience & Education
+                </TabsTrigger>
+                <TabsTrigger value="resumes" className="text-white data-[state=active]:bg-white/10">
+                  Resumes
+                </TabsTrigger>
+              </>
+            )}
+            
+            {/* Employer/Recruiter/Admin-specific tabs */}
+            {(user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && (
+              <>
+                <TabsTrigger value="company" className="text-white data-[state=active]:bg-white/10">
+                  Company Details
+                </TabsTrigger>
+                <TabsTrigger value="jobs" className="text-white data-[state=active]:bg-white/10">
+                  Posted Jobs
+                </TabsTrigger>
+                <TabsTrigger value="verification" className="text-white data-[state=active]:bg-white/10">
+                  Verification Status
+                </TabsTrigger>
+              </>
+            )}
+            
+            {/* Superadmin-specific tabs */}
+            {user.user_type === 'superadmin' && (
+              <>
+                <TabsTrigger value="permissions" className="text-white data-[state=active]:bg-white/10">
+                  Permissions & Access
+                </TabsTrigger>
+                <TabsTrigger value="system" className="text-white data-[state=active]:bg-white/10">
+                  System Actions
+                </TabsTrigger>
+              </>
+            )}
+            
+            {/* Common tabs for all users */}
             <TabsTrigger value="payments" className="text-white data-[state=active]:bg-white/10">
               Payments
             </TabsTrigger>
@@ -560,7 +620,8 @@ export default function UserDetailPage() {
             )}
           </TabsContent>
 
-          {/* Applications Tab */}
+          {/* Applications Tab - Jobseekers only */}
+          {user.user_type === 'jobseeker' && (
           <TabsContent value="applications" className="space-y-6">
             <Card className="bg-white/5 border-white/10">
               <CardHeader>
@@ -610,8 +671,10 @@ export default function UserDetailPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
-          {/* Experience Tab */}
+          {/* Experience Tab - Jobseekers only */}
+          {user.user_type === 'jobseeker' && (
           <TabsContent value="experience" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Work Experience */}
@@ -685,6 +748,235 @@ export default function UserDetailPage() {
               </Card>
             </div>
           </TabsContent>
+          )}
+
+          {/* Resumes Tab - Jobseekers only */}
+          {user.user_type === 'jobseeker' && (
+          <TabsContent value="resumes" className="space-y-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Resumes ({user.resumes?.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.resumes && user.resumes.length > 0 ? (
+                  <div className="space-y-4">
+                    {user.resumes.map((resume: any) => (
+                      <div key={resume.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="text-white font-semibold">{resume.title || 'Resume'}</h4>
+                            {resume.summary && (
+                              <p className="text-sm text-gray-400 mt-1">{resume.summary}</p>
+                            )}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                              <span>Views: {resume.views || 0}</span>
+                              <span>Downloads: {resume.downloads || 0}</span>
+                              {resume.isDefault && <Badge variant="outline" className="text-xs">Default</Badge>}
+                              {resume.isPublic && <Badge variant="outline" className="text-xs">Public</Badge>}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Last updated: {new Date(resume.lastUpdated || resume.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-center py-8">No resumes uploaded yet</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {/* Company Details Tab - Employers/Admins/Recruiters only */}
+          {(user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company && (
+          <TabsContent value="company" className="space-y-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Building2 className="w-5 h-5 mr-2" />
+                  Company Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400">Company Name</label>
+                    <p className="text-white font-semibold">{user.company.name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Industry</label>
+                    <p className="text-white">{user.company.industry || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Company Size</label>
+                    <p className="text-white">{user.company.companySize || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Region</label>
+                    <p className="text-white">{user.company.region || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Account Type</label>
+                    <Badge variant="outline">{user.company.companyAccountType || 'direct_employer'}</Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Email</label>
+                    <p className="text-white">{user.company.email || user.company.contactEmail || 'Not provided'}</p>
+                  </div>
+                </div>
+                {user.company.website && (
+                  <div>
+                    <label className="text-sm text-gray-400">Website</label>
+                    <a href={user.company.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                      {user.company.website}
+                    </a>
+                  </div>
+                )}
+                {user.company.description && (
+                  <div>
+                    <label className="text-sm text-gray-400">Description</label>
+                    <p className="text-white mt-1">{user.company.description}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {/* Posted Jobs Tab - Employers/Admins/Recruiters only */}
+          {(user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.postedJobs && (
+          <TabsContent value="jobs" className="space-y-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Briefcase className="w-5 h-5 mr-2" />
+                  Posted Jobs ({user.postedJobs.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.postedJobs.length > 0 ? (
+                  <div className="space-y-4">
+                    {user.postedJobs.map((job: any) => (
+                      <div key={job.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="text-white font-semibold">{job.title}</h4>
+                            <p className="text-gray-400">{job.location}</p>
+                            <p className="text-sm text-gray-400">Applications: {job.applicationCount || 0}</p>
+                          </div>
+                          <Badge className={job.status === 'active' ? 'bg-green-600' : 'bg-gray-600'}>
+                            {job.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-center py-8">No jobs posted yet</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {/* Verification Status Tab - Employers/Admins/Recruiters only */}
+          {(user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company && (
+          <TabsContent value="verification" className="space-y-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Verification Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-400">Account Status</label>
+                  <Badge className={user.account_status === 'active' ? 'bg-green-600' : user.account_status === 'pending_verification' ? 'bg-amber-600' : 'bg-red-600'}>
+                    {user.account_status}
+                  </Badge>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Company Verification Status</label>
+                  <Badge className={user.company.verificationStatus === 'verified' ? 'bg-green-600' : user.company.verificationStatus === 'pending' ? 'bg-amber-600' : 'bg-red-600'}>
+                    {user.company.verificationStatus || 'unverified'}
+                  </Badge>
+                </div>
+                {user.company.verificationDocuments && (
+                  <div>
+                    <label className="text-sm text-gray-400">Verification Documents</label>
+                    <p className="text-white">{user.company.verificationDocuments.documents?.length || 0} documents submitted</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {/* Permissions Tab - Superadmin only */}
+          {user.user_type === 'superadmin' && (
+          <TabsContent value="permissions" className="space-y-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Permissions & Access Control
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm text-gray-400">Role</label>
+                    <Badge className="bg-purple-600">Super Administrator</Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Access Level</label>
+                    <p className="text-white">Full System Access</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400">Permissions</label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">User Management</Badge>
+                      <Badge variant="outline">Company Verification</Badge>
+                      <Badge variant="outline">Content Moderation</Badge>
+                      <Badge variant="outline">System Configuration</Badge>
+                      <Badge variant="outline">Financial Reports</Badge>
+                      <Badge variant="outline">Analytics Access</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {/* System Actions Tab - Superadmin only */}
+          {user.user_type === 'superadmin' && (
+          <TabsContent value="system" className="space-y-6">
+            <Card className="bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Activity className="w-5 h-5 mr-2" />
+                  System Actions & Logs
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-300">Recent administrative actions and system logs for this superadmin account.</p>
+                <div className="mt-4 space-y-2">
+                  <div className="p-3 bg-white/5 rounded border border-white/10">
+                    <p className="text-sm text-white">All system-wide administrative actions are logged and audited.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
 
           {/* Payments Tab */}
           <TabsContent value="payments" className="space-y-6">

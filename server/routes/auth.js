@@ -157,7 +157,8 @@ const generateToken = (user) => {
     { 
       id: user.id, 
       email: user.email, 
-      userType: user.user_type 
+      userType: user.user_type,
+      sessionVersion: user.session_version || 1
     },
     process.env.JWT_SECRET || 'your-secret-key',
     { expiresIn: '7d' }
@@ -466,7 +467,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           phone,
           user_type: userType,
           designation: designation,
-          account_status: 'active', // Set to active initially, will be updated by verification system
+          account_status: 'pending_verification', // Set to pending verification initially
           company_id: company.id,
           preferences: {
             employerRole: companyId ? (role || 'recruiter') : 'admin',
@@ -494,7 +495,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           phone,
           user_type: userType,
           designation: designation,
-          account_status: 'active', // Set to active initially, will be updated by verification system
+          account_status: 'pending_verification', // Set to pending verification initially
           is_email_verified: false,
           company_id: company.id,
           oauth_provider: 'local',
