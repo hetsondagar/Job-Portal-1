@@ -19,25 +19,25 @@ module.exports = {
       console.log('ℹ️  role already exists, skipping');
     }
 
-    if (!(await columnExists('industryType'))) {
-      await queryInterface.addColumn('jobs', 'industryType', { type: Sequelize.STRING, allowNull: true });
-      console.log('✅ Added industryType column');
+    if (!(await columnExists('industrytype'))) {
+      await queryInterface.addColumn('jobs', 'industrytype', { type: Sequelize.STRING, allowNull: true });
+      console.log('✅ Added industrytype column');
     } else {
-      console.log('ℹ️  industryType already exists, skipping');
+      console.log('ℹ️  industrytype already exists, skipping');
     }
 
-    if (!(await columnExists('roleCategory'))) {
-      await queryInterface.addColumn('jobs', 'roleCategory', { type: Sequelize.STRING, allowNull: true });
-      console.log('✅ Added roleCategory column');
+    if (!(await columnExists('rolecategory'))) {
+      await queryInterface.addColumn('jobs', 'rolecategory', { type: Sequelize.STRING, allowNull: true });
+      console.log('✅ Added rolecategory column');
     } else {
-      console.log('ℹ️  roleCategory already exists, skipping');
+      console.log('ℹ️  rolecategory already exists, skipping');
     }
 
-    if (!(await columnExists('employmentType'))) {
-      await queryInterface.addColumn('jobs', 'employmentType', { type: Sequelize.STRING, allowNull: true });
-      console.log('✅ Added employmentType column');
+    if (!(await columnExists('employmenttype'))) {
+      await queryInterface.addColumn('jobs', 'employmenttype', { type: Sequelize.STRING, allowNull: true });
+      console.log('✅ Added employmenttype column');
     } else {
-      console.log('ℹ️  employmentType already exists, skipping');
+      console.log('ℹ️  employmenttype already exists, skipping');
     }
 
     console.log('🎉 All missing columns added successfully!');
@@ -47,9 +47,9 @@ module.exports = {
     console.log('🔧 Removing added columns from jobs table...');
 
     await queryInterface.removeColumn('jobs', 'role');
-    await queryInterface.removeColumn('jobs', 'industryType');
-    await queryInterface.removeColumn('jobs', 'roleCategory');
-    await queryInterface.removeColumn('jobs', 'employmentType');
+    await queryInterface.removeColumn('jobs', 'industrytype');
+    await queryInterface.removeColumn('jobs', 'rolecategory');
+    await queryInterface.removeColumn('jobs', 'employmenttype');
 
     console.log('✅ All columns removed successfully!');
   }

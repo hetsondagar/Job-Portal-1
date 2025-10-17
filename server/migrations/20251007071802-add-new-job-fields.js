@@ -8,17 +8,17 @@ module.exports = {
       allowNull: true
     });
     
-    await queryInterface.addColumn('jobs', 'industryType', {
+    await queryInterface.addColumn('jobs', 'industrytype', {
       type: Sequelize.STRING,
       allowNull: true
     });
     
-    await queryInterface.addColumn('jobs', 'roleCategory', {
+    await queryInterface.addColumn('jobs', 'rolecategory', {
       type: Sequelize.STRING,
       allowNull: true
     });
     
-    await queryInterface.addColumn('jobs', 'employmentType', {
+    await queryInterface.addColumn('jobs', 'employmenttype', {
       type: Sequelize.STRING,
       allowNull: true
     });
@@ -26,8 +26,8 @@ module.exports = {
 
   async down (queryInterface, Sequelize) {
     await queryInterface.removeColumn('jobs', 'role');
-    await queryInterface.removeColumn('jobs', 'industryType');
-    await queryInterface.removeColumn('jobs', 'roleCategory');
-    await queryInterface.removeColumn('jobs', 'employmentType');
+    await queryInterface.removeColumn('jobs', 'industrytype');
+    await queryInterface.removeColumn('jobs', 'rolecategory');
+    await queryInterface.removeColumn('jobs', 'employmenttype');
   }
 };

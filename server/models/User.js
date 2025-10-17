@@ -293,8 +293,8 @@ const User = sequelize.define('User', {
   underscored: false,
   // Enable timestamps and map to camelCase columns present in DB
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   hooks: {
     beforeCreate: async (user) => {
       // Hash password whenever it's provided

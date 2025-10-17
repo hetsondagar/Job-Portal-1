@@ -36,105 +36,105 @@ module.exports = {
     
     const premiumFeatures = [
       {
-        name: 'urgencyLevel',
+        name: 'urgencylevel',
         type: Sequelize.ENUM('high', 'critical', 'immediate'),
         allowNull: true,
         defaultValue: null,
         comment: 'Urgency level for hot vacancy (high/critical/immediate)'
       },
       {
-        name: 'hiringTimeline',
+        name: 'hiringtimeline',
         type: Sequelize.ENUM('immediate', '1-week', '2-weeks', '1-month'),
         allowNull: true,
         defaultValue: null,
         comment: 'When employer needs to fill the position'
       },
       {
-        name: 'maxApplications',
+        name: 'maxapplications',
         type: Sequelize.INTEGER,
         allowNull: true,
         defaultValue: null,
         comment: 'Maximum number of applications allowed'
       },
       {
-        name: 'applicationDeadline',
+        name: 'applicationdeadline',
         type: Sequelize.DATE,
         allowNull: true,
         defaultValue: null,
         comment: 'When applications close for this hot vacancy'
       },
       {
-        name: 'pricingTier',
+        name: 'pricingtier',
         type: Sequelize.ENUM('basic', 'premium', 'enterprise', 'super-premium'),
         allowNull: true,
         defaultValue: null,
         comment: 'Hot vacancy pricing tier'
       },
       {
-        name: 'paymentId',
+        name: 'paymentid',
         type: Sequelize.STRING,
         allowNull: true,
         defaultValue: null,
         comment: 'Payment gateway transaction ID'
       },
       {
-        name: 'paymentDate',
+        name: 'paymentdate',
         type: Sequelize.DATE,
         allowNull: true,
         defaultValue: null,
         comment: 'When payment was successfully completed'
       },
       {
-        name: 'priorityListing',
+        name: 'prioritylisting',
         type: Sequelize.BOOLEAN,
         allowNull: true,
         defaultValue: false,
         comment: 'Show at top of job listings'
       },
       {
-        name: 'featuredBadge',
+        name: 'featuredbadge',
         type: Sequelize.BOOLEAN,
         allowNull: true,
         defaultValue: false,
         comment: 'Display featured badge on job'
       },
       {
-        name: 'unlimitedApplications',
+        name: 'unlimitedapplications',
         type: Sequelize.BOOLEAN,
         allowNull: true,
         defaultValue: false,
         comment: 'Allow unlimited applications (ignores maxApplications)'
       },
       {
-        name: 'advancedAnalytics',
+        name: 'advancedanalytics',
         type: Sequelize.BOOLEAN,
         allowNull: true,
         defaultValue: false,
         comment: 'Enable advanced analytics and insights'
       },
       {
-        name: 'candidateMatching',
+        name: 'candidatematching',
         type: Sequelize.BOOLEAN,
         allowNull: true,
         defaultValue: false,
         comment: 'Enable AI-powered candidate matching'
       },
       {
-        name: 'directContact',
+        name: 'directcontact',
         type: Sequelize.BOOLEAN,
         allowNull: true,
         defaultValue: false,
         comment: 'Allow candidates to contact employer directly'
       },
       {
-        name: 'seoTitle',
+        name: 'seotitle',
         type: Sequelize.STRING,
         allowNull: true,
         defaultValue: null,
         comment: 'SEO optimized title for search engines'
       },
       {
-        name: 'seoDescription',
+        name: 'seodescription',
         type: Sequelize.TEXT,
         allowNull: true,
         defaultValue: null,
@@ -198,31 +198,31 @@ module.exports = {
     const indexes = [
       {
         name: 'idx_jobs_urgency_level',
-        fields: ['urgencyLevel'],
+        fields: ['urgencylevel'],
         where: { ishotvacancy: true }
       },
       {
         name: 'idx_jobs_hiring_timeline',
-        fields: ['hiringTimeline'],
+        fields: ['hiringtimeline'],
         where: { ishotvacancy: true }
       },
       {
         name: 'idx_jobs_pricing_tier',
-        fields: ['pricingTier'],
+        fields: ['pricingtier'],
         where: { ishotvacancy: true }
       },
       {
         name: 'idx_jobs_payment_status',
-        fields: ['paymentId', 'paymentDate'],
+        fields: ['paymentid', 'paymentdate'],
         where: { ishotvacancy: true }
       },
       {
         name: 'idx_jobs_premium_features',
-        fields: ['priorityListing', 'featuredBadge', 'unlimitedApplications']
+        fields: ['prioritylisting', 'featuredbadge', 'unlimitedapplications']
       },
       {
         name: 'idx_jobs_application_deadline',
-        fields: ['applicationDeadline'],
+        fields: ['applicationdeadline'],
         where: { ishotvacancy: true }
       }
     ];
@@ -264,21 +264,21 @@ module.exports = {
     console.log('🔧 Removing premium hot vacancy features from jobs table...');
     
     const columnsToRemove = [
-      'urgencyLevel',
-      'hiringTimeline',
-      'maxApplications',
-      'applicationDeadline',
-      'pricingTier',
-      'paymentId',
-      'paymentDate',
-      'priorityListing',
-      'featuredBadge',
-      'unlimitedApplications',
-      'advancedAnalytics',
-      'candidateMatching',
-      'directContact',
-      'seoTitle',
-      'seoDescription',
+      'urgencylevel',
+      'hiringtimeline',
+      'maxapplications',
+      'applicationdeadline',
+      'pricingtier',
+      'paymentid',
+      'paymentdate',
+      'prioritylisting',
+      'featuredbadge',
+      'unlimitedapplications',
+      'advancedanalytics',
+      'candidatematching',
+      'directcontact',
+      'seotitle',
+      'seodescription',
       'keywords',
       'impressions',
       'clicks'
