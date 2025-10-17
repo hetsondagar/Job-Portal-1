@@ -284,42 +284,42 @@ router.get('/users/:userId/details', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'createdAt']
         },
         {
           model: JobApplication,
           as: 'jobApplications',
-          attributes: ['id', 'status', 'created_at'],
+          attributes: ['id', 'status', 'createdAt'],
           include: [{
             model: Job,
             as: 'job',
             attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status', 'createdAt'],
             include: [{
               model: Company,
-              as: 'Company',
+              as: 'company',
               attributes: ['id', 'name', 'industry']
             }]
           }],
           limit: 10,
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         },
         {
           model: JobBookmark,
           as: 'jobBookmarks',
-          attributes: ['id', 'created_at'],
+          attributes: ['id', 'createdAt'],
           include: [{
             model: Job,
             as: 'job',
             attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status'],
             include: [{
               model: Company,
-              as: 'Company',
+              as: 'company',
               attributes: ['id', 'name', 'industry']
             }]
           }],
           limit: 10,
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         },
         {
           model: Resume,
@@ -356,7 +356,7 @@ router.get('/users/:userId/details', async (req, res) => {
     let totalJobsPosted = 0;
     if ((user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company?.id) {
       postedJobs = await Job.findAll({
-        where: { companyId: user.company.id },
+        where: { company_id: user.company.id },
         attributes: ['id', 'title', 'location', 'status', 'createdAt'],
         limit: 20,
         order: [['createdAt', 'DESC']],
@@ -388,14 +388,14 @@ router.get('/users/:userId/details', async (req, res) => {
         as: 'plan',
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     // Get payment history
     const payments = await Payment.findAll({
       where: { userId },
-      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
-      order: [['created_at', 'DESC']],
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      order: [['createdAt', 'DESC']],
       limit: 10
     });
 
@@ -410,7 +410,7 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get user sessions
     const sessions = await UserSession.findAll({
       where: { userId },
-      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivityAt', 'created_at'],
+      attributes: ['id', 'ipAddress', 'userAgent', 'isActive', 'lastActivityAt', 'createdAt'],
       order: [['lastActivityAt', 'DESC']],
       limit: 10
     });
@@ -472,7 +472,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
               attributes: ['id', 'first_name', 'last_name', 'email']
             }]
           }],
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         },
         {
           model: CompanyPhoto,
@@ -488,7 +488,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
             as: 'reviewer',
             attributes: ['id', 'first_name', 'last_name']
           }],
-          order: [['created_at', 'DESC']],
+          order: [['createdAt', 'DESC']],
           limit: 10
         }
       ]
@@ -502,13 +502,13 @@ router.get('/companies/:companyId/details', async (req, res) => {
     }
 
     // Get additional statistics
-    const totalJobs = await Job.count({ where: { companyId } });
-    const activeJobs = await Job.count({ where: { companyId, status: 'active' } });
+    const totalJobs = await Job.count({ where: { company_id: companyId } });
+    const activeJobs = await Job.count({ where: { company_id: companyId, status: 'active' } });
     const totalApplications = await JobApplication.count({
       include: [{
         model: Job,
         as: 'job',
-        where: { companyId }
+        where: { company_id: companyId }
       }]
     });
     const totalReviews = await CompanyReview.count({ where: { companyId } });
@@ -530,7 +530,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
         as: 'plan',
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     // Get payment history
@@ -538,8 +538,8 @@ router.get('/companies/:companyId/details', async (req, res) => {
       where: { 
         userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
       },
-      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
-      order: [['created_at', 'DESC']],
+      attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
+      order: [['createdAt', 'DESC']],
       limit: 10
     });
 
@@ -556,8 +556,8 @@ router.get('/companies/:companyId/details', async (req, res) => {
     // Get company analytics
     const analytics = await Analytics.findAll({
       where: { companyId },
-      attributes: ['id', 'eventType', 'metadata', 'created_at'],
-      order: [['created_at', 'DESC']],
+      attributes: ['id', 'eventType', 'metadata', 'createdAt'],
+      order: [['createdAt', 'DESC']],
       limit: 50
     });
 
@@ -601,7 +601,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
         },
         {
@@ -612,7 +612,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         {
           model: JobApplication,
           as: 'jobApplications',
-          attributes: ['id', 'status', 'coverLetter', 'created_at', 'updated_at'],
+          attributes: ['id', 'status', 'coverLetter', 'createdAt', 'updatedAt'],
           include: [{
             model: User,
             as: 'applicant',
@@ -625,7 +625,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
               required: false
             }]
           }],
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         },
         {
           model: JobBookmark,
@@ -636,7 +636,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             as: 'user',
             attributes: ['id', 'first_name', 'last_name', 'email']
           }],
-          order: [['created_at', 'DESC']]
+          order: [['createdAt', 'DESC']]
         },
       ]
     });
@@ -667,8 +667,8 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         jobId,
         eventType: ['job_view', 'job_apply', 'job_bookmark']
       },
-      attributes: ['id', 'eventType', 'metadata', 'created_at'],
-      order: [['created_at', 'DESC']],
+      attributes: ['id', 'eventType', 'metadata', 'createdAt'],
+      order: [['createdAt', 'DESC']],
       limit: 100
     });
 
@@ -691,7 +691,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
     const similarJobsQuery = {
       id: { [Op.ne]: jobId },
       [Op.or]: [
-        { companyId: job.companyId },
+        { company_id: job.companyId },
         { location: { [Op.iLike]: `%${job.location?.split(',')[0]}%` } }
       ]
     };
@@ -706,7 +706,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt'],
       include: [{
         model: Company,
-        as: 'Company',
+        as: 'company',
         attributes: ['id', 'name', 'industry']
       }],
       limit: 5,
@@ -1377,7 +1377,7 @@ router.get('/jobs', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['id', 'name', 'logo']
         }
       ]
@@ -1444,7 +1444,7 @@ router.get('/jobs/region/:region', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['id', 'name', 'logo']
         }
       ]
@@ -1556,7 +1556,7 @@ router.get('/jobs/export', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['name']
         }
       ]

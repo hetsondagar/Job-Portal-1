@@ -682,7 +682,7 @@ Job.associate = function(models) {
   // Main company (employer who owns the job - could be agency or direct)
   Job.belongsTo(models.Company, {
     foreignKey: 'companyId',
-    as: 'Company'
+    as: 'company'
   });
   
   // Employer user

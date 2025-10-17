@@ -958,7 +958,7 @@ exports.getAllJobs = async (req, res, next) => {
     const include = [
       {
         model: Company,
-        as: 'Company',
+        as: 'company',
         attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
         where: (() => {
@@ -1069,7 +1069,7 @@ exports.getJobById = async (req, res, next) => {
       include: [
         {
           model: Company,
-          as: 'Company',
+          as: 'company',
           attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone'],
           required: false // Make it optional since companyId can be NULL
         },
