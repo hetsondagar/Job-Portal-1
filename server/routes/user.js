@@ -2542,7 +2542,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
           ]
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({

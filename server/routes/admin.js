@@ -365,14 +365,14 @@ router.get('/users/:userId/details', async (req, res) => {
           as: 'jobApplications',
           attributes: ['id', 'status', 'createdAt'],
           limit: 10,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
           as: 'jobBookmarks',
           attributes: ['id', 'createdAt'],
           limit: 10,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: Resume,
