@@ -598,34 +598,35 @@ router.get('/companies/:companyId/details', async (req, res) => {
         as: 'plan',
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
-    // Get payment history
-    const payments = await Payment.findAll({
+    // Get payment history - only if company has employees
+    const firstEmployeeId = company.employees?.[0]?.id;
+    const payments = firstEmployeeId ? await Payment.findAll({
       where: { 
-        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+        userId: firstEmployeeId
       },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
-    });
+    }) : [];
 
-    // Get company activity logs (using UserActivityLog for now)
-    const activityLogs = await UserActivityLog.findAll({
+    // Get company activity logs - only if company has employees
+    const activityLogs = firstEmployeeId ? await UserActivityLog.findAll({
       where: { 
-        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+        userId: firstEmployeeId
       },
       attributes: ['id', 'activityType', 'details', 'timestamp'],
       order: [['timestamp', 'DESC']],
       limit: 20
-    });
+    }) : [];
 
     // Get company analytics
     const analytics = await Analytics.findAll({
       where: { companyId },
       attributes: ['id', 'eventType', 'metadata', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 50
     });
 
@@ -737,7 +738,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         eventType: ['job_view', 'job_apply', 'job_bookmark']
       },
       attributes: ['id', 'eventType', 'metadata', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 100
     });
 
