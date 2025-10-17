@@ -261,7 +261,7 @@ router.get('/users', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -322,7 +322,7 @@ router.get('/users/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -412,7 +412,7 @@ router.get('/users/:userId/details', async (req, res) => {
         where: { companyId: user.company.id },
         attributes: ['id', 'title', 'location', 'status', 'createdAt'],
         limit: 20,
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         include: [{
           model: JobApplication,
           as: 'jobApplications',
@@ -441,14 +441,14 @@ router.get('/users/:userId/details', async (req, res) => {
         as: 'plan',
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get payment history
     const payments = await Payment.findAll({
       where: { userId },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
     });
 
@@ -525,7 +525,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const jobApplications = jobIds.length > 0 ? await JobApplication.findAll({
       where: { jobId: jobIds },
       attributes: ['id', 'jobId', 'status', 'createdAt'],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     }) : [];
 
     // Get applicants separately to avoid complex includes
@@ -598,7 +598,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
         as: 'plan',
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get payment history
@@ -607,7 +607,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
         userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
       },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
     });
 
@@ -625,7 +625,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const analytics = await Analytics.findAll({
       where: { companyId },
       attributes: ['id', 'eventType', 'metadata', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 50
     });
 
@@ -694,7 +694,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
               required: false
             }]
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
@@ -705,7 +705,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             as: 'user',
             attributes: ['id', 'first_name', 'last_name', 'email']
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
       ]
     });
@@ -737,7 +737,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         eventType: ['job_view', 'job_apply', 'job_bookmark']
       },
       attributes: ['id', 'eventType', 'metadata', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 100
     });
 
@@ -779,7 +779,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         attributes: ['id', 'name', 'industry']
       }],
       limit: 5,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get job requirements analysis
@@ -895,7 +895,7 @@ router.get('/users/portal/:portal', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -1011,7 +1011,7 @@ router.get('/users/export', async (req, res) => {
     const users = await User.findAll({
       where: whereClause,
       attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Convert to CSV
@@ -1100,7 +1100,7 @@ router.get('/companies', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1160,7 +1160,7 @@ router.get('/companies/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1274,7 +1274,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 1. Delete job applications first (they reference jobs and users)
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM job_applications WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM job_applications WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1285,7 +1285,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 2. Delete job bookmarks
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM job_bookmarks WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM job_bookmarks WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1295,7 +1295,7 @@ router.delete('/companies/:id', async (req, res) => {
 
     // 3. Delete jobs (both by companyId and employerId)
     await sequelize.query(
-      'DELETE FROM jobs WHERE "companyId" = :companyId OR "employerId" = ANY(:userIds)',
+      'DELETE FROM jobs WHERE "companyId" = :companyId OR employer_id = ANY(:userIds)',
       {
         replacements: { companyId: id, userIds: userIds },
         transaction
@@ -1304,7 +1304,7 @@ router.delete('/companies/:id', async (req, res) => {
 
     // 4. Delete company follows
     await sequelize.query(
-      'DELETE FROM company_follows WHERE "companyId" = :companyId',
+      'DELETE FROM company_follows WHERE company_id = :companyId',
       {
         replacements: { companyId: id },
         transaction
@@ -1313,7 +1313,7 @@ router.delete('/companies/:id', async (req, res) => {
 
     // 5. Delete company photos
     await sequelize.query(
-      'DELETE FROM company_photos WHERE "companyId" = :companyId',
+      'DELETE FROM company_photos WHERE company_id = :companyId',
       {
         replacements: { companyId: id },
         transaction
@@ -1322,7 +1322,7 @@ router.delete('/companies/:id', async (req, res) => {
 
     // 6. Delete company reviews
     await sequelize.query(
-      'DELETE FROM company_reviews WHERE "companyId" = :companyId',
+      'DELETE FROM company_reviews WHERE company_id = :companyId',
       {
         replacements: { companyId: id },
         transaction
@@ -1332,7 +1332,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 7. Delete user sessions
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM user_sessions WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM user_sessions WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1343,7 +1343,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 8. Delete user activity logs
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM user_activity_logs WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM user_activity_logs WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1354,7 +1354,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 9. Delete resumes
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM resumes WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM resumes WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1365,7 +1365,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 10. Delete work experiences
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM work_experiences WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM work_experiences WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1376,7 +1376,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 11. Delete educations
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM educations WHERE "userId" = ANY(:userIds)',
+        'DELETE FROM educations WHERE user_id = ANY(:userIds)',
         {
           replacements: { userIds: userIds },
           transaction
@@ -1387,7 +1387,7 @@ router.delete('/companies/:id', async (req, res) => {
     // 12. Delete notifications
     if (userIds.length > 0) {
       await sequelize.query(
-        'DELETE FROM notifications WHERE "userId" = ANY(:userIds) OR "companyId" = :companyId',
+        'DELETE FROM notifications WHERE user_id = ANY(:userIds) OR company_id = :companyId',
         {
           replacements: { userIds: userIds, companyId: id },
           transaction
@@ -1451,7 +1451,7 @@ router.get('/companies/export', async (req, res) => {
 
     const companies = await Company.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Convert to CSV
@@ -1534,7 +1534,7 @@ router.get('/jobs', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1601,7 +1601,7 @@ router.get('/jobs/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1713,7 +1713,7 @@ router.get('/jobs/export', async (req, res) => {
 
     const jobs = await Job.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
