@@ -23,7 +23,7 @@ const Job = sequelize.define('Job', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'company_id',
+    field: 'companyId',
     references: {
       model: 'companies',
       key: 'id'
