@@ -363,14 +363,14 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: JobApplication,
           as: 'jobApplications',
-          attributes: ['id', 'status', 'createdAt'],
+          attributes: ['id', 'status', 'created_at'],
           limit: 10,
           order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
           as: 'jobBookmarks',
-          attributes: ['id', 'createdAt'],
+          attributes: ['id', 'created_at'],
           limit: 10,
           order: [['created_at', 'DESC']]
         },
@@ -588,10 +588,17 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const totalReviews = 0;
     const averageRating = { averageRating: 0 };
 
-    // Get company subscription/pricing information
-    const subscription = await Subscription.findOne({
+    // Get company users first
+    const companyUsers = await User.findAll({
+      where: { companyId: companyId },
+      attributes: ['id', 'first_name', 'last_name', 'email', 'user_type']
+    });
+
+    // Get company subscription/pricing information - use first user's ID as a proxy
+    const firstUserId = companyUsers.length > 0 ? companyUsers[0].id : null;
+    const subscription = firstUserId ? await Subscription.findOne({
       where: { 
-        userId: company.employees?.[0]?.id // Use first employee's ID as a proxy
+        userId: firstUserId
       },
       include: [{
         model: SubscriptionPlan,
@@ -599,23 +606,22 @@ router.get('/companies/:companyId/details', async (req, res) => {
         attributes: ['id', 'name', 'monthlyPrice', 'yearlyPrice', 'currency', 'features', 'planType']
       }],
       order: [['created_at', 'DESC']]
-    });
+    }) : null;
 
-    // Get payment history - only if company has employees
-    const firstEmployeeId = company.employees?.[0]?.id;
-    const payments = firstEmployeeId ? await Payment.findAll({
+    // Get payment history - only if company has users
+    const payments = firstUserId ? await Payment.findAll({
       where: { 
-        userId: firstEmployeeId
+        userId: firstUserId
       },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'createdAt', 'description'],
       order: [['created_at', 'DESC']],
       limit: 10
     }) : [];
 
-    // Get company activity logs - only if company has employees
-    const activityLogs = firstEmployeeId ? await UserActivityLog.findAll({
+    // Get company activity logs - only if company has users
+    const activityLogs = firstUserId ? await UserActivityLog.findAll({
       where: { 
-        userId: firstEmployeeId
+        userId: firstUserId
       },
       attributes: ['id', 'activityType', 'details', 'timestamp'],
       order: [['timestamp', 'DESC']],
@@ -639,7 +645,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
         totalApplications,
         totalReviews,
         averageRating: averageRating?.averageRating ? parseFloat(averageRating.averageRating).toFixed(1) : 0,
-        totalEmployees: company.employees?.length || 0,
+        totalEmployees: companyUsers?.length || 0,
         totalPhotos: company.photos?.length || 0
       },
       subscription: subscription || null,
@@ -682,7 +688,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         {
           model: JobApplication,
           as: 'jobApplications',
-          attributes: ['id', 'status', 'coverLetter', 'createdAt', 'updatedAt'],
+          attributes: ['id', 'status', 'coverLetter', 'created_at', 'updated_at'],
           include: [{
             model: User,
             as: 'applicant',
@@ -695,18 +701,18 @@ router.get('/jobs/:jobId/details', async (req, res) => {
               required: false
             }]
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
         {
           model: JobBookmark,
           as: 'bookmarks',
-          attributes: ['id', 'createdAt'],
+          attributes: ['id', 'created_at'],
           include: [{
             model: User,
             as: 'user',
             attributes: ['id', 'first_name', 'last_name', 'email']
           }],
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         },
       ]
     });
