@@ -931,7 +931,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         let companyName = 'Company';
         let jobTitle = 'a position';
         try {
-          const employer = await User.findByPk(app.employerId, { include: [{ model: Company, as: 'company', attributes: ['name'] }] });
+          const employer = await User.findByPk(app.employerId, { include: [{ model: Company, as: 'Company', attributes: ['name'] }] });
           const job = await Job.findByPk(app.jobId, { attributes: ['title'] });
           if (employer?.company?.name) companyName = employer.company.name;
           if (job?.title) jobTitle = job.title;
@@ -1043,7 +1043,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 
         const recentMatchingJobs = await Job.findAll({
           where: whereClause,
-          include: [{ model: Company, as: 'company', attributes: ['name'] }],
+          include: [{ model: Company, as: 'Company', attributes: ['name'] }],
           order: [['createdAt', 'DESC']],
           limit: 20
         });
@@ -1426,7 +1426,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
           include: [
             {
               model: Company,
-              as: 'company',
+              as: 'Company',
               attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone']
             },
             {
@@ -1739,7 +1739,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
             include: [
               {
                 model: Company,
-                as: 'company',
+                as: 'Company',
                 attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
               }
             ]
@@ -1979,7 +1979,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
           include: [
             {
               model: Company,
-              as: 'company',
+              as: 'Company',
               attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone']
             }
           ]
@@ -2537,7 +2537,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
           include: [
             {
               model: Company,
-              as: 'company'
+              as: 'Company'
             }
           ]
         }
@@ -4302,7 +4302,7 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
     const jobs = await Job.findAll({
       where: whereClause,
       attributes: ['id', 'title', 'status', 'region', 'createdAt'],
-      include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
+      include: [{ model: Company, as: 'Company', attributes: ['id', 'name', 'region'] }],
       order: [['createdAt', 'DESC']]
     });
 

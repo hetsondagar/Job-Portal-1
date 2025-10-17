@@ -337,7 +337,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push('/admin/dashboard')}
+              onClick={() => router.push('/super-admin/dashboard')}
               className="text-white hover:bg-white/10 border border-white/20"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -509,7 +509,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          router.push(`/admin/companies/${company.id}`)
+                          router.push(`/super-admin/companies/${company.id}`)
                         }}
                         className="text-white hover:bg-white/10 border-white/20 bg-white/5"
                       >

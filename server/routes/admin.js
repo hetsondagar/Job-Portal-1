@@ -284,7 +284,7 @@ router.get('/users/:userId/details', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'company',
+          as: 'Company',
           attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'createdAt']
         },
         {
@@ -297,7 +297,7 @@ router.get('/users/:userId/details', async (req, res) => {
             attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status', 'createdAt'],
             include: [{
               model: Company,
-              as: 'company',
+              as: 'Company',
               attributes: ['id', 'name', 'industry']
             }]
           }],
@@ -314,7 +314,7 @@ router.get('/users/:userId/details', async (req, res) => {
             attributes: ['id', 'title', 'companyId', 'location', 'salary', 'jobType', 'status'],
             include: [{
               model: Company,
-              as: 'company',
+              as: 'Company',
               attributes: ['id', 'name', 'industry']
             }]
           }],
@@ -601,7 +601,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'company',
+          as: 'Company',
           attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
         },
         {
@@ -706,7 +706,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt'],
       include: [{
         model: Company,
-        as: 'company',
+        as: 'Company',
         attributes: ['id', 'name', 'industry']
       }],
       limit: 5,
@@ -1377,7 +1377,7 @@ router.get('/jobs', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'company',
+          as: 'Company',
           attributes: ['id', 'name', 'logo']
         }
       ]
@@ -1444,7 +1444,7 @@ router.get('/jobs/region/:region', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'company',
+          as: 'Company',
           attributes: ['id', 'name', 'logo']
         }
       ]
@@ -1556,7 +1556,7 @@ router.get('/jobs/export', async (req, res) => {
       include: [
         {
           model: Company,
-          as: 'company',
+          as: 'Company',
           attributes: ['name']
         }
       ]
