@@ -1208,32 +1208,40 @@ router.delete('/companies/:id', async (req, res) => {
       });
     }
 
-    // Delete company jobs (by companyId)
-    await Job.destroy({ 
-      where: { companyId: id },
-      transaction 
-    });
+    // Delete company jobs (by company_id - using raw query to avoid model mapping issues)
+    await sequelize.query(
+      'DELETE FROM jobs WHERE company_id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
 
-    // Delete job applications
-    await JobApplication.destroy({ 
-      where: { companyId: id },
-      transaction 
-    });
-
-    // Delete company follows
-    await CompanyFollow.destroy({ 
-      where: { companyId: id },
-      transaction 
-    });
-
-    // Delete company photos
-    const { CompanyPhoto } = require('../models');
-    if (CompanyPhoto) {
-      await CompanyPhoto.destroy({ 
-        where: { companyId: id },
+    // Delete job applications (by employerId from the users we're about to delete)
+    if (userIds.length > 0) {
+      await JobApplication.destroy({ 
+        where: { employerId: userIds },
         transaction 
       });
     }
+
+    // Delete company follows (using raw query)
+    await sequelize.query(
+      'DELETE FROM company_follows WHERE company_id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
+
+    // Delete company photos (using raw query)
+    await sequelize.query(
+      'DELETE FROM company_photos WHERE company_id = :companyId',
+      {
+        replacements: { companyId: id },
+        transaction
+      }
+    );
 
     // Delete company users (after jobs are deleted)
     await User.destroy({ 
