@@ -69,15 +69,19 @@ export default function UserManagementPage({ portal, title, description, icon }:
         status: filterStatus === 'all' ? undefined : filterStatus
       })
       
-      if (response.success) {
-        setUsers(response.data.users)
-        setTotalPages(response.data.totalPages)
+      if (response.success && response.data) {
+        setUsers(response.data.users || [])
+        setTotalPages(response.data.totalPages || 1)
       } else {
         toast.error(`Failed to load ${title.toLowerCase()} users`)
+        setUsers([])
+        setTotalPages(1)
       }
     } catch (error) {
       console.error(`Failed to load ${title.toLowerCase()} users:`, error)
       toast.error(`Failed to load ${title.toLowerCase()} users`)
+      setUsers([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }

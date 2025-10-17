@@ -91,15 +91,19 @@ export default function JobManagementPage({ portal, title, description, icon }: 
         })
       }
       
-      if (response.success) {
-        setJobs(response.data.jobs)
-        setTotalPages(response.data.totalPages)
+      if (response.success && response.data) {
+        setJobs(response.data.jobs || [])
+        setTotalPages(response.data.totalPages || 1)
       } else {
         toast.error(`Failed to load ${title.toLowerCase()}`)
+        setJobs([])
+        setTotalPages(1)
       }
     } catch (error) {
       console.error(`Failed to load ${title.toLowerCase()}:`, error)
       toast.error(`Failed to load ${title.toLowerCase()}`)
+      setJobs([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }

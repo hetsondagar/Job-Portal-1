@@ -96,15 +96,19 @@ export default function CompanyManagementPage({ portal, title, description, icon
         })
       }
       
-      if (response.success) {
-        setCompanies(response.data.companies)
-        setTotalPages(response.data.totalPages)
+      if (response.success && response.data) {
+        setCompanies(response.data.companies || [])
+        setTotalPages(response.data.totalPages || 1)
       } else {
         toast.error(`Failed to load ${title.toLowerCase()}`)
+        setCompanies([])
+        setTotalPages(1)
       }
     } catch (error) {
       console.error(`Failed to load ${title.toLowerCase()}:`, error)
       toast.error(`Failed to load ${title.toLowerCase()}`)
+      setCompanies([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }

@@ -704,6 +704,19 @@ class ApiService {
     }
 
       console.log('✅ handleResponse - Success:', data)
+      
+      // Ensure consistent response structure
+      if (data && typeof data === 'object') {
+        // If data doesn't have success property, wrap it
+        if (!('success' in data)) {
+          return {
+            success: true,
+            message: 'Request successful',
+            data: data
+          } as ApiResponse<T>
+        }
+      }
+      
       return data as ApiResponse<T>
     } catch (error) {
       console.log('❌ handleResponse - Unexpected error caught:', error);
