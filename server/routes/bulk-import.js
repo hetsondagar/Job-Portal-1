@@ -114,7 +114,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const imports = await BulkJobImport.findAndCountAll({
       where: whereClause,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
       // Removed include to avoid association error

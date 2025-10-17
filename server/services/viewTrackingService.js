@@ -169,7 +169,7 @@ class ViewTrackingService {
             required: false
           }
         ],
-        order: [['created_at', 'DESC']],
+        order: [['createdAt', 'DESC']],
         limit
       });
 

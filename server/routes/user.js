@@ -2423,7 +2423,7 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
     
     const alerts = await JobAlert.findAll({
       where: { userId: req.user.id },
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     res.json({
@@ -2542,7 +2542,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
           ]
         }
       ],
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     res.json({

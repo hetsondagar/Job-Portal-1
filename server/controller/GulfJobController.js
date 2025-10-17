@@ -575,7 +575,7 @@ const getGulfJobBookmarks = async (req, res) => {
           ]
         }
       ],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -617,7 +617,7 @@ const getGulfJobAlerts = async (req, res) => {
 
     const { count, rows: alerts } = await JobAlert.findAndCountAll({
       where: whereClause,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

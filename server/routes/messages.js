@@ -203,7 +203,7 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
           attributes: ['id', 'first_name', 'last_name', 'user_type', 'company_id']
         }
       ],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
