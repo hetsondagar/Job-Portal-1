@@ -991,7 +991,7 @@ exports.getAllJobs = async (req, res, next) => {
       },
       {
         model: User,
-        as: 'Employer',
+        as: 'employer',
         attributes: ['id', 'first_name', 'last_name', 'email', 'company_id'],
         required: Boolean(recruiterType) || false
       },
@@ -1087,7 +1087,7 @@ exports.getJobById = async (req, res, next) => {
         },
         {
           model: User,
-          as: 'Employer',
+          as: 'employer',
           attributes: ['id', 'first_name', 'last_name', 'email']
         },
         {
