@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line } from "recharts"
 
 export default function EmployerAnalyticsPage() {
@@ -180,38 +180,51 @@ export default function EmployerAnalyticsPage() {
   const isCompanyAdmin = user.userType === "admin" && !!user.companyId
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <EmployerNavbar />
-      <div className="p-6 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <EmployerDashboardNavbar />
+      
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
+        <div className="space-y-8">
               <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Analytics</h1>
           <div className="text-sm text-gray-600">{isCompanyAdmin ? "Company Admin View" : "Recruiter View"}</div>
         </div>
 
         {/* Recruiter (self) quick stats */}
-        <section className="bg-white border rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4">Your Activity</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="border rounded p-3">
-              <div className="text-gray-600 text-sm">Candidates Accessed</div>
-              <div className="text-2xl font-semibold">{myActivitiesCount.accessed}</div>
-                      </div>
-            <div className="border rounded p-3">
-              <div className="text-gray-600 text-sm">Candidates Hired</div>
-              <div className="text-2xl font-semibold">{myActivitiesCount.hired}</div>
-                            </div>
-            <div className="border rounded p-3">
-              <div className="text-gray-600 text-sm">Candidates Shortlisted</div>
-              <div className="text-2xl font-semibold">{myActivitiesCount.shortlisted}</div>
-                            </div>
-                          </div>
+        <section className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl p-6">
+          <h2 className="text-xl font-semibold mb-6 text-slate-900">Your Activity</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl p-4 hover:bg-white/70 transition-colors">
+              <div className="text-slate-600 text-sm font-medium">Candidates Accessed</div>
+              <div className="text-3xl font-bold text-slate-900 mt-2">{myActivitiesCount.accessed}</div>
+            </div>
+            <div className="bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl p-4 hover:bg-white/70 transition-colors">
+              <div className="text-slate-600 text-sm font-medium">Candidates Hired</div>
+              <div className="text-3xl font-bold text-slate-900 mt-2">{myActivitiesCount.hired}</div>
+            </div>
+            <div className="bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl p-4 hover:bg-white/70 transition-colors">
+              <div className="text-slate-600 text-sm font-medium">Candidates Shortlisted</div>
+              <div className="text-3xl font-bold text-slate-900 mt-2">{myActivitiesCount.shortlisted}</div>
+            </div>
+          </div>
         </section>
 
         {/* Recruiter leaderboard (company admin only) */}
         {isCompanyAdmin && (
-        <section className="bg-white border rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4">Recruiter Performance</h2>
-          <div className="h-72 w-full">
+        <section className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl p-6">
+          <h2 className="text-xl font-semibold mb-6 text-slate-900">Recruiter Performance</h2>
+          <div className="h-72 w-full bg-white/30 backdrop-blur-md rounded-2xl p-4">
             <ResponsiveContainer>
               <LineChart data={recruiterPerformance as any[]}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -222,30 +235,30 @@ export default function EmployerAnalyticsPage() {
                 <Line type="monotone" dataKey="activityCount" name="Activities" stroke="#2563eb" />
               </LineChart>
             </ResponsiveContainer>
-                        </div>
+          </div>
         </section>
         )}
 
         {/* Company admin only: company-wide analytics */}
         {isCompanyAdmin && (
-          <section className="bg-white border rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4">Company-wide Analytics</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="border rounded p-3">
-                <div className="text-gray-600 text-sm">Total Accessed</div>
-                <div className="text-2xl font-semibold">{companyTotals.accessed}</div>
-                  </div>
-              <div className="border rounded p-3">
-                <div className="text-gray-600 text-sm">Total Hired</div>
-                <div className="text-2xl font-semibold">{companyTotals.hired}</div>
+          <section className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl p-6">
+            <h2 className="text-xl font-semibold mb-6 text-slate-900">Company-wide Analytics</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
+              <div className="bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl p-4 hover:bg-white/70 transition-colors">
+                <div className="text-slate-600 text-sm font-medium">Total Accessed</div>
+                <div className="text-3xl font-bold text-slate-900 mt-2">{companyTotals.accessed}</div>
+              </div>
+              <div className="bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl p-4 hover:bg-white/70 transition-colors">
+                <div className="text-slate-600 text-sm font-medium">Total Hired</div>
+                <div className="text-3xl font-bold text-slate-900 mt-2">{companyTotals.hired}</div>
+              </div>
+              <div className="bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl p-4 hover:bg-white/70 transition-colors">
+                <div className="text-slate-600 text-sm font-medium">Total Shortlisted</div>
+                <div className="text-3xl font-bold text-slate-900 mt-2">{companyTotals.shortlisted}</div>
+              </div>
             </div>
-              <div className="border rounded p-3">
-                <div className="text-gray-600 text-sm">Total Shortlisted</div>
-                <div className="text-2xl font-semibold">{companyTotals.shortlisted}</div>
-                      </div>
-                    </div>
 
-            <div className="h-80 w-full">
+            <div className="h-80 w-full bg-white/30 backdrop-blur-md rounded-2xl p-4">
               <ResponsiveContainer>
                 <BarChart data={perRecruiterChart}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -261,7 +274,8 @@ export default function EmployerAnalyticsPage() {
                           </div>
           </section>
         )}
-                      </div>
+        </div>
+      </div>
     </div>
   )
 }

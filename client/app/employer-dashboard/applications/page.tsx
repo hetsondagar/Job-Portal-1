@@ -362,13 +362,21 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
         <EmployerNavbar />
-        <div className="container mx-auto px-4 py-8">
+        
+        {/* Background Effects - Blue theme */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+          <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        </div>
+        
+        <div className="relative z-10 container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="text-center">
+            <div className="text-center bg-white/50 backdrop-blur-xl border-white/40 rounded-3xl p-8 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading applications...</p>
+              <p className="text-slate-600">Loading applications...</p>
             </div>
           </div>
         </div>
@@ -378,10 +386,21 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       <EmployerNavbar />
       
-      <div className="container mx-auto px-4 py-8">
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           {statusFilter !== 'all' && (
@@ -518,7 +537,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
               )
               
               return (
-                <Card key={application.id} className={`hover:shadow-md transition-shadow ${isPremium ? 'ring-2 ring-yellow-200 bg-yellow-50/30' : ''}`}>
+                <Card key={application.id} className={`rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] ${isPremium ? 'ring-2 ring-yellow-200' : ''}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4 flex-1">

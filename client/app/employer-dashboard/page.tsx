@@ -22,13 +22,14 @@ import {
   RefreshCw,
   Flame,
   Star,
+  Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
-import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { CompanyInfoDisplay } from "@/components/company-info-display"
 import { CompanyRegistration } from "@/components/company-registration"
 import { CompanyManagement } from "@/components/company-management"
@@ -43,6 +44,38 @@ import { EmployerProfileCompletionDialog } from "@/components/profile-completion
 export default function EmployerDashboard() {
   const { user, refreshUser } = useAuth()
 
+  // Check if mock mode is enabled
+  const isMockMode = typeof window !== 'undefined' && 
+    (localStorage.getItem('useMockData') === 'true' || 
+     window.location.search.includes('mock=true'))
+
+  // If mock mode, bypass auth guard and use mock user
+  if (isMockMode) {
+    const mockUser = {
+      id: "user_123",
+      firstName: "John",
+      lastName: "Doe",
+      email: "john.doe@company.com",
+      userType: "employer",
+      user_type: "employer",
+      companyId: "company_456",
+      company: {
+        id: "company_456",
+        name: "TechCorp Solutions",
+        logo: "/placeholder-logo.png",
+        description: "Leading technology solutions provider",
+        industry: "Technology",
+        size: "100-500",
+        location: "New York, NY",
+        website: "https://techcorp.com"
+      },
+      region: "main",
+      isVerified: true,
+      createdAt: "2024-01-15T10:00:00Z"
+    }
+    return <EmployerDashboardContent user={mockUser} refreshUser={async () => {}} />
+  }
+
   return (
     <EmployerAuthGuard>
       <EmployerDashboardContent user={user} refreshUser={refreshUser} />
@@ -52,13 +85,170 @@ export default function EmployerDashboard() {
 
 function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUser: () => Promise<void> }) {
   const router = useRouter()
-  const [stats, setStats] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // Check if mock mode is enabled
+  const isMockMode = typeof window !== 'undefined' && 
+    (localStorage.getItem('useMockData') === 'true' || 
+     window.location.search.includes('mock=true'))
+
+  // Mock data for local development
+  const mockStats = [
+    {
+      title: "Active Jobs",
+      value: "12",
+      change: "+2 this week",
+      color: "from-blue-500 to-cyan-500",
+      icon: Briefcase,
+      link: "/employer-dashboard/manage-jobs"
+    },
+    {
+      title: "Total Applications",
+      value: "247",
+      change: "+15% from last month",
+      color: "from-green-500 to-emerald-500",
+      icon: Users,
+      link: "/employer-dashboard/applications"
+    },
+    {
+      title: "Shortlisted",
+      value: "43",
+      change: "+8 this week",
+      color: "from-yellow-500 to-amber-500",
+      icon: Star,
+      link: "/employer-dashboard/applications?status=shortlisted"
+    },
+    {
+      title: "Hired",
+      value: "8",
+      change: "+3 this month",
+      color: "from-purple-500 to-violet-500",
+      icon: Award,
+      link: "/employer-dashboard/applications?status=hired"
+    }
+  ]
+
+  const mockQuickActions = [
+    {
+      title: "Post New Job",
+      description: "Create and publish a new job posting",
+      icon: Plus,
+      color: "from-blue-500 to-cyan-500",
+      href: "/employer-dashboard/post-job"
+    },
+    {
+      title: "View Applications",
+      description: "Review and manage job applications",
+      icon: Users,
+      color: "from-green-500 to-emerald-500",
+      href: "/employer-dashboard/applications"
+    },
+    {
+      title: "Manage Jobs",
+      description: "Edit and manage existing job postings",
+      icon: Briefcase,
+      color: "from-purple-500 to-violet-500",
+      href: "/employer-dashboard/manage-jobs"
+    },
+    {
+      title: "Analytics",
+      description: "View recruitment analytics and insights",
+      icon: BarChart3,
+      color: "from-orange-500 to-red-500",
+      href: "/employer-dashboard/analytics"
+    },
+    {
+      title: "Company Settings",
+      description: "Update company information and preferences",
+      icon: Settings,
+      color: "from-indigo-500 to-blue-500",
+      href: "/employer-dashboard/settings"
+    },
+    {
+      title: "Hot Vacancies",
+      description: "Create premium hot vacancy postings",
+      icon: Flame,
+      color: "from-red-500 to-orange-500",
+      href: "/employer-dashboard/hot-vacancies"
+    }
+  ]
+
+  const mockRecentActivity = [
+    {
+      id: "activity_1",
+      title: "New Application Received",
+      description: "Sarah Johnson applied for Senior Frontend Developer position",
+      time: "2 hours ago",
+      icon: Users
+    },
+    {
+      id: "activity_2",
+      title: "Job Published",
+      description: "Backend Developer job posted successfully",
+      time: "4 hours ago",
+      icon: Briefcase
+    },
+    {
+      id: "activity_3",
+      title: "Candidate Shortlisted",
+      description: "Michael Chen shortlisted for Product Manager role",
+      time: "1 day ago",
+      icon: Star
+    },
+    {
+      id: "activity_4",
+      title: "Interview Scheduled",
+      description: "Interview scheduled with Emma Davis for UX Designer",
+      time: "2 days ago",
+      icon: Calendar
+    }
+  ]
+
+  const mockUpcomingInterviews = [
+    {
+      id: "interview_1",
+      title: "Senior Frontend Developer",
+      scheduledAt: "2024-01-20T10:00:00Z",
+      jobApplication: {
+        applicant: {
+          first_name: "Sarah",
+          last_name: "Johnson",
+          email: "sarah.johnson@email.com"
+        }
+      }
+    },
+    {
+      id: "interview_2",
+      title: "Product Manager",
+      scheduledAt: "2024-01-21T14:30:00Z",
+      jobApplication: {
+        applicant: {
+          first_name: "Michael",
+          last_name: "Chen",
+          email: "michael.chen@email.com"
+        }
+      }
+    },
+    {
+      id: "interview_3",
+      title: "UX Designer",
+      scheduledAt: "2024-01-22T09:15:00Z",
+      jobApplication: {
+        applicant: {
+          first_name: "Emma",
+          last_name: "Davis",
+          email: "emma.davis@email.com"
+        }
+      }
+    }
+  ]
+
+  const [stats, setStats] = useState<any[]>(isMockMode ? mockStats : [])
+  const [loading, setLoading] = useState(!isMockMode)
   const [companyData, setCompanyData] = useState<any>(null)
   const [recentApplications, setRecentApplications] = useState<any[]>([])
-  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>(isMockMode ? mockRecentActivity : [])
   const [hotVacancies, setHotVacancies] = useState<any[]>([])
-  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
+  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>(isMockMode ? mockUpcomingInterviews : [])
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
   const [profileCheckDone, setProfileCheckDone] = useState(false)
 
@@ -471,8 +661,8 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
     },
   ]
 
-  // Filter quick actions based on user type
-  const quickActions = allQuickActions.filter(action => {
+  // Filter quick actions based on user type, or use mock data
+  const quickActions = isMockMode ? mockQuickActions : allQuickActions.filter(action => {
     if (action.adminOnly) {
       // Show Usage Pulse for admin users (both system admins and company admins)
       return user?.userType === 'admin' || user?.userType === 'superadmin'
@@ -578,24 +768,40 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 overflow-x-hidden">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <EmployerDashboardNavbar />
+
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip (raised a bit like hero strip) */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
 
               {/* Welcome Banner */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white overflow-hidden mb-8"
+            className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white overflow-hidden mb-8 shadow-[0_10px_40px_rgba(59,130,246,0.3)]"
           >
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">
-                    Welcome back, {user?.firstName ? user.firstName.toUpperCase() : 'EMPLOYER'}!
-                  </h1>
-                  <p className="text-blue-100 text-lg mb-4">Ready to find your next great hire?</p>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Briefcase className="w-8 h-8 text-blue-200" />
+                    <h1 className="serif-heading text-3xl sm:text-4xl font-bold drop-shadow">
+                      Employer Dashboard
+                    </h1>
+                  </div>
+                  <p className="text-blue-100/90 text-lg mb-6 leading-relaxed">
+                    Welcome back, {user?.firstName ? user.firstName.toUpperCase() : 'EMPLOYER'}! Ready to find your next great hire?
+                  </p>
                   <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
                       <TrendingUp className="w-5 h-5 text-blue-200" />
@@ -608,13 +814,14 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                   </div>
                 </div>
                 <div className="hidden lg:block">
-                  <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center">
+                  <div className="w-32 h-32 bg-white/10 ring-1 ring-white/30 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(255,255,255,0.15)]">
                     <Briefcase className="w-16 h-16 text-white/80" />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90"></div>
+            <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-blue-400/20 blur-3xl"></div>
+            <div className="absolute -bottom-16 -left-20 w-72 h-72 rounded-full bg-indigo-400/10 blur-3xl"></div>
           </motion.div>
 
         {/* Company Registration Section */}
@@ -648,20 +855,28 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           </motion.div>
         )}
 
-        {/* Stats Cards */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-slate-900">Dashboard Statistics</h2>
-          <button
-            onClick={loadDashboardData}
-            disabled={loading || isRefreshing}
-            className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-            title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="text-sm">Refresh</span>
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards - Premium glass analytics */}
+        <div className="relative mb-8">
+          {/* subtle animated bg behind stats */}
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -top-10 -left-10 w-64 h-64 bg-gradient-to-br from-blue-300/20 to-cyan-300/20 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-gradient-to-br from-indigo-300/20 to-violet-300/20 rounded-full blur-3xl animate-pulse delay-500" />
+          </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 uppercase">Dashboard Statistics</h2>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={loadDashboardData}
+                disabled={loading || isRefreshing}
+                className="flex items-center space-x-2 px-3 py-2 text-slate-700/80 rounded-xl bg-white/40 backdrop-blur-md border border-white/30 hover:bg-white/60 transition-colors disabled:opacity-50"
+                title={isRefreshing ? "Refresh in progress..." : "Refresh dashboard data"}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="text-sm">Refresh Data</span>
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {loading ? (
             <div className="col-span-full flex justify-center items-center py-12">
               <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
@@ -672,40 +887,39 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
+                transition={{ delay: index * 0.06, duration: 0.45 }}
+                className="group"
               >
                 {stat.link ? (
                   <Link href={stat.link}>
-                    <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105">
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02]">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                            <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                            <p className="text-sm text-green-600">{stat.change}</p>
+                            <p className="text-[11px] tracking-widest uppercase text-slate-500">{stat.title}</p>
+                            <p className="text-4xl font-extrabold leading-tight text-slate-900 group-hover:brightness-110 transition-all">{stat.value}</p>
+                            <p className="text-xs font-medium text-blue-700/90 mt-1">{stat.change}</p>
                           </div>
-                          <div
-                            className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                          >
-                            <stat.icon className="w-6 h-6 text-white" />
+                          <div className={`relative w-12 h-12 rounded-2xl bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)]`}>
+                            <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                            <stat.icon className="relative w-6 h-6 text-white" />
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   </Link>
                 ) : (
-                  <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
+                  <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                          <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                          <p className="text-sm text-green-600">{stat.change}</p>
+                          <p className="text-[11px] tracking-widest uppercase text-slate-500">{stat.title}</p>
+                          <p className="text-4xl font-extrabold leading-tight text-slate-900">{stat.value}</p>
+                          <p className="text-xs font-medium text-blue-700/90 mt-1">{stat.change}</p>
                         </div>
-                        <div
-                          className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                        >
-                          <stat.icon className="w-6 h-6 text-white" />
+                        <div className={`relative w-12 h-12 rounded-2xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}>
+                          <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                          <stat.icon className="relative w-6 h-6 text-white" />
                         </div>
                       </div>
                     </CardContent>
@@ -718,6 +932,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
               <p className="text-slate-600">No dashboard data available.</p>
             </div>
           )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -741,7 +956,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             )}
 
             {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -768,7 +983,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                       transition={{ delay: index * 0.1, duration: 0.3 }}
                     >
                       <Link href={action.href}>
-                        <Card className="h-full hover:shadow-md transition-all duration-300 hover:scale-105 cursor-pointer border-slate-200">
+                        <Card className="h-full transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] cursor-pointer bg-white/50 backdrop-blur-xl border-white/40 hover:shadow-[0_18px_50px_rgba(59,130,246,0.14)]">
                           <CardContent className="p-6">
                             <div className="flex items-start space-x-4">
                               <div
@@ -777,8 +992,8 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                                 <action.icon className="w-6 h-6 text-white" />
                               </div>
                               <div>
-                                <h3 className="font-semibold text-slate-900 mb-1">{action.title}</h3>
-                                <p className="text-sm text-slate-600">{action.description}</p>
+                                <h3 className="font-semibold text-slate-900 mb-1 tracking-tight">{action.title}</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed">{action.description}</p>
                               </div>
                             </div>
                           </CardContent>
@@ -791,7 +1006,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             </Card>
 
             {/* Recent Activity */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-xl border-white/30 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -813,14 +1028,14 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                   {recentActivity.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-start space-x-4 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="flex items-start space-x-4 p-4 rounded-xl bg-white/50 backdrop-blur-md border border-white/30 hover:bg-white/70 transition-colors"
                     >
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <activity.icon className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500/90 flex items-center justify-center shadow-sm">
+                        <activity.icon className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium text-slate-900">{activity.title}</h4>
-                        <p className="text-sm text-slate-600">{activity.description}</p>
+                        <p className="text-sm text-slate-600 leading-relaxed">{activity.description}</p>
                         <p className="text-xs text-slate-500 mt-1">{activity.time}</p>
                       </div>
                     </div>
@@ -840,7 +1055,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
 
 
             {/* Profile Completion */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -864,7 +1079,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                       <span className="text-sm text-slate-600">Company Profile</span>
                       <span className="text-sm font-medium text-slate-900">{calculateProfileCompletion()}%</span>
                     </div>
-                    <Progress value={calculateProfileCompletion()} className="h-2" />
+                    <Progress value={calculateProfileCompletion()} className="h-2 bg-white/60" />
                   </div>
                   <div className="text-sm text-slate-600">
                     {calculateProfileCompletion() >= 80 ? 'Great! Your profile is well completed.' : 'Complete your profile to attract better candidates'}
@@ -882,7 +1097,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
             </Card>
 
             {/* Upcoming Events */}
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-900 flex items-center">
@@ -903,7 +1118,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                 <div className="space-y-3">
                   {upcomingInterviews.length > 0 ? (
                     upcomingInterviews.slice(0, 3).map((interview, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-white/50 backdrop-blur-md border border-white/40 rounded-xl">
                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-slate-900">{interview.title}</p>
@@ -966,7 +1181,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         </div>
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
 
       {/* Profile Completion Dialog */}
       {user && (
