@@ -37,7 +37,7 @@ import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { InterviewSchedulingDialog } from "@/components/interview-scheduling-dialog"
@@ -363,7 +363,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-        <EmployerNavbar />
+        <EmployerDashboardNavbar />
         
         {/* Background Effects - Blue theme */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -387,7 +387,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-      <EmployerNavbar />
+      <EmployerDashboardNavbar />
       
       {/* Background Effects - Blue theme */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -397,10 +397,10 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
         <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
         {/* Wide translucent blue gradient strip */}
-        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+        <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
       </div>
       
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      <div className="relative z-10 container mx-auto px-4 pt-16 pb-8">
         {/* Header */}
         <div className="mb-8">
           {statusFilter !== 'all' && (

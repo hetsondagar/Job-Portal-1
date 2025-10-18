@@ -203,6 +203,20 @@ export function EmployerDashboardNavbar() {
                         <Database className="w-4 h-4" />
                         <span>Bulk Import</span>
                       </Link>
+                      <Link
+                        href="/employer-dashboard/requirements/create"
+                        className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Post Requirement</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/requirements"
+                        className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      >
+                        <Users className="w-4 h-4" />
+                        <span>Manage Requirements</span>
+                      </Link>
                     </motion.div>
                   )}
                 </AnimatePresence>

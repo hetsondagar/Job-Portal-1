@@ -3201,7 +3201,7 @@ export default function PostJobPage() {
         )}
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
 
       {/* Template Selection Dialog - Enhanced */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
