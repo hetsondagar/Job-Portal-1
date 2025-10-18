@@ -83,7 +83,7 @@ export function EmployerDashboardNavbar() {
   }
 
   return (
-    <nav className="bg-gradient-to-r from-blue-200/60 via-cyan-200/50 to-indigo-200/60 dark:from-gray-900/80 dark:via-gray-800/70 dark:to-gray-900/80 backdrop-blur-xl border-b border-white/30 dark:border-gray-700/50 fixed top-0 left-0 right-0 z-50 transition-colors">
+    <nav className="bg-gradient-to-r from-blue-200/60 via-cyan-200/50 to-indigo-200/60 backdrop-blur-xl border-b border-white/30 fixed top-0 left-0 right-0 z-50 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
