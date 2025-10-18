@@ -96,7 +96,11 @@ export default function MessagesPage() {
               <button
                 key={c.id}
                 onClick={() => openConversation(c.id)}
-                className={`w-full text-left border rounded p-2 ${selectedId === c.id ? 'bg-blue-50' : ''}`}
+                className={`w-full text-left rounded-xl p-3 transition-all duration-200 ${
+                  selectedId === c.id 
+                    ? 'bg-blue-100/80 border-blue-300 shadow-md' 
+                    : 'bg-white/70 hover:bg-white/90 border-white/60 hover:shadow-sm'
+                } border backdrop-blur-sm`}
               >
                 <div className="flex justify-between">
                   <div className="font-medium">{c.otherParticipant?.name || c.otherParticipant?.email || 'Conversation'}</div>
@@ -126,7 +130,7 @@ export default function MessagesPage() {
             {/* Quick coworker list */}
             <div className="mt-3 grid grid-cols-1 gap-2">
               {coworkers.map((u) => (
-                <button key={u.id} className="w-full text-left text-sm border rounded px-2 py-2 hover:bg-gray-50"
+                <button key={u.id} className="w-full text-left text-sm rounded-lg px-3 py-2 bg-white/70 hover:bg-white/90 border border-white/60 hover:shadow-sm transition-all duration-200"
                   onClick={async () => { await startConversation(u.id); }}>
                   {u.name || u.email}
                 </button>
@@ -135,7 +139,7 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        <div className="md:col-span-2 border rounded bg-white flex flex-col min-h-[60vh]">
+        <div className="md:col-span-2 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] flex flex-col min-h-[60vh]">
           {!selectedId ? (
             <div className="flex-1 grid place-items-center text-gray-500">
               <div className="text-center p-6">
@@ -143,7 +147,7 @@ export default function MessagesPage() {
                 <p className="text-sm mb-4">Choose a coworker from the left, or pick from suggestions below.</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {coworkers.slice(0, 6).map((u) => (
-                    <button key={u.id} className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+                    <button key={u.id} className="px-4 py-2 rounded-xl text-sm bg-white/70 hover:bg-white/90 border border-white/60 hover:shadow-sm transition-all duration-200 font-medium"
                       onClick={async () => { await startConversation(u.id); }}>
                       {u.name || u.email}
                     </button>
@@ -160,7 +164,7 @@ export default function MessagesPage() {
                   <div className="space-y-3">
                     {messages.map((m) => (
                       <div key={m.id} className={`max-w-[80%] ${m.isFromMe ? 'ml-auto text-right' : ''}`}>
-                        <div className={`inline-block rounded px-3 py-2 ${m.isFromMe ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
+                        <div className={`inline-block rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm ${m.isFromMe ? 'bg-blue-500/90 text-white border border-blue-400/30' : 'bg-white/80 text-gray-800 border border-white/60'}`}>
                           <div className="text-sm whitespace-pre-wrap">{m.content}</div>
                           <div className="text-[10px] opacity-70 mt-1">{new Date(m.createdAt).toLocaleString()}</div>
                         </div>
@@ -169,14 +173,15 @@ export default function MessagesPage() {
                   </div>
                 )}
               </div>
-              <div className="border-t p-2 flex gap-2">
+              <div className="border-t border-white/30 p-4 flex gap-3">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="flex-1 border rounded px-3 py-2 text-sm"
+                  className="flex-1 rounded-2xl border border-white/60 bg-white/70 backdrop-blur-sm px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/60 transition-all duration-200"
                   placeholder="Type a message..."
+                  onKeyPress={(e) => e.key === 'Enter' && send()}
                 />
-                <button onClick={send} className="px-4 py-2 bg-blue-600 text-white rounded text-sm">Send</button>
+                <button onClick={send} className="px-6 py-3 bg-blue-500/90 hover:bg-blue-600/90 text-white rounded-2xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 backdrop-blur-sm border border-blue-400/30">Send</button>
               </div>
             </>
           )}

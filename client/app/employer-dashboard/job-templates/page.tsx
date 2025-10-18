@@ -493,7 +493,7 @@ export default function JobTemplatesPage() {
         </DialogContent>
       </Dialog>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
     </div>
   )
 }
