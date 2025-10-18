@@ -33,8 +33,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { EmployerNavbar } from "@/components/employer-navbar"
-import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -430,7 +430,7 @@ export default function CandidateProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <EmployerNavbar />
+        <EmployerDashboardNavbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -439,7 +439,7 @@ export default function CandidateProfilePage() {
             </div>
           </div>
         </div>
-        <EmployerFooter />
+        <EmployerDashboardFooter />
       </div>
     )
   }
@@ -447,7 +447,7 @@ export default function CandidateProfilePage() {
   if (error || !candidate) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <EmployerNavbar />
+        <EmployerDashboardNavbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -465,16 +465,26 @@ export default function CandidateProfilePage() {
             </div>
           </div>
         </div>
-        <EmployerFooter />
+        <EmployerDashboardFooter />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      {/* Animated background effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/3 left-1/3 w-60 h-60 bg-gradient-to-br from-cyan-400/10 to-indigo-400/10 rounded-full blur-2xl animate-pulse delay-500"></div>
+      </div>
+      
+      {/* Blue gradient strip */}
+      <div className="absolute top-1/3 left-0 right-0 h-32 bg-gradient-to-r from-blue-400/10 via-cyan-400/5 to-indigo-400/10 blur-3xl"></div>
+      
+      <EmployerDashboardNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-16 relative z-10">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-6">
@@ -619,7 +629,7 @@ export default function CandidateProfilePage() {
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Contact Information */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Users className="w-5 h-5" />
@@ -673,7 +683,7 @@ export default function CandidateProfilePage() {
               </Card>
 
               {/* Salary & Preferences */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Award className="w-5 h-5" />
@@ -707,7 +717,7 @@ export default function CandidateProfilePage() {
               </Card>
 
               {/* Skills & Languages */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Building2 className="w-5 h-5" />
@@ -741,7 +751,7 @@ export default function CandidateProfilePage() {
             </div>
 
             {/* Certifications */}
-            <Card>
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <CardHeader>
                 <CardTitle>Certifications</CardTitle>
               </CardHeader>
@@ -760,7 +770,7 @@ export default function CandidateProfilePage() {
           </TabsContent>
 
           <TabsContent value="experience" className="space-y-6">
-            <Card>
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <CardHeader>
                 <CardTitle>Work Experience</CardTitle>
               </CardHeader>
@@ -794,7 +804,7 @@ export default function CandidateProfilePage() {
           </TabsContent>
 
           <TabsContent value="education" className="space-y-6">
-            <Card>
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <CardHeader>
                 <CardTitle>Education</CardTitle>
               </CardHeader>
@@ -838,7 +848,7 @@ export default function CandidateProfilePage() {
           </TabsContent>
 
           <TabsContent value="projects" className="space-y-6">
-            <Card>
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <CardHeader>
                 <CardTitle>Projects</CardTitle>
               </CardHeader>
@@ -882,7 +892,7 @@ export default function CandidateProfilePage() {
 
           <TabsContent value="cv" className="space-y-6">
             {/* Resume/CV Section */}
-            <Card>
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -906,7 +916,7 @@ export default function CandidateProfilePage() {
                           <h4 className="text-lg font-semibold mb-3">Available CVs</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {candidate.resumes.map((resume: any, index: number) => (
-                              <Card key={resume.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                              <Card key={resume.id} className="cursor-pointer rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
                                 <CardContent className="p-4">
                                   <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -1043,7 +1053,7 @@ export default function CandidateProfilePage() {
 
                   {/* CV Information */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                       <CardHeader>
                         <CardTitle className="text-lg">CV Details</CardTitle>
                       </CardHeader>
@@ -1077,7 +1087,7 @@ export default function CandidateProfilePage() {
                       </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                       <CardHeader>
                         <CardTitle className="text-lg">CV Actions</CardTitle>
                       </CardHeader>
@@ -1119,7 +1129,7 @@ export default function CandidateProfilePage() {
 
                   {/* Resume Summary and Skills */}
                   {candidate.resumes[0].summary && (
-                    <Card>
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                       <CardHeader>
                         <CardTitle className="text-lg">Resume Summary</CardTitle>
                       </CardHeader>
@@ -1131,7 +1141,7 @@ export default function CandidateProfilePage() {
 
                   {/* Resume Skills */}
                   {candidate.resumes[0].skills && candidate.resumes[0].skills.length > 0 && (
-                    <Card>
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                       <CardHeader>
                         <CardTitle className="text-lg">Resume Skills</CardTitle>
                       </CardHeader>
@@ -1161,7 +1171,7 @@ export default function CandidateProfilePage() {
             </Card>
 
             {/* Cover Letter Section */}
-            <Card>
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -1185,7 +1195,7 @@ export default function CandidateProfilePage() {
                           <h4 className="text-lg font-semibold mb-3">Available Cover Letters</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {candidate.coverLetters.map((coverLetter: any, index: number) => (
-                              <Card key={coverLetter.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                              <Card key={coverLetter.id} className="cursor-pointer rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
                                 <CardContent className="p-4">
                                   <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -1272,7 +1282,7 @@ export default function CandidateProfilePage() {
 
                       {/* Cover Letter Information */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card>
+                        <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                           <CardHeader>
                             <CardTitle className="text-lg">Cover Letter Details</CardTitle>
                           </CardHeader>
@@ -1296,7 +1306,7 @@ export default function CandidateProfilePage() {
                           </CardContent>
                         </Card>
 
-                        <Card>
+                        <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                           <CardHeader>
                             <CardTitle className="text-lg">Cover Letter Actions</CardTitle>
                           </CardHeader>
@@ -1329,7 +1339,7 @@ export default function CandidateProfilePage() {
 
                       {/* Cover Letter Summary */}
                       {candidate.coverLetters[0].summary && (
-                        <Card>
+                        <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                           <CardHeader>
                             <CardTitle className="text-lg">Cover Letter Summary</CardTitle>
                           </CardHeader>
@@ -1496,7 +1506,7 @@ export default function CandidateProfilePage() {
         </div>
       )}
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
     </div>
   )
 } 

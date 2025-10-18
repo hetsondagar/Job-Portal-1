@@ -680,7 +680,7 @@ function ApplicationsPageContent({ user, authLoading }: { user: any; authLoading
 
         {/* Application Detail Modal */}
         <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-blue-50/95 via-cyan-50/90 to-indigo-50/95 backdrop-blur-2xl border-blue-200/40 shadow-[0_20px_50px_rgba(59,130,246,0.15)]">
             <DialogHeader>
               <DialogTitle>Application Details</DialogTitle>
             </DialogHeader>
@@ -845,7 +845,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
   return (
     <div className="space-y-6">
       {/* Candidate Overview */}
-      <Card>
+      <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div>
@@ -892,7 +892,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
       {/* Social Links */}
       {(applicant?.social_links?.linkedin || applicant?.social_links?.github || applicant?.socialLinks?.linkedin || applicant?.socialLinks?.github) && (
-        <Card>
+        <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
           <CardHeader>
             <CardTitle className="flex items-center">
               <ExternalLink className="w-5 h-5 mr-2" />
@@ -934,7 +934,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
       {/* Work Experience */}
       {applicant?.workExperiences && applicant.workExperiences.length > 0 && (
-        <Card>
+        <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Briefcase className="w-5 h-5 mr-2" />
@@ -976,7 +976,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
       {/* Education */}
       {applicant?.educations && applicant.educations.length > 0 && (
-        <Card>
+        <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
           <CardHeader>
             <CardTitle className="flex items-center">
               <GraduationCap className="w-5 h-5 mr-2" />
@@ -1009,7 +1009,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
       {/* Skills */}
       {applicant?.allSkills && applicant.allSkills.length > 0 && (
-        <Card>
+        <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Award className="w-5 h-5 mr-2" />
@@ -1029,7 +1029,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
       )}
 
       {/* Application Details */}
-      <Card>
+      <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
         <CardHeader>
           <CardTitle className="flex items-center">
             <FileText className="w-5 h-5 mr-2" />
@@ -1098,7 +1098,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
 
       {/* Resume */}
       {jobResume && (
-        <Card>
+        <Card className="rounded-3xl bg-white/60 backdrop-blur-xl border-white/50 shadow-[0_8px_28px_rgba(59,130,246,0.12)]">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
