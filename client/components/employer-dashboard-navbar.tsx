@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Building2, ChevronDown, Menu, Plus, BarChart3, Users, Briefcase, Database, FileText, Moon, Sun, User, LogOut, Bell, Settings, Globe } from "lucide-react"
+import { Building2, ChevronDown, Menu, Plus, BarChart3, Users, Briefcase, Database, FileText, User, LogOut, Bell, Settings, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { motion, AnimatePresence } from "framer-motion"
-import { useTheme } from "next-themes"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 
@@ -17,7 +16,6 @@ export function EmployerDashboardNavbar() {
   const [showJobsDropdown, setShowJobsDropdown] = useState(false)
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const { theme, setTheme } = useTheme()
   const { user, logout, refreshUser } = useAuth()
   const [company, setCompany] = useState<any>(null)
   const isAdmin = (user?.userType === 'admin') || (user?.preferences?.employerRole === 'admin')
@@ -226,21 +224,13 @@ export function EmployerDashboardNavbar() {
 
           {/* Right Side */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="text-slate-600 hover:text-blue-600"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-
             {/* Notifications */}
-            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-blue-600 relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
-            </Button>
+            <Link href="/employer-dashboard/notifications">
+              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-blue-600 relative">
+                <Bell className="w-4 h-4" />
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
+              </Button>
+            </Link>
 
             {/* User Menu */}
             <DropdownMenu>
