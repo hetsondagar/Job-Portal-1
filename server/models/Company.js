@@ -113,36 +113,43 @@ const Company = sequelize.define('Company', {
   },
   companySize: {
     type: DataTypes.ENUM('1-50', '51-200', '201-500', '500-1000', '1000+'),
-    allowNull: true
+    allowNull: true,
+    field: 'company_size'
   },
   foundedYear: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    field: 'founded_year'
   },
   totalReviews: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'total_reviews'
   },
   isVerified: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_verified'
   },
   isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: true
+    defaultValue: true,
+    field: 'is_active'
   },
   isFeatured: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_featured'
   },
   socialLinks: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'social_links'
   },
   benefits: {
     type: DataTypes.JSONB,
@@ -157,6 +164,7 @@ const Company = sequelize.define('Company', {
   companyType: {
     type: DataTypes.ENUM('startup', 'midsize', 'enterprise', 'multinational'),
     allowNull: true,
+    field: 'company_type',
     set(value) {
       if (typeof value === 'string') {
         this.setDataValue('companyType', value.toLowerCase());
@@ -214,11 +222,13 @@ const Company = sequelize.define('Company', {
   },
   contactEmail: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'contact_email'
   },
   contactPhone: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'contact_phone'
   },
   verificationStatus: {
     type: DataTypes.ENUM('unverified', 'pending', 'verified', 'premium_verified'),
@@ -350,10 +360,22 @@ const Company = sequelize.define('Company', {
       key: 'id'
     },
     comment: 'User who claimed the company'
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'created_at'
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'updated_at'
   }
 }, {
   tableName: 'companies',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   underscored: false,
   hooks: {
     // Removed auto slug generation - handled manually in auth routes

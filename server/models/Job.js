@@ -23,7 +23,7 @@ const Job = sequelize.define('Job', {
   companyId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'companyId',
+    field: 'company_id',
     references: {
       model: 'companies',
       key: 'id'
@@ -32,6 +32,7 @@ const Job = sequelize.define('Job', {
   employerId: {
     type: DataTypes.UUID,
     allowNull: true, // Made nullable to support agency jobs (they use companyId instead)
+    field: 'posted_by',
     references: {
       model: 'users',
       key: 'id'
@@ -39,7 +40,8 @@ const Job = sequelize.define('Job', {
   },
   shortDescription: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'short_description'
   },
   location: {
     type: DataTypes.STRING,
@@ -86,46 +88,51 @@ const Job = sequelize.define('Job', {
   jobType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
     allowNull: false,
-    defaultValue: 'full-time'
+    defaultValue: 'full-time',
+    field: 'job_type'
   },
   experienceLevel: {
     type: DataTypes.ENUM('entry', 'junior', 'mid', 'senior', 'lead', 'executive'),
-    allowNull: true
+    allowNull: true,
+    field: 'experience_level'
   },
   experienceMin: {
     type: DataTypes.INTEGER, // in years
-    allowNull: true
+    allowNull: true,
+    field: 'experience_min'
   },
   experienceMax: {
     type: DataTypes.INTEGER, // in years
-    allowNull: true
+    allowNull: true,
+    field: 'experience_max'
   },
   salaryMin: {
     type: DataTypes.DECIMAL,
-    allowNull: true
+    allowNull: true,
+    field: 'salary_min'
   },
   salaryMax: {
     type: DataTypes.DECIMAL,
-    allowNull: true
+    allowNull: true,
+    field: 'salary_max'
   },
   salaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'salary_currency'
   },
   salaryPeriod: {
-    type: DataTypes.ENUM('hourly', 'daily', 'weekly', 'monthly', 'yearly'),
-    allowNull: true,
-    defaultValue: 'yearly'
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have salary_period'
   },
   isSalaryVisible: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: true
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have is_salary_visible'
   },
   department: {
-    type: DataTypes.STRING,
-    allowNull: true
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; jobs table has no department column'
   },
   category: {
     type: DataTypes.STRING,
@@ -139,7 +146,8 @@ const Job = sequelize.define('Job', {
   remoteWork: {
     type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
     allowNull: true,
-    defaultValue: 'on-site'
+    defaultValue: 'on-site',
+    field: 'remoteWork'
   },
   travelRequired: {
     type: DataTypes.BOOLEAN,
@@ -196,7 +204,8 @@ const Job = sequelize.define('Job', {
   },
   validTill: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'valid_till'
   },
   publishedAt: {
     type: DataTypes.DATE,
@@ -625,55 +634,34 @@ const Job = sequelize.define('Job', {
     field: 'clicks'
   },
   
-  // ========== AGENCY POSTING FIELDS ==========
+  // ========== AGENCY POSTING FIELDS (VIRTUAL LOCALLY; real columns may exist in prod) ==========
   hiringCompanyId: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    field: 'hiring_company_id',
-    references: {
-      model: 'companies',
-      key: 'id'
-    },
-    comment: 'The actual hiring company (for agency posts)'
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have hiring_company_id'
   },
   postedByAgencyId: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    field: 'posted_by_agency_id',
-    references: {
-      model: 'companies',
-      key: 'id'
-    },
-    comment: 'The agency that posted the job'
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have posted_by_agency_id'
   },
   isAgencyPosted: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-    field: 'is_agency_posted',
-    comment: 'Whether this job was posted by an agency'
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have is_agency_posted'
   },
   agencyDescription: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    field: 'agency_description',
-    comment: 'Short description about the agency'
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have agency_description'
   },
   authorizationId: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    field: 'authorization_id',
-    references: {
-      model: 'agency_client_authorizations',
-      key: 'id'
-    },
-    comment: 'Link to the authorization record'
+    type: DataTypes.VIRTUAL,
+    comment: 'Virtual locally; production may have authorization_id'
   }
 }, {
   sequelize,
   modelName: 'Job',
   tableName: 'jobs',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   paranoid: false
 });
 
