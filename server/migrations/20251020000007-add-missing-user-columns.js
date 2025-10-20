@@ -5,74 +5,38 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
     
     try {
-      // Add missing user columns
-      await queryInterface.addColumn('users', 'current_company', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Current company name for job seekers'
-      }, { transaction });
+      // Add missing user columns with error handling for existing columns
+      const columnsToAdd = [
+        { name: 'current_company', type: Sequelize.STRING, comment: 'Current company name for job seekers' },
+        { name: 'current_role', type: Sequelize.STRING, comment: 'Current role/position for job seekers' },
+        { name: 'highest_education', type: Sequelize.STRING, comment: 'Highest education level' },
+        { name: 'field_of_study', type: Sequelize.STRING, comment: 'Field of study' },
+        { name: 'preferred_job_titles', type: Sequelize.JSONB, defaultValue: [], comment: 'Preferred job titles' },
+        { name: 'preferred_industries', type: Sequelize.JSONB, defaultValue: [], comment: 'Preferred industries' },
+        { name: 'preferred_company_size', type: Sequelize.STRING, comment: 'Preferred company size' },
+        { name: 'preferred_work_mode', type: Sequelize.STRING, comment: 'Preferred work mode (remote, hybrid, on-site)' },
+        { name: 'preferred_employment_type', type: Sequelize.STRING, comment: 'Preferred employment type (full-time, part-time, etc.)' },
+        { name: 'designation', type: Sequelize.STRING, comment: 'User designation' },
+        { name: 'department', type: Sequelize.STRING, comment: 'User department' }
+      ];
 
-      await queryInterface.addColumn('users', 'current_role', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Current role/position for job seekers'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'highest_education', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Highest education level'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'field_of_study', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Field of study'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'preferred_job_titles', {
-        type: Sequelize.JSONB,
-        allowNull: true,
-        defaultValue: [],
-        comment: 'Preferred job titles'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'preferred_industries', {
-        type: Sequelize.JSONB,
-        allowNull: true,
-        defaultValue: [],
-        comment: 'Preferred industries'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'preferred_company_size', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Preferred company size'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'preferred_work_mode', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Preferred work mode (remote, hybrid, on-site)'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'preferred_employment_type', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Preferred employment type (full-time, part-time, etc.)'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'designation', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'User designation'
-      }, { transaction });
-
-      await queryInterface.addColumn('users', 'department', {
-        type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'User department'
-      }, { transaction });
+      for (const column of columnsToAdd) {
+        try {
+          await queryInterface.addColumn('users', column.name, {
+            type: column.type,
+            allowNull: true,
+            defaultValue: column.defaultValue,
+            comment: column.comment
+          }, { transaction });
+          console.log(`✅ Added column: ${column.name}`);
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            console.log(`⚠️ Column ${column.name} already exists, skipping...`);
+          } else {
+            throw error;
+          }
+        }
+      }
 
       await transaction.commit();
       console.log('✅ Added missing user columns successfully');

@@ -463,4 +463,85 @@ router.get('/pending', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/verification/upload-documents
+ * @desc    Upload verification documents
+ * @access  Private (Employer)
+ */
+router.post('/upload-documents', authenticateToken, upload.array('documents', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No files uploaded'
+      });
+    }
+
+    const uploadedDocuments = req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: file.path,
+      url: `/uploads/verification-documents/${file.filename}`
+    }));
+
+    res.json({
+      success: true,
+      message: `Successfully uploaded ${uploadedDocuments.length} document(s)`,
+      data: {
+        documents: uploadedDocuments
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Document upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload documents',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @route   GET /api/verification/documents/:filename
+ * @desc    Serve verification documents
+ * @access  Private (Admin/SuperAdmin)
+ */
+router.get('/documents/:filename', authenticateToken, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+
+    // Check if user is admin or superadmin
+    if (!['admin', 'superadmin'].includes(user.user_type)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/verification-documents', filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    res.sendFile(filePath);
+
+  } catch (error) {
+    console.error('❌ Document serve error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve document',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;
