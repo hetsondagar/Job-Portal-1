@@ -1418,7 +1418,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
     const { JobApplication, Job, Company, User, Resume } = require('../config/index');
     
     const applications = await JobApplication.findAll({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
       include: [
         {
           model: Job,
@@ -1493,8 +1493,8 @@ router.post('/applications', authenticateToken, async (req, res) => {
     // Check if user already applied for this job
     const existingApplication = await JobApplication.findOne({
       where: { 
-        job_id: jobId, 
-        user_id: req.user.id 
+        jobId: jobId, 
+        userId: req.user.id 
       }
     });
 
@@ -1624,7 +1624,7 @@ router.get('/employer/applications/test', authenticateToken, async (req, res) =>
     
     // Simple count query first
     const count = await JobApplication.count({
-      where: { employer_id: req.user.id }
+      where: { employerId: req.user.id }
     });
     
     console.log('🧪 Found', count, 'applications for employer');
