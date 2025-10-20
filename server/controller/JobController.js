@@ -2141,7 +2141,7 @@ exports.getJobsByCompany = async (req, res, next) => {
           required: false // Make it optional since companyId can be NULL
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -2756,7 +2756,7 @@ exports.getJobsByCompany = async (req, res, next) => {
 
       ],
 
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
 
       offset: parseInt(offset)

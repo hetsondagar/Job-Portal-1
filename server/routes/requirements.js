@@ -316,7 +316,7 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log('🔍 Requirements API - Where clause:', whereClause);
     const rows = await Requirement.findAll({ 
       where: whereClause, 
-      order: [['createdAt', 'DESC']] 
+      order: [['created_at', 'DESC']] 
     });
     
     console.log('✅ Requirements API - Found requirements:', rows.length);
@@ -748,7 +748,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
         'experience_years', 'preferred_locations', 'education', 'designation',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt',
+        'is_email_verified', 'is_phone_verified', 'created_at',
         'preferences', 'certifications'
       ]
     });
@@ -806,7 +806,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
           'experience_years', 'preferred_locations', 'education', 'designation',
           'profile_completion', 'last_login_at', 'last_profile_update',
-          'is_email_verified', 'is_phone_verified', 'createdAt',
+          'is_email_verified', 'is_phone_verified', 'created_at',
           'preferences', 'certifications'
         ]
       });
@@ -1291,7 +1291,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         'current_location', 'headline', 'summary', 'skills', 'languages',
         'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt',
+        'is_email_verified', 'is_phone_verified', 'created_at',
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
@@ -1653,7 +1653,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               title: resume.title || 'Resume',
               filename: filename,
               fileSize: fileSize,
-              uploadDate: resume.createdAt || resume.createdAt,
+              uploadDate: resume.created_at || resume.created_at,
               lastUpdated: resume.lastUpdated || resume.last_updated,
               is_default: resume.isDefault ?? resume.is_default ?? false,
               viewUrl,
@@ -1746,7 +1746,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 title: resume.title || 'Resume',
                 filename: filename,
                 fileSize: fileSize,
-                uploadDate: resume.createdAt || resume.createdAt,
+                uploadDate: resume.created_at || resume.created_at,
                 lastUpdated: resume.lastUpdated || resume.last_updated,
                 is_default: resume.isDefault ?? resume.is_default ?? false,
                 viewUrl,
@@ -2771,7 +2771,7 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
           attributes: ['id'],
           limit: parseInt(limit),
           offset: (page - 1) * limit,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         });
         
         targetCandidateIds = allCandidates.map(c => c.id);
@@ -2787,7 +2787,7 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
             attributes: ['id'],
             limit: parseInt(limit),
             offset: offset,
-            order: [['createdAt', 'DESC']]
+            order: [['created_at', 'DESC']]
           });
           
           targetCandidateIds = candidates.map(c => c.id);
@@ -2801,7 +2801,7 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
             attributes: ['id'],
             limit: parseInt(limit),
             offset: (page - 1) * limit,
-            order: [['createdAt', 'DESC']]
+            order: [['created_at', 'DESC']]
           });
           
           targetCandidateIds = candidates.map(c => c.id);

@@ -444,7 +444,7 @@ router.get('/pending', authenticateToken, async (req, res) => {
         where: { user_type: ['employer', 'admin'] },
         attributes: ['id', 'first_name', 'last_name', 'email', 'phone']
       }],
-      order: [['createdAt', 'ASC']]
+      order: [['created_at', 'ASC']]
     });
 
     res.json({

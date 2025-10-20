@@ -423,7 +423,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       passwordSkipped: Boolean(req.user.password_skipped),
       requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0) && req.user.oauth_provider && req.user.oauth_provider !== 'local' && !req.user.password_skipped,
       profileCompleted: Boolean(req.user.first_name && req.user.last_name && req.user.phone) && ((req.user.profile_completion || 0) >= 60),
-      createdAt: req.user.createdAt,
+      createdAt: req.user.created_at,
       updatedAt: req.user.updatedAt
     };
 
@@ -468,7 +468,7 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
         'current_location', 'headline', 'summary', 'skills', 'languages',
         'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt',
+        'is_email_verified', 'is_phone_verified', 'created_at',
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
@@ -565,7 +565,7 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
           title: resume.title || 'Resume',
           filename: filename,
           fileSize: fileSize,
-          uploadDate: resume.createdAt || resume.createdAt,
+          uploadDate: resume.created_at || resume.created_at,
           lastUpdated: resume.lastUpdated || resume.last_updated,
           isDefault: resume.isDefault ?? resume.is_default ?? false,
           fileUrl: toAbsoluteUrl(filePath),
@@ -783,7 +783,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       hasPassword: !!(updatedUser.password && String(updatedUser.password).trim().length > 0),
       passwordSkipped: Boolean(updatedUser.password_skipped),
       requiresPasswordSetup: !(updatedUser.password && String(updatedUser.password).trim().length > 0) && updatedUser.oauth_provider && updatedUser.oauth_provider !== 'local' && !updatedUser.password_skipped,
-      createdAt: updatedUser.createdAt,
+      createdAt: updatedUser.created_at,
       updatedAt: updatedUser.updatedAt
     };
 
@@ -886,7 +886,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         type: n.type,
         title: n.title,
         isRead: n.isRead,
-        createdAt: n.createdAt
+        createdAt: n.created_at
       }))
     });
 
@@ -1039,7 +1039,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         // Only consider recent jobs (last 14 days) to avoid spamming
         const fourteenDaysAgo = new Date();
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-        whereClause.createdAt = { [Op.gte]: fourteenDaysAgo };
+        whereClause.created_at = { [Op.gte]: fourteenDaysAgo };
 
         const recentMatchingJobs = await Job.findAll({
           where: whereClause,
@@ -4296,7 +4296,7 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
     
     const jobs = await Job.findAll({
       where: whereClause,
-      attributes: ['id', 'title', 'status', 'region', 'createdAt'],
+      attributes: ['id', 'title', 'status', 'region', 'created_at'],
       include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
       order: [['created_at', 'DESC']]
     });
@@ -4673,7 +4673,7 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
       profileCompletion: updatedUser.profile_completion,
       oauthProvider: updatedUser.oauth_provider,
       oauthId: updatedUser.oauth_id,
-      createdAt: updatedUser.createdAt,
+      createdAt: updatedUser.created_at,
       updatedAt: updatedUser.updatedAt
     };
 
@@ -4818,7 +4818,7 @@ router.get('/jobs/:jobId/photos', async (req, res) => {
         jobId: jobId,
         isActive: true 
       },
-      order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+      order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
     });
 
     res.json({

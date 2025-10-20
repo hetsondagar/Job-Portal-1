@@ -29,7 +29,7 @@ router.get('/search', async (req, res) => {
         isClaimed: false, // Only unclaimed companies
         isActive: true
       },
-      attributes: ['id', 'name', 'industry', 'city', 'createdAt', 'createdByAgencyId'],
+      attributes: ['id', 'name', 'industry', 'city', 'created_at', 'createdByAgencyId'],
       limit: 10,
       order: [['name', 'ASC']]
     });

@@ -137,7 +137,7 @@ router.get('/authorization-details/:id', async (req, res) => {
         'allowedLocations',
         'clientContactEmail',
         'clientContactName',
-        'createdAt'
+        'created_at'
       ],
       include: [
         {

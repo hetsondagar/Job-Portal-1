@@ -227,7 +227,7 @@ router.get('/:id/photos', async (req, res) => {
         hotVacancyId: id,
         isActive: true
       },
-      order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
+      order: [['display_order', 'ASC'], ['created_at', 'ASC']]
     });
 
     return res.status(200).json({

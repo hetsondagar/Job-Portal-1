@@ -161,7 +161,7 @@ router.get('/:id/photos', async (req, res) => {
     // CompanyPhoto model is now directly imported
     const photos = await CompanyPhoto.findAll({
       where: { companyId: id, isActive: true },
-      order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
+      order: [['display_order', 'ASC'], ['created_at', 'ASC']]
     });
     
     console.log('🔍 Company photos found:', photos.length);
@@ -314,7 +314,7 @@ router.get('/', async (req, res) => {
       attributes: [
         'id', 'name', 'slug', 'logo', 'industry', 'companySize', 'website', 
         'city', 'state', 'country', 'region', 'description', 'foundedYear', 
-        'revenue', 'companyType', 'isFeatured', 'isVerified', 'createdAt', 'updatedAt',
+        'revenue', 'companyType', 'isFeatured', 'isVerified', 'created_at', 'updated_at',
         // Add claiming fields for registration flow
         'isClaimed', 'createdByAgencyId', 'claimedAt'
       ],
@@ -552,7 +552,7 @@ router.get('/:id/photos', async (req, res) => {
     const { CompanyPhoto } = require('../config');
     const photos = await CompanyPhoto.findAll({
       where: { companyId: id, isActive: true },
-      order: [['display_order', 'ASC'], ['createdAt', 'ASC']]
+      order: [['display_order', 'ASC'], ['created_at', 'ASC']]
     });
     return res.status(200).json({ success: true, data: photos });
   } catch (error) {
@@ -697,7 +697,7 @@ router.get('/:id', async (req, res) => {
       const { CompanyPhoto } = require('../config');
       companyPhotos = await CompanyPhoto.findAll({
         where: { companyId: id, isActive: true },
-        order: [['display_order', 'ASC'], ['createdAt', 'ASC']],
+        order: [['display_order', 'ASC'], ['created_at', 'ASC']],
         limit: 10
       });
 
@@ -754,7 +754,7 @@ router.get('/:id', async (req, res) => {
       workCulture: company.culture || '',
       featured: company.isFeatured || false,
       isVerified: company.isVerified || false,
-      createdAt: company.createdAt,
+      createdAt: company.created_at,
       updatedAt: company.updatedAt
     };
 
@@ -833,13 +833,13 @@ router.get('/:id/jobs', async (req, res) => {
     
     const jobs = await Job.findAll({
       where,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: [
         'id', 'title', 'location', 'jobType', 'experienceLevel', 
         'salaryMin', 'salaryMax', 'description', 'requirements',
-        'createdAt', 'isUrgent', 'department', 'category', 'city', 
+        'created_at', 'isUrgent', 'department', 'category', 'city', 
         'state', 'country', 'salary', 'skills', 'applications',
-        'updatedAt', 'status', 'remoteWork', 'experienceMin', 'experienceMax', 'validTill'
+        'updated_at', 'status', 'remoteWork', 'experienceMin', 'experienceMax', 'validTill'
       ]
     });
 
