@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
-import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { useToast } from "@/hooks/use-toast"
 
 export default function EditRequirementPage() {
@@ -159,10 +159,20 @@ export default function EditRequirementPage() {
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      {/* Animated background effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/3 left-1/3 w-60 h-60 bg-gradient-to-br from-cyan-400/10 to-indigo-400/10 rounded-full blur-2xl animate-pulse delay-500"></div>
+      </div>
+      
+      {/* Blue gradient strip */}
+      <div className="absolute top-1/3 left-0 right-0 h-32 bg-gradient-to-r from-blue-400/10 via-cyan-400/5 to-indigo-400/10 blur-3xl"></div>
+      
+      <EmployerDashboardNavbar />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-16 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -189,7 +199,7 @@ export default function EditRequirementPage() {
             {/* Main Form */}
             <div className="lg:col-span-2 space-y-6">
               {/* Basic Information */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle>Basic Information</CardTitle>
                 </CardHeader>
@@ -270,7 +280,7 @@ export default function EditRequirementPage() {
               </Card>
 
               {/* Skills */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle>Required Skills</CardTitle>
                 </CardHeader>
@@ -345,7 +355,7 @@ export default function EditRequirementPage() {
               </Card>
 
               {/* Benefits */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle>Benefits & Perks</CardTitle>
                 </CardHeader>
@@ -407,7 +417,7 @@ export default function EditRequirementPage() {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Job Details */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle>Job Details</CardTitle>
                 </CardHeader>
@@ -490,7 +500,7 @@ export default function EditRequirementPage() {
               </Card>
 
               {/* Work Preferences */}
-              <Card>
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
                 <CardHeader>
                   <CardTitle>Work Preferences</CardTitle>
                 </CardHeader>
@@ -571,7 +581,7 @@ export default function EditRequirementPage() {
         </form>
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
     </div>
   )
 } 

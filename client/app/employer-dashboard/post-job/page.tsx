@@ -14,7 +14,8 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { EmployerFooter } from "@/components/employer-footer"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
@@ -2901,10 +2902,18 @@ export default function PostJobPage() {
   // Show loading state while checking authentication or loading draft
   if (loading || loadingDraft) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <EmployerNavbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+        <EmployerDashboardNavbar />
+        
+        {/* Background Effects - Blue theme */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+          <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        </div>
+        
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center bg-white/50 backdrop-blur-xl border-white/40 rounded-3xl p-8 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-slate-600">
               {loadingDraft ? 'Loading your draft...' : 'Loading...'}
@@ -2916,10 +2925,21 @@ export default function PostJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-x-hidden">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <EmployerDashboardNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -2945,7 +2965,7 @@ export default function PostJobPage() {
 
         {/* ========== AGENCY CLIENT SELECTION (BEFORE STEPS) ========== */}
         {isAgency && !clientSelectionMade && (
-          <Card className="mb-8 border-blue-200 bg-blue-50/50">
+          <Card className="mb-8 bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="w-6 h-6 text-blue-600" />
@@ -3080,7 +3100,7 @@ export default function PostJobPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar - Steps */}
           <div className="lg:col-span-1">
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 sticky top-24">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl sticky top-24">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   {steps.map((step) => (
@@ -3118,7 +3138,7 @@ export default function PostJobPage() {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl">
               <CardHeader>
                 <CardTitle>
                   Step {currentStep}: {steps[currentStep - 1].title}
@@ -3181,7 +3201,7 @@ export default function PostJobPage() {
         )}
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
 
       {/* Template Selection Dialog - Enhanced */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
