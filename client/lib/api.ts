@@ -1501,7 +1501,7 @@ class ApiService {
           .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
           .join('&')
       : '';
-    const endpoint = `/jobs/company/${finalCompanyId}${query}`;
+    const endpoint = `/companies/${finalCompanyId}/jobs${query}`;
     
     return this.makeRequest(endpoint, async () => {
       const response = await fetch(`${this.baseURL}${endpoint}`, {

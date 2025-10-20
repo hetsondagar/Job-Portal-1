@@ -101,7 +101,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const offset = (page - 1) * limit;
 
     const whereClause = {
-      companyId: req.user.companyId
+      companyId: req.user.companyId || req.user.company_id
     };
 
     if (status) {
@@ -150,7 +150,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const importRecord = await BulkJobImport.findOne({
       where: {
         id: id,
-        companyId: req.user.companyId
+        companyId: req.user.companyId || req.user.company_id
       }
       // Removed include to avoid association error
     });
@@ -331,7 +331,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
     const importRecord = await BulkJobImport.findOne({
       where: {
         id: id,
-        companyId: req.user.companyId
+        companyId: req.user.companyId || req.user.company_id
       }
     });
 
@@ -376,7 +376,7 @@ router.post('/:id/retry', authenticateToken, async (req, res) => {
     const importRecord = await BulkJobImport.findOne({
       where: {
         id: id,
-        companyId: req.user.companyId
+        companyId: req.user.companyId || req.user.company_id
       }
     });
 

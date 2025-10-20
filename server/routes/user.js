@@ -1713,7 +1713,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     // First, let's check if there are any applications at all
     console.log('🔍 Fetching all applications...');
     const allApplications = await JobApplication.findAll({
-      attributes: ['id', 'job_id', 'user_id', 'status', 'applied_at'],
+      attributes: ['id', 'job_id', 'applicant_id', 'status', 'applied_at'],
       limit: 10
     });
     console.log('📊 All applications in database (first 10):', allApplications.map(app => ({
@@ -2876,8 +2876,8 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
              u.first_name, u.last_name, u.email, u.headline, u.current_location, u.skills
       FROM job_applications ja
       JOIN jobs j ON ja.job_id = j.id
-      JOIN users u ON ja.user_id = u.id
-      WHERE j."employerId" = :userId
+      JOIN users u ON ja.applicant_id = u.id
+      WHERE j."posted_by" = :userId
     `, {
       replacements: { userId: req.user.id },
       type: sequelize.QueryTypes.SELECT

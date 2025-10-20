@@ -152,7 +152,8 @@ export default function PostJobPage() {
   // ========== LOAD AGENCY CLIENTS ==========
   useEffect(() => {
     const checkAgencyAndLoadClients = async () => {
-      if (user && user.companyId) {
+      // Only proceed if user is authenticated and has a valid token
+      if (user && user.companyId && !loading && apiService.isAuthenticated()) {
         try {
           // Check if user's company is an agency
           const companyResponse = await apiService.getCompany(user.companyId)
@@ -178,16 +179,20 @@ export default function PostJobPage() {
         } catch (error) {
           console.error('Error checking agency status:', error)
         }
+      } else if (user && !loading) {
+        // Direct employer - auto-select "own company"
+        setSelectedClient('own')
+        setClientSelectionMade(true)
       }
     }
 
     checkAgencyAndLoadClients()
-  }, [user])
+  }, [user, loading])
 
   // Load job photos when uploadedJobId changes
   useEffect(() => {
     const loadJobPhotos = async () => {
-      if (uploadedJobId && user) {
+      if (uploadedJobId && user && !loading && apiService.isAuthenticated()) {
         try {
           console.log('🔍 Loading job photos for job ID:', uploadedJobId)
           const photosResponse = await apiService.getJobPhotos(uploadedJobId)
@@ -205,7 +210,7 @@ export default function PostJobPage() {
     }
 
     loadJobPhotos()
-  }, [uploadedJobId, user])
+  }, [uploadedJobId, user, loading])
 
   // Load job data when editing or template data from URL
   useEffect(() => {
@@ -435,7 +440,7 @@ export default function PostJobPage() {
       }
     };
 
-    if (user && !loading) {
+    if (user && !loading && apiService.isAuthenticated()) {
       loadJobData();
       loadTemplates();
       
@@ -458,6 +463,11 @@ export default function PostJobPage() {
 
   // Load available templates
   const loadTemplates = async () => {
+    if (!apiService.isAuthenticated()) {
+      console.log('Not authenticated, skipping template loading');
+      return;
+    }
+    
     try {
       const response = await apiService.getJobTemplates();
       if (response.success) {
@@ -2918,6 +2928,46 @@ export default function PostJobPage() {
             <p className="mt-4 text-slate-600">
               {loadingDraft ? 'Loading your draft...' : 'Loading...'}
             </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Check authentication and user type
+  if (!user || !apiService.isAuthenticated()) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+        <EmployerDashboardNavbar />
+        
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center bg-white/50 backdrop-blur-xl border-white/40 rounded-3xl p-8 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">Authentication Required</h2>
+            <p className="text-slate-600 mb-4">Please log in to access this page.</p>
+            <Button onClick={() => router.push('/employer-login')}>
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Check user type - only allow employers and admins
+  if (user.userType !== 'employer' && user.userType !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+        <EmployerDashboardNavbar />
+        
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center bg-white/50 backdrop-blur-xl border-white/40 rounded-3xl p-8 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">Access Denied</h2>
+            <p className="text-slate-600 mb-4">Only employers and admins can access this page.</p>
+            <Button onClick={() => router.push('/employer-dashboard')}>
+              Go to Dashboard
+            </Button>
           </div>
         </div>
       </div>

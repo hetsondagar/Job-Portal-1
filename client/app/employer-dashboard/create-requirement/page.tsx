@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { useToast } from "@/hooks/use-toast"
 import { apiService } from "@/lib/api"
@@ -235,7 +235,7 @@ export default function CreateRequirementPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerNavbar />
+      <EmployerDashboardNavbar />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
