@@ -73,7 +73,11 @@ const upload = multer({
  * @desc    Upload verification document
  * @access  Private
  */
-router.post('/verification-document', authenticateToken, upload.single('file'), async (req, res) => {
+router.post('/verification-document', authenticateToken, (req, res, next) => {
+  // Explicitly set the type for verification documents
+  req.body.type = 'verification_document';
+  next();
+}, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -81,6 +85,8 @@ router.post('/verification-document', authenticateToken, upload.single('file'), 
         message: 'No file uploaded'
       });
     }
+
+    console.log('📁 Verification document uploaded:', req.file.filename, 'to:', req.file.destination);
 
     // Generate URL for the uploaded file
     const fileUrl = `/api/verification/documents/${req.file.filename}`;

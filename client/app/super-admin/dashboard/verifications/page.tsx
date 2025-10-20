@@ -394,20 +394,38 @@ export default function AdminVerificationsPage() {
                                 size="sm"
                                 onClick={async () => {
                                   try {
-                                    const fullUrl = doc.url.startsWith('http') ? doc.url : `${window.location.origin}${doc.url}`;
+                                    // Extract filename from the document URL
+                                    const filename = doc.url.split('/').pop();
+                                    if (!filename) {
+                                      toast.error('Invalid document URL');
+                                      return;
+                                    }
                                     
-                                    // First try to fetch the document to check if it exists
-                                    const response = await fetch(fullUrl, {
-                                      method: 'HEAD',
+                                    console.log('🔍 Requesting signed URL for:', filename);
+                                    
+                                    // Generate signed URL for document access
+                                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/verification/documents/access`, {
+                                      method: 'POST',
                                       headers: {
-                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                                      }
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({ filename }),
                                     });
                                     
-                                    if (response.ok) {
-                                      window.open(fullUrl, '_blank');
+                                    const result = await response.json();
+                                    
+                                    if (result.success && result.signedUrl) {
+                                      // Use API base URL to construct full signed URL
+                                      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                                      const serverBaseUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get server base URL
+                                      const fullSignedUrl = `${serverBaseUrl}${result.signedUrl}`;
+                                      
+                                      console.log('✅ Opening signed URL:', fullSignedUrl);
+                                      window.open(fullSignedUrl, '_blank');
                                     } else {
-                                      toast.error('Document not found or access denied');
+                                      console.error('Failed to generate signed URL:', result.message);
+                                      toast.error(result.message || 'Failed to access document');
                                     }
                                   } catch (error) {
                                     console.error('Error accessing document:', error);
@@ -446,23 +464,41 @@ export default function AdminVerificationsPage() {
                             size="sm"
                             onClick={async () => {
                               try {
-                                const fullUrl = doc.url.startsWith('http') ? doc.url : `${window.location.origin}${doc.url}`;
+                                // Extract filename from the document URL
+                                const filename = doc.url.split('/').pop();
+                                if (!filename) {
+                                  toast.error('Invalid document URL');
+                                  return;
+                                }
                                 
-                                // First try to fetch the document to check if it exists
-                                const response = await fetch(fullUrl, {
-                                  method: 'HEAD',
+                                console.log('🔍 Requesting signed URL for (fallback):', filename);
+                                
+                                // Generate signed URL for document access
+                                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/verification/documents/access`, {
+                                  method: 'POST',
                                   headers: {
-                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                                  }
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({ filename }),
                                 });
                                 
-                                if (response.ok) {
-                                  window.open(fullUrl, '_blank');
+                                const result = await response.json();
+                                
+                                if (result.success && result.signedUrl) {
+                                  // Use API base URL to construct full signed URL
+                                  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                                  const serverBaseUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get server base URL
+                                  const fullSignedUrl = `${serverBaseUrl}${result.signedUrl}`;
+                                  
+                                  console.log('✅ Opening signed URL (fallback):', fullSignedUrl);
+                                  window.open(fullSignedUrl, '_blank');
                                 } else {
-                                  toast.error('Document not found or access denied');
+                                  console.error('Failed to generate signed URL (fallback):', result.message);
+                                  toast.error(result.message || 'Failed to access document');
                                 }
                               } catch (error) {
-                                console.error('Error accessing document:', error);
+                                console.error('Error accessing document (fallback):', error);
                                 toast.error('Failed to open document');
                               }
                             }}

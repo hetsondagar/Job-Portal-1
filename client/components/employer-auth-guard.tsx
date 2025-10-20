@@ -182,11 +182,32 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
             </p>
             <div className="space-y-2">
               <Button 
-                onClick={() => router.push('/employer-login')}
+                onClick={() => window.location.reload()}
+                variant="default"
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                Check Verification Status
+              </Button>
+              <Button 
+                onClick={async () => {
+                  // Log out the user first to prevent redirect loop
+                  try {
+                    await apiService.logout()
+                    localStorage.clear()
+                    sessionStorage.clear()
+                    router.push('/employer-login')
+                  } catch (error) {
+                    console.error('Error during logout:', error)
+                    // Fallback: clear storage and redirect
+                    localStorage.clear()
+                    sessionStorage.clear()
+                    router.push('/employer-login')
+                  }
+                }}
                 variant="outline"
                 className="w-full"
               >
-                Back to Login
+                Logout & Return to Login
               </Button>
             </div>
           </CardContent>

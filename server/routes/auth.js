@@ -296,9 +296,11 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
 
     // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
+    let existingCompany = null;
+    
     if (existingUser) {
       // Check if the user's company is rejected OR user account is rejected - allow re-registration
-      const existingCompany = await Company.findByPk(existingUser.companyId);
+      existingCompany = await Company.findByPk(existingUser.companyId);
       
       // Allow re-registration if:
       // 1. Company verification is rejected
@@ -346,8 +348,8 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         
         // Check if slug exists and generate unique one
         while (true) {
-          const existingCompany = await Company.findOne({ where: { slug } });
-          if (!existingCompany) {
+          const existingCompanyWithSlug = await Company.findOne({ where: { slug } });
+          if (!existingCompanyWithSlug) {
             break;
           }
           slug = `${baseSlug}-${counter}`;
@@ -393,6 +395,31 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           company = await Company.findByPk(existingUser.companyId, { transaction });
           if (company && company.verificationStatus === 'rejected') {
             console.log('🔄 Updating rejected company for re-registration:', company.name);
+            
+            // Clean up old verification documents if they exist
+            if (company.verificationDocuments && company.verificationDocuments.length > 0) {
+              console.log('🗑️ Cleaning up old verification documents for company:', company.id);
+              try {
+                const fs = require('fs');
+                const path = require('path');
+                const uploadDir = path.join(__dirname, '../uploads/verification-documents');
+                
+                // Delete old document files
+                for (const doc of company.verificationDocuments) {
+                  if (doc.filename) {
+                    const filePath = path.join(uploadDir, doc.filename);
+                    if (fs.existsSync(filePath)) {
+                      fs.unlinkSync(filePath);
+                      console.log('✅ Deleted old document:', doc.filename);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('❌ Error cleaning up old documents:', error);
+                // Don't fail the registration if document cleanup fails
+              }
+            }
+            
             await company.update({
               name: companyName,
               industry: industry || company.industry,
@@ -405,7 +432,10 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
               contactPhone: phone,
               companyStatus: 'pending_approval',
               verificationStatus: 'pending',
-              companyAccountType: companyAccountType || 'direct'
+              companyAccountType: companyAccountType || 'direct',
+              verificationDocuments: [], // Clear old documents
+              verificationMethod: null, // Reset verification method
+              verifiedAt: null // Reset verification date
             }, { transaction });
           }
         }
@@ -460,6 +490,38 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       if (existingUser && allowUserUpdate) {
         // Update existing user for re-registration
         console.log('🔄 Updating existing user for re-registration:', email);
+        
+        // If user account was rejected, also clean up company documents
+        if (existingUser.account_status === 'rejected' && company && company.verificationDocuments && company.verificationDocuments.length > 0) {
+          console.log('🗑️ Cleaning up old verification documents for rejected user account:', email);
+          try {
+            const fs = require('fs');
+            const path = require('path');
+            const uploadDir = path.join(__dirname, '../uploads/verification-documents');
+            
+            // Delete old document files
+            for (const doc of company.verificationDocuments) {
+              if (doc.filename) {
+                const filePath = path.join(uploadDir, doc.filename);
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                  console.log('✅ Deleted old document:', doc.filename);
+                }
+              }
+            }
+            
+            // Clear documents from company record
+            await company.update({
+              verificationDocuments: [],
+              verificationMethod: null,
+              verifiedAt: null
+            }, { transaction });
+          } catch (error) {
+            console.error('❌ Error cleaning up old documents for rejected user:', error);
+            // Don't fail the registration if document cleanup fails
+          }
+        }
+        
         await existingUser.update({
           password,
           first_name: firstName,

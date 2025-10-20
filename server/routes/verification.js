@@ -550,4 +550,144 @@ router.get('/documents/:filename', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/verification/documents/access
+ * @desc    Generate temporary access URL for document
+ * @access  Private (Admin/SuperAdmin)
+ */
+router.post('/documents/access', authenticateToken, async (req, res) => {
+  try {
+    const { filename } = req.body;
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+
+    console.log(`🔍 Document access request for: ${filename} by user: ${user?.email} (${user?.user_type})`);
+
+    // Check if user is admin or superadmin
+    if (!['admin', 'superadmin'].includes(user.user_type)) {
+      console.log(`❌ Access denied for user: ${user?.email} (${user?.user_type})`);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/verification-documents', filename);
+    console.log(`📁 Checking file: ${filePath}`);
+    
+    if (!fs.existsSync(filePath)) {
+      console.log(`❌ File not found: ${filePath}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    // Generate a temporary signed URL (valid for 5 minutes)
+    const crypto = require('crypto');
+    const timestamp = Date.now();
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const signature = crypto.createHmac('sha256', secret)
+      .update(`${filename}-${timestamp}-${userId}`)
+      .digest('hex');
+
+    const signedUrl = `/api/verification/documents/signed/${filename}?t=${timestamp}&s=${signature}&u=${userId}`;
+    
+    console.log(`✅ Generated signed URL for: ${filename}`);
+    res.json({
+      success: true,
+      signedUrl: signedUrl
+    });
+
+  } catch (error) {
+    console.error('❌ Document access generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate document access URL',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @route   GET /api/verification/documents/signed/:filename
+ * @desc    Serve documents via signed URL (no auth required)
+ * @access  Public (but signed)
+ */
+router.get('/documents/signed/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const { t, s, u } = req.query;
+
+    console.log(`🔍 Signed document access request: ${filename}`);
+
+    // Validate signed URL
+    if (!t || !s || !u) {
+      console.log(`❌ Missing signature parameters`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid access URL'
+      });
+    }
+
+    // Check if URL is not expired (5 minutes)
+    const timestamp = parseInt(t);
+    const now = Date.now();
+    if (now - timestamp > 5 * 60 * 1000) { // 5 minutes
+      console.log(`❌ Signed URL expired`);
+      return res.status(401).json({
+        success: false,
+        message: 'Access URL expired'
+      });
+    }
+
+    // Verify signature
+    const crypto = require('crypto');
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const expectedSignature = crypto.createHmac('sha256', secret)
+      .update(`${filename}-${timestamp}-${u}`)
+      .digest('hex');
+
+    if (s !== expectedSignature) {
+      console.log(`❌ Invalid signature`);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid access URL'
+      });
+    }
+
+    // Verify user exists and is admin/superadmin
+    const user = await User.findByPk(u);
+    if (!user || !['admin', 'superadmin'].includes(user.user_type)) {
+      console.log(`❌ Invalid user for signed URL`);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads/verification-documents', filename);
+    console.log(`📁 Looking for file: ${filePath}`);
+    
+    if (!fs.existsSync(filePath)) {
+      console.log(`❌ File not found: ${filePath}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    console.log(`✅ Serving signed file: ${filePath}`);
+    res.sendFile(filePath);
+
+  } catch (error) {
+    console.error('❌ Signed document serve error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve document',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;
