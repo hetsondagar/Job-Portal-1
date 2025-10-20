@@ -2,6 +2,17 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Guard: skip if companies table doesn't exist yet
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    
+    if (!normalized.includes('companies')) {
+      console.log('ℹ️  Skipping agency system migration (companies table not created yet)');
+      return;
+    }
+
     const transaction = await queryInterface.sequelize.transaction();
     
     try {

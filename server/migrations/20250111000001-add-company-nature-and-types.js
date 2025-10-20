@@ -2,6 +2,16 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Guard: ensure companies table exists before altering
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    if (!normalized.includes('companies')) {
+      console.log('ℹ️  Skipping company nature/types migration (companies table not created yet)');
+      return;
+    }
+
     // Add natureOfBusiness field (JSONB array for multi-select)
     await queryInterface.addColumn('companies', 'nature_of_business', {
       type: Sequelize.JSONB,

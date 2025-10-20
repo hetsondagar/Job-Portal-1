@@ -2,6 +2,16 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Guard: ensure hot_vacancies table exists
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    if (!normalized.includes('hot_vacancies')) {
+      console.log('ℹ️  Skipping premium hot vacancy features (hot_vacancies not created yet)');
+      return;
+    }
+
     console.log('🔥 Adding premium hot vacancy features...');
     
     // Add urgent hiring column

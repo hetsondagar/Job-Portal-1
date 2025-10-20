@@ -2,6 +2,17 @@
 
 module.exports = {
 	async up(queryInterface, Sequelize) {
+    // Guard: skip if dependent tables don't exist yet
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    
+    if (!normalized.includes('job_applications')) {
+      console.log('ℹ️  Skipping migration (job_applications not created yet)');
+      return;
+    }
+
 		// Ensure job_applications has snake_case column cover_letter_id (FK to cover_letters.id)
 		const table = await queryInterface.describeTable('job_applications');
 		const hasCamel = Object.prototype.hasOwnProperty.call(table, 'coverLetterId');

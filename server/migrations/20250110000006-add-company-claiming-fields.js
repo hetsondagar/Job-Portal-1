@@ -2,6 +2,16 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Guard: ensure base tables exist
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    if (!normalized.includes('companies') || !normalized.includes('users')) {
+      console.log('ℹ️  Skipping company claiming fields (companies/users not created yet)');
+      return;
+    }
+
     console.log('🔄 Adding company claiming fields to companies table...');
     
     try {

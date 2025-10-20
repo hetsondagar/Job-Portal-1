@@ -1,7 +1,10 @@
 const { Sequelize } = require('sequelize');
 
-// Production database credentials
-const DATABASE_URL = 'postgresql://jobportal_dev_0u1u_user:yK9WCII787btQrSqZJVdq0Cx61rZoTsc@dpg-d372gajuibrs738lnm5g-a.oregon-postgres.render.com/jobportal_dev_0u1u';
+// Use PROD_DB_URL env or first CLI arg; fallback to legacy value
+const inputUrl = process.env.PROD_DB_URL || process.argv[2] || 'postgresql://jobportal_dev_0u1u_user:yK9WCII787btQrSqZJVdq0Cx61rZoTsc@dpg-d372gajuibrs738lnm5g-a.singapore-postgres.render.com/jobportal_dev_0u1u';
+
+// Ensure ssl=true for Render if not present
+const DATABASE_URL = /[?&]ssl(=|$)/i.test(inputUrl) ? inputUrl : (inputUrl.includes('?') ? `${inputUrl}&ssl=true` : `${inputUrl}?ssl=true`);
 
 const sequelize = new Sequelize(DATABASE_URL, {
   dialect: 'postgres',

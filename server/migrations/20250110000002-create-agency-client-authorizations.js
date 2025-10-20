@@ -2,6 +2,23 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Guard: ensure dependent tables exist to avoid FK errors on fresh DBs
+    const allTables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(allTables)
+      ? allTables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+
+    if (!normalized.includes('users') || !normalized.includes('companies')) {
+      console.log('ℹ️  Skipping agency_client_authorizations creation (users/companies not ready yet)');
+      return;
+    }
+
+    // Skip if table already exists
+    if (normalized.includes('agency_client_authorizations')) {
+      console.log('ℹ️  Table agency_client_authorizations already exists, skipping...');
+      return;
+    }
+
     const transaction = await queryInterface.sequelize.transaction();
     
     try {

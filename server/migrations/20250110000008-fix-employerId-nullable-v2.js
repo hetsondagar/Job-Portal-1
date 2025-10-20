@@ -2,6 +2,16 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Guard: ensure jobs table exists before altering
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    if (!normalized.includes('jobs')) {
+      console.log('ℹ️  Skipping employerId nullable fix (jobs table not created yet)');
+      return;
+    }
+
     console.log('🔧 Making employerId nullable in jobs table (v2)...');
     
     try {

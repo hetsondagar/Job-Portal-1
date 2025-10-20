@@ -2,6 +2,16 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Guard: ensure base table exists to avoid FK/DDL errors on fresh DBs
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    if (!normalized.includes('agency_client_authorizations')) {
+      console.log('ℹ️  Skipping client verification fields (agency_client_authorizations not created yet)');
+      return;
+    }
+
     console.log('🔄 Adding client verification fields to agency_client_authorizations table...');
     
     try {
