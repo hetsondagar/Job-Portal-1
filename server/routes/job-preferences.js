@@ -222,7 +222,7 @@ router.get('/matching-jobs', authenticateToken, async (req, res) => {
           attributes: ['id', 'name', 'logo', 'website']
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: offset
     });

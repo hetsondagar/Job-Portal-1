@@ -874,7 +874,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     // Correct field mapping: model uses camelCase userId
     let notifications = await Notification.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
 
@@ -1005,7 +1005,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         // Re-fetch latest 50 notifications to include new ones in correct order
         notifications = await Notification.findAll({
           where: { userId: req.user.id },
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 50
         });
       }
@@ -1044,7 +1044,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         const recentMatchingJobs = await Job.findAll({
           where: whereClause,
           include: [{ model: Company, as: 'company', attributes: ['name'] }],
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 20
         });
 
@@ -1111,7 +1111,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         if (preferredCreates.length > 0) {
           notifications = await Notification.findAll({
             where: { userId: req.user.id },
-            order: [['createdAt', 'DESC']],
+            order: [['created_at', 'DESC']],
             limit: 50
           });
         }
@@ -1171,7 +1171,7 @@ router.get('/employer/notifications', authenticateToken, async (req, res) => {
         userId: req.user.id,
         type: employerNotificationTypes
       },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -2423,7 +2423,7 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
     
     const alerts = await JobAlert.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -2534,12 +2534,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
         {
           model: Job,
           as: 'job',
-          include: [
-            {
-              model: Company,
-              as: 'company'
-            }
-          ]
+          attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId', 'status']
         }
       ],
       order: [['created_at', 'DESC']]
@@ -3138,7 +3133,7 @@ router.get('/resumes', authenticateToken, async (req, res) => {
   try {
     const resumes = await Resume.findAll({
       where: { userId: req.user.id },
-      order: [['isDefault', 'DESC'], ['createdAt', 'DESC']]
+      order: [['isDefault', 'DESC'], ['created_at', 'DESC']]
     });
 
     res.json({
@@ -3167,7 +3162,7 @@ router.get('/resumes/stats', authenticateToken, async (req, res) => {
 
     const recentResumes = await Resume.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 3
     });
 
@@ -4303,7 +4298,7 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
       where: whereClause,
       attributes: ['id', 'title', 'status', 'region', 'createdAt'],
       include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Applications for employer jobs

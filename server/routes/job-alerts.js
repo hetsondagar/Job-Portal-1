@@ -56,7 +56,7 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const alerts = await JobAlert.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({

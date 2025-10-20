@@ -10,6 +10,7 @@ const JobPreference = sequelize.define('JobPreference', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -20,76 +21,91 @@ const JobPreference = sequelize.define('JobPreference', {
   preferredJobTitles: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_job_titles'
   },
   preferredLocations: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_locations'
   },
   preferredJobTypes: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_job_types'
   },
   preferredExperienceLevels: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_experience_levels'
   },
   preferredSalaryMin: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'preferred_salary_min'
   },
   preferredSalaryMax: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'preferred_salary_max'
   },
   preferredSalaryCurrency: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'INR'
+    defaultValue: 'INR',
+    field: 'preferred_salary_currency'
   },
   preferredSkills: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_skills'
   },
   preferredWorkMode: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_work_mode'
   },
   preferredShiftTiming: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'preferred_shift_timing'
   },
   // Additional preferences
   willingToRelocate: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'willing_to_relocate'
   },
   willingToTravel: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'willing_to_travel'
   },
   noticePeriod: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    field: 'notice_period'
   },
   // Notification preferences
   emailAlerts: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: true
+    defaultValue: true,
+    field: 'email_alerts'
   },
   pushNotifications: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: true
+    defaultValue: true,
+    field: 'push_notifications'
   },
   // Region specific
   region: {
@@ -101,18 +117,20 @@ const JobPreference = sequelize.define('JobPreference', {
   isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: true
+    defaultValue: true,
+    field: 'is_active'
   },
   lastUpdated: {
     type: DataTypes.DATE,
     allowNull: true,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    field: 'last_updated'
   }
 }, {
   tableName: 'job_preferences',
   timestamps: true,
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       unique: true,
