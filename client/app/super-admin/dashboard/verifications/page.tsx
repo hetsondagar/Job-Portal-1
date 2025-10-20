@@ -392,7 +392,28 @@ export default function AdminVerificationsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(doc.url, '_blank')}
+                                onClick={async () => {
+                                  try {
+                                    const fullUrl = doc.url.startsWith('http') ? doc.url : `${window.location.origin}${doc.url}`;
+                                    
+                                    // First try to fetch the document to check if it exists
+                                    const response = await fetch(fullUrl, {
+                                      method: 'HEAD',
+                                      headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                      }
+                                    });
+                                    
+                                    if (response.ok) {
+                                      window.open(fullUrl, '_blank');
+                                    } else {
+                                      toast.error('Document not found or access denied');
+                                    }
+                                  } catch (error) {
+                                    console.error('Error accessing document:', error);
+                                    toast.error('Failed to open document');
+                                  }
+                                }}
                               >
                                 View Document
                               </Button>
@@ -423,7 +444,28 @@ export default function AdminVerificationsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(doc.url, '_blank')}
+                            onClick={async () => {
+                              try {
+                                const fullUrl = doc.url.startsWith('http') ? doc.url : `${window.location.origin}${doc.url}`;
+                                
+                                // First try to fetch the document to check if it exists
+                                const response = await fetch(fullUrl, {
+                                  method: 'HEAD',
+                                  headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                  }
+                                });
+                                
+                                if (response.ok) {
+                                  window.open(fullUrl, '_blank');
+                                } else {
+                                  toast.error('Document not found or access denied');
+                                }
+                              } catch (error) {
+                                console.error('Error accessing document:', error);
+                                toast.error('Failed to open document');
+                              }
+                            }}
                           >
                             View Document
                           </Button>

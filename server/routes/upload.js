@@ -83,7 +83,7 @@ router.post('/verification-document', authenticateToken, upload.single('file'), 
     }
 
     // Generate URL for the uploaded file
-    const fileUrl = `/uploads/verification-documents/${req.file.filename}`;
+    const fileUrl = `/api/verification/documents/${req.file.filename}`;
     
     console.log(`✅ Verification document uploaded: ${req.file.filename} for user: ${req.user.email}`);
 

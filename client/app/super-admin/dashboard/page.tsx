@@ -30,14 +30,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 
 export default function AdminDashboardPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, logout } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
-    if (authLoading) return
+    if (authLoading || isLoggingOut) return
 
     // Redirect if not logged in or not admin
     if (!user) {
@@ -52,11 +53,24 @@ export default function AdminDashboardPage() {
     }
 
     loadStats()
-  }, [user, authLoading, router])
+  }, [user, authLoading, router, isLoggingOut])
 
   const loadStats = async () => {
     try {
       setLoading(true)
+      
+      // Check if user is logging out
+      if (isLoggingOut) {
+        console.log('User is logging out, skipping stats load')
+        return
+      }
+      
+      // Check if user is still logged in before making API call
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.log('No token found, skipping stats load')
+        return
+      }
       
       // Ensure API service has the latest token
       apiService.refreshToken()
@@ -70,7 +84,10 @@ export default function AdminDashboardPage() {
       }
     } catch (error) {
       console.error('Failed to load stats:', error)
-      toast.error('Failed to load statistics')
+      // Don't show error toast if it's a 401 (unauthorized) error or if user is logging out
+      if (error?.response?.status !== 401 && !isLoggingOut) {
+        toast.error('Failed to load statistics')
+      }
     } finally {
       setLoading(false)
     }
@@ -115,9 +132,21 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  localStorage.clear()
-                  router.push('/admin-login')
+                onClick={async () => {
+                  try {
+                    setIsLoggingOut(true)
+                    // Use the proper logout method from useAuth
+                    await logout()
+                    // Show logout message
+                    toast.success('Logged out successfully')
+                  } catch (error) {
+                    console.error('Logout error:', error)
+                    // Fallback: clear storage manually and redirect
+                    localStorage.clear()
+                    sessionStorage.clear()
+                    toast.success('Logged out successfully')
+                    router.push('/admin-login')
+                  }
                 }}
                 className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
               >

@@ -483,7 +483,7 @@ router.post('/upload-documents', authenticateToken, upload.array('documents', 10
       mimetype: file.mimetype,
       size: file.size,
       path: file.path,
-      url: `/uploads/verification-documents/${file.filename}`
+      url: `/api/verification/documents/${file.filename}`
     }));
 
     res.json({
@@ -515,8 +515,11 @@ router.get('/documents/:filename', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const user = await User.findByPk(userId);
 
+    console.log(`🔍 Document access request: ${filename} by user: ${user?.email} (${user?.user_type})`);
+
     // Check if user is admin or superadmin
     if (!['admin', 'superadmin'].includes(user.user_type)) {
+      console.log(`❌ Access denied for user: ${user?.email} (${user?.user_type})`);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -524,14 +527,17 @@ router.get('/documents/:filename', authenticateToken, async (req, res) => {
     }
 
     const filePath = path.join(__dirname, '../uploads/verification-documents', filename);
+    console.log(`📁 Looking for file: ${filePath}`);
     
     if (!fs.existsSync(filePath)) {
+      console.log(`❌ File not found: ${filePath}`);
       return res.status(404).json({
         success: false,
         message: 'Document not found'
       });
     }
 
+    console.log(`✅ Serving file: ${filePath}`);
     res.sendFile(filePath);
 
   } catch (error) {
