@@ -423,7 +423,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       passwordSkipped: Boolean(req.user.password_skipped),
       requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0) && req.user.oauth_provider && req.user.oauth_provider !== 'local' && !req.user.password_skipped,
       profileCompleted: Boolean(req.user.first_name && req.user.last_name && req.user.phone) && ((req.user.profile_completion || 0) >= 60),
-      createdAt: req.user.createdAt,
+      createdAt: req.user.created_at,
       updatedAt: req.user.updatedAt
     };
 
@@ -468,7 +468,7 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
         'current_location', 'headline', 'summary', 'skills', 'languages',
         'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
-        'is_email_verified', 'is_phone_verified', 'createdAt',
+        'is_email_verified', 'is_phone_verified', 'created_at',
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
@@ -565,7 +565,7 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
           title: resume.title || 'Resume',
           filename: filename,
           fileSize: fileSize,
-          uploadDate: resume.createdAt || resume.createdAt,
+          uploadDate: resume.created_at || resume.created_at,
           lastUpdated: resume.lastUpdated || resume.last_updated,
           isDefault: resume.isDefault ?? resume.is_default ?? false,
           fileUrl: toAbsoluteUrl(filePath),
@@ -783,7 +783,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       hasPassword: !!(updatedUser.password && String(updatedUser.password).trim().length > 0),
       passwordSkipped: Boolean(updatedUser.password_skipped),
       requiresPasswordSetup: !(updatedUser.password && String(updatedUser.password).trim().length > 0) && updatedUser.oauth_provider && updatedUser.oauth_provider !== 'local' && !updatedUser.password_skipped,
-      createdAt: updatedUser.createdAt,
+      createdAt: updatedUser.created_at,
       updatedAt: updatedUser.updatedAt
     };
 
@@ -874,7 +874,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     // Correct field mapping: model uses camelCase userId
     let notifications = await Notification.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
 
@@ -886,7 +886,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         type: n.type,
         title: n.title,
         isRead: n.isRead,
-        createdAt: n.createdAt
+        createdAt: n.created_at
       }))
     });
 
@@ -1005,7 +1005,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         // Re-fetch latest 50 notifications to include new ones in correct order
         notifications = await Notification.findAll({
           where: { userId: req.user.id },
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 50
         });
       }
@@ -1039,12 +1039,12 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         // Only consider recent jobs (last 14 days) to avoid spamming
         const fourteenDaysAgo = new Date();
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-        whereClause.createdAt = { [Op.gte]: fourteenDaysAgo };
+        whereClause.created_at = { [Op.gte]: fourteenDaysAgo };
 
         const recentMatchingJobs = await Job.findAll({
           where: whereClause,
           include: [{ model: Company, as: 'company', attributes: ['name'] }],
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 20
         });
 
@@ -1111,7 +1111,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         if (preferredCreates.length > 0) {
           notifications = await Notification.findAll({
             where: { userId: req.user.id },
-            order: [['createdAt', 'DESC']],
+            order: [['created_at', 'DESC']],
             limit: 50
           });
         }
@@ -1171,7 +1171,7 @@ router.get('/employer/notifications', authenticateToken, async (req, res) => {
         userId: req.user.id,
         type: employerNotificationTypes
       },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -1713,7 +1713,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     // First, let's check if there are any applications at all
     console.log('🔍 Fetching all applications...');
     const allApplications = await JobApplication.findAll({
-      attributes: ['id', 'job_id', 'user_id', 'status', 'applied_at'],
+      attributes: ['id', 'job_id', 'applicant_id', 'status', 'applied_at'],
       limit: 10
     });
     console.log('📊 All applications in database (first 10):', allApplications.map(app => ({
@@ -2423,7 +2423,7 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
     
     const alerts = await JobAlert.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -2534,12 +2534,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
         {
           model: Job,
           as: 'job',
-          include: [
-            {
-              model: Company,
-              as: 'company'
-            }
-          ]
+          attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId', 'status']
         }
       ],
       order: [['created_at', 'DESC']]
@@ -2881,8 +2876,8 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
              u.first_name, u.last_name, u.email, u.headline, u.current_location, u.skills
       FROM job_applications ja
       JOIN jobs j ON ja.job_id = j.id
-      JOIN users u ON ja.user_id = u.id
-      WHERE j."employerId" = :userId
+      JOIN users u ON ja.applicant_id = u.id
+      WHERE j."posted_by" = :userId
     `, {
       replacements: { userId: req.user.id },
       type: sequelize.QueryTypes.SELECT
@@ -3138,7 +3133,7 @@ router.get('/resumes', authenticateToken, async (req, res) => {
   try {
     const resumes = await Resume.findAll({
       where: { userId: req.user.id },
-      order: [['isDefault', 'DESC'], ['createdAt', 'DESC']]
+      order: [['isDefault', 'DESC'], ['created_at', 'DESC']]
     });
 
     res.json({
@@ -3167,7 +3162,7 @@ router.get('/resumes/stats', authenticateToken, async (req, res) => {
 
     const recentResumes = await Resume.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 3
     });
 
@@ -4301,9 +4296,9 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
     
     const jobs = await Job.findAll({
       where: whereClause,
-      attributes: ['id', 'title', 'status', 'region', 'createdAt'],
+      attributes: ['id', 'title', 'status', 'region', 'created_at'],
       include: [{ model: Company, as: 'company', attributes: ['id', 'name', 'region'] }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Applications for employer jobs
@@ -4678,7 +4673,7 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
       profileCompletion: updatedUser.profile_completion,
       oauthProvider: updatedUser.oauth_provider,
       oauthId: updatedUser.oauth_id,
-      createdAt: updatedUser.createdAt,
+      createdAt: updatedUser.created_at,
       updatedAt: updatedUser.updatedAt
     };
 
@@ -4823,7 +4818,7 @@ router.get('/jobs/:jobId/photos', async (req, res) => {
         jobId: jobId,
         isActive: true 
       },
-      order: [['displayOrder', 'ASC'], ['createdAt', 'ASC']]
+      order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
     });
 
     res.json({

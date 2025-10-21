@@ -51,10 +51,10 @@ router.get('/agency-verifications', authenticateToken, requireAdmin, async (req,
           'agencyDocuments',
           'verifiedAt',
           'verificationMethod',
-          'createdAt',
+          'created_at',
           'updatedAt'
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
@@ -94,7 +94,7 @@ router.get('/agency-verifications', authenticateToken, requireAdmin, async (req,
             } : undefined
           }
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
@@ -473,7 +473,7 @@ router.get('/agency-verifications/agency/:agencyId', authenticateToken, requireA
         'verificationStatus',
         'verifiedAt',
         'verificationMethod',
-        'createdAt',
+        'created_at',
         'updatedAt'
       ]
     });
@@ -497,7 +497,7 @@ router.get('/agency-verifications/agency/:agencyId', authenticateToken, requireA
           attributes: ['id', 'name', 'logo', 'industry', 'city']
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     
     // Get agency users
@@ -505,7 +505,7 @@ router.get('/agency-verifications/agency/:agencyId', authenticateToken, requireA
       where: {
         companyId: agencyId
       },
-      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'createdAt']
+      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'created_at']
     });
     
     res.json({

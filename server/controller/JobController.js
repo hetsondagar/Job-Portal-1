@@ -777,6 +777,7 @@ exports.createJob = async (req, res, next) => {
  */
 exports.getAllJobs = async (req, res, next) => {
   try {
+    const AGENCY_ENABLED = String(process.env.AGENCY_FEATURES || '').toLowerCase() === 'true';
     const {
       page = 1,
       limit = 10,
@@ -978,18 +979,6 @@ exports.getAllJobs = async (req, res, next) => {
         })()
       },
       {
-        model: Company,
-        as: 'HiringCompany',
-        attributes: ['id', 'name', 'logo', 'industry', 'city', 'companySize', 'website'],
-        required: false // Optional - only for agency jobs
-      },
-      {
-        model: Company,
-        as: 'PostedByAgency',
-        attributes: ['id', 'name', 'logo', 'companyAccountType', 'industry', 'city'],
-        required: false // Optional - only for agency jobs
-      },
-      {
         model: User,
         as: 'employer',
         attributes: ['id', 'first_name', 'last_name', 'email', 'company_id'],
@@ -1003,6 +992,24 @@ exports.getAllJobs = async (req, res, next) => {
         required: false
       }
     ];
+
+    // Include agency-related associations only if explicitly enabled (to avoid joining non-existent columns locally)
+    if (AGENCY_ENABLED) {
+      include.splice(1, 0,
+        {
+          model: Company,
+          as: 'HiringCompany',
+          attributes: ['id', 'name', 'logo', 'industry', 'city', 'companySize', 'website'],
+          required: false
+        },
+        {
+          model: Company,
+          as: 'PostedByAgency',
+          attributes: ['id', 'name', 'logo', 'companyAccountType', 'industry', 'city'],
+          required: false
+        }
+      );
+    }
 
     // Recruiter type: company (employer has companyId) or consultant (no companyId)
     if (recruiterType === 'company') {
@@ -1024,8 +1031,16 @@ exports.getAllJobs = async (req, res, next) => {
     orderClauses.push(['boostedSearch', 'DESC']); // Boosted search fifth
     orderClauses.push(['featuredBadge', 'DESC']); // Featured badge sixth
     
-    // Then apply user's requested sort
-    orderClauses.push([sortBy, sortOrder]);
+    // Then apply user's requested sort - map camelCase to snake_case
+    const sortByMapping = {
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at',
+      'title': 'title',
+      'status': 'status',
+      'location': 'location'
+    };
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
+    orderClauses.push([dbSortBy, sortOrder]);
     
     console.log('🔍 Using enhanced sorting for hot vacancy priority:', orderClauses);
     
@@ -2020,14 +2035,14 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     // Map camelCase sortBy to snake_case database columns
     const sortByMapping = {
-      'createdAt': 'createdAt',
+      'createdAt': 'created_at',
       'updatedAt': 'updated_at',
       'title': 'title',
       'status': 'status',
       'location': 'location'
     };
     
-    const dbSortBy = sortByMapping[sortBy] || 'createdAt';
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
 
     const { count, rows: jobs } = await Job.findAndCountAll({
       where: whereClause,
@@ -2126,7 +2141,7 @@ exports.getJobsByCompany = async (req, res, next) => {
           required: false // Make it optional since companyId can be NULL
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -2598,14 +2613,14 @@ exports.getJobsByEmployer = async (req, res, next) => {
 
     // Map camelCase sortBy to snake_case database columns
     const sortByMapping = {
-      'createdAt': 'createdAt',
+      'createdAt': 'created_at',
       'updatedAt': 'updated_at',
       'title': 'title',
       'status': 'status',
       'location': 'location'
     };
     
-    const dbSortBy = sortByMapping[sortBy] || 'createdAt';
+    const dbSortBy = sortByMapping[sortBy] || 'created_at';
 
 
     const { count, rows: jobs } = await Job.findAndCountAll({
@@ -2741,7 +2756,7 @@ exports.getJobsByCompany = async (req, res, next) => {
 
       ],
 
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
 
       offset: parseInt(offset)

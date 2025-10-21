@@ -406,7 +406,7 @@ exports.getHotVacanciesByEmployer = async (req, res, next) => {
         as: 'company',
         attributes: ['id', 'name', 'industry', 'companySize', 'website']
       }],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -684,7 +684,7 @@ exports.getPublicHotVacancies = async (req, res, next) => {
         ['pricingTier', 'DESC'], // Higher tier sixth (super-premium > enterprise > premium > basic)
         ['impressions', 'DESC'], // More impressions = better visibility
         ['applicationDeadline', 'ASC'], // Closer deadline = more urgent
-        ['createdAt', 'DESC'] // Newer first
+        ['created_at', 'DESC'] // Newer first
       ],
       limit: parseInt(limit),
       offset: parseInt(offset)

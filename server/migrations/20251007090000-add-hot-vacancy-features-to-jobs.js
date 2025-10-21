@@ -2,6 +2,18 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Guard: skip if dependent tables don't exist yet
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    
+    if (!normalized.includes('jobs')) {
+      console.log('ℹ️  Skipping migration (jobs not created yet)');
+      return;
+    }
+
+
     console.log('🔥 Adding hot vacancy features to jobs table...');
     
     // Add hot vacancy fields to jobs table

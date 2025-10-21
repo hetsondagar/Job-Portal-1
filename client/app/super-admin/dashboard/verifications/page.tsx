@@ -392,7 +392,46 @@ export default function AdminVerificationsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(doc.url, '_blank')}
+                                onClick={async () => {
+                                  try {
+                                    // Extract filename from the document URL
+                                    const filename = doc.url.split('/').pop();
+                                    if (!filename) {
+                                      toast.error('Invalid document URL');
+                                      return;
+                                    }
+                                    
+                                    console.log('🔍 Requesting signed URL for:', filename);
+                                    
+                                    // Generate signed URL for document access
+                                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/verification/documents/access`, {
+                                      method: 'POST',
+                                      headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({ filename }),
+                                    });
+                                    
+                                    const result = await response.json();
+                                    
+                                    if (result.success && result.signedUrl) {
+                                      // Use API base URL to construct full signed URL
+                                      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                                      const serverBaseUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get server base URL
+                                      const fullSignedUrl = `${serverBaseUrl}${result.signedUrl}`;
+                                      
+                                      console.log('✅ Opening signed URL:', fullSignedUrl);
+                                      window.open(fullSignedUrl, '_blank');
+                                    } else {
+                                      console.error('Failed to generate signed URL:', result.message);
+                                      toast.error(result.message || 'Failed to access document');
+                                    }
+                                  } catch (error) {
+                                    console.error('Error accessing document:', error);
+                                    toast.error('Failed to open document');
+                                  }
+                                }}
                               >
                                 View Document
                               </Button>
@@ -423,7 +462,46 @@ export default function AdminVerificationsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(doc.url, '_blank')}
+                            onClick={async () => {
+                              try {
+                                // Extract filename from the document URL
+                                const filename = doc.url.split('/').pop();
+                                if (!filename) {
+                                  toast.error('Invalid document URL');
+                                  return;
+                                }
+                                
+                                console.log('🔍 Requesting signed URL for (fallback):', filename);
+                                
+                                // Generate signed URL for document access
+                                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/verification/documents/access`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({ filename }),
+                                });
+                                
+                                const result = await response.json();
+                                
+                                if (result.success && result.signedUrl) {
+                                  // Use API base URL to construct full signed URL
+                                  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                                  const serverBaseUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get server base URL
+                                  const fullSignedUrl = `${serverBaseUrl}${result.signedUrl}`;
+                                  
+                                  console.log('✅ Opening signed URL (fallback):', fullSignedUrl);
+                                  window.open(fullSignedUrl, '_blank');
+                                } else {
+                                  console.error('Failed to generate signed URL (fallback):', result.message);
+                                  toast.error(result.message || 'Failed to access document');
+                                }
+                              } catch (error) {
+                                console.error('Error accessing document (fallback):', error);
+                                toast.error('Failed to open document');
+                              }
+                            }}
                           >
                             View Document
                           </Button>

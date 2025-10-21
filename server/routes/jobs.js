@@ -455,7 +455,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
         data: {
           applicationId: existingApplication.id,
           status: existingApplication.status,
-          applied_at: existingApplication.appliedAt || existingApplication.createdAt
+          applied_at: existingApplication.appliedAt || existingApplication.created_at
         }
       });
     }
@@ -510,7 +510,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       data: {
         applicationId: application.id,
         status: application.status,
-        applied_at: application.createdAt
+        applied_at: application.created_at
       }
     });
 

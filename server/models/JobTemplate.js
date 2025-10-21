@@ -10,8 +10,8 @@ const JobTemplate = sequelize.define('JobTemplate', {
     companyId: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'companyId', // Explicitly map to camelCase column
       comment: 'Company this template belongs to'
-      // DB column added as camelCase via migration: companyId
     },
     name: {
       type: DataTypes.STRING(255),
@@ -68,11 +68,6 @@ const JobTemplate = sequelize.define('JobTemplate', {
       defaultValue: 0,
       field: 'usage_count',
       comment: 'Number of times template was used'
-    },
-    version: {
-      type: DataTypes.INTEGER,
-      defaultValue: 1,
-      comment: 'Template version'
     }
 }, {
   tableName: 'job_templates',

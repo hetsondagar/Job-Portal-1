@@ -202,11 +202,11 @@ export function EmployerDashboardNavbar() {
                         <span>Bulk Import</span>
                       </Link>
                       <Link
-                        href="/employer-dashboard/requirements/create"
+                        href="/employer-dashboard/create-requirement"
                         className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                       >
                         <FileText className="w-4 h-4" />
-                        <span>Post Requirement</span>
+                        <span>Create Requirement</span>
                       </Link>
                       <Link
                         href="/employer-dashboard/requirements"
@@ -286,6 +286,9 @@ export function EmployerDashboardNavbar() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 bg-white/90 backdrop-blur-xl border-white/40">
+                <div className="sr-only">
+                  <h2>Navigation Menu</h2>
+                </div>
                 <div className="flex flex-col space-y-6 mt-6">
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-10 h-10">

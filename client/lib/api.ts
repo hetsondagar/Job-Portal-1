@@ -1249,6 +1249,21 @@ class ApiService {
   }
 
   /**
+   * Generate signed URL for document access
+   */
+  async generateDocumentAccessUrl(filename: string): Promise<ApiResponse<{ signedUrl: string }>> {
+    const response = await fetch(`${API_BASE_URL}/verification/documents/access`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.getToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ filename }),
+    });
+    return this.handleResponse<{ signedUrl: string }>(response);
+  }
+
+  /**
    * Get pending verification requests (Admin only)
    */
   async getPendingVerifications(): Promise<ApiResponse<any[]>> {
@@ -1486,7 +1501,7 @@ class ApiService {
           .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
           .join('&')
       : '';
-    const endpoint = `/jobs/company/${finalCompanyId}${query}`;
+    const endpoint = `/companies/${finalCompanyId}/jobs${query}`;
     
     return this.makeRequest(endpoint, async () => {
       const response = await fetch(`${this.baseURL}${endpoint}`, {

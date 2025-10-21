@@ -109,40 +109,48 @@ const Company = sequelize.define('Company', {
   },
   shortDescription: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'short_description'
   },
   companySize: {
     type: DataTypes.ENUM('1-50', '51-200', '201-500', '500-1000', '1000+'),
-    allowNull: true
+    allowNull: true,
+    field: 'company_size'
   },
   foundedYear: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    field: 'founded_year'
   },
   totalReviews: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'total_reviews'
   },
   isVerified: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_verified'
   },
   isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: true
+    defaultValue: true,
+    field: 'is_active'
   },
   isFeatured: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_featured'
   },
   socialLinks: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'social_links'
   },
   benefits: {
     type: DataTypes.JSONB,
@@ -157,6 +165,7 @@ const Company = sequelize.define('Company', {
   companyType: {
     type: DataTypes.ENUM('startup', 'midsize', 'enterprise', 'multinational'),
     allowNull: true,
+    field: 'company_type',
     set(value) {
       if (typeof value === 'string') {
         this.setDataValue('companyType', value.toLowerCase());
@@ -183,15 +192,18 @@ const Company = sequelize.define('Company', {
   },
   fundingStage: {
     type: DataTypes.ENUM('bootstrapped', 'seed', 'series-a', 'series-b', 'series-c', 'public'),
-    allowNull: true
+    allowNull: true,
+    field: 'funding_stage'
   },
   revenue: {
     type: DataTypes.ENUM('0-1cr', '1-10cr', '10-50cr', '50-100cr', '100cr+'),
-    allowNull: true
+    allowNull: true,
+    field: 'revenue'
   },
   culture: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'culture'
   },
   whyJoinUs: {
     type: DataTypes.TEXT,
@@ -201,80 +213,97 @@ const Company = sequelize.define('Company', {
   workEnvironment: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'work_environment'
   },
   hiringProcess: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'hiring_process'
   },
   contactPerson: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'contact_person'
   },
   contactEmail: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'contact_email'
   },
   contactPhone: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'contact_phone'
   },
   verificationStatus: {
     type: DataTypes.ENUM('unverified', 'pending', 'verified', 'premium_verified'),
     allowNull: true,
-    defaultValue: 'unverified'
+    defaultValue: 'unverified',
+    field: 'verification_status'
   },
   verificationDocuments: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'verification_documents'
   },
   totalJobsPosted: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'total_jobs_posted'
   },
   activeJobsCount: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'active_jobs_count'
   },
   totalApplications: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'total_applications'
   },
   averageResponseTime: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    field: 'average_response_time'
   },
   metaTitle: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'meta_title'
   },
   metaDescription: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'meta_description'
   },
   keywords: {
     type: DataTypes.JSONB,
     allowNull: true,
-    defaultValue: []
+    defaultValue: [],
+    field: 'keywords'
   },
   companyStatus: {
     type: DataTypes.ENUM('active', 'inactive', 'suspended', 'pending_approval'),
     allowNull: true,
-    defaultValue: 'pending_approval'
+    defaultValue: 'pending_approval',
+    field: 'company_status'
   },
   lastActivityAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'last_activity_at'
   },
   profileCompletion: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'profile_completion'
   },
   region: {
     type: DataTypes.ENUM('india', 'gulf', 'other'),
@@ -350,10 +379,12 @@ const Company = sequelize.define('Company', {
       key: 'id'
     },
     comment: 'User who claimed the company'
-  }
+  },
 }, {
   tableName: 'companies',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   underscored: false,
   hooks: {
     // Removed auto slug generation - handled manually in auth routes

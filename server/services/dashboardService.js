@@ -144,7 +144,7 @@ class DashboardService {
 
       const searchHistory = await SearchHistory.findAll({
         where: { userId },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit
       });
 
@@ -243,12 +243,12 @@ class DashboardService {
       try {
         recentBookmarks = await JobBookmark.findAll({
           where: { userId },
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
           limit: 5,
           include: [{
             model: require('../models/Job'),
             as: 'job',
-            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId']
+            attributes: ['id', 'title', 'location', 'salaryMin', 'salaryMax', 'companyId', 'status']
           }]
         });
       } catch (error) {
@@ -270,7 +270,7 @@ class DashboardService {
       try {
         jobAlerts = await JobAlert.findAll({
           where: { userId },
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         });
       } catch (error) {
         console.error('Error fetching job alerts:', error);
@@ -585,7 +585,7 @@ class DashboardService {
     const searchRows = await safeFindAll(() => SearchHistory.findAll({
       where: { userId, createdAt: { [Op.gte]: dateFrom } },
       attributes: ['searchQuery', 'resultsCount', 'createdAt'],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 20
     }));
     const searchPerformance = searchRows.map(r => {
@@ -660,7 +660,7 @@ class DashboardService {
     // Recent searches
     const recentSearches = await safeFindAll(() => SearchHistory.findAll({
       where: { userId, createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 5
     }));
     
@@ -679,7 +679,7 @@ class DashboardService {
     if (ViewTracking) {
       const recentViews = await safeFindAll(() => ViewTracking.findAll({
         where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 3
       }));
       
@@ -698,7 +698,7 @@ class DashboardService {
     if (Message) {
       const recentMessages = await safeFindAll(() => Message.findAll({
         where: { senderId: userId, createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 3
       }));
       
@@ -716,7 +716,7 @@ class DashboardService {
     // Recent resume downloads
     const recentDownloads = await safeFindAll(() => Analytics.findAll({
       where: { userId, eventType: 'resume_download', createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 3
     }));
     
@@ -1182,7 +1182,7 @@ class DashboardService {
 
       attributes: ['searchQuery', 'resultsCount', 'createdAt'],
 
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
 
       limit: 20
 
@@ -1332,7 +1332,7 @@ class DashboardService {
 
       where: { userId, createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
 
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
 
       limit: 5
 
@@ -1370,7 +1370,7 @@ class DashboardService {
 
         where: { userId, viewType: 'profile_view', createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
 
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
 
         limit: 3
 
@@ -1408,7 +1408,7 @@ class DashboardService {
 
         where: { senderId: userId, createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
 
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
 
         limit: 3
 
@@ -1444,7 +1444,7 @@ class DashboardService {
 
       where: { userId, eventType: 'resume_download', createdAt: { [Op.gte]: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
 
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
 
       limit: 3
 

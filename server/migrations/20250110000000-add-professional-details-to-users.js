@@ -3,6 +3,17 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Guard: skip if users table doesn't exist yet
+    const tables = await queryInterface.showAllTables();
+    const normalized = Array.isArray(tables)
+      ? tables.map((t) => (typeof t === 'string' ? t : t.tableName || t)).map((n) => String(n).toLowerCase())
+      : [];
+    
+    if (!normalized.includes('users')) {
+      console.log('ℹ️  Skipping professional details migration (users table not created yet)');
+      return;
+    }
+
     // Add Professional Details columns
     await queryInterface.addColumn('users', 'current_company', {
       type: Sequelize.STRING,

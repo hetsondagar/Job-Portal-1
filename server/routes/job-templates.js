@@ -28,39 +28,38 @@ const authenticateToken = async (req, res, next) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { category, search } = req.query;
-    const where = {};
-    if (category) where.category = category;
-    if (search) {
-      where[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } }
-      ];
+    
+    // Build the where clause properly
+    const where = {
+      [Op.and]: [
+        // User permission check
+        {
+          [Op.or]: [
+            { createdBy: req.user.id },
+            { isPublic: true }
+          ]
+        }
+      ]
+    };
+
+    // Add category filter if provided
+    if (category) {
+      where[Op.and].push({ category });
     }
-    const list = await JobTemplate.findAll({
-      attributes: [
-        'id',
-        'companyId',
-        'name',
-        'description',
-        'category',
-        [require('sequelize').col('template_data'), 'templateData'],
-        'tags',
-        [require('sequelize').col('is_public'), 'isPublic'],
-        [require('sequelize').col('created_by'), 'createdBy'],
-        [require('sequelize').col('last_used_at'), 'lastUsedAt'],
-        [require('sequelize').col('usage_count'), 'usageCount'],
-        'version',
-        [require('sequelize').col('created_at'), 'createdAt'],
-        [require('sequelize').col('updated_at'), 'updatedAt']
-      ],
-      where: {
-        ...where,
+
+    // Add search filter if provided
+    if (search) {
+      where[Op.and].push({
         [Op.or]: [
-          { createdBy: req.user.id },
-          { isPublic: true }
+          { name: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } }
         ]
-      },
-      order: [[require('sequelize').col('updated_at'), 'DESC']]
+      });
+    }
+
+    const list = await JobTemplate.findAll({
+      where,
+      order: [['updated_at', 'DESC']]
     });
     res.json({ success: true, data: list });
   } catch (error) {

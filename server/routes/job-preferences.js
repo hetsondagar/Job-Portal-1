@@ -222,7 +222,7 @@ router.get('/matching-jobs', authenticateToken, async (req, res) => {
           attributes: ['id', 'name', 'logo', 'website']
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: offset
     });
@@ -243,7 +243,7 @@ router.get('/matching-jobs', authenticateToken, async (req, res) => {
         : 'Not specified'),
       skills: job.skills || [],
       logo: job.company?.logo || '/placeholder-logo.png',
-      posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+      posted: job.created_at ? new Date(job.created_at).toLocaleDateString() : 'Recently',
       applicants: job.applications || 0,
       description: job.description,
       type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',

@@ -139,7 +139,7 @@ router.get('/stats', async (req, res) => {
         User.count({ where: { is_active: true } }),
         User.count({
           where: {
-            createdAt: {
+            created_at: {
               [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
             }
           }
@@ -153,7 +153,7 @@ router.get('/stats', async (req, res) => {
         Company.count({ where: { isActive: true } }),
         Company.count({
           where: {
-            createdAt: {
+            created_at: {
               [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
             }
           }
@@ -168,7 +168,7 @@ router.get('/stats', async (req, res) => {
         Job.count({ where: { region: 'gulf' } }),
         Job.count({
           where: {
-            createdAt: {
+            created_at: {
               [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
             }
           }
@@ -261,7 +261,7 @@ router.get('/users', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -322,7 +322,7 @@ router.get('/users/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -357,7 +357,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'createdAt']
+          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'created_at']
         },
         // Temporarily disabled Job includes to avoid company_id column errors
         {
@@ -377,7 +377,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Resume,
           as: 'resumes',
-          attributes: ['id', 'title', 'summary', 'isDefault', 'isPublic', 'views', 'downloads', 'lastUpdated', 'createdAt']
+          attributes: ['id', 'title', 'summary', 'isDefault', 'isPublic', 'views', 'downloads', 'lastUpdated', 'created_at']
         },
         {
           model: WorkExperience,
@@ -410,9 +410,9 @@ router.get('/users/:userId/details', async (req, res) => {
     if ((user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company?.id) {
       postedJobs = await Job.findAll({
         where: { companyId: user.company.id },
-        attributes: ['id', 'title', 'location', 'status', 'createdAt'],
+        attributes: ['id', 'title', 'location', 'status', 'created_at'],
         limit: 20,
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         include: [{
           model: JobApplication,
           as: 'jobApplications',
@@ -515,7 +515,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Get company's jobs using raw SQL to avoid column name issues
     const companyJobsRows = await sequelize.query(
-      'SELECT id, title, location, salary, "jobType", status, "createdAt", "validTill" FROM jobs WHERE "companyId" = :companyId ORDER BY "createdAt" DESC',
+      'SELECT id, title, location, salary, "jobType", status, "created_at", "validTill" FROM jobs WHERE "companyId" = :companyId ORDER BY "created_at" DESC',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
     const companyJobs = companyJobsRows || [];
@@ -678,7 +678,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'createdAt']
+          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'created_at']
         },
         {
           model: User,
@@ -779,14 +779,14 @@ router.get('/jobs/:jobId/details', async (req, res) => {
 
     const similarJobs = await Job.findAll({
       where: similarJobsQuery,
-      attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'createdAt'],
+      attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'created_at'],
       include: [{
         model: Company,
         as: 'company',
         attributes: ['id', 'name', 'industry']
       }],
       limit: 5,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Get job requirements analysis
@@ -902,7 +902,7 @@ router.get('/users/portal/:portal', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
 
@@ -1018,7 +1018,7 @@ router.get('/users/export', async (req, res) => {
     const users = await User.findAll({
       where: whereClause,
       attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Convert to CSV
@@ -1036,7 +1036,7 @@ router.get('/users/export', async (req, res) => {
         user.is_email_verified ? 'Yes' : 'No',
         user.is_phone_verified ? 'Yes' : 'No',
         user.last_login_at ? new Date(user.last_login_at).toISOString() : '',
-        new Date(user.createdAt).toISOString()
+        new Date(user.created_at).toISOString()
       ].map(field => `"${field}"`).join(',');
     }).join('\n');
 
@@ -1107,7 +1107,7 @@ router.get('/companies', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1167,7 +1167,7 @@ router.get('/companies/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1458,7 +1458,7 @@ router.get('/companies/export', async (req, res) => {
 
     const companies = await Company.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Convert to CSV
@@ -1482,7 +1482,7 @@ router.get('/companies/export', async (req, res) => {
         company.totalJobsPosted || 0,
         company.totalApplications || 0,
         company.rating || 0,
-        new Date(company.createdAt).toISOString()
+        new Date(company.created_at).toISOString()
       ].map(field => `"${field}"`).join(',');
     }).join('\n');
 
@@ -1541,7 +1541,7 @@ router.get('/jobs', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1608,7 +1608,7 @@ router.get('/jobs/region/:region', async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1720,7 +1720,7 @@ router.get('/jobs/export', async (req, res) => {
 
     const jobs = await Job.findAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Company,
@@ -1746,7 +1746,7 @@ router.get('/jobs/export', async (req, res) => {
         job.salaryMax || 0,
         job.salaryCurrency || '',
         (job.description || '').replace(/"/g, '""'),
-        new Date(job.createdAt).toISOString()
+        new Date(job.created_at).toISOString()
       ].map(field => `"${field}"`).join(',');
     }).join('\n');
 

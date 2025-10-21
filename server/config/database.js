@@ -25,11 +25,11 @@ const getDialectOptions = (host) => {
 module.exports = {
   development: {
     username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'password',
+    password: process.env.DB_PASSWORD || 'CptJackSprw@7777',
     database: process.env.DB_NAME || 'jobportal_dev',
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
-    url: process.env.DB_URL || 'postgresql://postgres:password@localhost:5432/jobportal_dev',
+    url: process.env.DB_URL,
     dialect: 'postgres',
     logging: console.log,
     pool: {

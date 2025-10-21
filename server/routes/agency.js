@@ -543,7 +543,7 @@ router.get('/clients', authenticateToken, async (req, res) => {
           attributes: ['id', 'name', 'slug', 'logo', 'industry', 'city', 'companyStatus']
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     
     res.json({
@@ -648,7 +648,7 @@ router.get('/clients/active/list', authenticateToken, async (req, res) => {
           attributes: ['id', 'name', 'slug', 'logo', 'industry', 'city']
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     
     res.json({

@@ -485,10 +485,10 @@ router.get('/posting-insights', authenticateToken, async (req, res) => {
     if (!userCompanyId) return res.status(400).json({ success: false, message: 'User is not associated with any company' });
     
     const jobWhere = { companyId: userCompanyId };
-    if (from) jobWhere.createdAt = { ...(jobWhere.createdAt || {}), [Op.gte]: new Date(from) };
-    if (to) jobWhere.createdAt = { ...(jobWhere.createdAt || {}), [Op.lte]: new Date(to) };
+    if (from) jobWhere.created_at = { ...(jobWhere.created_at || {}), [Op.gte]: new Date(from) };
+    if (to) jobWhere.created_at = { ...(jobWhere.created_at || {}), [Op.lte]: new Date(to) };
 
-    const jobs = await Job.findAll({ where: jobWhere, attributes: ['id', 'employerId', 'title', 'createdAt'] });
+    const jobs = await Job.findAll({ where: jobWhere, attributes: ['id', 'employerId', 'title', 'created_at'] });
     const jobIds = jobs.map(j => j.id);
 
     let applicationCounts = [];
