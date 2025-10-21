@@ -120,7 +120,7 @@ const Company = sequelize.define('Company', {
   foundedYear: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    field: 'founded_year'
+    field: 'foundedYear'
   },
   totalReviews: {
     type: DataTypes.INTEGER,
