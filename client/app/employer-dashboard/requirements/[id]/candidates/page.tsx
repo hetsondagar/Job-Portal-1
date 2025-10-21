@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { EmployerNavbar } from "@/components/employer-navbar"
-import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService, constructAvatarUrl } from "@/lib/api"
 import { toast } from "sonner"
 
@@ -304,10 +304,20 @@ export default function CandidatesPage() {
   }
 
   return (
-    <div key={String(params.id)} className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      <EmployerNavbar />
+    <div key={String(params.id)} className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      {/* Animated background effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/3 left-1/3 w-60 h-60 bg-gradient-to-br from-cyan-400/10 to-indigo-400/10 rounded-full blur-2xl animate-pulse delay-500"></div>
+      </div>
+      
+      {/* Blue gradient strip */}
+      <div className="absolute top-1/3 left-0 right-0 h-32 bg-gradient-to-r from-blue-400/10 via-cyan-400/5 to-indigo-400/10 blur-3xl"></div>
+      
+      <EmployerDashboardNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-16 relative z-10">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
@@ -374,7 +384,7 @@ export default function CandidatesPage() {
 
         {/* Matching Statistics Summary */}
         {!loading && !error && requirement && (
-          <Card className="mb-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-blue-200">
+          <Card className="mb-6 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
             <div className="p-4">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <div className="text-center">
@@ -512,7 +522,7 @@ export default function CandidatesPage() {
 
           {/* Advanced Filters */}
           {showFilters && (
-            <Card className="mt-4 p-6">
+            <Card className="mt-4 p-6 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Experience Range */}
                 <div>
@@ -683,7 +693,7 @@ export default function CandidatesPage() {
         <div className="space-y-4">
             {candidates.length > 0 ? (
               candidates.map((candidate) => (
-            <Card key={candidate.id} className={`p-6 hover:shadow-lg transition-shadow ${calculatingATS ? 'opacity-75' : ''}`}>
+            <Card key={candidate.id} className={`p-6 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300 ${calculatingATS ? 'opacity-75' : ''}`}>
               <div className="flex items-start space-x-4">
                 <Avatar className="w-16 h-16">
                   <AvatarImage 
@@ -958,7 +968,7 @@ export default function CandidatesPage() {
         )}
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
     </div>
   )
 }

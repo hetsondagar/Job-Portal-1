@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { apiService } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
-import { EmployerNavbar } from '@/components/employer-navbar'
+import { EmployerDashboardNavbar } from '@/components/employer-dashboard-navbar'
 
 export default function UsagePulsePage() {
   const { user, loading } = useAuth()
@@ -128,17 +128,29 @@ export default function UsagePulsePage() {
   if (!user || user.userType !== 'admin' || !user.companyId) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <EmployerNavbar />
-      <div className="p-6 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <EmployerDashboardNavbar />
+      
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+      
+      <div className="relative z-10 pt-16 p-6 space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Usage Pulse</h1>
         </div>
 
       {/* Summary: Quota usage per recruiter */}
-      <section className="bg-white border rounded-lg p-4">
+      <section className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] p-4">
         <h2 className="text-lg font-medium mb-4">Quota Usage by Recruiter</h2>
-        <div className="h-72 w-full">
+        <div className="h-72 w-full rounded-xl bg-white/30 backdrop-blur-sm border border-white/20">
           <ResponsiveContainer>
             <BarChart data={quotaChartData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -152,7 +164,7 @@ export default function UsagePulsePage() {
           </ResponsiveContainer>
         </div>
         <div className="mt-4 overflow-auto">
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm rounded-lg bg-white/30 backdrop-blur-sm border border-white/20">
             <thead>
               <tr className="text-left text-gray-600">
                 <th className="p-2">Recruiter</th>
@@ -194,7 +206,7 @@ export default function UsagePulsePage() {
       </section>
 
       {/* Activities table */}
-      <section className="bg-white border rounded-lg p-4">
+      <section className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium">Activity Logs</h2>
           <div className="flex gap-2">
@@ -214,7 +226,7 @@ export default function UsagePulsePage() {
           </div>
         </div>
         <div className="overflow-auto">
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm rounded-lg bg-white/30 backdrop-blur-sm border border-white/20">
             <thead>
               <tr className="text-left text-gray-600">
                 <th className="p-2">Timestamp</th>
@@ -285,7 +297,7 @@ export default function UsagePulsePage() {
       </section>
 
       {/* Search insights */}
-      <section className="bg-white border rounded-lg p-4">
+      <section className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] p-4">
         <h2 className="text-lg font-medium mb-4">Top Search Keywords</h2>
         <ol className="list-decimal pl-6 space-y-1">
           {searchInsights.map((k: any, idx: number) => (
@@ -295,9 +307,9 @@ export default function UsagePulsePage() {
       </section>
 
       {/* Posting insights */}
-      <section className="bg-white border rounded-lg p-4">
+      <section className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] p-4">
         <h2 className="text-lg font-medium mb-4">Job Postings vs Applications</h2>
-        <div className="h-72 w-full">
+        <div className="h-72 w-full rounded-xl bg-white/30 backdrop-blur-sm border border-white/20">
           <ResponsiveContainer>
             <LineChart data={postingSeries as any[]}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -313,9 +325,9 @@ export default function UsagePulsePage() {
       </section>
 
       {/* Recruiter performance */}
-      <section className="bg-white border rounded-lg p-4">
+      <section className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] p-4">
         <h2 className="text-lg font-medium mb-4">Recruiter Leaderboard</h2>
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm rounded-lg bg-white/30 backdrop-blur-sm border border-white/20">
           <thead>
             <tr className="text-left text-gray-600">
               <th className="p-2">Recruiter</th>

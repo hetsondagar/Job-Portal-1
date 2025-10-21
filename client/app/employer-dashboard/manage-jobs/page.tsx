@@ -35,8 +35,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
-import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
@@ -319,10 +319,21 @@ export default function ManageJobsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-x-hidden">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <EmployerDashboardNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -338,7 +349,7 @@ export default function ManageJobsPage() {
         </div>
 
         {/* Filters */}
-        <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 mb-8">
+        <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl mb-8">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
@@ -385,7 +396,7 @@ export default function ManageJobsPage() {
                 </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)] rounded-3xl">
               <CardContent className="p-6">
                 <div className="space-y-6">
                   {/* Loading State */}
@@ -422,7 +433,7 @@ export default function ManageJobsPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1, duration: 0.5 }}
-                        className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                        className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] rounded-3xl p-6 mb-6"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -619,7 +630,7 @@ export default function ManageJobsPage() {
         </Tabs>
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
     </div>
   )
 }

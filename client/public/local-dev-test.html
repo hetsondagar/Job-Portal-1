@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employer Dashboard - Local Dev</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 18px;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .step code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background: #2563eb;
+        }
+        .success {
+            background: #10b981;
+        }
+        .success:hover {
+            background: #059669;
+        }
+        .info {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info h4 {
+            margin-top: 0;
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Employer Dashboard - Local Development</h1>
+            <p>Set up your local development environment with mock data</p>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <h3>1. Enable Mock Data Mode</h3>
+                <p>Add <code>?mock=true</code> to your dashboard URL or enable it programmatically.</p>
+                <p><strong>Example URLs:</strong></p>
+                <ul>
+                    <li><code>http://localhost:3000/employer-dashboard?mock=true</code></li>
+                    <li><code>http://localhost:3000/employer-dashboard/applications?mock=true</code></li>
+                    <li><code>http://localhost:3000/employer-dashboard/manage-jobs?mock=true</code></li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <h3>2. Start Development Server</h3>
+                <p>Run your Next.js development server:</p>
+                <code>npm run dev</code>
+                <p>or</p>
+                <code>yarn dev</code>
+            </div>
+
+            <div class="step">
+                <h3>3. Navigate to Dashboard</h3>
+                <p>Open your browser and go to:</p>
+                <code>http://localhost:3000/employer-dashboard?mock=true</code>
+                <p>You should see the dashboard with mock data!</p>
+            </div>
+        </div>
+
+        <div class="info">
+            <h4>📊 Mock Data Includes:</h4>
+            <ul>
+                <li><strong>User Profile:</strong> John Doe from TechCorp Solutions</li>
+                <li><strong>Dashboard Stats:</strong> 12 Active Jobs, 247 Applications, 43 Shortlisted, 8 Hired</li>
+                <li><strong>Job Listings:</strong> 5 sample jobs with different statuses</li>
+                <li><strong>Applications:</strong> 5 sample applications with various candidates</li>
+                <li><strong>Analytics:</strong> Mock recruiter performance data</li>
+                <li><strong>Recent Activity:</strong> Sample activity feed</li>
+                <li><strong>Upcoming Interviews:</strong> 3 scheduled interviews</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h4>🎨 UI Features to Test:</h4>
+            <ul>
+                <li><strong>Frosty Gradient Cards:</strong> All cards use the new glassmorphism design</li>
+                <li><strong>Blue Theme:</strong> Consistent blue gradient background matching employer signin</li>
+                <li><strong>Hover Effects:</strong> Cards lift and scale on hover</li>
+                <li><strong>Background Effects:</strong> Animated blur circles and gradient strips</li>
+                <li><strong>Responsive Design:</strong> Test on different screen sizes</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="http://localhost:3000/employer-dashboard?mock=true" class="button success" target="_blank">
+                🚀 Open Dashboard
+            </a>
+            <a href="http://localhost:3000/employer-dashboard/applications?mock=true" class="button" target="_blank">
+                📋 View Applications
+            </a>
+            <a href="http://localhost:3000/employer-dashboard/manage-jobs?mock=true" class="button" target="_blank">
+                💼 Manage Jobs
+            </a>
+            <a href="http://localhost:3000/employer-dashboard/analytics?mock=true" class="button" target="_blank">
+                📊 Analytics
+            </a>
+        </div>
+    </div>
+</body>
+</html>
