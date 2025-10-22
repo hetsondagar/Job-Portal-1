@@ -249,7 +249,7 @@ class TaxEngine {
     );
 
     // Calculate income tax
-    const incomeTax = this.calculateIncomeTax(taxableIncome.final, regimeRules, input);
+    const incomeTax = this.calculateIncomeTax(taxableIncome.final, regimeRules, input, grossSalary.total);
 
     // Calculate monthly TDS
     const monthlyTDS = this.calculateMonthlyTDS(incomeTax.total);
@@ -332,7 +332,7 @@ class TaxEngine {
   /**
    * Calculate income tax using slab system
    */
-  calculateIncomeTax(taxableIncome, regimeRules, input) {
+  calculateIncomeTax(taxableIncome, regimeRules, input, grossSalary) {
     let tax = 0;
     let previousLimit = 0;
     
@@ -354,7 +354,7 @@ class TaxEngine {
     const taxBeforeRebate = tax;
     
     // Apply rebate (Section 87A)
-    const rebate = this.calculateRebate(taxableIncome, tax, regimeRules, input);
+    const rebate = this.calculateRebate(taxableIncome, tax, regimeRules, input, grossSalary);
     tax = Math.max(0, tax - rebate.amount);
     
     const taxBeforeSurcharge = tax;
@@ -383,9 +383,12 @@ class TaxEngine {
   /**
    * Calculate rebate (Section 87A)
    */
-  calculateRebate(taxableIncome, tax, regimeRules, input) {
+  calculateRebate(taxableIncome, tax, regimeRules, input, grossSalary) {
     const rebateRules = regimeRules.rebate;
-    let eligibleForRebate = taxableIncome <= rebateRules.threshold;
+    
+    // Rebate eligibility is based on total income (gross salary), not taxable income
+    const totalIncome = grossSalary + (input.income_from_other_sources || 0) + (input.stcg || 0) + (input.ltcg || 0);
+    let eligibleForRebate = totalIncome <= rebateRules.threshold;
     
     // Check if special rate incomes are excluded from rebate
     if (regimeRules.specialRateIncomesExcludedFromRebate) {
@@ -395,6 +398,7 @@ class TaxEngine {
       }
     }
     
+    // Rebate amount: If eligible, completely eliminate tax (up to rebate limit)
     const rebateAmount = eligibleForRebate ? Math.min(rebateRules.amount, tax) : 0;
     
     return {
@@ -402,6 +406,7 @@ class TaxEngine {
       threshold: rebateRules.threshold,
       maxAmount: rebateRules.amount,
       amount: rebateAmount,
+      totalIncome: totalIncome,
       specialRateIncomeExcluded: regimeRules.specialRateIncomesExcludedFromRebate && 
                                  ((input.stcg || 0) + (input.ltcg || 0)) > 0
     };

@@ -41,7 +41,7 @@ class TaxRulesFetcher {
         console.log(`📄 Using default tax rules for FY ${fy}`);
         console.log(`ℹ️  Note: Government websites may not provide machine-readable tax data.`);
         console.log(`ℹ️  Using pre-configured rules based on official Income Tax Department guidelines.`);
-        rules = await this.loadDefaultRules();
+        rules = await this.loadDefaultRules(fy);
       }
 
       // Validate and enhance rules
@@ -90,7 +90,18 @@ class TaxRulesFetcher {
   /**
    * Load default rules from config file
    */
-  async loadDefaultRules() {
+  async loadDefaultRules(fy = '2025-26') {
+    // Try to load FY-specific rules first
+    const fyConfigPath = path.join(this.configDir, `tax-rules-${fy}.json`);
+    try {
+      const data = await fs.readFile(fyConfigPath, 'utf8');
+      console.log(`📄 Loaded FY-specific tax rules from tax-rules-${fy}.json`);
+      return JSON.parse(data);
+    } catch (error) {
+      console.log(`📄 FY-specific rules not found, falling back to default rules`);
+    }
+    
+    // Fall back to default rules
     const configPath = path.join(this.configDir, 'tax-rules-default.json');
     try {
       const data = await fs.readFile(configPath, 'utf8');

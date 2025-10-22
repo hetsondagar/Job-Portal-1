@@ -105,6 +105,7 @@ const SalaryCalculator = () => {
   const [availableRegimes, setAvailableRegimes] = useState<string[]>([]);
   const [selectedRegimes, setSelectedRegimes] = useState<string[]>(['old', 'new']);
   const [showDemo, setShowDemo] = useState(false);
+  const [showTestSuite, setShowTestSuite] = useState(false);
   
   // Indian states with professional tax
   const indianStates = [
@@ -166,6 +167,9 @@ const SalaryCalculator = () => {
         [field]: typeof value === 'string' ? parseFloat(value) || 0 : value
       }));
     }
+    
+    // Clear previous results when inputs change to force recalculation
+    setResult(null);
   };
 
   const loadDemoData = () => {
@@ -299,6 +303,92 @@ const SalaryCalculator = () => {
     });
     
     return bestRegime;
+  };
+
+  const runComprehensiveTests = async () => {
+    setLoading(true);
+    const testResults = [];
+    
+    // Test scenarios
+    const testScenarios = [
+      {
+        name: "Low Income (₹5L)",
+        profile: { basic: 300000, hra: 150000, conveyance: 19200, special_allowances: 30000, lta: 0, bonus: 0, other_taxable: 0, employee_pf_percent: 12, employer_pf_percent: 12, nps_employee: 0, nps_employer: 0, other_deductions: 0, investments: { '80C': 0, '80D': 0, '80CCD1B': 0 }, rent_paid: 180000, lives_in_metro: true, age: 30, state: 'Maharashtra', income_from_other_sources: 0, stcg: 0, ltcg: 0 }
+      },
+      {
+        name: "Medium Income (₹10L)",
+        profile: { basic: 600000, hra: 300000, conveyance: 30000, special_allowances: 70000, lta: 25000, bonus: 0, other_taxable: 0, employee_pf_percent: 12, employer_pf_percent: 12, nps_employee: 0, nps_employer: 0, other_deductions: 0, investments: { '80C': 150000, '80D': 25000, '80CCD1B': 0 }, rent_paid: 360000, lives_in_metro: true, age: 30, state: 'Maharashtra', income_from_other_sources: 0, stcg: 0, ltcg: 0 }
+      },
+      {
+        name: "High Income (₹20L)",
+        profile: { basic: 1200000, hra: 600000, conveyance: 50000, special_allowances: 150000, lta: 50000, bonus: 100000, other_taxable: 0, employee_pf_percent: 12, employer_pf_percent: 12, nps_employee: 0, nps_employer: 0, other_deductions: 0, investments: { '80C': 150000, '80D': 25000, '80CCD1B': 50000 }, rent_paid: 720000, lives_in_metro: true, age: 30, state: 'Maharashtra', income_from_other_sources: 0, stcg: 0, ltcg: 0 }
+      },
+      {
+        name: "Zero Investments",
+        profile: { basic: 600000, hra: 300000, conveyance: 30000, special_allowances: 70000, lta: 25000, bonus: 0, other_taxable: 0, employee_pf_percent: 12, employer_pf_percent: 12, nps_employee: 0, nps_employer: 0, other_deductions: 0, investments: { '80C': 0, '80D': 0, '80CCD1B': 0 }, rent_paid: 360000, lives_in_metro: true, age: 30, state: 'Maharashtra', income_from_other_sources: 0, stcg: 0, ltcg: 0 }
+      },
+      {
+        name: "Senior Citizen (65 years)",
+        profile: { basic: 600000, hra: 300000, conveyance: 30000, special_allowances: 70000, lta: 25000, bonus: 0, other_taxable: 0, employee_pf_percent: 12, employer_pf_percent: 12, nps_employee: 0, nps_employer: 0, other_deductions: 0, investments: { '80C': 150000, '80D': 50000, '80CCD1B': 0 }, rent_paid: 360000, lives_in_metro: true, age: 65, state: 'Maharashtra', income_from_other_sources: 0, stcg: 0, ltcg: 0 }
+      }
+    ];
+
+    for (const scenario of testScenarios) {
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const response = await fetch(`${API_BASE_URL}/salary/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fy: '2025-26',
+            regimes: ['old', 'new', 'new_post_2025'],
+            profile: scenario.profile
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            const regimeResults = Object.entries(data.regimes).map(([key, regime]: [string, any]) => ({
+              regime: key,
+              tax: regime.incomeTax?.total || 0,
+              takeHome: regime.takeHome?.monthly || 0
+            }));
+            
+            testResults.push({
+              scenario: scenario.name,
+              success: true,
+              results: regimeResults
+            });
+          } else {
+            testResults.push({
+              scenario: scenario.name,
+              success: false,
+              error: data.message
+            });
+          }
+        } else {
+          testResults.push({
+            scenario: scenario.name,
+            success: false,
+            error: `HTTP ${response.status}`
+          });
+        }
+      } catch (error) {
+        testResults.push({
+          scenario: scenario.name,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        });
+      }
+    }
+
+    setLoading(false);
+    setShowTestSuite(true);
+    toast.success(`Test suite completed! ${testResults.filter(r => r.success).length}/${testResults.length} tests passed.`);
+    
+    // Log results for debugging
+    console.log('Test Results:', testResults);
   };
 
   return (
@@ -473,6 +563,14 @@ const SalaryCalculator = () => {
               <RefreshCw className="h-4 w-4" />
               Clear All
             </Button>
+            <Button 
+              onClick={runComprehensiveTests}
+              variant="outline" 
+              className="flex items-center gap-2 border-green-200 hover:bg-green-50"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Run Test Suite
+            </Button>
           </div>
           
           {showDemo && (
@@ -526,6 +624,7 @@ const SalaryCalculator = () => {
                       value={profile.basic}
                       onChange={(e) => handleInputChange('basic', e.target.value)}
                       placeholder="e.g., 600000"
+                      className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-xs text-gray-500">
                       Base salary component. Usually 40-50% of total CTC.
@@ -892,8 +991,14 @@ const SalaryCalculator = () => {
                 {availableRegimes.map((regime) => {
                   const regimeNames = {
                     'old': 'Old Tax Regime (with deductions)',
-                    'new': 'New Tax Regime (default)',
-                    'new_post_2025': 'New Tax Regime (Post FY 2025-26)'
+                    'new': 'New Tax Regime (FY 2024-25)',
+                    'new_post_2025': 'New Tax Regime (FY 2025-26)'
+                  };
+                  
+                  const regimeDescriptions = {
+                    'old': 'Full Chapter VI-A deductions, HRA exemptions, LTA benefits',
+                    'new': 'Higher standard deduction (₹75K), limited deductions, ₹25K rebate up to ₹7L',
+                    'new_post_2025': 'Updated slabs (0-4L: 0%, 4-8L: 5%, 8-12L: 10%, 12-16L: 15%, 16-20L: 20%, 20-24L: 25%, 24L+: 30%), ₹60K rebate up to ₹12L'
                   };
                   
                   return (
@@ -916,9 +1021,7 @@ const SalaryCalculator = () => {
                         <div>
                           <div className="font-medium">{regimeNames[regime as keyof typeof regimeNames]}</div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {regime === 'old' && 'Includes 80C, 80D, HRA exemptions, LTA'}
-                            {regime === 'new' && 'Higher standard deduction, limited deductions'}
-                            {regime === 'new_post_2025' && 'Latest tax slabs and rebate rules'}
+                            {regimeDescriptions[regime as keyof typeof regimeDescriptions]}
                           </div>
                         </div>
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -940,23 +1043,40 @@ const SalaryCalculator = () => {
               )}
             </div>
 
-            <Button 
-              onClick={calculateSalary} 
-              disabled={loading || selectedRegimes.length === 0}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Calculating...
-                </>
-              ) : (
-                <>
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Calculate Salary
-                </>
-              )}
-            </Button>
+            <div className="space-y-3">
+              {/* Quick Preview */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Quick Preview</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-600 dark:text-blue-400">Gross Annual:</span>
+                    <div className="font-semibold">{formatCurrency(profile.basic + profile.hra + profile.conveyance + profile.special_allowances + profile.lta + profile.bonus + profile.other_taxable)}</div>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 dark:text-blue-400">Monthly Gross:</span>
+                    <div className="font-semibold">{formatCurrency((profile.basic + profile.hra + profile.conveyance + profile.special_allowances + profile.lta + profile.bonus + profile.other_taxable) / 12)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={calculateSalary} 
+                disabled={loading || selectedRegimes.length === 0}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="mr-2 h-4 w-4" />
+                    Calculate Salary
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
