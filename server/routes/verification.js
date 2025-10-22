@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middlewares/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const AdminNotificationService = require('../services/adminNotificationService');
 
 // Configure multer for document uploads
 const storage = multer.diskStorage({
@@ -247,6 +248,13 @@ router.post('/approve/:companyId', authenticateToken, async (req, res) => {
 
     console.log(`✅ Company verification approved: ${company.name} (${company.id}) by admin: ${req.user.email}`);
 
+    // Create admin notification for verification approval
+    try {
+      await AdminNotificationService.notifyCompanyVerification('approved', company, req.user);
+    } catch (error) {
+      console.error('⚠️ Error creating admin notification for verification approval:', error);
+    }
+
     res.json({
       success: true,
       message: 'Company verification approved successfully',
@@ -342,6 +350,13 @@ router.post('/reject/:companyId', authenticateToken, async (req, res) => {
     }
 
     console.log(`❌ Company verification rejected: ${company.name} (${company.id}) by admin: ${req.user.email}. Reason: ${reason}`);
+
+    // Create admin notification for verification rejection
+    try {
+      await AdminNotificationService.notifyCompanyVerification('rejected', company, req.user);
+    } catch (error) {
+      console.error('⚠️ Error creating admin notification for verification rejection:', error);
+    }
 
     res.json({
       success: true,

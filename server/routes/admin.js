@@ -515,7 +515,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Get company's jobs using raw SQL to avoid column name issues
     const companyJobsRows = await sequelize.query(
-      'SELECT id, title, location, salary, "jobType", status, "created_at", "validTill" FROM jobs WHERE "companyId" = :companyId ORDER BY "created_at" DESC',
+      'SELECT id, title, location, salary, job_type, status, created_at, valid_till FROM jobs WHERE company_id = :companyId ORDER BY created_at DESC',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
     const companyJobs = companyJobsRows || [];
@@ -559,28 +559,27 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Add applications to jobs
     const companyJobsWithApplications = companyJobs.map(job => {
-      const jobData = job.toJSON();
       return {
-        ...jobData,
+        ...job,
         jobApplications: applicationsByJob[job.id] || []
       };
     });
 
     // Get additional statistics using raw SQL to avoid column name issues
     const [totalJobsResult] = await sequelize.query(
-      'SELECT COUNT(*) as count FROM jobs WHERE "companyId" = :companyId',
+      'SELECT COUNT(*) as count FROM jobs WHERE company_id = :companyId',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
     const totalJobs = totalJobsResult.count;
     
     const [activeJobsResult] = await sequelize.query(
-      'SELECT COUNT(*) as count FROM jobs WHERE "companyId" = :companyId AND status = :status',
+      'SELECT COUNT(*) as count FROM jobs WHERE company_id = :companyId AND status = :status',
       { replacements: { companyId: companyId, status: 'active' }, type: sequelize.QueryTypes.SELECT }
     );
     const activeJobs = activeJobsResult.count;
     
     const [totalApplicationsResult] = await sequelize.query(
-      'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j."companyId" = :companyId',
+      'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j.company_id = :companyId',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
     const totalApplications = totalApplicationsResult.count;
@@ -779,7 +778,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
 
     const similarJobs = await Job.findAll({
       where: similarJobsQuery,
-      attributes: ['id', 'title', 'location', 'salary', 'jobType', 'status', 'created_at'],
+      attributes: ['id', 'title', 'location', 'salary', 'job_type', 'status', 'created_at'],
       include: [{
         model: Company,
         as: 'company',
@@ -1302,7 +1301,7 @@ router.delete('/companies/:id', async (req, res) => {
 
     // 3. Delete jobs (both by companyId and employerId)
     await sequelize.query(
-      'DELETE FROM jobs WHERE "companyId" = :companyId OR employer_id = ANY(:userIds)',
+      'DELETE FROM jobs WHERE company_id = :companyId OR employer_id = ANY(:userIds)',
       {
         replacements: { companyId: id, userIds: userIds },
         transaction

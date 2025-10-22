@@ -3,6 +3,7 @@ const router = express.Router();
 const { Company, User } = require('../models');
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
+const AdminNotificationService = require('../services/adminNotificationService');
 
 /**
  * @route   GET /api/companies/claim/search
@@ -332,6 +333,14 @@ router.post('/create-new', async (req, res) => {
         userId: user.id,
         userEmail
       });
+
+      // Create admin notifications for new admin and company registration
+      try {
+        await AdminNotificationService.notifyNewRegistration('admin', user, company);
+        await AdminNotificationService.notifyNewCompanyRegistration(company, user);
+      } catch (error) {
+        console.error('⚠️ Error creating admin notifications:', error);
+      }
       
       res.json({
         success: true,

@@ -36,6 +36,7 @@ const Requirement = require('./Requirement');
 const Application = require('./Application');
 const JobPreference = require('./JobPreference');
 const AgencyClientAuthorization = require('./AgencyClientAuthorization');
+const AdminNotification = require('./AdminNotification');
 
 // Import Sequelize
 const { Sequelize } = require('sequelize');
@@ -97,7 +98,8 @@ const models = {
   Requirement,
   Application,
   JobPreference,
-  AgencyClientAuthorization
+  AgencyClientAuthorization,
+  AdminNotification
 };
 
 // Define associations

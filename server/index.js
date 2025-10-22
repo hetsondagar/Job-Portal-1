@@ -350,6 +350,7 @@ app.use('/api/upload', uploadRoutes);
 // Admin routes (secure)
 app.use('/api/admin', adminAgencyRoutes);
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin/notifications', require('./routes/admin-notifications'));
 
   // Compatibility redirect for cover-letter download legacy path
   app.get('/api/cover-letters/:id/download', (req, res) => {

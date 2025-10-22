@@ -1057,25 +1057,25 @@ const SalaryCalculator = () => {
                     <div className="font-semibold">{formatCurrency((profile.basic + profile.hra + profile.conveyance + profile.special_allowances + profile.lta + profile.bonus + profile.other_taxable) / 12)}</div>
                   </div>
                 </div>
-              </div>
+            </div>
 
-              <Button 
-                onClick={calculateSalary} 
-                disabled={loading || selectedRegimes.length === 0}
+            <Button 
+              onClick={calculateSalary} 
+              disabled={loading || selectedRegimes.length === 0}
                 className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calculating...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="mr-2 h-4 w-4" />
-                    Calculate Salary
-                  </>
-                )}
-              </Button>
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Calculating...
+                </>
+              ) : (
+                <>
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Calculate Salary
+                </>
+              )}
+            </Button>
             </div>
           </CardContent>
         </Card>

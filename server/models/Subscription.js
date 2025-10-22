@@ -11,6 +11,7 @@ const Subscription = sequelize.define('Subscription', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'user_id',
     references: {
       model: 'users',
       key: 'id'
@@ -19,6 +20,7 @@ const Subscription = sequelize.define('Subscription', {
   planId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'plan_id',
     references: {
       model: 'subscription_plans',
       key: 'id'
@@ -32,19 +34,23 @@ const Subscription = sequelize.define('Subscription', {
   startDate: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    field: 'start_date'
   },
   endDate: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'end_date'
   },
   trialEndDate: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'trial_ends_at'
   },
   billingCycle: {
     type: DataTypes.ENUM('monthly', 'quarterly', 'yearly'),
-    defaultValue: 'monthly'
+    defaultValue: 'monthly',
+    field: 'billing_cycle'
   },
   amount: {
     type: DataTypes.DECIMAL(10, 2),
@@ -56,42 +62,28 @@ const Subscription = sequelize.define('Subscription', {
   },
   nextBillingDate: {
     type: DataTypes.DATE,
-    allowNull: true
-  },
-  lastBillingDate: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  paymentMethod: {
-    type: DataTypes.STRING(50),
     allowNull: true,
-    comment: 'Payment method type: credit_card, bank_transfer, etc.'
-  },
-  paymentGateway: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    comment: 'Payment gateway: stripe, razorpay, etc.'
-  },
-  paymentGatewayId: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-    comment: 'External payment gateway subscription ID'
+    field: 'next_billing_date'
   },
   autoRenew: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true
+    defaultValue: true,
+    field: 'auto_renew'
   },
   cancellationReason: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'cancellation_reason'
   },
   cancelledAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'cancelled_at'
   },
   cancelledBy: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'cancelled_by',
     references: {
       model: 'users',
       key: 'id'
@@ -105,19 +97,14 @@ const Subscription = sequelize.define('Subscription', {
   usage: {
     type: DataTypes.JSONB,
     allowNull: true,
+    field: 'limits',
     comment: 'Usage statistics: job_postings, candidate_views, etc.'
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    comment: 'Additional subscription data'
   }
 }, {
   tableName: 'subscriptions',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  timestamps: true,
   underscored: true,
   indexes: [
     {
@@ -128,17 +115,15 @@ const Subscription = sequelize.define('Subscription', {
     },
     {
       fields: ['next_billing_date']
-    },
-    {
-      fields: ['payment_gateway_id']
     }
   ],
   hooks: {
     beforeCreate: (subscription) => {
       if (subscription.status === 'trial' && !subscription.trialEndDate) {
-        // Set trial end date to 14 days from start
-        subscription.trialEndDate = new Date(subscription.startDate);
-        subscription.trialEndDate.setDate(subscription.trialEndDate.getDate() + 14);
+        // Set trial end date to 14 days from start (virtual field)
+        const trialEnd = new Date(subscription.startDate);
+        trialEnd.setDate(trialEnd.getDate() + 14);
+        subscription.trialEndDate = trialEnd;
       }
     }
   }

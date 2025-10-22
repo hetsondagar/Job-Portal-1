@@ -57,37 +57,45 @@ const Payment = sequelize.define('Payment', {
   },
   gatewayTransactionId: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'gateway_transaction_id'
   },
   gatewayOrderId: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'gateway_order_id'
   },
   gatewayPaymentId: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'gateway_payment_id'
   },
   gatewayRefundId: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'gateway_refund_id'
   },
   billingAddress: {
     type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'billing_address'
   },
   taxAmount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'tax_amount'
   },
   discountAmount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'discount_amount'
   },
   finalAmount: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
+    allowNull: false,
+    field: 'final_amount'
   },
   description: {
     type: DataTypes.TEXT,
@@ -95,27 +103,57 @@ const Payment = sequelize.define('Payment', {
   },
   failureReason: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'failure_reason'
   },
   failureCode: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    field: 'failure_code'
   },
   processedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'processed_at'
   },
   refundedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'refunded_at'
   },
   refundAmount: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'refund_amount'
   },
   refundReason: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    field: 'refund_reason'
+  },
+  refundedBy: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'refunded_by',
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  gatewayResponse: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    field: 'gateway_response'
+  },
+  invoiceUrl: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'invoice_url'
+  },
+  receiptUrl: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'receipt_url'
   },
   metadata: {
     type: DataTypes.JSONB,

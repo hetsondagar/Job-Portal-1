@@ -8,6 +8,7 @@ const Company = require('../models/Company');
 const { sequelize } = require('../config/sequelize');
 const { Op } = require('sequelize');
 const emailService = require('../services/emailService');
+const AdminNotificationService = require('../services/adminNotificationService');
 
 const router = express.Router();
 
@@ -244,6 +245,13 @@ router.post('/signup', validateSignup, async (req, res) => {
     });
     
     console.log('✅ User created successfully:', user.id);
+
+    // Check for jobseeker milestones and create notifications
+    try {
+      await AdminNotificationService.checkJobseekerMilestones();
+    } catch (error) {
+      console.error('⚠️ Error checking jobseeker milestones:', error);
+    }
 
     // Generate JWT token
     const token = generateToken(user);
@@ -584,6 +592,16 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       const token = generateToken(user);
 
       console.log('✅ Employer signup completed successfully for:', email);
+
+      // Create admin notifications for new employer and company registration
+      try {
+        await AdminNotificationService.notifyNewRegistration('employer', user, company);
+        if (company) {
+          await AdminNotificationService.notifyNewCompanyRegistration(company, user);
+        }
+      } catch (error) {
+        console.error('⚠️ Error creating admin notifications:', error);
+      }
 
       // Return success response with company information
       res.status(201).json({

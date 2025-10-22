@@ -266,6 +266,16 @@ export default function CompanyDetailPage() {
     )
   }
 
+  // Additional safety check to ensure company data is properly initialized
+  if (!company.jobs) company.jobs = []
+  if (!company.employees) company.employees = []
+  if (!company.reviews) company.reviews = []
+  if (!company.payments) company.payments = []
+  if (!company.activityLogs) company.activityLogs = []
+  if (!company.subscription) company.subscription = { plan: { features: [] } }
+  if (!company.subscription.plan) company.subscription.plan = { features: [] }
+  if (!company.subscription.plan.features) company.subscription.plan.features = []
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -582,7 +592,7 @@ export default function CompanyDetailPage() {
                       <p className="text-white">${company.subscription.plan.price}</p>
                     </div>
                   </div>
-                  {company.subscription.plan.features && company.subscription.plan.features.length > 0 && (
+                  {company.subscription?.plan?.features && company.subscription.plan.features.length > 0 && (
                     <div className="mt-4">
                       <label className="text-sm text-gray-400">Features</label>
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -605,11 +615,11 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Briefcase className="w-5 h-5 mr-2" />
-                  Company Jobs ({company.jobs.length})
+                  Company Jobs ({company.jobs?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.jobs.length > 0 ? (
+                {company.jobs && company.jobs.length > 0 ? (
                   <div className="space-y-4">
                     {company.jobs.map((job) => (
                       <div key={job.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
@@ -620,7 +630,7 @@ export default function CompanyDetailPage() {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-400">
                               <span>{job.jobType}</span>
                               {job.salary && <span>${job.salary}</span>}
-                              <span>{job.jobApplications.length} applications</span>
+                              <span>{job.jobApplications?.length || 0} applications</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -654,11 +664,11 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Users className="w-5 h-5 mr-2" />
-                  Company Employees ({company.employees.length})
+                  Company Employees ({company.employees?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.employees.length > 0 ? (
+                {company.employees && company.employees.length > 0 ? (
                   <div className="space-y-4">
                     {company.employees.map((employee) => (
                       <div key={employee.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
@@ -697,11 +707,11 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Star className="w-5 h-5 mr-2" />
-                  Company Reviews ({company.reviews.length})
+                  Company Reviews ({company.reviews?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.reviews.length > 0 ? (
+                {company.reviews && company.reviews.length > 0 ? (
                   <div className="space-y-4">
                     {company.reviews.map((review) => (
                       <div key={review.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
@@ -744,11 +754,11 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <CreditCard className="w-5 h-5 mr-2" />
-                  Payment History ({company.payments.length})
+                  Payment History ({company.payments?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.payments.length > 0 ? (
+                {company.payments && company.payments.length > 0 ? (
                   <div className="space-y-4">
                     {company.payments.map((payment) => (
                       <div key={payment.id} className="p-4 bg-white/5 rounded-lg border border-white/10">
@@ -785,11 +795,11 @@ export default function CompanyDetailPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <Activity className="w-5 h-5 mr-2" />
-                  Activity Logs ({company.activityLogs.length})
+                  Activity Logs ({company.activityLogs?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {company.activityLogs.length > 0 ? (
+                {company.activityLogs && company.activityLogs.length > 0 ? (
                   <div className="space-y-3">
                     {company.activityLogs.slice(0, 20).map((log) => (
                       <div key={log.id} className="p-3 bg-white/5 rounded border border-white/10">

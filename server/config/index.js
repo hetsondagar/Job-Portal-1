@@ -80,11 +80,7 @@ Company.hasMany(CompanyPhoto, { foreignKey: 'companyId', as: 'photos' });
 JobCategory.belongsTo(JobCategory, { foreignKey: 'parent_id', as: 'parent' });
 JobCategory.hasMany(JobCategory, { foreignKey: 'parent_id', as: 'children' });
 
-// JobApplication associations
-JobApplication.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
-JobApplication.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
-JobApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'jobResume' });
-JobApplication.belongsTo(CoverLetter, { foreignKey: 'coverLetterId', as: 'jobCoverLetter' });
+// JobApplication associations are now defined in the model file to prevent duplicates
 
 // JobBookmark associations
 JobBookmark.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -157,10 +153,7 @@ SubscriptionPlan.hasMany(Subscription, { foreignKey: 'planId', as: 'subscription
 UserSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 
-// Interview associations
-Interview.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
-Interview.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
-Interview.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+// Interview associations are now defined in the model file to prevent duplicates
 User.hasMany(Interview, { foreignKey: 'employerId', as: 'conductedInterviews' });
 User.hasMany(Interview, { foreignKey: 'candidateId', as: 'attendedInterviews' });
 

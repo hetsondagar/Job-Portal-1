@@ -21,7 +21,9 @@ import {
   UserX,
   CheckCircle2,
   Clock,
-  FileCheck
+  FileCheck,
+  Bell,
+  BellRing
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -160,7 +162,7 @@ export default function AdminDashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white border-gray-200 shadow-sm">
+          <TabsList className="grid w-full grid-cols-5 bg-white border-gray-200 shadow-sm">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
@@ -176,6 +178,10 @@ export default function AdminDashboardPage() {
             <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Briefcase className="w-4 h-4 mr-2" />
               Jobs
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <Bell className="w-4 h-4 mr-2" />
+              Notifications
             </TabsTrigger>
           </TabsList>
 
@@ -654,6 +660,107 @@ export default function AdminDashboardPage() {
                         View All Jobs
                       </Button>
                     </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="mt-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Admin Notifications</h2>
+                <Link href="/super-admin/dashboard/notifications">
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <BellRing className="w-4 h-4 mr-2" />
+                    View All Notifications
+                  </Button>
+                </Link>
+              </div>
+              
+              <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Notification Center</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Stay updated with platform activities, new registrations, and important events
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-green-500 rounded-full">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">Registration</Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">New User Registrations</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Get notified when new admins, employers, or companies register on the platform.
+                      </p>
+                      <Link href="/super-admin/dashboard/notifications?category=registration">
+                        <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-50">
+                          View Registration Notifications
+                        </Button>
+                      </Link>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-blue-500 rounded-full">
+                          <CheckCircle2 className="w-6 h-6 text-white" />
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-800">Verification</Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Company Verifications</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Track company verification approvals and rejections for compliance monitoring.
+                      </p>
+                      <Link href="/super-admin/dashboard/notifications?category=verification">
+                        <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                          View Verification Notifications
+                        </Button>
+                      </Link>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-purple-500 rounded-full">
+                          <TrendingUp className="w-6 h-6 text-white" />
+                        </div>
+                        <Badge className="bg-purple-100 text-purple-800">Milestone</Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Growth Milestones</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Celebrate platform growth with jobseeker milestone notifications (10, 50, 100, 500, 1000+ users).
+                      </p>
+                      <Link href="/super-admin/dashboard/notifications?category=milestone">
+                        <Button variant="outline" size="sm" className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                          View Milestone Notifications
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-blue-500 rounded-full">
+                        <Bell className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Real-time Notifications</h3>
+                        <p className="text-gray-600 text-sm">
+                          All notifications are created automatically when events occur. You can view, filter, and manage them in the dedicated notifications page.
+                        </p>
+                      </div>
+                      <Link href="/super-admin/dashboard/notifications">
+                        <Button className="bg-blue-600 hover:bg-blue-700">
+                          <BellRing className="w-4 h-4 mr-2" />
+                          Open Notifications
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

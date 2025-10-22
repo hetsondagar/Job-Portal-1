@@ -25,16 +25,19 @@ const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
   planType: {
     type: DataTypes.ENUM('free', 'basic', 'premium', 'enterprise', 'custom'),
     defaultValue: 'basic',
-    allowNull: false
+    allowNull: false,
+    field: 'plan_type'
   },
   monthlyPrice: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'monthly_price'
   },
   yearlyPrice: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
+    allowNull: true,
+    field: 'yearly_price'
   },
   currency: {
     type: DataTypes.STRING(3),
@@ -48,55 +51,68 @@ const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
   },
   isActive: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true
+    defaultValue: true,
+    field: 'is_active'
   },
   isPopular: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_popular'
   },
   sortOrder: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'sort_order'
   },
   trialDays: {
     type: DataTypes.INTEGER,
-    defaultValue: 14
+    defaultValue: 14,
+    field: 'trial_days'
   },
   maxTeamMembers: {
     type: DataTypes.INTEGER,
-    defaultValue: 1
+    defaultValue: 1,
+    field: 'max_team_members'
   },
   maxJobPostings: {
     type: DataTypes.INTEGER,
-    defaultValue: 1
+    defaultValue: 1,
+    field: 'max_job_postings'
   },
   maxCandidateViews: {
     type: DataTypes.INTEGER,
-    defaultValue: 100
+    defaultValue: 100,
+    field: 'max_candidate_views'
   },
   maxResumeDownloads: {
     type: DataTypes.INTEGER,
-    defaultValue: 10
+    defaultValue: 10,
+    field: 'max_resume_downloads'
   },
   hasAdvancedAnalytics: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'has_advanced_analytics'
   },
   hasPrioritySupport: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'has_priority_support'
   },
   hasCustomBranding: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'has_custom_branding'
   },
   hasAPIAccess: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'has_api_access'
   },
   hasBulkOperations: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'has_bulk_operations'
   },
   metadata: {
     type: DataTypes.JSONB,
@@ -108,7 +124,6 @@ const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  timestamps: true,
   underscored: true,
   hooks: {
     beforeCreate: (plan) => {

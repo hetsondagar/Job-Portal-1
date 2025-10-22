@@ -68,11 +68,8 @@ const Analytics = sequelize.define('Analytics', {
   },
   operatingSystem: {
     type: DataTypes.STRING,
-    allowNull: true
-  },
-  location: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
+    allowNull: true,
+    field: 'operating_system'
   },
   jobId: {
     type: DataTypes.UUID,
@@ -103,11 +100,13 @@ const Analytics = sequelize.define('Analytics', {
   },
   searchQuery: {
     type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'search_query'
   },
   filters: {
     type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'filters'
   },
   duration: {
     type: DataTypes.INTEGER, // in seconds
@@ -115,7 +114,8 @@ const Analytics = sequelize.define('Analytics', {
   },
   metadata: {
     type: DataTypes.JSONB,
-    defaultValue: {}
+    defaultValue: {},
+    field: 'custom_parameters'
   }
 }, {
   tableName: 'analytics',
