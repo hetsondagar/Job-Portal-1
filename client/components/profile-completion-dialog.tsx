@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { apiService, User } from '@/lib/api'
 import { toast } from 'sonner'
-import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar, Building2, ChevronDown } from 'lucide-react'
+import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar, Building2, ChevronDown, Upload, Image, Palette } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
+import DepartmentDropdown from "@/components/ui/department-dropdown"
 
 interface ProfileCompletionDialogProps {
   isOpen: boolean
@@ -513,6 +514,7 @@ export function EmployerProfileCompletionDialog({
     phone: '',
     designation: '',
     department: '',
+    departments: [] as string[],
     location: '',
     // Company Info (if creating new)
     companyName: '',
@@ -530,6 +532,7 @@ export function EmployerProfileCompletionDialog({
   const [currentStep, setCurrentStep] = useState(1)
   const [showNatureOfBusinessDropdown, setShowNatureOfBusinessDropdown] = useState(false)
   const [showCompanyTypesDropdown, setShowCompanyTypesDropdown] = useState(false)
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
   const [companyData, setCompanyData] = useState<any>(null)
 
   // Multi-select options
@@ -618,17 +621,30 @@ export function EmployerProfileCompletionDialog({
   const handleSubmit = async () => {
     // Validate required fields based on current step
     if (currentStep === 1) {
-      if (!formData.phone || !formData.designation) {
-        toast.error('Please fill in all required fields (Phone, Designation)')
-        return
-      }
+      // Step 1 is company branding - no required fields, just move to next step
+      // No validation needed for Step 1
+    }
+    
+    if (currentStep === 2) {
+      // Step 2 is company logo - no required fields, just move to next step
+      // No validation needed for Step 2
+    }
+    
+    if (currentStep === 3) {
       if (needsCompany && (!formData.companyName || !formData.companyIndustry)) {
         toast.error('Please provide company name and industry')
         return
       }
     }
+    
+    if (currentStep === 4) {
+      if (!formData.phone || !formData.designation) {
+        toast.error('Please fill in all required fields (Phone, Designation)')
+        return
+      }
+    }
 
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
       return
     }
@@ -754,18 +770,20 @@ export function EmployerProfileCompletionDialog({
 
   const getStepTitle = () => {
     switch (currentStep) {
-      case 1: return "Basic Information"
-      case 2: return "Company Details"
-      case 3: return "About Your Company"
+      case 1: return "About Your Company"
+      case 2: return "Company Logo & Branding"
+      case 3: return "Company Details"
+      case 4: return "Your Personal Information"
       default: return "Complete Your Profile"
     }
   }
 
   const getStepDescription = () => {
     switch (currentStep) {
-      case 1: return "Let's start with your basic professional information."
-      case 2: return needsCompany ? "Create your company profile to get started." : "Complete your company details."
-      case 3: return "Tell candidates about your company and what makes it special."
+      case 1: return "🎯 Get FREE professional branding! Showcase your company to millions of job seekers and attract top talent."
+      case 2: return "🎨 Add your company logo and branding elements to make your company stand out."
+      case 3: return needsCompany ? "Create your company profile to get started." : "Complete your company details."
+      case 4: return "Let's complete your personal professional information."
       default: return "Complete your profile to start posting jobs and managing applications effectively."
     }
   }
@@ -777,7 +795,7 @@ export function EmployerProfileCompletionDialog({
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="w-5 h-5" />
             Complete Your Employer Profile
-            <Badge variant="outline" className="ml-2">Step {currentStep} of 3</Badge>
+            <Badge variant="outline" className="ml-2">Step {currentStep} of 4</Badge>
           </DialogTitle>
           <DialogDescription>
             {getStepDescription()}
@@ -787,67 +805,272 @@ export function EmployerProfileCompletionDialog({
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div 
               className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 3) * 100}%` }}
+              style={{ width: `${(currentStep / 4) * 100}%` }}
             />
           </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Step 1: Basic Information */}
+          {/* Step 1: About Your Company (moved from Step 3) */}
           {currentStep === 1 && (
-            <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                <UserIcon className="w-4 h-4" />
-                Basic Information
-              </h3>
+            <div className="space-y-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-4">
+                  <Building2 className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg text-purple-900 dark:text-purple-100 mb-2">
+                  🎯 Empower Your Company Brand
+                </h3>
+                <p className="text-sm text-purple-700 dark:text-purple-300 leading-relaxed">
+                  <strong>Get FREE professional branding on our portal!</strong> Complete your company profile to showcase your organization to millions of job seekers and attract top talent.
+                </p>
+                <div className="mt-4 p-3 bg-white/60 dark:bg-purple-800/30 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <p className="text-xs text-purple-800 dark:text-purple-200 font-medium">
+                    ✨ Your company information will be displayed on our public companies page, helping job seekers discover and learn about your organization
+                  </p>
+                </div>
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="emp-phone">Phone Number *</Label>
-                  <Input
-                    id="emp-phone"
-                    type="tel"
-                    placeholder="+91 9876543210"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+              <div className="space-y-6">
+                <div className="bg-white/80 dark:bg-purple-800/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <Label htmlFor="companyDescription" className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                      Company Description & Culture
+                    </Label>
+                  </div>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
+                    This will be displayed on your company profile page. Help job seekers understand your company's mission, values, and work culture.
+                  </p>
+                  <Textarea
+                    id="companyDescription"
+                    placeholder="Describe your company's mission, values, culture, and what makes it a great place to work. This helps job seekers understand your organization better..."
+                    value={formData.companyDescription}
+                    onChange={(e) => handleInputChange('companyDescription', e.target.value)}
+                    rows={4}
+                    className="border-purple-200 focus:border-purple-400 focus:ring-purple-200"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="designation">Your Designation *</Label>
-                  <Input
-                    id="designation"
-                    placeholder="e.g., HR Manager, Recruiter"
-                    value={formData.designation}
-                    onChange={(e) => handleInputChange('designation', e.target.value)}
+                <div className="bg-white/80 dark:bg-purple-800/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                    <Label htmlFor="companyWhyJoinUs" className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                      Why Join Our Company?
+                    </Label>
+                  </div>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
+                    Highlight your company's unique benefits, growth opportunities, and what makes it attractive to potential employees.
+                  </p>
+                  <Textarea
+                    id="companyWhyJoinUs"
+                    placeholder="Share what makes your company special - career growth opportunities, benefits, work-life balance, innovative projects, team culture, etc..."
+                    value={formData.companyWhyJoinUs}
+                    onChange={(e) => handleInputChange('companyWhyJoinUs', e.target.value)}
+                    rows={4}
+                    className="border-purple-200 focus:border-purple-400 focus:ring-purple-200"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    placeholder="e.g., Human Resources"
-                    value={formData.department}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                  />
-                </div>
+                <div className="bg-white/80 dark:bg-purple-800/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                    <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                      Company Classification
+                    </h4>
+                  </div>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-4">
+                    Help job seekers understand your business model and company type. This information helps candidates find companies that match their career preferences.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Nature of Business */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-purple-800 dark:text-purple-200">Nature of Business</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between"
+                        onClick={() => setShowNatureOfBusinessDropdown(true)}
+                      >
+                        <span className="text-left flex-1 truncate">
+                          {formData.natureOfBusiness.length > 0
+                            ? `${formData.natureOfBusiness.length} selected`
+                            : "Select nature of business"}
+                        </span>
+                        <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                      </Button>
+                      
+                      {formData.natureOfBusiness.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {formData.natureOfBusiness.slice(0, 3).map((item: string) => (
+                            <Badge key={item} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              {item}
+                            </Badge>
+                          ))}
+                          {formData.natureOfBusiness.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{formData.natureOfBusiness.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="e.g., Mumbai, Maharashtra"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                  />
+                    {/* Company Types */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-purple-800 dark:text-purple-200">Company Type</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between"
+                        onClick={() => setShowCompanyTypesDropdown(true)}
+                      >
+                        <span className="text-left flex-1 truncate">
+                          {formData.companyTypes.length > 0
+                            ? `${formData.companyTypes.length} selected`
+                            : "Select company type(s)"}
+                        </span>
+                        <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                      </Button>
+                      
+                      {formData.companyTypes.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {formData.companyTypes.slice(0, 3).map((type: string) => (
+                            <Badge key={type} variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                              {type}
+                            </Badge>
+                          ))}
+                          {formData.companyTypes.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{formData.companyTypes.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Call to Action Section */}
+                <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-lg text-white">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-semibold text-sm">🚀 Ready to Showcase Your Company?</h4>
+                  </div>
+                  <p className="text-xs text-purple-100 leading-relaxed">
+                    Complete your company profile to get <strong>FREE professional branding</strong> on our platform. Your company will be featured on our public companies page, helping you attract the best talent and build your employer brand.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="flex items-center gap-1 text-xs text-purple-100">
+                      <div className="w-1.5 h-1.5 bg-green-300 rounded-full"></div>
+                      <span>Public company profile</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-purple-100">
+                      <div className="w-1.5 h-1.5 bg-green-300 rounded-full"></div>
+                      <span>Enhanced job visibility</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-purple-100">
+                      <div className="w-1.5 h-1.5 bg-green-300 rounded-full"></div>
+                      <span>Professional branding</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Step 2: Company Details */}
+          {/* Step 2: Company Logo & Branding */}
           {currentStep === 2 && (
+            <div className="space-y-6 p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-lg">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full mb-4">
+                  <Building2 className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Company Logo & Branding</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Add your company logo and branding elements to make your company stand out</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Company Logo Upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="companyLogo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Company Logo
+                  </Label>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                      <Building2 className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <Button type="button" variant="outline" className="w-full">
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Logo
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 2MB. Recommended: 200x200px</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Company Placeholder/Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="companyPlaceholder" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Company Placeholder Image
+                  </Label>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-32 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                      <Image className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <Button type="button" variant="outline" className="w-full">
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Placeholder
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-1">Optional: Company office, team, or product image</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brand Colors */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Brand Colors (Optional)
+                  </Label>
+                  <div className="flex space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-sm"></div>
+                      <span className="text-xs text-gray-600">Primary</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-gray-500 rounded-full border-2 border-white shadow-sm"></div>
+                      <span className="text-xs text-gray-600">Secondary</span>
+                    </div>
+                    <Button type="button" variant="outline" size="sm">
+                      <Palette className="w-3 h-3 mr-1" />
+                      Customize
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Skip Option */}
+                <div className="text-center pt-4">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setCurrentStep(currentStep + 1)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Company Details */}
+          {currentStep === 3 && (
             <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <h3 className="font-semibold text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
@@ -923,132 +1146,91 @@ export function EmployerProfileCompletionDialog({
             </div>
           )}
 
-          {/* Step 3: About Your Company */}
-          {currentStep === 3 && (
-            <div className="space-y-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <h3 className="font-semibold text-sm text-purple-900 dark:text-purple-100 flex items-center gap-2">
-                <Briefcase className="w-4 h-4" />
-                About Your Company
-              </h3>
+          {/* Step 4: Your Personal Information */}
+          {currentStep === 4 && (
+            <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
+                  <UserIcon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg text-blue-900 dark:text-blue-100 mb-2">
+                  👤 Your Personal Information
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
+                  Complete your personal professional details to help us provide you with the best hiring experience.
+                </p>
+              </div>
               
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="companyDescription">Company Description</Label>
-                  <Textarea
-                    id="companyDescription"
-                    placeholder="Tell candidates about your company, culture, and values..."
-                    value={formData.companyDescription}
-                    onChange={(e) => handleInputChange('companyDescription', e.target.value)}
-                    rows={4}
+                  <Label htmlFor="emp-phone">Phone Number *</Label>
+                  <Input
+                    id="emp-phone"
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    className="border-blue-200 focus:border-blue-400 focus:ring-blue-200"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="companyWhyJoinUs">Why Join Us</Label>
-                  <Textarea
-                    id="companyWhyJoinUs"
-                    placeholder="Tell jobseekers why they should join your company..."
-                    value={formData.companyWhyJoinUs}
-                    onChange={(e) => handleInputChange('companyWhyJoinUs', e.target.value)}
-                    rows={4}
+                  <Label htmlFor="designation">Your Designation *</Label>
+                  <Input
+                    id="designation"
+                    placeholder="e.g., HR Manager, Recruiter"
+                    value={formData.designation}
+                    onChange={(e) => handleInputChange('designation', e.target.value)}
+                    className="border-blue-200 focus:border-blue-400 focus:ring-blue-200"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Nature of Business */}
-                  <div className="space-y-2">
-                    <Label>Nature of Business</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full justify-between"
-                      onClick={() => setShowNatureOfBusinessDropdown(true)}
-                    >
-                      <span className="text-left flex-1 truncate">
-                        {formData.natureOfBusiness.length > 0
-                          ? `${formData.natureOfBusiness.length} selected`
-                          : "Select nature of business"}
-                      </span>
-                      <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
-                    </Button>
-                    
-                    {formData.natureOfBusiness.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {formData.natureOfBusiness.slice(0, 3).map((item: string) => (
-                          <Badge key={item} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                            {item}
-                          </Badge>
-                        ))}
-                        {formData.natureOfBusiness.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{formData.natureOfBusiness.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <div>
+                  <Label htmlFor="department">Department</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between border-blue-200 focus:border-blue-400"
+                    onClick={() => setShowDepartmentDropdown(true)}
+                  >
+                    <span className="text-left flex-1 truncate">
+                      {formData.departments.length > 0
+                        ? `${formData.departments.length} selected`
+                        : "Select department"}
+                    </span>
+                    <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                  </Button>
+                  
+                  {formData.departments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {formData.departments.slice(0, 3).map((dept: string) => (
+                        <Badge key={dept} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                          {dept}
+                        </Badge>
+                      ))}
+                      {formData.departments.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{formData.departments.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                  {/* Company Types */}
-                  <div className="space-y-2">
-                    <Label>Company Type</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full justify-between"
-                      onClick={() => setShowCompanyTypesDropdown(true)}
-                    >
-                      <span className="text-left flex-1 truncate">
-                        {formData.companyTypes.length > 0
-                          ? `${formData.companyTypes.length} selected`
-                          : "Select company type(s)"}
-                      </span>
-                      <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
-                    </Button>
-                    
-                    {formData.companyTypes.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {formData.companyTypes.slice(0, 3).map((type: string) => (
-                          <Badge key={type} variant="secondary" className="text-xs bg-purple-100 text-purple-800">
-                            {type}
-                          </Badge>
-                        ))}
-                        {formData.companyTypes.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{formData.companyTypes.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    placeholder="e.g., Mumbai, Maharashtra"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange('location', e.target.value)}
+                    className="border-blue-200 focus:border-blue-400 focus:ring-blue-200"
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* Multi-Select Dropdowns */}
-          {showNatureOfBusinessDropdown && (
-            <MultiSelectDropdown
-              title="Select Nature of Business"
-              options={natureOfBusinessOptions}
-              selectedValues={formData.natureOfBusiness}
-              onChange={(values) => {
-                handleInputChange("natureOfBusiness", values)
-              }}
-              onClose={() => setShowNatureOfBusinessDropdown(false)}
-            />
-          )}
-
-          {showCompanyTypesDropdown && (
-            <MultiSelectDropdown
-              title="Select Company Type(s)"
-              options={companyTypeOptions}
-              selectedValues={formData.companyTypes}
-              onChange={(values) => {
-                handleInputChange("companyTypes", values)
-              }}
-              onClose={() => setShowCompanyTypesDropdown(false)}
-            />
-          )}
         </div>
 
         <div className="flex justify-between gap-3 pt-4 border-t">
@@ -1075,17 +1257,55 @@ export function EmployerProfileCompletionDialog({
             onClick={handleSubmit}
             disabled={
               submitting || 
-              (currentStep === 1 && (!formData.phone || !formData.designation)) ||
-              (currentStep === 2 && needsCompany && (!formData.companyName || !formData.companyIndustry))
+              (currentStep === 3 && needsCompany && (!formData.companyName || !formData.companyIndustry)) ||
+              (currentStep === 4 && (!formData.phone || !formData.designation))
             }
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           >
             {submitting ? 'Saving...' : 
-             currentStep < 3 ? 'Next' : 'Complete Profile'}
+             currentStep < 4 ? 'Next' : '🚀 Complete & Get FREE Branding'}
           </Button>
         </div>
       </DialogContent>
+      
+      {/* Multi-Select Dropdowns - Rendered outside dialog content for proper positioning */}
+      {showNatureOfBusinessDropdown && (
+        <MultiSelectDropdown
+          title="Select Nature of Business"
+          options={natureOfBusinessOptions}
+          selectedValues={formData.natureOfBusiness}
+          onChange={(values) => {
+            handleInputChange("natureOfBusiness", values)
+          }}
+          onClose={() => setShowNatureOfBusinessDropdown(false)}
+        />
+      )}
+
+      {showCompanyTypesDropdown && (
+        <MultiSelectDropdown
+          title="Select Company Type(s)"
+          options={companyTypeOptions}
+          selectedValues={formData.companyTypes}
+          onChange={(values) => {
+            handleInputChange("companyTypes", values)
+          }}
+          onClose={() => setShowCompanyTypesDropdown(false)}
+        />
+      )}
+
+      {showDepartmentDropdown && (
+        <DepartmentDropdown
+          selectedDepartments={formData.departments}
+          onDepartmentChange={(departments: string[]) => {
+            handleInputChange("departments", departments)
+            // Also update the single department field for backward compatibility
+            handleInputChange("department", departments[0] || '')
+          }}
+          onClose={() => setShowDepartmentDropdown(false)}
+        />
+      )}
     </Dialog>
   )
 }
+
 

@@ -105,6 +105,7 @@ export interface EmployerSignupData {
   phone: string;
   companySize?: string;
   industry?: string;
+  industries?: string[]; // Support for multiple industries
   website?: string;
   region?: string;
   role?: string;
@@ -4220,7 +4221,7 @@ class ApiService {
   }
 
   async cleanupAdminNotifications(daysOld: number = 90): Promise<ApiResponse<any>> {
-    return this.delete('/admin/notifications/cleanup', { daysOld });
+    return this.post('/admin/notifications/cleanup', { daysOld });
   }
 
 }

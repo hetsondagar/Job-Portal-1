@@ -98,22 +98,14 @@ export function EmployerDashboardNavbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-8">
-            {/* Dashboard */}
-            <Link
-              href="/employer-dashboard"
-              className="text-slate-700 hover:text-blue-600 font-medium transition-colors"
-            >
-              Dashboard
-            </Link>
-
-            {/* Jobs Dropdown */}
+            {/* Jobs & Responses Dropdown */}
             <div className="relative">
               <button
                 onMouseEnter={() => setShowJobsDropdown(true)}
                 onMouseLeave={() => setShowJobsDropdown(false)}
                 className="flex items-center space-x-1 text-slate-700 hover:text-blue-600 font-medium transition-colors"
               >
-                <span>Jobs</span>
+                <span>Jobs and Responses</span>
                 <ChevronDown className="w-4 h-4" />
               </button>
 
@@ -123,53 +115,93 @@ export function EmployerDashboardNavbar() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
                     onMouseEnter={() => setShowJobsDropdown(true)}
                     onMouseLeave={() => setShowJobsDropdown(false)}
-                    className="absolute top-full left-0 mt-2 w-48 bg-white/90 backdrop-blur-xl border border-white/40 rounded-xl shadow-[0_8px_30px_rgba(59,130,246,0.12)] py-2"
+                    className="absolute left-0 mt-2 w-80 bg-white/95 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-200/50 p-4"
                   >
-                    <Link
-                      href="/employer-dashboard/post-job"
-                      className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Post Job</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/manage-jobs"
-                      className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                    >
-                      <Briefcase className="w-4 h-4" />
-                      <span>Manage Jobs</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/job-templates"
-                      className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Templates</span>
-                    </Link>
+                    <div className="mb-3">
+                      <h3 className="text-base font-semibold text-slate-900 mb-1">Jobs and Responses</h3>
+                      <p className="text-xs text-slate-600">Manage your job postings and candidate responses</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Link
+                        href="/employer-dashboard/post-job"
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-blue-100/80 rounded-lg flex items-center justify-center group-hover:bg-blue-200/80 transition-colors">
+                          <Plus className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 text-sm">Post a Free Job</div>
+                          <div className="text-xs text-slate-500">Post your job for free and reach thousands of candidates</div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/post-internship"
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-green-100/80 rounded-lg flex items-center justify-center group-hover:bg-green-200/80 transition-colors">
+                          <Users className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 text-sm">Post an Internship</div>
+                          <div className="text-xs text-slate-500">Find talented interns for your organization</div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/hot-vacancies"
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-red-100/80 rounded-lg flex items-center justify-center group-hover:bg-red-200/80 transition-colors">
+                          <Briefcase className="w-4 h-4 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 text-sm">Post a Hot Vacancy</div>
+                          <div className="text-xs text-slate-500">Premium urgent hiring solutions for immediate recruitment</div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/manage-jobs"
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-blue-100/80 rounded-lg flex items-center justify-center group-hover:bg-blue-200/80 transition-colors">
+                          <Briefcase className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 text-sm">Manage Jobs and Responses</div>
+                          <div className="text-xs text-slate-500">Track and manage all your job postings</div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/job-templates"
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-purple-100/80 rounded-lg flex items-center justify-center group-hover:bg-purple-200/80 transition-colors">
+                          <FileText className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 text-sm">Job Templates</div>
+                          <div className="text-xs text-slate-500">Use pre-built templates for faster job posting</div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/applications"
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <div className="w-8 h-8 bg-orange-100/80 rounded-lg flex items-center justify-center group-hover:bg-orange-200/80 transition-colors">
+                          <Users className="w-4 h-4 text-orange-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 text-sm">View Applications</div>
+                          <div className="text-xs text-slate-500">Review and manage candidate applications</div>
+                        </div>
+                      </Link>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Applications */}
-            <Link
-              href="/employer-dashboard/applications"
-              className="flex items-center space-x-1 text-slate-700 hover:text-blue-600 font-medium transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              <span>Applications</span>
-            </Link>
-
-            {/* Analytics */}
-            <Link
-              href="/employer-dashboard/analytics"
-              className="flex items-center space-x-1 text-slate-700 hover:text-blue-600 font-medium transition-colors"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Analytics</span>
-            </Link>
 
             {/* Database Dropdown (Admin Only) */}
             {isAdmin && (
@@ -305,14 +337,6 @@ export function EmployerDashboardNavbar() {
 
                   <div className="space-y-2">
                     <Link
-                      href="/employer-dashboard"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                    <Link
                       href="/employer-dashboard/post-job"
                       className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                       onClick={() => setIsOpen(false)}
@@ -321,12 +345,36 @@ export function EmployerDashboardNavbar() {
                       <span>Post Job</span>
                     </Link>
                     <Link
+                      href="/employer-dashboard/post-internship"
+                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Post Internship</span>
+                    </Link>
+                    <Link
+                      href="/employer-dashboard/hot-vacancies"
+                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Briefcase className="w-4 h-4" />
+                      <span>Hot Vacancies</span>
+                    </Link>
+                    <Link
                       href="/employer-dashboard/manage-jobs"
                       className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                       onClick={() => setIsOpen(false)}
                     >
                       <Briefcase className="w-4 h-4" />
-                      <span>Manage Jobs</span>
+                      <span>Manage Jobs and Responses</span>
+                    </Link>
+                    <Link
+                      href="/employer-dashboard/job-templates"
+                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Job Templates</span>
                     </Link>
                     <Link
                       href="/employer-dashboard/applications"
@@ -334,15 +382,7 @@ export function EmployerDashboardNavbar() {
                       onClick={() => setIsOpen(false)}
                     >
                       <Users className="w-4 h-4" />
-                      <span>Applications</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/analytics"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span>Analytics</span>
+                      <span>View Applications</span>
                     </Link>
                   </div>
 

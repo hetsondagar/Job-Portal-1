@@ -301,7 +301,7 @@ export default function EmployerRegisterPage() {
     }
   }
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     
     // Clear validation error when user starts typing
@@ -326,6 +326,7 @@ export default function EmployerRegisterPage() {
     "Dedicated account manager",
     "Priority job listing",
     "Detailed analytics & insights",
+    "Professional company branding & showcase",
   ]
 
   return (
@@ -380,6 +381,49 @@ export default function EmployerRegisterPage() {
                 Post your first job for free and upgrade as you grow. No setup fees, no hidden costs.
               </p>
             </div>
+
+            {/* Company Branding Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white"
+            >
+              <h3 className="text-xl font-bold mb-3 flex items-center">
+                <Building2 className="w-6 h-6 mr-2" />
+                Professional Company Branding
+              </h3>
+              <div className="space-y-3 text-purple-100">
+                <p className="text-sm leading-relaxed">
+                  <strong className="text-white">Showcase Your Company:</strong> Create a compelling company profile that attracts top talent and builds your employer brand.
+                </p>
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-300 flex-shrink-0" />
+                    <span>Custom company logo and branding</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-300 flex-shrink-0" />
+                    <span>Detailed company information and culture</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-300 flex-shrink-0" />
+                    <span>Employee testimonials and reviews</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-300 flex-shrink-0" />
+                    <span>Company benefits and perks showcase</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-300 flex-shrink-0" />
+                    <span>Career growth opportunities display</span>
+                  </div>
+                </div>
+                <p className="text-xs text-purple-200 mt-3">
+                  Stand out from competitors and attract the best candidates with a professional company presence that reflects your values and culture.
+                </p>
+              </div>
+            </motion.div>
           </motion.div>
 
           {/* Right Side - Registration Form */}

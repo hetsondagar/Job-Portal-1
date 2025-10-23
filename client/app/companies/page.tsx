@@ -150,6 +150,12 @@ interface Company {
 
   urgent: boolean
 
+  isActive?: boolean
+
+  isVerified?: boolean
+
+  verificationStatus?: string
+
 }
 
 
@@ -1851,7 +1857,14 @@ export default function CompaniesPage() {
 
     }
 
+    // Active and Verified filter - Only show active and verified companies
 
+    filtered = filtered.filter(company => 
+      company.isActive === true && 
+      (company.verificationStatus === 'verified' || company.isVerified === true)
+    )
+
+    console.log('✅ Active and verified filter applied:', filtered.length, 'companies')
 
     // Enhanced Search filter with advanced matching
 
