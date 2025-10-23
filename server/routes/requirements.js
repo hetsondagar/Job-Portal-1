@@ -133,7 +133,7 @@ router.post('/', authenticateToken, async (req, res) => {
           companyRecord = await Company.create({
             name: providedCompanyName,
             slug,
-            industry: body.industry || 'Other',
+            industries: body.industries || ['Other'],
             companySize: body.companySize || '1-50',
             email: req.user.email,
             region: body.region || 'india',

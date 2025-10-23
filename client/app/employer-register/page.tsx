@@ -39,8 +39,7 @@ export default function EmployerRegisterPage() {
     password: "",
     confirmPassword: "",
     companySize: "",
-    industry: "",
-    industries: [] as string[], // NEW: Support multiple industries
+    industries: [] as string[], // Primary field for industries
     website: "",
     role: "recruiter",
     region: "",
@@ -185,7 +184,6 @@ export default function EmployerRegisterPage() {
         companyName: formData.companyId ? undefined : formData.companyName,
         phone: formData.phone,
         companySize: formData.companySize,
-        industry: formData.industry,
         industries: formData.industries,
         website: formData.website,
         role: formData.role,
@@ -206,7 +204,7 @@ export default function EmployerRegisterPage() {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('verificationCompanyData', JSON.stringify({
             name: formData.companyId ? company?.name : formData.companyName,
-            industry: formData.industry,
+            industries: formData.industries,
             website: formData.website,
             companyAccountType: formData.companyAccountType
           }))
@@ -251,8 +249,8 @@ export default function EmployerRegisterPage() {
                 }
               case 'companySize':
                 return '📊 Company Size: Select from the dropdown (1-50, 51-200, etc.)'
-              case 'industry':
-                return '🏭 Industry: Select from the dropdown (Technology, Finance, etc.)'
+              case 'industries':
+                return '🏭 Industries: Select at least one industry from the dropdown'
               default:
                 return `${field}: ${message}`
             }
@@ -458,7 +456,7 @@ export default function EmployerRegisterPage() {
                         ) : companyOptions.map((c) => (
                           <button key={c.id} type="button" onClick={() => handleInputChange('companyId', c.id)} className={`w-full text-left px-3 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 ${formData.companyId === c.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                             <div className="font-medium text-slate-900 dark:text-white">{c.name}</div>
-                            <div className="text-xs text-slate-500 mt-1">{c.industry} • {c.companySize}</div>
+                            <div className="text-xs text-slate-500 mt-1">{(c.industries && c.industries.length > 0 ? c.industries[0] : 'Other')} • {c.companySize}</div>
                           </button>
                         ))}
                       </div>
@@ -720,8 +718,8 @@ export default function EmployerRegisterPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="industry" className="text-slate-700 dark:text-slate-300">
-                        Industry
+                      <Label htmlFor="industries" className="text-slate-700 dark:text-slate-300">
+                        Industries *
                       </Label>
                       <Button
                         type="button"
@@ -743,8 +741,6 @@ export default function EmployerRegisterPage() {
                                 onClick={() => {
                                   const newIndustries = formData.industries.filter((_, i) => i !== index)
                                   handleInputChange("industries", newIndustries)
-                                  // Also update the single industry field for backward compatibility
-                                  handleInputChange("industry", newIndustries[0] || '')
                                 }}
                                 className="ml-2 hover:text-blue-600"
                               >
@@ -760,8 +756,6 @@ export default function EmployerRegisterPage() {
                           selectedIndustries={formData.industries}
                           onIndustryChange={(industries: string[]) => {
                             handleInputChange("industries", industries)
-                            // Also update the single industry field for backward compatibility
-                            handleInputChange("industry", industries[0] || '')
                           }}
                           onClose={() => setShowIndustryDropdown(false)}
                         />

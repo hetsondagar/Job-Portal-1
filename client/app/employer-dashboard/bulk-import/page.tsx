@@ -101,11 +101,11 @@ export default function BulkImportPage() {
         <div className="absolute top-1/4 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 sm:mb-8">
           <div className="mb-4 lg:mb-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Bulk Job Import</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Bulk Job Import</h1>
             <p className="text-sm sm:text-base text-slate-600">Import multiple job postings from CSV, Excel, or JSON files</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">

@@ -1427,7 +1427,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone']
+              attributes: ['id', 'name', 'industries', 'companySize', 'website', 'contactEmail', 'contactPhone']
             },
             {
               model: User,
@@ -1740,7 +1740,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
               {
                 model: Company,
                 as: 'company',
-                attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+                attributes: ['id', 'name', 'industries', 'companySize', 'website', 'email', 'phone']
               }
             ]
           },
@@ -1980,7 +1980,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'industry', 'companySize', 'website', 'contactEmail', 'contactPhone']
+              attributes: ['id', 'name', 'industries', 'companySize', 'website', 'contactEmail', 'contactPhone']
             }
           ]
         },

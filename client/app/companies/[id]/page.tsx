@@ -424,7 +424,7 @@ function CompanyDetailPage() {
         const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
         if (arr.length > 0) {
           const name = arr[0]?.companyName || 'Company'
-          setCompany({ id: companyId, name, industry: '', companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
+          setCompany({ id: companyId, name, industries: [], companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
           return
         }
         }
@@ -1019,7 +1019,7 @@ function CompanyDetailPage() {
   // Simple computed sector key without useMemo to avoid React error #310
   const getSectorKey = () => {
     try {
-    const ind = (company?.industry || '').toLowerCase()
+    const ind = (company?.industries && company.industries.length > 0 ? company.industries[0] : '').toLowerCase()
     if (ind.includes('tech')) return 'technology'
     if (ind.includes('fin')) return 'finance'
     if (ind.includes('health')) return 'healthcare'
@@ -1074,37 +1074,40 @@ function CompanyDetailPage() {
 
               <CardContent className="p-8 -mt-16 relative">
                 <div className="flex flex-col lg:flex-row items-start lg:items-end space-y-6 lg:space-y-0 lg:space-x-8">
-                  <Avatar className="w-32 h-32 ring-4 ring-white dark:ring-slate-800 shadow-xl">
-                    <AvatarImage 
-                      src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder.svg"} 
-                      alt={company.name}
-                      onLoad={() => {
-                        console.log('✅ Company logo loaded:', company.logo);
-                      }}
-                      onError={(e) => {
-                        console.error('❌ Company logo failed:', company.logo);
-                        console.log('🔍 Logo data:', company);
-                      }}
-                    />
-                    <AvatarFallback className={`text-4xl font-bold ${sectorColors.text}`}>
-                      {(company.name||'')[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    {/* Placeholder background image */}
+                    {company.placeholderImage && (
+                      <div className="absolute inset-0 w-32 h-32 rounded-full overflow-hidden opacity-20 z-0">
+                        <img 
+                          src={company.placeholderImage.startsWith('http') ? company.placeholderImage : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.placeholderImage}`} 
+                          alt={`${company.name} background`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <Avatar className="w-32 h-32 ring-4 ring-white dark:ring-slate-800 shadow-xl relative z-10">
+                      <AvatarImage 
+                        src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder.svg"} 
+                        alt={company.name}
+                        onLoad={() => {
+                          console.log('✅ Company logo loaded:', company.logo);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Company logo failed:', company.logo);
+                          console.log('🔍 Logo data:', company);
+                        }}
+                      />
+                      <AvatarFallback className={`text-4xl font-bold ${sectorColors.text}`}>
+                        {(company.name||'')[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
 
                   <div className="flex-1">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
                       <div>
                         <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{toDisplayText(company.name) || 'Company'}</h1>
                         <div className="flex items-center flex-wrap gap-2 mb-3">
-                          {/* Industry Badge */}
-                          {company.industry && (
-                            <Badge
-                              className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10`}
-                            >
-                              {company.industry}
-                            </Badge>
-                          )}
-                          
                           {/* Company Types */}
                           {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
                             <>
@@ -1136,13 +1139,6 @@ function CompanyDetailPage() {
                               )}
                             </>
                           )}
-                          
-                          {/* Company Size */}
-                          {company.companySize && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                              {company.companySize} employees
-                            </Badge>
-                          )}
                         </div>
                         <div className="flex items-center space-x-6 text-slate-600 dark:text-slate-300">
                           <div className="flex items-center">
@@ -1153,10 +1149,6 @@ function CompanyDetailPage() {
                           <div className="flex items-center">
                             <MapPin className="w-5 h-5 mr-2" />
                             {locationDisplay}
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="w-5 h-5 mr-2" />
-                            {company.employees || '—'} employees
                           </div>
                         </div>
                       </div>
@@ -1242,6 +1234,24 @@ function CompanyDetailPage() {
                     
                     {/* Company Details */}
                     <div className="space-y-6 mb-6">
+                      {/* Industries */}
+                      {company.industries && Array.isArray(company.industries) && company.industries.length > 0 && (
+                        <div>
+                          <div className="font-medium text-slate-900 dark:text-white mb-2">Industries</div>
+                          <div className="flex flex-wrap gap-2">
+                            {company.industries.length === 1 ? (
+                              <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 border-indigo-200">
+                                {company.industries[0]}
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-gradient-to-r from-indigo-100 via-purple-100 to-blue-100 text-indigo-800 border-indigo-200">
+                                Multi Industry
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Nature of Business */}
                       {company.natureOfBusiness && Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 && (
                         <div>

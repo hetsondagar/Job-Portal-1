@@ -21,6 +21,7 @@ const CompanyPhoto = sequelize.define('CompanyPhoto', {
   caption: { type: DataTypes.TEXT, allowNull: true },
   displayOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: 'display_order' },
   isPrimary: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'is_primary' },
+  isPlaceholder: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'is_placeholder' },
   isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'is_active' },
   uploadedBy: { type: DataTypes.UUID, allowNull: false, field: 'uploaded_by' },
   metadata: { type: DataTypes.JSONB, allowNull: true }

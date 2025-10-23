@@ -64,7 +64,7 @@ export default function EmployerDashboard() {
         name: "TechCorp Solutions",
         logo: "/placeholder-logo.png",
         description: "Leading technology solutions provider",
-        industry: "Technology",
+        industries: ["Technology"],
         size: "100-500",
         location: "New York, NY",
         website: "https://techcorp.com"
@@ -688,7 +688,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
     // Company profile fields (60% of total)
     if (user.companyId && companyData) {
       const companyFields = [
-        companyData.name, companyData.industry, companyData.companySize,
+        companyData.name, companyData.industries && companyData.industries.length > 0 ? companyData.industries[0] : 'Other', companyData.companySize,
         companyData.website, companyData.description, companyData.address
       ]
       companyFields.forEach(field => {
@@ -783,23 +783,23 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       </div>
 
               {/* Welcome Banner */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white overflow-hidden mb-8 shadow-[0_10px_40px_rgba(59,130,246,0.3)]"
+            className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white overflow-hidden mb-6 shadow-[0_10px_40px_rgba(59,130,246,0.3)]"
           >
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Briefcase className="w-8 h-8 text-blue-200" />
-                    <h1 className="serif-heading text-3xl sm:text-4xl font-bold drop-shadow">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <Briefcase className="w-7 h-7 text-blue-200" />
+                    <h1 className="serif-heading text-2xl sm:text-3xl font-bold drop-shadow">
                       Employer Dashboard
                     </h1>
                   </div>
-                  <p className="text-blue-100/90 text-lg mb-6 leading-relaxed">
+                  <p className="text-blue-100/90 text-base mb-4 leading-relaxed">
                     Welcome back, {user?.firstName ? user.firstName.toUpperCase() : 'EMPLOYER'}! Ready to find your next great hire?
                   </p>
                   <div className="flex items-center space-x-6">
@@ -856,7 +856,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         )}
 
         {/* Stats Cards - Premium glass analytics */}
-        <div className="relative mb-8">
+        <div className="relative mb-6">
           {/* subtle animated bg behind stats */}
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute -top-10 -left-10 w-64 h-64 bg-gradient-to-br from-blue-300/20 to-cyan-300/20 rounded-full blur-3xl animate-pulse" />
@@ -876,10 +876,10 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {loading ? (
-            <div className="col-span-full flex justify-center items-center py-12">
-              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+            <div className="col-span-full flex justify-center items-center py-8">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
             </div>
           ) : stats.length > 0 ? (
             stats.map((stat, index) => (
@@ -928,16 +928,16 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
               </motion.div>
             ))
           ) : (
-            <div className="col-span-full text-center py-12">
+            <div className="col-span-full text-center py-8">
               <p className="text-slate-600">No dashboard data available.</p>
             </div>
           )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Quick Actions */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6">
             {/* Company Jobs Section */}
             {user?.companyId && (
               <motion.div
@@ -984,12 +984,12 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                     >
                       <Link href={action.href}>
                         <Card className="h-full transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] cursor-pointer bg-white/50 backdrop-blur-xl border-white/40 hover:shadow-[0_18px_50px_rgba(59,130,246,0.14)]">
-                          <CardContent className="p-6">
+                          <CardContent className="p-4">
                             <div className="flex items-start space-x-4">
                               <div
-                                className={`w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} flex items-center justify-center`}
+                                className={`w-10 h-10 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center`}
                               >
-                                <action.icon className="w-6 h-6 text-white" />
+                                <action.icon className="w-5 h-5 text-white" />
                               </div>
                               <div>
                                 <h3 className="font-semibold text-slate-900 mb-1 tracking-tight">{action.title}</h3>
@@ -1046,7 +1046,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           </div>
 
           {/* Right Column - Profile & Support */}
-          <div className="space-y-8">
+          <div className="space-y-6">
                           {/* Company Information */}
               {user?.companyId && (
                               <CompanyInfoDisplay companyId={user.companyId} />

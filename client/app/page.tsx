@@ -757,9 +757,14 @@ export default function HomePage() {
         const companiesResp = await apiService.listCompanies({ limit: 20, offset: 0 })
         console.log('📊 Companies API response:', companiesResp)
         if (companiesResp.success && Array.isArray(companiesResp.data)) {
-          companiesCountLocal = companiesResp.data.length
-          console.log(`✅ Found ${companiesCountLocal} companies`)
-          const baseMapped = companiesResp.data.map((c: any) => ({
+          // Filter for verified and active companies only
+          const verifiedActiveCompanies = companiesResp.data.filter((c: any) => 
+            (c.verificationStatus === 'verified' || c.isVerified === true) && 
+            (c.isActive === true)
+          )
+          companiesCountLocal = verifiedActiveCompanies.length
+          console.log(`✅ Found ${companiesCountLocal} verified and active companies`)
+          const baseMapped = verifiedActiveCompanies.map((c: any) => ({
             id: c.id,
             name: c.name,
             industry: c.industry || 'General',
@@ -1458,7 +1463,7 @@ export default function HomePage() {
 
 
       {/* Footer */}
-      <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-600/5"></div>

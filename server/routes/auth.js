@@ -87,12 +87,16 @@ const validateEmployerSignup = [
     .optional({ checkFalsy: true })
     .isIn(['1-50', '51-200', '201-500', '500-1000', '1000+'])
     .withMessage('Invalid company size'),
-  body('industry')
+  body('industries')
+    .optional({ checkFalsy: true })
+    .isArray()
+    .withMessage('Industries must be an array'),
+  body('industries.*')
     .optional({ checkFalsy: true })
     .isString()
     .trim()
     .isLength({ min: 2, max: 100 })
-    .withMessage('Industry must be between 2 and 100 characters'),
+    .withMessage('Each industry must be between 2 and 100 characters'),
   body('region')
     .optional()
     .isIn(['india', 'gulf', 'other'])
@@ -300,7 +304,18 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       });
     }
 
-    const { email, password, fullName, companyName, companyId, phone, companySize, industry, industries, website, region, role, companyAccountType } = req.body;
+    const { email, password, fullName, companyName, companyId, phone, companySize, industries, website, region, role, companyAccountType } = req.body;
+    
+    // Validate that at least one industry is provided
+    if (!industries || !Array.isArray(industries) || industries.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one industry must be selected'
+      });
+    }
+    
+    // Use the first industry as the primary industry for backward compatibility
+    const primaryIndustry = industries[0];
 
     // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
@@ -430,8 +445,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             
             await company.update({
               name: companyName,
-              industry: industry || company.industry,
-              industries: industries || company.industries || [],
+              industries: industries,
               companySize: companySize || company.companySize,
               website: website || company.website,
               email: email,
@@ -452,12 +466,11 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         if (!company) {
           // Create new company record
           const companySlug = await generateSlug(companyName);
-          console.log('📝 Creating company record:', { name: companyName, industry, companySize, website, slug: companySlug, companyAccountType });
+          console.log('📝 Creating company record:', { name: companyName, industries, companySize, website, slug: companySlug, companyAccountType });
           company = await Company.create({
             name: companyName,
             slug: companySlug,
-            industry: industry || 'Other',
-            industries: industries || [],
+            industries: industries,
             companySize: companySize || '1-50',
             website: website,
             email: email,
@@ -623,7 +636,6 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           company: company ? {
             id: company.id,
             name: company.name,
-            industry: company.industry,
             industries: company.industries || [],
             companySize: company.companySize,
             website: company.website,
@@ -838,7 +850,6 @@ router.post('/login', validateLogin, async (req, res) => {
         responseData.company = {
           id: company.id,
           name: company.name,
-          industry: company.industry,
           industries: company.industries || [],
           companySize: company.companySize,
           website: company.website,

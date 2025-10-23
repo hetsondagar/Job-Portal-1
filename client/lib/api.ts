@@ -71,12 +71,17 @@ export interface User {
 export interface Company {
   id: string;
   name: string;
-  industry: string;
+  industries: string[]; // Primary field for multiple industries
   companySize: string;
   website?: string;
   email: string;
   phone?: string;
   region?: string;
+  logo?: string;
+  placeholderImage?: string;
+  isActive?: boolean;
+  isVerified?: boolean;
+  verificationStatus?: string;
 }
 
 export interface AuthResponse {
@@ -104,8 +109,7 @@ export interface EmployerSignupData {
   companyId?: string; // Optional when creating new company
   phone: string;
   companySize?: string;
-  industry?: string;
-  industries?: string[]; // Support for multiple industries
+  industries: string[]; // Always use array for industries
   website?: string;
   region?: string;
   role?: string;

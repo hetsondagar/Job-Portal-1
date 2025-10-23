@@ -357,7 +357,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'industries', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'created_at']
+          attributes: ['id', 'name', 'email', 'industries', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'created_at']
         },
         // Temporarily disabled Job includes to avoid company_id column errors
         {
@@ -680,7 +680,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'created_at']
+          attributes: ['id', 'name', 'email', 'industries', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'created_at']
         },
         {
           model: User,
@@ -1486,7 +1486,7 @@ router.get('/companies/export', async (req, res) => {
         company.name || '',
         company.email || '',
         company.phone || '',
-        company.industry || '',
+        (company.industries && company.industries.length > 0 ? company.industries[0] : '') || '',
         company.sector || '',
         company.region || '',
         company.isActive ? 'Active' : 'Inactive',

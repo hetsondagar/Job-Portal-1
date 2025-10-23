@@ -242,7 +242,7 @@ AdminNotification.createCompanyRegistrationNotification = async function(company
     relatedCompanyId: companyData.id,
     metadata: {
       companyName: companyData.name,
-      companyIndustry: companyData.industry,
+      companyIndustry: companyData.industries && companyData.industries.length > 0 ? companyData.industries[0] : 'Other',
       companySize: companyData.companySize,
       contactEmail: userData.email,
       contactName: `${userData.first_name} ${userData.last_name}`,

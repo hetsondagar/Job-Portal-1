@@ -534,6 +534,10 @@ export function EmployerProfileCompletionDialog({
   const [showCompanyTypesDropdown, setShowCompanyTypesDropdown] = useState(false)
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
   const [companyData, setCompanyData] = useState<any>(null)
+  const [companyLogo, setCompanyLogo] = useState<File | null>(null)
+  const [companyPlaceholder, setCompanyPlaceholder] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [placeholderPreview, setPlaceholderPreview] = useState<string | null>(null)
 
   // Multi-select options
   const natureOfBusinessOptions = [
@@ -617,6 +621,30 @@ export function EmployerProfileCompletionDialog({
       }))
     }
   }, [user])
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setCompanyLogo(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handlePlaceholderUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setCompanyPlaceholder(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setPlaceholderPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const handleSubmit = async () => {
     // Validate required fields based on current step
@@ -1000,13 +1028,29 @@ export function EmployerProfileCompletionDialog({
                     Company Logo
                   </Label>
                   <div className="flex items-center space-x-4">
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
-                      <Building2 className="w-8 h-8 text-gray-400" />
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden">
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="w-8 h-8 text-gray-400" />
+                      )}
                     </div>
                     <div className="flex-1">
-                      <Button type="button" variant="outline" className="w-full">
+                      <input
+                        type="file"
+                        id="companyLogo"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => document.getElementById('companyLogo')?.click()}
+                      >
                         <Upload className="w-4 h-4 mr-2" />
-                        Upload Logo
+                        {companyLogo ? 'Change Logo' : 'Upload Logo'}
                       </Button>
                       <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 2MB. Recommended: 200x200px</p>
                     </div>
@@ -1019,52 +1063,35 @@ export function EmployerProfileCompletionDialog({
                     Company Placeholder Image
                   </Label>
                   <div className="flex items-center space-x-4">
-                    <div className="w-32 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
-                      <Image className="w-6 h-6 text-gray-400" />
+                    <div className="w-32 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden">
+                      {placeholderPreview ? (
+                        <img src={placeholderPreview} alt="Placeholder preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Image className="w-6 h-6 text-gray-400" />
+                      )}
                     </div>
                     <div className="flex-1">
-                      <Button type="button" variant="outline" className="w-full">
+                      <input
+                        type="file"
+                        id="companyPlaceholder"
+                        accept="image/*"
+                        onChange={handlePlaceholderUpload}
+                        className="hidden"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => document.getElementById('companyPlaceholder')?.click()}
+                      >
                         <Upload className="w-4 h-4 mr-2" />
-                        Upload Placeholder
+                        {companyPlaceholder ? 'Change Image' : 'Upload Placeholder'}
                       </Button>
                       <p className="text-xs text-gray-500 mt-1">Optional: Company office, team, or product image</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Brand Colors */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Brand Colors (Optional)
-                  </Label>
-                  <div className="flex space-x-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-sm"></div>
-                      <span className="text-xs text-gray-600">Primary</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-gray-500 rounded-full border-2 border-white shadow-sm"></div>
-                      <span className="text-xs text-gray-600">Secondary</span>
-                    </div>
-                    <Button type="button" variant="outline" size="sm">
-                      <Palette className="w-3 h-3 mr-1" />
-                      Customize
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Skip Option */}
-                <div className="text-center pt-4">
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setCurrentStep(currentStep + 1)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    Skip for now
-                  </Button>
-                </div>
               </div>
             </div>
           )}
@@ -1307,5 +1334,4 @@ export function EmployerProfileCompletionDialog({
     </Dialog>
   )
 }
-
 

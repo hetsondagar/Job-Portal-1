@@ -1009,7 +1009,7 @@ router.post('/sync-google-profile', async (req, res) => {
     const includeCompany = user.user_type === 'employer' ? {
       model: Company,
       as: 'company',
-      attributes: ['id', 'name', 'slug', 'industry', 'companySize', 'email', 'phone', 'contactPerson', 'contactEmail', 'contactPhone']
+      attributes: ['id', 'name', 'slug', 'industries', 'companySize', 'email', 'phone', 'contactPerson', 'contactEmail', 'contactPhone']
     } : null;
 
     const updatedUser = await User.findByPk(user.id, {

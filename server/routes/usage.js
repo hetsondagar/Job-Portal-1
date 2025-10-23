@@ -311,7 +311,7 @@ router.get('/activities', authenticateToken, async (req, res) => {
     if (allCompanyIds.length > 0) {
       const companies = await Company.findAll({ 
         where: { id: { [Op.in]: allCompanyIds } }, 
-        attributes: ['id', 'name', 'industry', 'companySize'] 
+        attributes: ['id', 'name', 'industries', 'companySize'] 
       });
       companies.forEach(c => companyIdToCompany.set(c.id, c));
     }
@@ -381,7 +381,7 @@ router.get('/activities', authenticateToken, async (req, res) => {
             status: job.status,
             companyId: job.companyId,
             companyName: company ? company.name : 'Unknown Company',
-            companyIndustry: company ? company.industry : null,
+            companyIndustry: company ? (company.industries && company.industries.length > 0 ? company.industries[0] : 'Other') : null,
             companySize: company ? company.companySize : null
           };
         }

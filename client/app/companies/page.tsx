@@ -156,6 +156,8 @@ interface Company {
 
   verificationStatus?: string
 
+  placeholderImage?: string
+
 }
 
 
@@ -1818,6 +1820,11 @@ export default function CompaniesPage() {
       companyType: '',
 
       urgent: false,
+
+      isActive: c.isActive !== false, // Default to true if not specified
+      isVerified: c.isVerified || false,
+      verificationStatus: c.verificationStatus || 'pending',
+      placeholderImage: c.placeholderImage || null,
 
     }
 
@@ -3941,9 +3948,20 @@ export default function CompaniesPage() {
 
                           <div className="flex flex-col lg:flex-row gap-2 lg:gap-3">
 
-                            <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }}>
+                            <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }} className="relative">
 
-                              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg flex-shrink-0 mx-auto lg:mx-0">
+                              {/* Placeholder background image */}
+                              {company.placeholderImage && (
+                                <div className="absolute inset-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden opacity-20">
+                                  <img 
+                                    src={company.placeholderImage} 
+                                    alt={`${company.name} background`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+
+                              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg flex-shrink-0 mx-auto lg:mx-0 relative z-10">
 
                                 <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
 
@@ -3986,23 +4004,19 @@ export default function CompaniesPage() {
                                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 h-8 overflow-hidden">
 
                                     {company.industries && company.industries.length > 0 ? (
-                                      <>
-                                        {company.industries.slice(0, 2).map((industry: string, index: number) => (
-                                          <Badge
-                                            key={index}
-                                            className={`${industryColors.badge} text-xs sm:text-sm`}
-                                          >
-                                            {industry}
-                                          </Badge>
-                                        ))}
-                                        {company.industries.length > 2 && (
-                                          <Badge
-                                            className={`${industryColors.badge} text-xs sm:text-sm`}
-                                          >
-                                            +{company.industries.length - 2} more
-                                          </Badge>
-                                        )}
-                                      </>
+                                      company.industries.length === 1 ? (
+                                        <Badge
+                                          className={`${industryColors.badge} text-xs sm:text-sm`}
+                                        >
+                                          {company.industries[0]}
+                                        </Badge>
+                                      ) : (
+                                        <Badge
+                                          className="bg-gradient-to-r from-indigo-100 via-purple-100 to-blue-100 text-indigo-800 border-indigo-200 text-xs sm:text-sm"
+                                        >
+                                          Multi Industry
+                                        </Badge>
+                                      )
                                     ) : (
                                       <Badge
                                         className={`${industryColors.badge} text-xs sm:text-sm`}
@@ -4372,7 +4386,7 @@ export default function CompaniesPage() {
 
       {/* Footer */}
 
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-12 sm:mt-16">
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-6 sm:py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-12 sm:mt-16">
 
         <div className="max-w-7xl mx-auto">
 

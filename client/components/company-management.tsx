@@ -161,6 +161,30 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
     }
   }
 
+  const handleSetPlaceholder = async (photoId: string) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const res = await fetch(`${base}/companies/${companyId}/photos/${photoId}/set-placeholder`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.success) {
+        toast.success('Placeholder image set successfully')
+        // Update photos to reflect the new placeholder status
+        setPhotos(prev => prev.map(p => ({
+          ...p,
+          isPlaceholder: p.id === photoId
+        })))
+      } else {
+        toast.error(data?.message || 'Failed to set placeholder')
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to set placeholder')
+    }
+  }
+
   const handleLogoUpload = async (file: File) => {
     if (!file) return
     try {
@@ -284,29 +308,43 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="industry">Industry</Label>
+                <Label htmlFor="industries">Industries</Label>
                 <Button
                   variant="outline"
                   className="w-full justify-between"
                   onClick={() => setShowIndustryDropdown(true)}
                 >
-                  <span>{formData.industry || "Select industry"}</span>
+                  <span>{formData.industries && formData.industries.length > 0 ? `${formData.industries.length} industr${formData.industries.length > 1 ? 'ies' : 'y'} selected` : "Select industries"}</span>
                   <ChevronDown className="w-4 h-4" />
                 </Button>
                 
+                {formData.industries && formData.industries.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.industries.map((industry: string, index: number) => (
+                      <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
+                        {industry}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newIndustries = formData.industries.filter((_: string, i: number) => i !== index)
+                            handleInputChange("industries", newIndustries)
+                          }}
+                          className="ml-2 hover:text-blue-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
                 {showIndustryDropdown && (
                   <IndustryDropdown
-                    selectedIndustries={formData.industry ? [formData.industry] : []}
+                    selectedIndustries={formData.industries || []}
                     onIndustryChange={(industries: string[]) => {
-                      // For company settings, we only allow single selection
-                      if (industries.length > 0) {
-                        handleInputChange("industry", industries[0])
-                      } else {
-                        handleInputChange("industry", "")
-                      }
+                      handleInputChange("industries", industries)
                     }}
                     onClose={() => setShowIndustryDropdown(false)}
-                    hideSelectAllButtons={true}
                   />
                 )}
               </div>
@@ -341,18 +379,25 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
 
             {/* Company Photos */}
             <div className="space-y-2">
-              <Label>Workplace Photos</Label>
+              <Label>Workplace Photos (Max 5)</Label>
               <div className="flex items-center gap-3">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handlePhotoUpload(file)
+                    if (file) {
+                      if (photos.length >= 5) {
+                        toast.error("Maximum 5 photos allowed")
+                        return
+                      }
+                      handlePhotoUpload(file)
+                    }
                   }}
-                  disabled={uploadingPhoto}
+                  disabled={uploadingPhoto || photos.length >= 5}
                 />
                 {uploadingPhoto && <span className="text-sm">Uploading...</span>}
+                {photos.length >= 5 && <span className="text-sm text-orange-600">Maximum photos reached</span>}
               </div>
               {photos.length > 0 && (
                 <div className="grid grid-cols-3 gap-3 mt-3">
@@ -370,13 +415,29 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                           console.log('🔍 Photo data:', p);
                         }}
                       />
-                      <button
-                        onClick={() => handlePhotoDelete(p.id)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        title="Delete photo"
-                      >
-                        ×
-                      </button>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSetPlaceholder(p.id)}
+                            className="bg-blue-500 text-white rounded px-2 py-1 text-xs hover:bg-blue-600"
+                            title="Set as placeholder image"
+                          >
+                            Set Placeholder
+                          </button>
+                          <button
+                            onClick={() => handlePhotoDelete(p.id)}
+                            className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                            title="Delete photo"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      {p.isPlaceholder && (
+                        <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                          Placeholder
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -594,8 +655,10 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               
               <div className="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                 <Globe className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                <div className="text-sm text-slate-600 dark:text-slate-300">Industry</div>
-                <div className="font-semibold text-slate-900 dark:text-white">{company.industry || 'N/A'}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-300">Industries</div>
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  {company.industries && company.industries.length > 0 ? company.industries.join(', ') : 'N/A'}
+                </div>
               </div>
               
               <div className="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
@@ -621,8 +684,10 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                   </div>
                   
                   <div>
-                    <Label className="text-sm text-slate-500">Industry</Label>
-                    <p className="font-medium">{company.industry || 'Not specified'}</p>
+                    <Label className="text-sm text-slate-500">Industries</Label>
+                    <p className="font-medium">
+                      {company.industries && company.industries.length > 0 ? company.industries.join(', ') : 'Not specified'}
+                    </p>
                   </div>
                   
                   <div>

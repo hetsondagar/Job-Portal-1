@@ -18,11 +18,11 @@ export function EmployerDashboardFooter() {
         <div className="absolute bottom-10 right-10 w-28 h-28 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Company Info */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-3 mb-6">
+            <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
@@ -31,7 +31,7 @@ export function EmployerDashboardFooter() {
                 <p className="text-sm text-slate-600">Find the best talent for your company</p>
               </div>
             </div>
-            <p className="text-slate-600 mb-6 max-w-md leading-relaxed">
+            <p className="text-slate-600 mb-4 max-w-md leading-relaxed">
               Connect with top talent and streamline your hiring process with our comprehensive employer dashboard. 
               Post jobs, manage applications, and grow your team with confidence.
             </p>
@@ -53,7 +53,7 @@ export function EmployerDashboardFooter() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-semibold text-slate-900 mb-4">Quick Links</h4>
+            <h4 className="text-lg font-semibold text-slate-900 mb-3">Quick Links</h4>
             <div className="space-y-3">
               <Link href="/employer-dashboard" className="block text-slate-600 hover:text-blue-600 transition-colors">
                 Dashboard
@@ -75,7 +75,7 @@ export function EmployerDashboardFooter() {
 
           {/* Support */}
           <div>
-            <h4 className="text-lg font-semibold text-slate-900 mb-4">Support</h4>
+            <h4 className="text-lg font-semibold text-slate-900 mb-3">Support</h4>
             <div className="space-y-3">
               <Link href="/help" className="block text-slate-600 hover:text-blue-600 transition-colors">
                 Help Center
@@ -97,7 +97,7 @@ export function EmployerDashboardFooter() {
         </div>
 
         {/* Contact Info */}
-        <div className="mt-12 pt-8 border-t border-white/40">
+        <div className="mt-8 pt-6 border-t border-white/40">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/50 backdrop-blur-md border border-white/30 rounded-xl flex items-center justify-center">
@@ -130,7 +130,7 @@ export function EmployerDashboardFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-8 pt-6 border-t border-white/40 flex flex-col md:flex-row items-center justify-between">
+        <div className="mt-6 pt-4 border-t border-white/40 flex flex-col md:flex-row items-center justify-between">
           <div className="flex items-center space-x-4 text-sm text-slate-600">
             <p>&copy; 2024 Employer Portal. All rights reserved.</p>
           </div>

@@ -14,8 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
-import { EmployerNavbar } from "@/components/employer-navbar"
-import { EmployerFooter } from "@/components/employer-footer"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
@@ -46,7 +46,7 @@ export default function EmployerSettingsPage() {
     avatar: "",
     companyLogo: "",
     companySize: "",
-    industry: "",
+    industries: [] as string[],
     website: "",
     address: "",
     about: "",
@@ -131,7 +131,7 @@ export default function EmployerSettingsPage() {
           avatar: userProfile.avatar || '',
           companyLogo: companyData?.logo || '',
           companySize: companyData?.companySize || '',
-          industry: companyData?.industry || '',
+          industries: companyData?.industries || [],
           website: companyData?.website || '',
           address: companyData?.address || '',
           about: companyData?.description || '',
@@ -248,7 +248,7 @@ export default function EmployerSettingsPage() {
           try {
             const companyUpdateData = {
               name: formData.company,
-              industry: formData.industry,
+              industries: formData.industries,
               companySize: formData.companySize,
               website: formData.website,
               description: formData.about,
@@ -328,9 +328,9 @@ export default function EmployerSettingsPage() {
   // Show loading state while checking authentication or loading data
   if (loading || loadingData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <EmployerNavbar />
-        <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+        <EmployerDashboardNavbar />
+        <div className="flex items-center justify-center min-h-screen pt-20">
           <div className="text-center">
             <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
             <p className="text-slate-600">Loading profile data...</p>
@@ -347,10 +347,19 @@ export default function EmployerSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <EmployerDashboardNavbar />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -777,7 +786,7 @@ export default function EmployerSettingsPage() {
         </Card>
       </div>
 
-      <EmployerFooter />
+      <EmployerDashboardFooter />
     </div>
   )
 } 

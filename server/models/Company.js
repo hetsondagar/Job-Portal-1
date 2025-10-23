@@ -28,18 +28,7 @@ const Company = sequelize.define('Company', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  industry: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    set(value) {
-      if (typeof value === 'string') {
-        this.setDataValue('industry', value.trim());
-      } else {
-        this.setDataValue('industry', value);
-      }
-    }
-  },
-  industries: {
+ industries: {
     type: DataTypes.JSON,
     allowNull: true,
     defaultValue: [],

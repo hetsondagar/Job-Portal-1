@@ -540,7 +540,7 @@ router.get('/clients', authenticateToken, async (req, res) => {
         {
           model: Company,
           as: 'ClientCompany',
-          attributes: ['id', 'name', 'slug', 'logo', 'industry', 'city', 'companyStatus']
+          attributes: ['id', 'name', 'slug', 'logo', 'industries', 'city', 'companyStatus']
         }
       ],
       order: [['created_at', 'DESC']]

@@ -312,9 +312,9 @@ router.get('/', async (req, res) => {
     const companies = await Company.findAll({
       where,
       attributes: [
-        'id', 'name', 'slug', 'logo', 'industry', 'companySize', 'website', 
+        'id', 'name', 'slug', 'logo', 'industries', 'companySize', 'website', 
         'city', 'state', 'country', 'region', 'description', 'foundedYear', 
-        'revenue', 'companyType', 'isFeatured', 'isVerified', 'created_at', 'updated_at',
+        'revenue', 'companyType', 'isFeatured', 'isVerified', 'isActive', 'verificationStatus', 'created_at', 'updated_at',
         // Add claiming fields for registration flow
         'isClaimed', 'createdByAgencyId', 'claimedAt'
       ],
@@ -351,7 +351,7 @@ router.get('/', async (req, res) => {
         profileViews, // Generate some realistic view counts for demo
         // Additional computed fields for frontend compatibility
         location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
-        sector: company.industry, // Map industry to sector for compatibility
+        sector: company.industries && company.industries.length > 0 ? company.industries[0] : 'Other', // Map first industry to sector for compatibility
         employees: company.companySize,
         headquarters: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
         founded: company.foundedYear, // Map foundedYear to founded for compatibility
@@ -427,7 +427,7 @@ router.post('/join', authenticateToken, async (req, res) => {
 // Create a new company
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, industry, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs } = req.body;
+    const { name, industries, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs } = req.body;
     
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
@@ -475,7 +475,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const company = await Company.create({
       name,
       slug: companySlug,
-      industry: industry || 'Other',
+      industries: industries || ['Other'],
       companySize: companySize || '1-50',
       website,
       email: email || req.user.email,
@@ -511,7 +511,7 @@ router.post('/', authenticateToken, async (req, res) => {
         company: {
           id: company.id,
           name: company.name,
-          industry: company.industry,
+          industries: company.industries || [],
           companySize: company.companySize,
           website: company.website,
           email: company.email,
@@ -545,46 +545,44 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// List company photos
-router.get('/:id/photos', async (req, res) => {
+// Set company photo as placeholder
+router.post('/:companyId/photos/:photoId/set-placeholder', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { CompanyPhoto } = require('../config');
-    const photos = await CompanyPhoto.findAll({
-      where: { companyId: id, isActive: true },
-      order: [['display_order', 'ASC'], ['created_at', 'ASC']]
-    });
-    return res.status(200).json({ success: true, data: photos });
-  } catch (error) {
-    console.error('List company photos error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to list photos' });
-  }
-});
-
-// Delete a company photo
-router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
-  try {
-    const { photoId } = req.params;
-    const { CompanyPhoto, Company } = require('../config');
-    const photo = await CompanyPhoto.findByPk(photoId, { include: [{ model: Company, as: 'company' }] });
-    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
-
-    // Must be admin or owner of company
-    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(photo.companyId)) {
+    const { companyId, photoId } = req.params;
+    
+    // Check if user has access to this company
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(companyId)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Delete file from disk (best-effort)
-    try {
-      const absPath = path.join(__dirname, '..', photo.filePath);
-      if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
-    } catch (_) {}
+    // Find the photo
+    const photo = await CompanyPhoto.findByPk(photoId);
+    if (!photo) {
+      return res.status(404).json({ success: false, message: 'Photo not found' });
+    }
 
-    await photo.destroy();
-    return res.status(200).json({ success: true, message: 'Company photo deleted' });
+    // Check if photo belongs to the company
+    if (String(photo.companyId) !== String(companyId)) {
+      return res.status(400).json({ success: false, message: 'Photo does not belong to this company' });
+    }
+
+    // Unset all other placeholder photos for this company
+    await CompanyPhoto.update(
+      { isPlaceholder: false }, 
+      { where: { companyId: companyId } }
+    );
+
+    // Set this photo as placeholder
+    await photo.update({ isPlaceholder: true });
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Placeholder image set successfully',
+      data: photo 
+    });
   } catch (error) {
-    console.error('Delete company photo error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to delete photo' });
+    console.error('Set placeholder error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to set placeholder image' });
   }
 });
 
@@ -607,7 +605,7 @@ router.get('/followed', authenticateToken, async (req, res) => {
       include: [{
         model: Company,
         as: 'company',
-        attributes: ['id', 'name', 'slug', 'industry', 'logo']
+        attributes: ['id', 'name', 'slug', 'industries', 'logo']
       }],
       order: [['followedAt', 'DESC']]
     });
@@ -720,7 +718,7 @@ router.get('/:id', async (req, res) => {
     const companyData = {
       id: company.id,
       name: company.name,
-      industry: company.industry,
+      industries: company.industries || [],
       companySize: company.companySize,
       website: company.website,
       email: company.email,
@@ -749,7 +747,7 @@ router.get('/:id', async (req, res) => {
       companyTypes: company.companyTypes || [],
       // Additional computed fields
       location: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
-      sector: company.industry, // Map industry to sector for compatibility
+      sector: company.industries && company.industries.length > 0 ? company.industries[0] : 'Other', // Map first industry to sector for compatibility
       benefits: company.benefits || [],
       workCulture: company.culture || '',
       featured: company.isFeatured || false,
@@ -869,7 +867,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
-      name, industry, companySize, website, description, address, city, state, country, 
+      name, industries, companySize, website, description, address, city, state, country, 
       whyJoinUs, natureOfBusiness, companyTypes, phone, email, about 
     } = req.body;
     
@@ -897,7 +895,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Update company information
     const updateData = {
       name: name || company.name,
-      industry: industry || company.industry,
+      industries: industries || company.industries || ['Other'],
       companySize: companySize || company.companySize,
       website: website || company.website,
       description: description || about || company.description,
@@ -928,7 +926,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       data: {
         id: company.id,
         name: company.name,
-        industry: company.industry,
+        industries: company.industries || [],
         companySize: company.companySize,
         website: company.website,
         email: company.email,

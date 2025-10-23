@@ -629,7 +629,7 @@ exports.createJob = async (req, res, next) => {
           salaryMax: job.salaryMax,
           salary: job.salary,
           skills: job.skills || [],
-          industry: userCompany?.industry,
+          industry: userCompany?.industries && userCompany.industries.length > 0 ? userCompany.industries[0] : 'Other',
           region: job.region
         };
 
@@ -960,7 +960,7 @@ exports.getAllJobs = async (req, res, next) => {
       {
         model: Company,
         as: 'company',
-        attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone', 'companyType'],
+        attributes: ['id', 'name', 'logo', 'industries', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone', 'companyType'],
         required: Boolean(industry || companyType || companyName) || false,
         where: (() => {
           const where = {};
@@ -999,7 +999,7 @@ exports.getAllJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'HiringCompany',
-          attributes: ['id', 'name', 'logo', 'industry', 'city', 'companySize', 'website'],
+          attributes: ['id', 'name', 'logo', 'industries', 'city', 'companySize', 'website'],
           required: false
         },
         {
@@ -1085,13 +1085,13 @@ exports.getJobById = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'logo', 'industry', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone'],
+          attributes: ['id', 'name', 'logo', 'industries', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone'],
           required: false // Make it optional since companyId can be NULL
         },
         {
           model: Company,
           as: 'HiringCompany',
-          attributes: ['id', 'name', 'logo', 'industry', 'city', 'companySize', 'website'],
+          attributes: ['id', 'name', 'logo', 'industries', 'city', 'companySize', 'website'],
           required: false // Optional - only for agency jobs
         },
         {
@@ -1236,7 +1236,7 @@ exports.getSimilarJobs = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'isFeatured', 'rating', 'totalReviews'],
+          attributes: ['id', 'name', 'industries', 'companySize', 'website', 'isFeatured', 'rating', 'totalReviews'],
           required: false
         },
         {
@@ -1480,7 +1480,7 @@ exports.getSimilarJobs = async (req, res, next) => {
           {
             model: Company,
             as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'isFeatured', 'rating', 'totalReviews'],
+          attributes: ['id', 'name', 'industries', 'companySize', 'website', 'isFeatured', 'rating', 'totalReviews'],
             required: false
           },
           {
@@ -1566,13 +1566,17 @@ exports.getSimilarJobs = async (req, res, next) => {
       factorScores.experienceMatch = experienceScore;
 
       // 6. Industry Match with fuzzy matching
-      if (currentJob.company?.industry && job.company?.industry) {
-        const industryScore = calculateAdvancedTextSimilarity(
-          currentJob.company.industry, 
-          job.company.industry
-        );
-        score += industryScore * weights.industryMatch;
-        factorScores.industryMatch = industryScore;
+      if (currentJob.company?.industries && job.company?.industries) {
+        const currentIndustry = currentJob.company.industries.length > 0 ? currentJob.company.industries[0] : '';
+        const jobIndustry = job.company.industries.length > 0 ? job.company.industries[0] : '';
+        if (currentIndustry && jobIndustry) {
+          const industryScore = calculateAdvancedTextSimilarity(
+            currentIndustry, 
+            jobIndustry
+          );
+          score += industryScore * weights.industryMatch;
+          factorScores.industryMatch = industryScore;
+        }
       }
 
       // 7. Job Type Match with compatibility matrix
@@ -1718,7 +1722,7 @@ exports.getSimilarJobs = async (req, res, next) => {
       isPremium: job.isPremium,
       description: job.description?.substring(0, 150) + (job.description?.length > 150 ? '...' : ''),
       companyInfo: {
-        industry: job.company?.industry,
+        industry: job.company?.industries && job.company.industries.length > 0 ? job.company.industries[0] : 'Other',
         size: job.company?.companySize,
         website: job.company?.website,
         isFeatured: job.company?.isFeatured,
@@ -1875,7 +1879,7 @@ exports.updateJob = async (req, res, next) => {
       metadataUpdate.consultancyName = consultancyName || existingMetadata.consultancyName || null;
       metadataUpdate.hiringCompany = {
         name: hiringCompanyName || existingMetadata.hiringCompany?.name || null,
-        industry: hiringCompanyIndustry || existingMetadata.hiringCompany?.industry || null,
+        industry: hiringCompanyIndustry || (existingMetadata.hiringCompany?.industries && existingMetadata.hiringCompany.industries.length > 0 ? existingMetadata.hiringCompany.industries[0] : null) || null,
         description: hiringCompanyDescription || existingMetadata.hiringCompany?.description || null
       };
       metadataUpdate.showHiringCompanyDetails = showHiringCompanyDetails !== undefined 
@@ -2137,7 +2141,7 @@ exports.getJobsByCompany = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize'],
+          attributes: ['id', 'name', 'industries', 'companySize'],
           required: false // Make it optional since companyId can be NULL
         }
       ],
@@ -2749,7 +2753,7 @@ exports.getJobsByCompany = async (req, res, next) => {
 
           as: 'company',
 
-          attributes: ['id', 'name', 'industry', 'companySize'],
+          attributes: ['id', 'name', 'industries', 'companySize'],
           required: false // Make it optional since companyId can be NULL
 
         }

@@ -269,9 +269,12 @@ export function EmployerDashboardNavbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 text-slate-700 hover:text-blue-600">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={company?.logo || "/placeholder-logo.png"} />
+                    <AvatarImage src={company?.logo || company?.companyLogo || "/placeholder-logo.png"} />
                     <AvatarFallback>
-                      {displayUser?.firstName?.[0]}{displayUser?.lastName?.[0]}
+                      {company?.logo || company?.companyLogo ? 
+                        <Building2 className="w-4 h-4" /> : 
+                        `${displayUser?.firstName?.[0]}${displayUser?.lastName?.[0]}`
+                      }
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-left">
@@ -294,12 +297,6 @@ export function EmployerDashboardNavbar() {
                   <Link href="/employer-dashboard/settings" className="flex items-center space-x-2">
                     <Settings className="w-4 h-4" />
                     <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center space-x-2">
-                    <User className="w-4 h-4" />
-                    <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
