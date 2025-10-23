@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
@@ -34,6 +34,7 @@ import Link from "next/link"
 export default function AdminDashboardPage() {
   const { user, loading: authLoading, logout } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
@@ -56,6 +57,22 @@ export default function AdminDashboardPage() {
 
     loadStats()
   }, [user, authLoading, router, isLoggingOut])
+
+  // Handle tab persistence from URL
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab')
+    if (tabFromUrl && ['overview', 'users', 'companies', 'jobs', 'notifications'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [searchParams])
+
+  // Handle tab change and update URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', value)
+    window.history.replaceState({}, '', url.toString())
+  }
 
   const loadStats = async () => {
     try {
@@ -161,7 +178,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-5 bg-white border-gray-200 shadow-sm">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4 mr-2" />
@@ -565,7 +582,7 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-400">Pending Verification</p>
-                          <p className="text-2xl font-bold text-yellow-400">{stats?.companies?.unverified || 0}</p>
+                          <p className="text-2xl font-bold text-yellow-400">{stats?.companies?.pending || 0}</p>
                         </div>
                         <Clock className="w-8 h-8 text-yellow-400" />
                       </div>

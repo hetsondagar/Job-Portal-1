@@ -98,6 +98,38 @@ class AdminNotificationService {
   }
 
   /**
+   * Create notification for job posting milestone
+   */
+  static async notifyJobPostingMilestone(milestone, count) {
+    try {
+      console.log(`🔔 Creating admin notification for job posting milestone:`, {
+        milestone,
+        count
+      });
+
+      const notification = await AdminNotification.create({
+        type: `job_posting_milestone_${milestone}`,
+        title: `🎉 Job Portal Milestone: ${milestone} Jobs Posted!`,
+        message: `Congratulations! The portal has reached a major milestone with ${count} total jobs posted. This shows the growing trust and engagement of employers on our platform.`,
+        shortMessage: `Portal now has ${count} jobs posted!`,
+        category: 'milestone',
+        priority: 'medium',
+        metadata: {
+          milestone,
+          count,
+          milestoneType: 'job_posting'
+        }
+      });
+
+      console.log(`✅ Job posting milestone notification created:`, notification.id);
+      return notification;
+    } catch (error) {
+      console.error('❌ Error creating job posting milestone notification:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check and create milestone notifications if needed
    */
   static async checkJobseekerMilestones() {
@@ -125,6 +157,36 @@ class AdminNotificationService {
       }
     } catch (error) {
       console.error('❌ Error checking jobseeker milestones:', error);
+    }
+  }
+
+  /**
+   * Check and create job posting milestone notifications
+   */
+  static async checkJobPostingMilestones() {
+    try {
+      const Job = require('../models/Job');
+      const totalJobsCount = await Job.count();
+
+      const milestones = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+      
+      for (const milestone of milestones) {
+        if (totalJobsCount >= milestone) {
+          // Check if we already have a notification for this milestone
+          const existingNotification = await AdminNotification.findOne({
+            where: {
+              type: `job_posting_milestone_${milestone}`
+            }
+          });
+
+          if (!existingNotification) {
+            await this.notifyJobPostingMilestone(milestone, totalJobsCount);
+            console.log(`🎉 Created job posting milestone notification for ${milestone} jobs`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error checking job posting milestones:', error);
     }
   }
 

@@ -124,6 +124,7 @@ router.put('/read-all', authenticateToken, requireAdmin, async (req, res) => {
 router.post('/check-milestones', authenticateToken, requireAdmin, async (req, res) => {
   try {
     await AdminNotificationService.checkJobseekerMilestones();
+    await AdminNotificationService.checkJobPostingMilestones();
     
     res.json({
       success: true,

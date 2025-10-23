@@ -357,7 +357,7 @@ router.get('/users/:userId/details', async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industry', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'created_at']
+          attributes: ['id', 'name', 'email', 'industry', 'industries', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'created_at']
         },
         // Temporarily disabled Job includes to avoid company_id column errors
         {
@@ -470,6 +470,9 @@ router.get('/users/:userId/details', async (req, res) => {
 
     const userDetails = {
       ...user.toJSON(),
+      // Ensure timestamps are properly mapped
+      createdAt: user.created_at || user.createdAt,
+      updatedAt: user.updated_at || user.updatedAt,
       postedJobs: postedJobs || [],
       statistics: {
         totalApplications,
@@ -1089,9 +1092,6 @@ router.get('/companies', async (req, res) => {
       } else if (verification === 'unverified') {
         whereClause.verificationStatus = 'unverified';
       }
-    } else {
-      // By default, show only verified companies in the list
-      whereClause.verificationStatus = 'verified';
     }
 
     if (search) {
@@ -1151,7 +1151,16 @@ router.get('/companies/region/:region', async (req, res) => {
     }
 
     if (verification && verification !== 'all') {
-      whereClause.isVerified = verification === 'verified';
+      // Support both old isVerified and new verificationStatus
+      if (verification === 'verified' || verification === 'approved') {
+        whereClause.verificationStatus = 'verified';
+      } else if (verification === 'pending') {
+        whereClause.verificationStatus = 'pending';
+      } else if (verification === 'rejected') {
+        whereClause.verificationStatus = 'unverified';
+      } else if (verification === 'unverified') {
+        whereClause.verificationStatus = 'unverified';
+      }
     }
 
     if (search) {
@@ -1225,7 +1234,7 @@ router.patch('/companies/:id/status', async (req, res) => {
 router.patch('/companies/:id/verification', async (req, res) => {
   try {
     const { id } = req.params;
-    const { isVerified } = req.body;
+    const { verificationStatus } = req.body;
 
     const company = await Company.findByPk(id);
     if (!company) {
@@ -1235,12 +1244,12 @@ router.patch('/companies/:id/verification', async (req, res) => {
       });
     }
 
-    await company.update({ isVerified });
+    await company.update({ verificationStatus });
 
     res.json({
       success: true,
-      message: `Company ${isVerified ? 'verified' : 'unverified'} successfully`,
-      data: { company: { id: company.id, isVerified: company.isVerified } }
+      message: `Company ${verificationStatus === 'verified' ? 'verified' : 'unverified'} successfully`,
+      data: { company: { id: company.id, verificationStatus: company.verificationStatus } }
     });
   } catch (error) {
     console.error('Error updating company verification:', error);
@@ -1452,7 +1461,16 @@ router.get('/companies/export', async (req, res) => {
     }
 
     if (verification && verification !== 'all') {
-      whereClause.isVerified = verification === 'verified';
+      // Support both old isVerified and new verificationStatus
+      if (verification === 'verified' || verification === 'approved') {
+        whereClause.verificationStatus = 'verified';
+      } else if (verification === 'pending') {
+        whereClause.verificationStatus = 'pending';
+      } else if (verification === 'rejected') {
+        whereClause.verificationStatus = 'unverified';
+      } else if (verification === 'unverified') {
+        whereClause.verificationStatus = 'unverified';
+      }
     }
 
     const companies = await Company.findAll({
@@ -1472,7 +1490,7 @@ router.get('/companies/export', async (req, res) => {
         company.sector || '',
         company.region || '',
         company.isActive ? 'Active' : 'Inactive',
-        company.isVerified ? 'Yes' : 'No',
+        company.verificationStatus === 'verified' ? 'Yes' : 'No',
         company.website || '',
         company.address || '',
         company.city || '',

@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { 
   Building2, CheckCircle2, XCircle, FileText, Download, 
-  Briefcase, Users, Star, Clock, AlertCircle, FileCheck, ShieldCheck 
+  Briefcase, Users, Star, Clock, AlertCircle, FileCheck, ShieldCheck,
+  Mail, Phone, Globe, MapPin, Calendar, Eye, Trash2, Edit
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,8 +12,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import { apiService } from "@/lib/api"
+import { useEffect } from "react"
 
 interface CompanyDialogProps {
   company: any
@@ -38,6 +42,38 @@ export function CompanyManagementDialog({
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [rejectionNotes, setRejectionNotes] = useState("")
+  const [detailedCompany, setDetailedCompany] = useState<any>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [showJobsList, setShowJobsList] = useState(false)
+
+  // Fetch detailed company data when dialog opens
+  useEffect(() => {
+    if (open && company?.id) {
+      fetchDetailedCompany()
+    }
+  }, [open, company?.id])
+
+  const fetchDetailedCompany = async () => {
+    if (!company?.id) return
+    
+    try {
+      setLoadingDetails(true)
+      const response = await apiService.getCompanyDetails(company.id)
+      
+      if (response.success && response.data) {
+        setDetailedCompany(response.data)
+      } else {
+        // Fallback to the company data from the list
+        setDetailedCompany(company)
+      }
+    } catch (error) {
+      console.error('Error fetching detailed company data:', error)
+      // Fallback to the company data from the list
+      setDetailedCompany(company)
+    } finally {
+      setLoadingDetails(false)
+    }
+  }
 
   const getImageUrl = (path: string) => {
     if (!path) return null
@@ -49,26 +85,26 @@ export function CompanyManagementDialog({
     switch (status) {
       case 'verified':
       case 'premium_verified':
-        return <Badge className="bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1" />Verified</Badge>
+        return <Badge className="bg-green-600 text-white"><CheckCircle2 className="w-3 h-3 mr-1" />Verified</Badge>
       case 'pending':
-        return <Badge className="bg-amber-600"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+        return <Badge className="bg-amber-600 text-white"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
       case 'rejected':
-        return <Badge className="bg-red-600"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>
+        return <Badge className="bg-red-600 text-white"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>
       default:
-        return <Badge className="bg-gray-600"><AlertCircle className="w-3 h-3 mr-1" />Unverified</Badge>
+        return <Badge className="bg-gray-600 text-white"><AlertCircle className="w-3 h-3 mr-1" />Unverified</Badge>
     }
   }
 
   const getAccountTypeBadge = (type: string) => {
     switch (type) {
       case 'direct_employer':
-        return <Badge variant="outline" className="border-blue-500 text-blue-400">Direct Employer</Badge>
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Direct Employer</Badge>
       case 'agency':
       case 'recruiting_agency':
       case 'consulting_firm':
-        return <Badge variant="outline" className="border-purple-500 text-purple-400">Agency/Consultancy</Badge>
+        return <Badge variant="outline" className="border-purple-500 text-purple-600">Agency/Consultancy</Badge>
       default:
-        return <Badge variant="outline">Unknown</Badge>
+        return <Badge variant="outline" className="border-gray-500 text-gray-600">Unknown</Badge>
     }
   }
 
@@ -83,9 +119,20 @@ export function CompanyManagementDialog({
     setRejectionNotes('')
   }
 
+  const handleVerifyClick = () => {
+    onApprove(company.id)
+  }
+
+  const handleDeactivateClick = () => {
+    onToggleStatus(company.id, company.isActive)
+  }
+
   if (!company) return null
 
-  const verificationDocs = company.verificationDocuments || {}
+  // Use detailed company data if available, otherwise fallback to company from list
+  const currentCompany = detailedCompany || company
+
+  const verificationDocs = currentCompany.verificationDocuments || {}
   const documents = verificationDocs.documents || []
   const gstNumber = verificationDocs.gstNumber || verificationDocs.data?.gstNumber || ''
   const panNumber = verificationDocs.panNumber || verificationDocs.data?.panNumber || ''
@@ -95,238 +142,514 @@ export function CompanyManagementDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
+            <DialogTitle className="flex items-center text-gray-900">
               <Building2 className="w-5 h-5 mr-2" />
               Company Details
             </DialogTitle>
-            <DialogDescription className="text-slate-300">
-              Complete information about {company.name}
+            <DialogDescription className="text-gray-600">
+              Complete information about {currentCompany.name}
             </DialogDescription>
           </DialogHeader>
 
+          {loadingDetails && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-gray-600">Loading company details...</span>
+            </div>
+          )}
+
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-700">
-              <TabsTrigger value="details">Company Details</TabsTrigger>
-              <TabsTrigger value="verification">
+            <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+              <TabsTrigger value="details" className="text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900">Company Details</TabsTrigger>
+              <TabsTrigger value="verification" className="text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900">
                 <FileCheck className="w-4 h-4 mr-2" />
-                Verification {company.verificationStatus === 'pending' && <Badge className="ml-2 bg-amber-600">Pending</Badge>}
+                Verification {currentCompany.verificationStatus === 'pending' && <Badge className="ml-2 bg-amber-600 text-white">Pending</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="statistics">Statistics</TabsTrigger>
+              <TabsTrigger value="statistics" className="text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900">Statistics</TabsTrigger>
             </TabsList>
 
             {/* Company Details Tab */}
             <TabsContent value="details" className="space-y-6 mt-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center overflow-hidden">
-                  {company.logo ? (
-                    <img src={getImageUrl(company.logo) || ''} alt={company.name} className="w-full h-full object-cover" />
+              <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {currentCompany.logo ? (
+                    <img src={getImageUrl(currentCompany.logo) || ''} alt={currentCompany.name} className="w-full h-full object-cover" />
                   ) : (
                     <Building2 className="w-10 h-10 text-white" />
                   )}
                 </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-white">{company.name}</h2>
-                  <p className="text-gray-400">{company.email}</p>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-900 truncate">{currentCompany.name}</h2>
+                  <p className="text-gray-600 truncate">{currentCompany.email}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {company.region && (
-                      <Badge variant="outline" className={company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}>
-                        {company.region === 'india' ? 'India' : 'Gulf'}
+                    {currentCompany.region && (
+                      <Badge variant="outline" className={currentCompany.region === 'india' ? 'border-orange-500 text-orange-600' : 'border-cyan-500 text-cyan-600'}>
+                        {currentCompany.region === 'india' ? 'India' : 'Gulf'}
                       </Badge>
                     )}
-                    {getVerificationStatusBadge(company.verificationStatus || (company.isVerified ? 'verified' : 'unverified'))}
-                    {getAccountTypeBadge(company.companyAccountType)}
-                    <Badge variant={company.isActive ? 'default' : 'destructive'} className={company.isActive ? 'bg-blue-600' : 'bg-gray-600'}>
-                      {company.isActive ? 'Active' : 'Inactive'}
+                    {getVerificationStatusBadge(currentCompany.verificationStatus || 'unverified')}
+                    {getAccountTypeBadge(currentCompany.companyAccountType)}
+                    <Badge variant={currentCompany.isActive ? 'default' : 'destructive'} className={currentCompany.isActive ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}>
+                      {currentCompany.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                 </div>
               </div>
 
+              <Separator />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div><label className="text-sm text-gray-400">Industry</label><p className="text-white">{company.industry || 'Not specified'}</p></div>
-                  <div><label className="text-sm text-gray-400">Sector</label><p className="text-white">{company.sector || 'Not specified'}</p></div>
-                  <div><label className="text-sm text-gray-400">Company Size</label><p className="text-white">{company.companySize || 'Not specified'}</p></div>
-                  <div><label className="text-sm text-gray-400">Founded Year</label><p className="text-white">{company.foundedYear || 'Not specified'}</p></div>
-                  <div><label className="text-sm text-gray-400">Website</label><p className="text-white">{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{company.website}</a> : 'Not provided'}</p></div>
+                {/* Basic Information */}
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900 flex items-center">
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Basic Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Company Name</label>
+                      <p className="text-gray-900">{currentCompany.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Email</label>
+                      <p className="text-gray-900 flex items-center">
+                        <Mail className="w-4 h-4 mr-2" />
+                        {currentCompany.email}
+                      </p>
+                    </div>
+                    {currentCompany.phone_number && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Phone</label>
+                        <p className="text-gray-900 flex items-center">
+                          <Phone className="w-4 h-4 mr-2" />
+                          {currentCompany.phone_number}
+                        </p>
+                      </div>
+                    )}
+                    {currentCompany.website && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Website</label>
+                        <p className="text-gray-900 flex items-center">
+                          <Globe className="w-4 h-4 mr-2" />
+                          <a href={currentCompany.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                            {currentCompany.website}
+                          </a>
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Industries</label>
+                      {currentCompany.industries && currentCompany.industries.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {currentCompany.industries.map((industry: string, index: number) => (
+                            <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
+                              {industry}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-900">{currentCompany.industry || 'Not specified'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Company Size</label>
+                      <p className="text-gray-900">{currentCompany.companySize || currentCompany.company_size || 'Not specified'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Location & Status */}
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900 flex items-center">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Location & Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Region</label>
+                      <p className="text-gray-900">{currentCompany.region || 'Not specified'}</p>
+                    </div>
+                    {currentCompany.address && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Address</label>
+                        <p className="text-gray-900">{currentCompany.address}</p>
+                      </div>
+                    )}
+                    {currentCompany.city && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">City</label>
+                        <p className="text-gray-900">{currentCompany.city}</p>
+                      </div>
+                    )}
+                    {currentCompany.state && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">State</label>
+                        <p className="text-gray-900">{currentCompany.state}</p>
+                      </div>
+                    )}
+                    {currentCompany.country && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Country</label>
+                        <p className="text-gray-900">{currentCompany.country}</p>
                 </div>
-                <div className="space-y-4">
-                  <div><label className="text-sm text-gray-400">Phone</label><p className="text-white">{company.phone || 'Not provided'}</p></div>
-                  <div><label className="text-sm text-gray-400">Address</label><p className="text-white">{company.address || 'Not provided'}</p></div>
-                  <div><label className="text-sm text-gray-400">City</label><p className="text-white">{company.city || 'Not specified'}</p></div>
-                  <div><label className="text-sm text-gray-400">State</label><p className="text-white">{company.state || 'Not specified'}</p></div>
-                  <div><label className="text-sm text-gray-400">Country</label><p className="text-white">{company.country || 'Not specified'}</p></div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Created</label>
+                      <p className="text-gray-900 flex items-center">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {currentCompany.createdAt ? new Date(currentCompany.createdAt).toLocaleDateString() : 'Not available'}
+                      </p>
                 </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {company.description && (
-                <div><label className="text-sm text-gray-400">Description</label><p className="text-white mt-1">{company.description}</p></div>
+              {currentCompany.description && (
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900">Description</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-700">{currentCompany.description}</p>
+                  </CardContent>
+                </Card>
               )}
-
-              <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                <div className="text-sm text-gray-400">Created: {new Date(company.createdAt).toLocaleDateString()}</div>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => onToggleVerification(company.id, company.isVerified)} className="border-white/20 text-white hover:bg-white/10">
-                    {company.isVerified ? <><XCircle className="w-4 h-4 mr-2" />Unverify</> : <><CheckCircle2 className="w-4 h-4 mr-2" />Verify</>}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => onToggleStatus(company.id, company.isActive)} className="border-white/20 text-white hover:bg-white/10">
-                    {company.isActive ? <><XCircle className="w-4 h-4 mr-2" />Deactivate</> : <><CheckCircle2 className="w-4 h-4 mr-2" />Activate</>}
-                  </Button>
-                </div>
-              </div>
             </TabsContent>
 
             {/* Verification Tab */}
             <TabsContent value="verification" className="space-y-6 mt-6">
-              <Card className="bg-slate-700/50 border-slate-600 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="w-8 h-8 text-amber-400" />
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center">
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Verification Status
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Current verification status and documents
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-white">Verification Status</h3>
-                      <p className="text-sm text-gray-400">Review employer verification request</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Status</h3>
+                      {getVerificationStatusBadge(currentCompany.verificationStatus || 'unverified')}
                     </div>
-                  </div>
-                  {getVerificationStatusBadge(company.verificationStatus || 'unverified')}
-                </div>
-
-                {/* Additional Information */}
-                {(gstNumber || panNumber || additionalNotes || submittedBy.email) && (
-                  <div className="bg-slate-800/50 rounded-lg p-4 mb-6">
-                    <h4 className="text-sm font-semibold text-white mb-3 flex items-center"><FileText className="w-4 h-4 mr-2" />Additional Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {gstNumber && <div><span className="text-gray-400">GST Number:</span><span className="text-white ml-2 font-mono">{gstNumber}</span></div>}
-                      {panNumber && <div><span className="text-gray-400">PAN Number:</span><span className="text-white ml-2 font-mono">{panNumber}</span></div>}
-                      {submittedBy.email && <div><span className="text-gray-400">Submitted By:</span><span className="text-white ml-2">{submittedBy.firstName} {submittedBy.lastName} ({submittedBy.email})</span></div>}
+                    {currentCompany.verificationStatus !== 'verified' && (
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={handleVerifyClick}
+                          disabled={processing}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          {processing ? 'Processing...' : 'Approve Verification'}
+                        </Button>
+                        <Button
+                          onClick={() => setShowRejectDialog(true)}
+                          variant="outline"
+                          className="border-red-500 text-red-600 hover:bg-red-50"
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
                     </div>
-                    {additionalNotes && (
-                      <div className="mt-3 pt-3 border-t border-slate-700"><span className="text-gray-400 block mb-1">Notes:</span><p className="text-white text-sm">{additionalNotes}</p></div>
                     )}
                   </div>
-                )}
 
-                {/* Verification Documents */}
-                {documents.length > 0 ? (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-white flex items-center"><FileText className="w-4 h-4 mr-2" />Verification Documents ({documents.length})</h4>
+                  {documents.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Verification Documents</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {documents.map((doc: any, index: number) => (
-                        <Card key={index} className="bg-slate-800/50 border-slate-600 p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1">
-                              <FileText className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-white text-sm truncate">{doc.type || `Document ${index + 1}`}</p>
-                                <p className="text-xs text-gray-400 mt-1 truncate">{doc.filename || doc.url?.split('/').pop() || 'document.pdf'}</p>
-                              </div>
+                          <div key={index} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-gray-900">{doc.type || `Document ${index + 1}`}</h4>
+                              {doc.url && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(doc.url, '_blank')}
+                                  className="text-blue-600 border-blue-500 hover:bg-blue-50"
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View
+                                </Button>
+                              )}
                             </div>
-                            <Button variant="ghost" size="sm" asChild className="flex-shrink-0 ml-2">
-                              <a href={getImageUrl(doc.url) || '#'} target="_blank" rel="noopener noreferrer">
-                                <Download className="w-4 h-4" />
-                              </a>
-                            </Button>
+                            {doc.description && (
+                              <p className="text-sm text-gray-600">{doc.description}</p>
+                            )}
                           </div>
-                        </Card>
                       ))}
+                      </div>
                     </div>
+                  )}
+
+                  {(gstNumber || panNumber) && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Business Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {gstNumber && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-600">GST Number</label>
+                            <p className="text-gray-900">{gstNumber}</p>
+                          </div>
+                        )}
+                        {panNumber && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-600">PAN Number</label>
+                            <p className="text-gray-900">{panNumber}</p>
+                          </div>
+                        )}
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No verification documents submitted</p>
                   </div>
                 )}
 
-                {/* Verification Actions */}
-                {company.verificationStatus === 'pending' && (
-                  <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-slate-700">
-                    <Button variant="outline" onClick={() => setShowRejectDialog(true)} disabled={processing} className="border-red-500 text-red-400 hover:bg-red-500/10">
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                    <Button onClick={() => onApprove(company.id)} disabled={processing} className="bg-green-600 hover:bg-green-700">
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      {processing ? 'Processing...' : 'Approve Verification'}
-                    </Button>
+                  {additionalNotes && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Additional Notes</h3>
+                      <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{additionalNotes}</p>
                   </div>
                 )}
+                </CardContent>
               </Card>
             </TabsContent>
 
             {/* Statistics Tab */}
             <TabsContent value="statistics" className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-white/5 border-white/10 p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-400">Total Jobs</p>
-                      <p className="text-3xl font-bold text-white mt-1">{company.totalJobsPosted || 0}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card className="bg-white border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowJobsList(true)}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <Briefcase className="w-8 h-8 text-blue-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Jobs</p>
+                        <p className="text-2xl font-bold text-gray-900">{currentCompany.statistics?.totalJobs || currentCompany.totalJobsPosted || 0}</p>
+                        <p className="text-xs text-blue-600 mt-1">Click to view all jobs</p>
+                      </div>
                     </div>
-                    <Briefcase className="w-10 h-10 text-blue-400" />
-                  </div>
+                  </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10 p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-400">Applications</p>
-                      <p className="text-3xl font-bold text-white mt-1">{company.totalApplications || 0}</p>
+
+                <Card className="bg-white border-gray-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <Users className="w-8 h-8 text-green-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Applications</p>
+                        <p className="text-2xl font-bold text-gray-900">{currentCompany.statistics?.totalApplications || currentCompany.totalApplications || 0}</p>
+                      </div>
                     </div>
-                    <Users className="w-10 h-10 text-green-400" />
-                  </div>
+                  </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10 p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-400">Rating</p>
-                      <p className="text-3xl font-bold text-white mt-1">
-                        {company.rating && typeof company.rating === 'number' ? company.rating.toFixed(1) : 'N/A'}
-                      </p>
+
+                <Card className="bg-white border-gray-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <Star className="w-8 h-8 text-yellow-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Rating</p>
+                        <p className="text-2xl font-bold text-gray-900">{currentCompany.statistics?.averageRating || currentCompany.rating || 'N/A'}</p>
+                      </div>
                     </div>
-                    <Star className="w-10 h-10 text-yellow-400" />
-                  </div>
+                  </CardContent>
                 </Card>
               </div>
             </TabsContent>
           </Tabs>
+
+          <DialogFooter className="bg-gray-50 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-2 w-full">
+              {currentCompany.verificationStatus !== 'verified' && (
+                <Button
+                  onClick={handleVerifyClick}
+                  disabled={processing}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {processing ? 'Processing...' : 'Approve Verification'}
+                </Button>
+              )}
+              <Button
+                onClick={handleDeactivateClick}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                {currentCompany.isActive ? (
+                  <>
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Deactivate Company
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Activate Company
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => onOpenChange(false)}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white">
+        <DialogContent className="bg-white border-gray-200 text-gray-900">
           <DialogHeader>
-            <DialogTitle>Reject Verification</DialogTitle>
-            <DialogDescription className="text-slate-300">
-              Please provide a reason for rejecting this verification request.
+            <DialogTitle className="text-gray-900">Reject Company Verification</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Please provide a reason for rejecting this company's verification.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-white mb-2 block">Reason for Rejection *</label>
+              <label className="text-sm font-medium text-gray-600">Reason for Rejection</label>
               <Select value={rejectReason} onValueChange={setRejectReason}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                   <SelectValue placeholder="Select a reason" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent>
                   <SelectItem value="incomplete_documents">Incomplete Documents</SelectItem>
-                  <SelectItem value="invalid_documents">Invalid or Unreadable Documents</SelectItem>
-                  <SelectItem value="mismatch_information">Information Mismatch</SelectItem>
+                  <SelectItem value="invalid_documents">Invalid Documents</SelectItem>
                   <SelectItem value="suspicious_activity">Suspicious Activity</SelectItem>
+                  <SelectItem value="policy_violation">Policy Violation</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-white mb-2 block">Additional Notes (Optional)</label>
-              <Textarea value={rejectionNotes} onChange={(e) => setRejectionNotes(e.target.value)} placeholder="Provide more details about the rejection..." className="bg-slate-700 border-slate-600 text-white min-h-[100px]" />
+              <label className="text-sm font-medium text-gray-600">Additional Notes</label>
+              <Textarea
+                value={rejectionNotes}
+                onChange={(e) => setRejectionNotes(e.target.value)}
+                placeholder="Provide additional details..."
+                className="bg-white border-gray-300 text-gray-900"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)} className="border-slate-600">Cancel</Button>
-            <Button onClick={handleRejectClick} disabled={processing || !rejectReason} className="bg-red-600 hover:bg-red-700">
-              {processing ? 'Rejecting...' : 'Reject Verification'}
+            <Button
+              onClick={() => setShowRejectDialog(false)}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRejectClick}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Reject Verification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Jobs List Dialog */}
+      <Dialog open={showJobsList} onOpenChange={setShowJobsList}>
+        <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 flex items-center">
+              <Briefcase className="w-5 h-5 mr-2" />
+              Jobs for {currentCompany.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              All jobs posted by this company
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {currentCompany.jobs && currentCompany.jobs.length > 0 ? (
+              <div className="space-y-4">
+                {currentCompany.jobs.map((job: any, index: number) => (
+                  <Card key={index} className="bg-white border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Location:</span>
+                              <span className="ml-2 text-gray-900">{job.location || 'Not specified'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Type:</span>
+                              <span className="ml-2 text-gray-900">{job.job_type || 'Not specified'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Salary:</span>
+                              <span className="ml-2 text-gray-900">{job.salary || 'Not specified'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Status:</span>
+                              <Badge className={`ml-2 ${
+                                job.status === 'active' ? 'bg-green-600' : 
+                                job.status === 'inactive' ? 'bg-red-600' : 'bg-gray-600'
+                              }`}>
+                                {job.status || 'Unknown'}
+                              </Badge>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Applications:</span>
+                              <span className="ml-2 text-gray-900">{job.jobApplications?.length || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Posted:</span>
+                              <span className="ml-2 text-gray-900">
+                                {job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setShowJobsList(false)
+                              onOpenChange(false)
+                              window.open(`/super-admin/jobs/${job.id}`, '_blank')
+                            }}
+                            className="text-blue-600 border-blue-500 hover:bg-blue-50"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Jobs Found</h3>
+                <p className="text-gray-600">This company hasn't posted any jobs yet.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowJobsList(false)}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -334,4 +657,3 @@ export function CompanyManagementDialog({
     </>
   )
 }
-

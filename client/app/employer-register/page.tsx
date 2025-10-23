@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Building2, CheckCircle, Globe, Users, ChevronDown } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Building2, CheckCircle, Globe, Users, ChevronDown, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
@@ -39,6 +40,7 @@ export default function EmployerRegisterPage() {
     confirmPassword: "",
     companySize: "",
     industry: "",
+    industries: [] as string[], // NEW: Support multiple industries
     website: "",
     role: "recruiter",
     region: "",
@@ -184,6 +186,7 @@ export default function EmployerRegisterPage() {
         phone: formData.phone,
         companySize: formData.companySize,
         industry: formData.industry,
+        industries: formData.industries,
         website: formData.website,
         role: formData.role,
         region: formData.region,
@@ -338,8 +341,8 @@ export default function EmployerRegisterPage() {
         <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
       </div>
 
-      <div className="relative flex items-start justify-center p-4 pt-8 min-h-[calc(100vh-80px)] bg-gradient-to-br from-blue-200/40 via-cyan-200/30 to-indigo-200/40">
-        <div className="relative w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-start pt-8">
+      <div className="relative flex items-start justify-center p-2 sm:p-4 pt-4 sm:pt-8 min-h-[calc(100vh-80px)] bg-gradient-to-br from-blue-200/40 via-cyan-200/30 to-indigo-200/40">
+        <div className="relative w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-start pt-4 sm:pt-8">
           {/* Left Side - Benefits */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -452,11 +455,11 @@ export default function EmployerRegisterPage() {
                     {/* Account Type Selection - NEW */}
                   <div className="space-y-2">
                       <Label className="font-semibold text-[#1E1E2F] dark:text-slate-300">Account Type *</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <button
                           type="button"
                           onClick={() => handleInputChange("companyAccountType", "direct")}
-                          className={`p-6 border-2 rounded-lg transition-all ${
+                          className={`p-4 sm:p-6 border-2 rounded-lg transition-all ${
                             formData.companyAccountType === "direct"
                               ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
                               : "border-slate-200 dark:border-slate-600 hover:border-blue-300"
@@ -472,7 +475,7 @@ export default function EmployerRegisterPage() {
                         <button
                           type="button"
                           onClick={() => handleInputChange("companyAccountType", "agency")}
-                          className={`p-6 border-2 rounded-lg transition-all ${
+                          className={`p-4 sm:p-6 border-2 rounded-lg transition-all ${
                             formData.companyAccountType === "agency"
                               ? "border-purple-600 bg-purple-50 dark:bg-purple-900/20"
                               : "border-slate-200 dark:border-slate-600 hover:border-purple-300"
@@ -569,9 +572,9 @@ export default function EmployerRegisterPage() {
                    )
                  )}
                  
-                 <form onSubmit={handleSubmit} className="space-y-6">
+                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="fullName" className="font-semibold text-[#1E1E2F] dark:text-slate-300">
                         Your Full Name
@@ -679,17 +682,41 @@ export default function EmployerRegisterPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className={`w-full h-12 justify-between border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl ${formData.industry ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}
+                        className={`w-full h-12 justify-between border-white/30 bg-white/10 backdrop-blur-md focus:border-blue-500 focus:bg-white/20 transition-all duration-300 rounded-xl ${formData.industries.length > 0 ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}
                         onClick={() => setShowIndustryDropdown(true)}
                       >
-                        <span>{formData.industry || 'Select industry'}</span>
+                        <span>{formData.industries.length > 0 ? `${formData.industries.length} industry${formData.industries.length > 1 ? 'ies' : ''} selected` : 'Select industries'}</span>
                         <ChevronDown className="w-4 h-4" />
                       </Button>
                       
+                      {formData.industries.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {formData.industries.map((industry, index) => (
+                            <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
+                              {industry}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newIndustries = formData.industries.filter((_, i) => i !== index)
+                                  handleInputChange("industries", newIndustries)
+                                  // Also update the single industry field for backward compatibility
+                                  handleInputChange("industry", newIndustries[0] || '')
+                                }}
+                                className="ml-2 hover:text-blue-600"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      
                       {showIndustryDropdown && (
                         <IndustryDropdown
-                          selectedIndustries={formData.industry ? [formData.industry] : []}
+                          selectedIndustries={formData.industries}
                           onIndustryChange={(industries: string[]) => {
+                            handleInputChange("industries", industries)
+                            // Also update the single industry field for backward compatibility
                             handleInputChange("industry", industries[0] || '')
                           }}
                           onClose={() => setShowIndustryDropdown(false)}

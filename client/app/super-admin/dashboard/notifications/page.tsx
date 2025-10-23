@@ -88,6 +88,7 @@ export default function AdminNotificationsPage() {
   const [notifications, setNotifications] = useState<AdminNotification[]>([])
   const [stats, setStats] = useState<NotificationStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [markingAsRead, setMarkingAsRead] = useState<string | null>(null)
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -115,33 +116,28 @@ export default function AdminNotificationsPage() {
   const loadNotifications = async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '20'
+      // Load notifications from backend using API service
+      const response = await apiService.getAdminNotifications({
+        page: currentPage,
+        limit: 20,
+        category: selectedCategory === 'all' ? undefined : selectedCategory,
+        priority: selectedPriority === 'all' ? undefined : selectedPriority,
+        isRead: selectedReadStatus === 'all' ? undefined : selectedReadStatus === 'read'
       })
       
-      if (selectedCategory !== 'all') params.append('category', selectedCategory)
-      if (selectedPriority !== 'all') params.append('priority', selectedPriority)
-      if (selectedReadStatus !== 'all') params.append('isRead', selectedReadStatus === 'read' ? 'true' : 'false')
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/notifications?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications')
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        setNotifications(data.data)
-        setTotalPages(data.pagination?.totalPages || 1)
+      if (response.success && response.data) {
+        setNotifications(response.data)
+        setTotalPages((response as any).pagination?.totalPages || 1)
+      } else {
+        setError(response.message || 'Failed to load notifications')
+        setNotifications([])
+        setTotalPages(1)
       }
     } catch (error) {
       console.error('Error loading notifications:', error)
-      toast.error('Failed to load notifications')
+      setError('Failed to load notifications. Please try again later.')
+      setNotifications([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
@@ -149,50 +145,49 @@ export default function AdminNotificationsPage() {
 
   const loadStats = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/notifications/stats`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats')
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        setStats(data.data)
+      const response = await apiService.getAdminNotificationStats()
+      
+      if (response.success && response.data) {
+        setStats(response.data)
+      } else {
+        setStats({
+          total: 0,
+          unread: 0,
+          byCategory: {},
+          byPriority: {}
+        })
       }
     } catch (error) {
       console.error('Error loading stats:', error)
+      setStats({
+        total: 0,
+        unread: 0,
+        byCategory: {},
+        byPriority: {}
+      })
     }
   }
 
   const markAsRead = async (notificationId: string) => {
     try {
       setMarkingAsRead(notificationId)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      const response = await apiService.markAdminNotificationAsRead(notificationId)
+
+      if (response.success) {
+        // Update local state
+        setNotifications(prev => prev.map(n => 
+          n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
+        ))
+        
+        // Update stats
+        if (stats) {
+          setStats(prev => prev ? { ...prev, unread: Math.max(0, prev.unread - 1) } : null)
         }
-      })
 
-      if (!response.ok) {
-        throw new Error('Failed to mark as read')
+        toast.success('Notification marked as read')
+      } else {
+        toast.error(response.message || 'Failed to mark as read')
       }
-
-      // Update local state
-      setNotifications(prev => prev.map(n => 
-        n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
-      ))
-      
-      // Update stats
-      if (stats) {
-        setStats(prev => prev ? { ...prev, unread: Math.max(0, prev.unread - 1) } : null)
-      }
-
-      toast.success('Notification marked as read')
     } catch (error) {
       console.error('Error marking as read:', error)
       toast.error('Failed to mark as read')
@@ -204,26 +199,21 @@ export default function AdminNotificationsPage() {
   const markAllAsRead = async () => {
     try {
       setMarkingAllAsRead(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/notifications/read-all`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      const response = await apiService.markAllAdminNotificationsAsRead()
+
+      if (response.success) {
+        // Update local state
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })))
+        
+        // Update stats
+        if (stats) {
+          setStats(prev => prev ? { ...prev, unread: 0 } : null)
         }
-      })
 
-      if (!response.ok) {
-        throw new Error('Failed to mark all as read')
+        toast.success('All notifications marked as read')
+      } else {
+        toast.error(response.message || 'Failed to mark all as read')
       }
-
-      // Update local state
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })))
-      
-      // Update stats
-      if (stats) {
-        setStats(prev => prev ? { ...prev, unread: 0 } : null)
-      }
-
-      toast.success('All notifications marked as read')
     } catch (error) {
       console.error('Error marking all as read:', error)
       toast.error('Failed to mark all as read')
@@ -337,9 +327,9 @@ export default function AdminNotificationsPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
+        <div className="text-gray-900 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p>Loading notifications...</p>
         </div>
       </div>
@@ -347,24 +337,24 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white">
       {/* Header */}
-      <div className="bg-white/10 backdrop-blur-md border-b border-white/20">
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/super-admin/dashboard">
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                <Button variant="ghost" size="sm" className="text-gray-900 hover:bg-gray-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Dashboard
                 </Button>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-white flex items-center">
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center">
                   <BellRing className="w-8 h-8 mr-3" />
                   Admin Notifications
                 </h1>
-                <p className="text-blue-200 mt-1">
+                <p className="text-gray-600 mt-1">
                   Stay updated with platform activities and important events
                 </p>
               </div>
@@ -375,7 +365,7 @@ export default function AdminNotificationsPage() {
                 disabled={refreshing}
                 variant="outline"
                 size="sm"
-                className="text-white border-white/30 hover:bg-white/20"
+                className="text-gray-900 border-gray-300 hover:bg-gray-100"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 Refresh
@@ -386,7 +376,7 @@ export default function AdminNotificationsPage() {
                   disabled={markingAllAsRead}
                   variant="default"
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Mark All Read
@@ -401,50 +391,50 @@ export default function AdminNotificationsPage() {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-200 text-sm">Total Notifications</p>
-                    <p className="text-3xl font-bold text-white">{stats.total}</p>
+                    <p className="text-gray-600 text-sm">Total Notifications</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
                   </div>
-                  <Bell className="w-8 h-8 text-blue-400" />
+                  <Bell className="w-8 h-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-200 text-sm">Unread</p>
-                    <p className="text-3xl font-bold text-orange-400">{stats.unread}</p>
+                    <p className="text-gray-600 text-sm">Unread</p>
+                    <p className="text-3xl font-bold text-orange-600">{stats.unread}</p>
                   </div>
-                  <BellRing className="w-8 h-8 text-orange-400" />
+                  <BellRing className="w-8 h-8 text-orange-600" />
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-200 text-sm">Registrations</p>
-                    <p className="text-3xl font-bold text-green-400">{stats.byCategory.registration || 0}</p>
+                    <p className="text-gray-600 text-sm">Registrations</p>
+                    <p className="text-3xl font-bold text-green-600">{stats.byCategory.registration || 0}</p>
                   </div>
-                  <UserPlus className="w-8 h-8 text-green-400" />
+                  <UserPlus className="w-8 h-8 text-green-600" />
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-200 text-sm">Verifications</p>
-                    <p className="text-3xl font-bold text-blue-400">{stats.byCategory.verification || 0}</p>
+                    <p className="text-gray-600 text-sm">Verifications</p>
+                    <p className="text-3xl font-bold text-blue-600">{stats.byCategory.verification || 0}</p>
                   </div>
-                  <CheckCircle2 className="w-8 h-8 text-blue-400" />
+                  <CheckCircle2 className="w-8 h-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
@@ -452,26 +442,26 @@ export default function AdminNotificationsPage() {
         )}
 
         {/* Filters */}
-        <Card className="bg-white/10 backdrop-blur-md border-white/20 mb-6">
+        <Card className="bg-white border-gray-200 shadow-sm mb-6">
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
-                <label className="text-blue-200 text-sm font-medium mb-2 block">Search</label>
+                <label className="text-gray-700 text-sm font-medium mb-2 block">Search</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search notifications..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-white/20 border-white/30 text-white placeholder:text-gray-300"
+                    className="pl-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
               </div>
               
               <div>
-                <label className="text-blue-200 text-sm font-medium mb-2 block">Category</label>
+                <label className="text-gray-700 text-sm font-medium mb-2 block">Category</label>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="bg-white/20 border-white/30 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -486,9 +476,9 @@ export default function AdminNotificationsPage() {
               </div>
               
               <div>
-                <label className="text-blue-200 text-sm font-medium mb-2 block">Priority</label>
+                <label className="text-gray-700 text-sm font-medium mb-2 block">Priority</label>
                 <Select value={selectedPriority} onValueChange={setSelectedPriority}>
-                  <SelectTrigger className="bg-white/20 border-white/30 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -502,9 +492,9 @@ export default function AdminNotificationsPage() {
               </div>
               
               <div>
-                <label className="text-blue-200 text-sm font-medium mb-2 block">Status</label>
+                <label className="text-gray-700 text-sm font-medium mb-2 block">Status</label>
                 <Select value={selectedReadStatus} onValueChange={setSelectedReadStatus}>
-                  <SelectTrigger className="bg-white/20 border-white/30 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -526,7 +516,7 @@ export default function AdminNotificationsPage() {
                   }}
                   variant="outline"
                   size="sm"
-                  className="w-full text-white border-white/30 hover:bg-white/20"
+                  className="w-full text-gray-900 border-gray-300 hover:bg-gray-100"
                 >
                   Clear Filters
                 </Button>
@@ -538,11 +528,11 @@ export default function AdminNotificationsPage() {
         {/* Notifications List */}
         <div className="space-y-4">
           {filteredNotifications.length === 0 ? (
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardContent className="p-12 text-center">
                 <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">No notifications found</h3>
-                <p className="text-blue-200">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No notifications found</h3>
+                <p className="text-gray-600">
                   {searchQuery || selectedCategory !== 'all' || selectedPriority !== 'all' || selectedReadStatus !== 'all'
                     ? 'Try adjusting your filters to see more notifications.'
                     : 'You\'re all caught up! New notifications will appear here.'}
@@ -553,14 +543,14 @@ export default function AdminNotificationsPage() {
             filteredNotifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={`bg-white/10 backdrop-blur-md border-white/20 transition-all duration-200 hover:bg-white/15 ${
+                className={`bg-white border-gray-200 shadow-sm transition-all duration-200 hover:shadow-md ${
                   !notification.isRead ? 'ring-2 ring-blue-500/50' : ''
                 }`}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     <div className={`p-3 rounded-full ${
-                      notification.isRead ? 'bg-white/20' : 'bg-blue-500/30'
+                      notification.isRead ? 'bg-gray-100' : 'bg-blue-100'
                     }`}>
                       {getNotificationIcon(notification.type, notification.icon)}
                     </div>
@@ -570,7 +560,7 @@ export default function AdminNotificationsPage() {
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
                             <h3 className={`text-lg font-semibold ${
-                              notification.isRead ? 'text-gray-300' : 'text-white'
+                              notification.isRead ? 'text-gray-600' : 'text-gray-900'
                             }`}>
                               {notification.title}
                             </h3>
@@ -580,7 +570,7 @@ export default function AdminNotificationsPage() {
                           </div>
                           
                           <p className={`text-sm mb-3 ${
-                            notification.isRead ? 'text-gray-400' : 'text-blue-200'
+                            notification.isRead ? 'text-gray-500' : 'text-gray-700'
                           }`}>
                             {notification.message}
                           </p>
@@ -615,7 +605,7 @@ export default function AdminNotificationsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-white border-white/30 hover:bg-white/20"
+                                className="text-gray-900 border-gray-300 hover:bg-gray-100"
                               >
                                 {notification.actionText || 'View'}
                               </Button>
@@ -628,7 +618,7 @@ export default function AdminNotificationsPage() {
                               disabled={markingAsRead === notification.id}
                               variant="ghost"
                               size="sm"
-                              className="text-white hover:bg-white/20"
+                              className="text-gray-900 hover:bg-gray-100"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -652,12 +642,12 @@ export default function AdminNotificationsPage() {
                 disabled={currentPage === 1}
                 variant="outline"
                 size="sm"
-                className="text-white border-white/30 hover:bg-white/20"
+                className="text-gray-900 border-gray-300 hover:bg-gray-100"
               >
                 Previous
               </Button>
               
-              <span className="text-white px-4">
+              <span className="text-gray-900 px-4">
                 Page {currentPage} of {totalPages}
               </span>
               
@@ -666,7 +656,7 @@ export default function AdminNotificationsPage() {
                 disabled={currentPage === totalPages}
                 variant="outline"
                 size="sm"
-                className="text-white border-white/30 hover:bg-white/20"
+                className="text-gray-900 border-gray-300 hover:bg-gray-100"
               >
                 Next
               </Button>

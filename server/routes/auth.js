@@ -300,7 +300,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       });
     }
 
-    const { email, password, fullName, companyName, companyId, phone, companySize, industry, website, region, role, companyAccountType } = req.body;
+    const { email, password, fullName, companyName, companyId, phone, companySize, industry, industries, website, region, role, companyAccountType } = req.body;
 
     // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
@@ -431,6 +431,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             await company.update({
               name: companyName,
               industry: industry || company.industry,
+              industries: industries || company.industries || [],
               companySize: companySize || company.companySize,
               website: website || company.website,
               email: email,
@@ -456,6 +457,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             name: companyName,
             slug: companySlug,
             industry: industry || 'Other',
+            industries: industries || [],
             companySize: companySize || '1-50',
             website: website,
             email: email,
@@ -622,6 +624,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             id: company.id,
             name: company.name,
             industry: company.industry,
+            industries: company.industries || [],
             companySize: company.companySize,
             website: company.website,
             email: company.email,
@@ -836,6 +839,7 @@ router.post('/login', validateLogin, async (req, res) => {
           id: company.id,
           name: company.name,
           industry: company.industry,
+          industries: company.industries || [],
           companySize: company.companySize,
           website: company.website,
           email: company.contactEmail,

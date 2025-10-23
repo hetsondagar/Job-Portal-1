@@ -39,6 +39,29 @@ const Company = sequelize.define('Company', {
       }
     }
   },
+  industries: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+    set(value) {
+      if (Array.isArray(value)) {
+        this.setDataValue('industries', value);
+      } else if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          this.setDataValue('industries', Array.isArray(parsed) ? parsed : [parsed]);
+        } catch {
+          this.setDataValue('industries', [value]);
+        }
+      } else {
+        this.setDataValue('industries', []);
+      }
+    },
+    get() {
+      const value = this.getDataValue('industries');
+      return Array.isArray(value) ? value : [];
+    }
+  },
   sector: {
     type: DataTypes.STRING,
     allowNull: true

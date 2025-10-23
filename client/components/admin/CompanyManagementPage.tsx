@@ -61,7 +61,6 @@ export default function CompanyManagementPage({ portal, title, description, icon
 
   useEffect(() => {
     if (authLoading) return
-
     if (!user || (user.userType !== 'admin' && user.userType !== 'superadmin')) {
       router.push('/admin-login')
       return
@@ -106,7 +105,9 @@ export default function CompanyManagementPage({ portal, title, description, icon
       }
     } catch (error) {
       console.error(`Failed to load ${title.toLowerCase()}:`, error)
-      toast.error(`Failed to load ${title.toLowerCase()}`)
+      toast.error(`Failed to load ${title.toLowerCase()}. Please check your connection and try again.`)
+      
+      // Set empty array when backend is not available - no mock data
       setCompanies([])
       setTotalPages(1)
     } finally {
@@ -116,11 +117,12 @@ export default function CompanyManagementPage({ portal, title, description, icon
 
   const toggleCompanyStatus = async (companyId: string, currentStatus: boolean | string) => {
     try {
-      const status = typeof currentStatus === 'boolean' ? !currentStatus : currentStatus === 'true'
-      const response = await apiService.updateCompanyStatus(companyId, status.toString())
+      const isCurrentlyActive = typeof currentStatus === 'boolean' ? currentStatus : currentStatus === 'true'
+      const newStatus = isCurrentlyActive ? 'inactive' : 'active'
+      const response = await apiService.updateCompanyStatus(companyId, newStatus)
       
       if (response.success) {
-        toast.success(`Company ${!currentStatus ? 'activated' : 'deactivated'} successfully`)
+        toast.success(`Company ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`)
         loadCompanies()
       } else {
         toast.error('Failed to update company status')
@@ -133,11 +135,12 @@ export default function CompanyManagementPage({ portal, title, description, icon
 
   const toggleVerification = async (companyId: string, currentVerification: boolean | string) => {
     try {
-      const verification = typeof currentVerification === 'boolean' ? !currentVerification : currentVerification === 'true'
-      const response = await apiService.updateCompanyVerification(companyId, verification.toString())
+      const isCurrentlyVerified = typeof currentVerification === 'boolean' ? currentVerification : currentVerification === 'true'
+      const newVerificationStatus = isCurrentlyVerified ? 'unverified' : 'verified'
+      const response = await apiService.updateCompanyVerification(companyId, newVerificationStatus)
       
       if (response.success) {
-        toast.success(`Company ${!currentVerification ? 'verified' : 'unverified'} successfully`)
+        toast.success(`Company ${newVerificationStatus === 'verified' ? 'verified' : 'unverified'} successfully`)
         loadCompanies()
       } else {
         toast.error('Failed to update company verification')
@@ -201,7 +204,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
       })
       
       if (response.success) {
-        toast.success('Company verification rejected')
+        toast.success('Company verification rejected successfully')
         setShowCompanyDialog(false)
         loadCompanies()
       } else {
@@ -258,7 +261,6 @@ export default function CompanyManagementPage({ portal, title, description, icon
     if (!logoPath) return null
     // If it's already a full URL, return as is
     if (logoPath.startsWith('http')) return logoPath
-    // Otherwise, construct the full URL
     return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${logoPath}`
   }
 
@@ -274,7 +276,6 @@ export default function CompanyManagementPage({ portal, title, description, icon
       case 'premium_verified':
         return (
           <Badge className="bg-green-600">
-            <CheckCircle2 className="w-3 h-3 mr-1" />
             Verified
           </Badge>
         )
@@ -306,14 +307,12 @@ export default function CompanyManagementPage({ portal, title, description, icon
     switch (companyAccountType) {
       case 'direct_employer':
         return <Badge variant="outline" className="border-blue-500 text-blue-400">Direct Employer</Badge>
-      case 'agency':
-        return <Badge variant="outline" className="border-purple-500 text-purple-400">Agency/Consultancy</Badge>
-      case 'recruiting_agency':
-        return <Badge variant="outline" className="border-purple-500 text-purple-400">Recruiting Agency</Badge>
+      case 'recruitment_agency':
+        return <Badge variant="outline" className="border-purple-500 text-purple-400">Recruitment Agency</Badge>
       case 'consulting_firm':
-        return <Badge variant="outline" className="border-purple-500 text-purple-400">Consulting Firm</Badge>
+        return <Badge variant="outline" className="border-green-500 text-green-400">Consulting Firm</Badge>
       default:
-        return <Badge variant="outline">Unknown</Badge>
+        return <Badge variant="outline" className="border-gray-500 text-gray-400">Unknown</Badge>
     }
   }
 
@@ -322,7 +321,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
       <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
         <div className="text-gray-900 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading {title.toLowerCase()}...</p>
+          <p>Loading companies...</p>
         </div>
       </div>
     )
@@ -342,17 +341,17 @@ export default function CompanyManagementPage({ portal, title, description, icon
               variant="ghost"
               size="sm"
               onClick={() => router.push('/super-admin/dashboard')}
-              className="text-gray-900 hover:bg-gray-100 border border-gray-300"
+              className="text-gray-900 hover:bg-gray-100"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                {icon}
-                <span className="ml-3">{title}</span>
-              </h1>
-              <p className="text-gray-600 mt-2">{description}</p>
+            <div className="flex items-center space-x-3">
+              {icon}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+                <p className="text-gray-600">{description}</p>
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -390,7 +389,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-4">
                 <Select value={filterStatus} onValueChange={(value) => { setFilterStatus(value); handleFilterChange() }}>
                   <SelectTrigger className="w-40 bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="Status" />
@@ -408,7 +407,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
                   <SelectContent>
                     <SelectItem value="all">All Verification</SelectItem>
                     <SelectItem value="verified">Verified</SelectItem>
-                    <SelectItem value="unverified">Unverified</SelectItem>
+                    <SelectItem value="unverified">Inactive</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
@@ -438,51 +437,58 @@ export default function CompanyManagementPage({ portal, title, description, icon
               <div className="text-center py-12">
                 <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No companies found</h3>
-                <p className="text-gray-600">No {title.toLowerCase()} match your current filters.</p>
+                <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {companies.map((company) => (
-                  <div key={company.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                        {company.logo ? (
-                          <img 
-                            src={getImageUrl(company.logo) || ''} 
-                            alt={company.name}
-                            className="w-16 h-16 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                            const nextSibling = e.currentTarget.nextElementSibling as HTMLElement | null
-                            if (nextSibling) nextSibling.style.display = 'flex'
-                          }}
-                          />
-                        ) : null}
-                        <Building2 className="w-8 h-8 text-white" style={{ display: company.logo ? 'none' : 'flex' }} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 text-lg">{company.name}</h3>
-                        <p className="text-gray-600 text-sm">{company.email}</p>
-                        <div className="flex items-center space-x-2 mt-2">
-                          {company.region && (
-                            <Badge 
-                              variant="outline" 
-                              className={company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}
-                            >
-                              {company.region === 'india' ? (
-                                <>
-                                  <MapPin className="w-3 h-3 mr-1" />
-                                  India
-                                </>
-                              ) : (
-                                <>
-                                  <Globe className="w-3 h-3 mr-1" />
-                                  Gulf
-                                </>
-                              )}
-                            </Badge>
-                          )}
-                          {getVerificationStatusBadge(company.verificationStatus || (company.isVerified ? 'verified' : 'unverified'))}
+                  <Card key={company.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                            <Building2 className="w-8 h-8 text-white" style={{ display: company.logo ? 'none' : 'flex' }} />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{company.name}</h3>
+                            <p className="text-sm text-gray-600">{company.email}</p>
+                            {company.industries && company.industries.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {company.industries.slice(0, 2).map((industry: string, index: number) => (
+                                  <Badge key={index} variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                    {industry}
+                                  </Badge>
+                                ))}
+                                {company.industries.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                    +{company.industries.length - 2} more
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : company.industry && (
+                              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 mt-1">
+                                {company.industry}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                          <Badge 
+                            variant="outline" 
+                            className={company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}
+                          >
+                            {company.region === 'india' ? (
+                              <>
+                                <MapPin className="w-3 h-3 mr-1" />
+                                India
+                              </>
+                            ) : (
+                              <>
+                                <Globe className="w-3 h-3 mr-1" />
+                                Gulf
+                              </>
+                            )}
+                          </Badge>
                           <Badge 
                             variant={company.isActive ? 'default' : 'destructive'}
                             className={company.isActive ? 'bg-blue-600' : 'bg-gray-600'}
@@ -490,106 +496,109 @@ export default function CompanyManagementPage({ portal, title, description, icon
                             {company.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>
-                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-400">
-                          <div className="flex items-center">
-                            <Briefcase className="w-3 h-3 mr-1" />
-                            {company.totalJobsPosted || 0} jobs
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="w-3 h-3 mr-1" />
-                            {company.totalApplications || 0} applications
-                          </div>
-                          {company.rating && typeof company.rating === 'number' && (
-                            <div className="flex items-center">
-                              <Star className="w-3 h-3 mr-1" />
-                              {company.rating.toFixed(1)}
-                            </div>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          router.push(`/super-admin/companies/${company.id}`)
-                        }}
-                        className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleVerification(company.id, company.isVerified)}
-                        className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
-                          company.isVerified ? 'hover:text-red-400' : 'hover:text-green-400'
-                        }`}
-                      >
-                        {company.isVerified ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleCompanyStatus(company.id, company.isActive)}
-                        className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
-                          company.isActive ? 'hover:text-red-400' : 'hover:text-green-400'
-                        }`}
-                      >
-                        {company.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedCompany(company)
-                            setShowCompanyDialog(true)
-                          }}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleVerification(company.id, company.isVerified)}>
-                            {company.isVerified ? (
-                              <>
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Unverify
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                Verify
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id, company.isActive)}>
-                            {company.isActive ? (
-                              <>
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                Activate
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => deleteCompany(company.id)}
-                            className="text-red-400"
+                      
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Briefcase className="w-3 h-3 mr-1" />
+                          {company.totalJobsPosted || 0} jobs
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Users className="w-3 h-3 mr-1" />
+                          {company.totalApplications || 0} applications
+                        </div>
+                        {company.rating && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Star className="w-3 h-3 mr-1" />
+                            {typeof company.rating === 'number' ? company.rating.toFixed(1) : company.rating}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCompany(company)
+                              setShowCompanyDialog(true)
+                            }}
+                            className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {company.verificationStatus !== 'verified' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApproveVerification(company.id)}
+                              className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white hover:text-green-400"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {company.verificationStatus !== 'verified' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleCompanyStatus(company.id, company.isActive)}
+                              className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
+                                company.isActive ? 'hover:text-red-400' : 'hover:text-green-400'
+                              }`}
+                            >
+                              {company.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                            </Button>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedCompany(company)
+                                setShowCompanyDialog(true)
+                              }}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                          {company.verificationStatus !== 'verified' && (
+                            <DropdownMenuItem onClick={() => handleApproveVerification(company.id)}>
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Verify
+                            </DropdownMenuItem>
+                          )}
+                              {company.verificationStatus !== 'verified' && (
+                                <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id, company.isActive)}>
+                                  {company.isActive ? (
+                                    <>
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                      Deactivate
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                                      Activate
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={() => deleteCompany(company.id)}
+                                className="text-red-400"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {getVerificationStatusBadge(company.verificationStatus || 'unverified')}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
@@ -627,7 +636,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
           </CardContent>
         </Card>
 
-        {/* Company Details Dialog */}
+        {/* Company Management Dialog */}
         <CompanyManagementDialog
           company={selectedCompany}
           open={showCompanyDialog}

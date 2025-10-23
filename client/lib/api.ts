@@ -3922,11 +3922,11 @@ class ApiService {
   }
 
   async updateCompanyStatus(companyId: string, status: string): Promise<ApiResponse<any>> {
-    return this.patch(`/admin/companies/${companyId}/status`, { status });
+    return this.patch(`/admin/companies/${companyId}/status`, { isActive: status === 'active' });
   }
 
   async updateCompanyVerification(companyId: string, verification: string): Promise<ApiResponse<any>> {
-    return this.patch(`/admin/companies/${companyId}/verification`, { verification });
+    return this.patch(`/admin/companies/${companyId}/verification`, { verificationStatus: verification });
   }
 
   async deleteCompany(companyId: string): Promise<ApiResponse<any>> {
@@ -4181,6 +4181,46 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
     return this.handleResponse<any>(response);
+  }
+
+  // Admin Notifications API methods
+  async getAdminNotifications(params?: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    priority?: string;
+    isRead?: boolean;
+    type?: string;
+  }): Promise<ApiResponse<any>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.priority) queryParams.append('priority', params.priority);
+    if (params?.isRead !== undefined) queryParams.append('isRead', params.isRead.toString());
+    if (params?.type) queryParams.append('type', params.type);
+    
+    return this.get(`/admin/notifications?${queryParams.toString()}`);
+  }
+
+  async getAdminNotificationStats(): Promise<ApiResponse<any>> {
+    return this.get('/admin/notifications/stats');
+  }
+
+  async markAdminNotificationAsRead(id: string): Promise<ApiResponse<any>> {
+    return this.put(`/admin/notifications/${id}/read`, {});
+  }
+
+  async markAllAdminNotificationsAsRead(): Promise<ApiResponse<any>> {
+    return this.put('/admin/notifications/read-all', {});
+  }
+
+  async checkAdminMilestones(): Promise<ApiResponse<any>> {
+    return this.post('/admin/notifications/check-milestones', {});
+  }
+
+  async cleanupAdminNotifications(daysOld: number = 90): Promise<ApiResponse<any>> {
+    return this.delete('/admin/notifications/cleanup', { daysOld });
   }
 
 }
