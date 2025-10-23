@@ -1012,9 +1012,15 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getNotifications(): Promise<ApiResponse<any[]>> {
+  async getNotifications(params?: { unread?: boolean }): Promise<ApiResponse<any[]>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/user/notifications`, {
+      const queryParams = new URLSearchParams();
+      if (params?.unread) {
+        queryParams.append('unread', 'true');
+      }
+      
+      const url = `${API_BASE_URL}/user/notifications${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await fetch(url, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -2499,6 +2505,15 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  async markConversationRead(conversationId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/messages/conversations/${conversationId}/read`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
   async markConversationAsRead(conversationId: string): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/messages/conversations/${conversationId}/read`, {
       method: 'PUT',
@@ -3288,9 +3303,17 @@ class ApiService {
   }
 
   // Get employer notifications
-  async getEmployerNotifications(page: number = 1, limit: number = 20): Promise<ApiResponse<any[]>> {
+  async getEmployerNotifications(page: number = 1, limit: number = 20, params?: { unread?: boolean }): Promise<ApiResponse<any[]>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/user/employer/notifications?page=${page}&limit=${limit}`, {
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', limit.toString());
+      
+      if (params?.unread) {
+        queryParams.append('unread', 'true');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/user/employer/notifications?${queryParams.toString()}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -4226,6 +4249,34 @@ class ApiService {
 
   async cleanupAdminNotifications(daysOld: number = 90): Promise<ApiResponse<any>> {
     return this.post('/admin/notifications/cleanup', { daysOld });
+  }
+
+  // Payment methods
+  async initiatePayment(
+    planType: string,
+    quantity: number,
+    amount: number,
+    customerDetails: {
+      name: string;
+      email: string;
+      phone: string;
+    },
+    metadata: any = {}
+  ): Promise<ApiResponse<any>> {
+    return this.post('/payments/initiate', {
+      planType,
+      quantity,
+      amount,
+      customerDetails,
+      metadata
+    });
+  }
+
+  async verifyPayment(paymentId: string, orderId: string): Promise<ApiResponse<any>> {
+    return this.post('/payments/verify', {
+      paymentId,
+      orderId
+    });
   }
 
 }

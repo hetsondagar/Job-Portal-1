@@ -10,6 +10,7 @@ const Message = sequelize.define('Message', {
   conversationId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'conversation_id',
     references: {
       model: 'conversations',
       key: 'id'
@@ -18,6 +19,7 @@ const Message = sequelize.define('Message', {
   senderId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'sender_id',
     references: {
       model: 'users',
       key: 'id'
@@ -26,6 +28,7 @@ const Message = sequelize.define('Message', {
   receiverId: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'receiver_id',
     references: {
       model: 'users',
       key: 'id'
@@ -34,51 +37,95 @@ const Message = sequelize.define('Message', {
   messageType: {
     type: DataTypes.ENUM('text', 'image', 'file', 'system', 'interview_invite', 'application_update'),
     allowNull: false,
-    defaultValue: 'text'
+    defaultValue: 'text',
+    field: 'message_type'
   },
   content: {
     type: DataTypes.TEXT,
     allowNull: false
   },
-  attachments: {
-    type: DataTypes.JSONB,
-    defaultValue: []
+  fileUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'file_url'
+  },
+  fileName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'file_name'
+  },
+  fileSize: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'file_size'
+  },
+  fileType: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'file_type'
   },
   isRead: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_read'
   },
   readAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'read_at'
   },
   isDelivered: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_delivered'
   },
   deliveredAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'delivered_at'
   },
   isEdited: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_edited'
   },
   editedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'edited_at'
+  },
+  originalContent: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'original_content'
   },
   replyToMessageId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'reply_to_message_id',
     references: {
       model: 'messages',
       key: 'id'
     }
   },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
+  isDeleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_deleted'
+  },
+  deletedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'deleted_at'
+  },
+  deletedBy: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'deleted_by',
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'messages',
@@ -93,13 +140,10 @@ const Message = sequelize.define('Message', {
       fields: ['sender_id']
     },
     {
-      fields: ['receiver_id']
-    },
-    {
       fields: ['is_read']
     },
     {
-      fields: ['createdAt']
+      fields: ['created_at']
     }
   ],
   hooks: {

@@ -871,9 +871,17 @@ router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     const { Notification, JobApplication, User, Company, Job } = require('../config/index');
     
+    // Build where clause
+    const whereClause = { userId: req.user.id };
+    
+    // Filter by unread status if requested
+    if (req.query.unread === 'true') {
+      whereClause.isRead = false;
+    }
+    
     // Correct field mapping: model uses camelCase userId
     let notifications = await Notification.findAll({
-      where: { userId: req.user.id },
+      where: whereClause,
       order: [['created_at', 'DESC']],
       limit: 50 // Limit to recent 50 notifications
     });
@@ -1153,24 +1161,38 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 router.get('/employer/notifications', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, unread } = req.query;
     const offset = (page - 1) * limit;
 
     // Get employer-specific notification types
     const employerNotificationTypes = [
       'job_application',
       'application_status', 
-      'job_recommendation',
       'company_update',
       'system',
-      'marketing'
+      'marketing',
+      'interview',
+      'offer',
+      'interview_scheduled',
+      'interview_cancelled',
+      'interview_reminder',
+      'candidate_shortlisted',
+      'application_shortlisted'
     ];
 
+    // Build where clause
+    const whereClause = { 
+      userId: req.user.id,
+      type: employerNotificationTypes
+    };
+
+    // Filter by unread status if requested
+    if (unread === 'true') {
+      whereClause.isRead = false;
+    }
+
     const { count, rows: notifications } = await Notification.findAndCountAll({
-      where: { 
-        userId: req.user.id,
-        type: employerNotificationTypes
-      },
+      where: whereClause,
       order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
@@ -1543,6 +1565,39 @@ router.post('/applications', authenticateToken, async (req, res) => {
     } catch (emailError) {
       console.error('❌ Failed to send application notification:', emailError);
       // Don't fail the application if email fails
+    }
+
+    // Send in-app notification to employer
+    try {
+      const { Notification } = require('../config/index');
+      const employer = await User.findByPk(job.employer.id);
+      const applicant = await User.findByPk(req.user.id);
+      
+      if (employer && applicant) {
+        await Notification.create({
+          userId: employer.id,
+          type: 'job_application',
+          title: `🎯 New Job Application Received!`,
+          message: `${applicant.firstName} ${applicant.lastName} has applied for "${job.title}" position.`,
+          shortMessage: `New application for ${job.title}`,
+          priority: 'high',
+          actionUrl: `/employer-dashboard/applications?jobId=${job.id}`,
+          actionText: 'View Application',
+          icon: 'user-plus',
+          metadata: {
+            applicationId: application.id,
+            jobId: job.id,
+            applicantId: applicant.id,
+            applicantName: `${applicant.firstName} ${applicant.lastName}`,
+            jobTitle: job.title,
+            companyId: job.companyId
+          }
+        });
+        console.log('✅ In-app notification sent to employer:', employer.id);
+      }
+    } catch (notificationError) {
+      console.error('❌ Failed to send in-app notification to employer:', notificationError);
+      // Don't fail the application if notification fails
     }
 
     res.status(201).json({
@@ -2233,6 +2288,56 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
     } catch (activityError) {
       console.error('Failed to log application status change activity:', activityError);
       // Don't fail the status update if activity logging fails
+    }
+
+    // Send notification to employer about status change
+    try {
+      const { Notification, User, Job } = require('../config/index');
+      
+      // Get applicant and job details for notification
+      const applicant = await User.findByPk(application.userId);
+      const job = await Job.findByPk(application.jobId);
+      
+      if (applicant && job) {
+        const statusMessages = {
+          'reviewing': 'Application is being reviewed',
+          'shortlisted': 'Candidate has been shortlisted',
+          'interview_scheduled': 'Interview has been scheduled',
+          'interviewed': 'Interview has been completed',
+          'offered': 'Job offer has been made',
+          'hired': 'Candidate has been hired',
+          'rejected': 'Application has been rejected',
+          'withdrawn': 'Application has been withdrawn'
+        };
+        
+        const statusMessage = statusMessages[status] || `Application status changed to ${status}`;
+        
+        await Notification.create({
+          userId: req.user.id,
+          type: 'application_status',
+          title: `📋 Application Status Updated`,
+          message: `${statusMessage} for ${applicant.firstName} ${applicant.lastName}'s application to "${job.title}".`,
+          shortMessage: `Status: ${status} - ${applicant.firstName} ${applicant.lastName}`,
+          priority: 'medium',
+          actionUrl: `/employer-dashboard/applications/${application.id}`,
+          actionText: 'View Application',
+          icon: 'file-text',
+          metadata: {
+            applicationId: application.id,
+            jobId: application.jobId,
+            applicantId: application.userId,
+            applicantName: `${applicant.firstName} ${applicant.lastName}`,
+            jobTitle: job.title,
+            oldStatus: oldStatus,
+            newStatus: status,
+            companyId: job.companyId
+          }
+        });
+        console.log(`✅ Application status change notification sent to employer ${req.user.id}`);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send application status notification to employer:', notificationError);
+      // Don't fail the status update if notification fails
     }
 
     // Handle notifications based on status change

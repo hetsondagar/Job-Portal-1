@@ -16,6 +16,7 @@ export function EmployerDashboardNavbar() {
   const [showJobsDropdown, setShowJobsDropdown] = useState(false)
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [unseenNotifications, setUnseenNotifications] = useState(0)
   const { user, logout, refreshUser } = useAuth()
   const [company, setCompany] = useState<any>(null)
   const isAdmin = (user?.userType === 'admin') || (user?.preferences?.employerRole === 'admin')
@@ -66,6 +67,32 @@ export function EmployerDashboardNavbar() {
 
     fetchCompanyData()
   }, [user, isMockMode])
+
+  // Fetch unseen notifications
+  const fetchUnseenNotifications = async () => {
+    if (!isMockMode && user?.id) {
+      try {
+        const response = await apiService.getEmployerNotifications(1, 50, { unread: true })
+        if (response.success && response.data) {
+          setUnseenNotifications(response.data.length)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error)
+      }
+    } else if (isMockMode) {
+      // Mock unseen notifications count
+      setUnseenNotifications(0)
+    }
+  }
+
+  useEffect(() => {
+    fetchUnseenNotifications()
+  }, [user, isMockMode])
+
+  // Refresh notifications when clicking on notification button
+  const handleNotificationClick = () => {
+    fetchUnseenNotifications()
+  }
 
   const handleLogout = async () => {
     try {
@@ -257,10 +284,16 @@ export function EmployerDashboardNavbar() {
           {/* Right Side */}
           <div className="flex items-center space-x-4">
             {/* Notifications */}
-            <Link href="/employer-dashboard/notifications">
+            <Link href="/employer-dashboard/notifications" onClick={handleNotificationClick}>
               <Button variant="ghost" size="sm" className="text-slate-600 hover:text-blue-600 relative">
                 <Bell className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
+                {unseenNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                    <span className="text-[8px] text-white font-bold">
+                      {unseenNotifications > 9 ? '9+' : unseenNotifications}
+                    </span>
+                  </span>
+                )}
               </Button>
             </Link>
 

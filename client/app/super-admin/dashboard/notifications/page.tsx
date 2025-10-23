@@ -174,17 +174,17 @@ export default function AdminNotificationsPage() {
       const response = await apiService.markAdminNotificationAsRead(notificationId)
 
       if (response.success) {
-        // Update local state
-        setNotifications(prev => prev.map(n => 
-          n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
-        ))
-        
-        // Update stats
-        if (stats) {
-          setStats(prev => prev ? { ...prev, unread: Math.max(0, prev.unread - 1) } : null)
-        }
+      // Update local state
+      setNotifications(prev => prev.map(n => 
+        n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
+      ))
+      
+      // Update stats
+      if (stats) {
+        setStats(prev => prev ? { ...prev, unread: Math.max(0, prev.unread - 1) } : null)
+      }
 
-        toast.success('Notification marked as read')
+      toast.success('Notification marked as read')
       } else {
         toast.error(response.message || 'Failed to mark as read')
       }
@@ -202,15 +202,15 @@ export default function AdminNotificationsPage() {
       const response = await apiService.markAllAdminNotificationsAsRead()
 
       if (response.success) {
-        // Update local state
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })))
-        
-        // Update stats
-        if (stats) {
-          setStats(prev => prev ? { ...prev, unread: 0 } : null)
-        }
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })))
+      
+      // Update stats
+      if (stats) {
+        setStats(prev => prev ? { ...prev, unread: 0 } : null)
+      }
 
-        toast.success('All notifications marked as read')
+      toast.success('All notifications marked as read')
       } else {
         toast.error(response.message || 'Failed to mark all as read')
       }

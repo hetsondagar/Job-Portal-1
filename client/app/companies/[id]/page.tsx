@@ -1239,15 +1239,11 @@ function CompanyDetailPage() {
                         <div>
                           <div className="font-medium text-slate-900 dark:text-white mb-2">Industries</div>
                           <div className="flex flex-wrap gap-2">
-                            {company.industries.length === 1 ? (
-                              <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 border-indigo-200">
-                                {company.industries[0]}
+                            {company.industries.map((industry: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="bg-indigo-100 text-indigo-800 border-indigo-200">
+                                {industry}
                               </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="bg-gradient-to-r from-indigo-100 via-purple-100 to-blue-100 text-indigo-800 border-indigo-200">
-                                Multi Industry
-                              </Badge>
-                            )}
+                            ))}
                           </div>
                         </div>
                       )}

@@ -10,6 +10,7 @@ const Conversation = sequelize.define('Conversation', {
   participant1Id: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'participant1_id',
     references: {
       model: 'users',
       key: 'id'
@@ -18,39 +19,41 @@ const Conversation = sequelize.define('Conversation', {
   participant2Id: {
     type: DataTypes.UUID,
     allowNull: false,
+    field: 'participant2_id',
     references: {
       model: 'users',
       key: 'id'
     }
   },
-  jobApplicationId: {
+  referenceId: {
     type: DataTypes.UUID,
     allowNull: true,
-    references: {
-      model: 'job_applications',
-      key: 'id'
-    }
+    field: 'reference_id'
+  },
+  referenceType: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'reference_type'
   },
   jobId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'job_id',
     references: {
       model: 'jobs',
       key: 'id'
     }
   },
   conversationType: {
-    type: DataTypes.ENUM('application', 'general', 'interview', 'support'),
+    type: DataTypes.ENUM('direct', 'job_application', 'requirement_application', 'interview'),
     allowNull: false,
-    defaultValue: 'general'
-  },
-  title: {
-    type: DataTypes.STRING,
-    allowNull: true
+    defaultValue: 'direct',
+    field: 'conversation_type'
   },
   lastMessageId: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'last_message_id',
     references: {
       model: 'messages',
       key: 'id'
@@ -58,35 +61,47 @@ const Conversation = sequelize.define('Conversation', {
   },
   lastMessageAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'last_message_at'
   },
-  unreadCount: {
+  unreadCountParticipant1: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'unread_count_participant1'
   },
-  isActive: {
+  unreadCountParticipant2: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'unread_count_participant2'
+  },
+  isArchivedParticipant1: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true
+    defaultValue: false,
+    field: 'is_archived_participant1'
   },
-  isArchived: {
+  isArchivedParticipant2: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_archived_participant2'
   },
-  archivedBy: {
+  isBlocked: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_blocked'
+  },
+  blockedBy: {
     type: DataTypes.UUID,
     allowNull: true,
+    field: 'blocked_by',
     references: {
       model: 'users',
       key: 'id'
     }
   },
-  archivedAt: {
+  blockedAt: {
     type: DataTypes.DATE,
-    allowNull: true
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
+    allowNull: true,
+    field: 'blocked_at'
   }
 }, {
   tableName: 'conversations',
@@ -95,27 +110,24 @@ const Conversation = sequelize.define('Conversation', {
   updatedAt: 'updated_at',
   indexes: [
     {
-      fields: ['participant1Id']
+      fields: ['participant1_id']
     },
     {
-      fields: ['participant2Id']
+      fields: ['participant2_id']
     },
     {
-      fields: ['jobApplicationId']
+      fields: ['reference_id']
     },
     {
-      fields: ['job_id']
+      fields: ['last_message_at']
     },
     {
-      fields: ['lastMessageAt']
-    },
-    {
-      fields: ['is_active']
+      fields: ['is_blocked']
     },
     {
       unique: true,
-      name: 'conversations_unique_participants_job',
-      fields: ['participant1Id', 'participant2Id', 'jobApplicationId']
+      name: 'conversations_unique_participants_reference',
+      fields: ['participant1_id', 'participant2_id', 'reference_id']
     }
   ],
   hooks: {
@@ -139,21 +151,29 @@ Conversation.prototype.isParticipant = function(userId) {
 };
 
 Conversation.prototype.markAsRead = function(userId) {
-  this.unreadCount = 0;
+  if (this.participant1Id === userId) {
+    this.unreadCountParticipant1 = 0;
+  } else if (this.participant2Id === userId) {
+    this.unreadCountParticipant2 = 0;
+  }
   return this.save();
 };
 
 Conversation.prototype.archive = function(userId) {
-  this.isArchived = true;
-  this.archivedBy = userId;
-  this.archivedAt = new Date();
+  if (this.participant1Id === userId) {
+    this.isArchivedParticipant1 = true;
+  } else if (this.participant2Id === userId) {
+    this.isArchivedParticipant2 = true;
+  }
   return this.save();
 };
 
-Conversation.prototype.unarchive = function() {
-  this.isArchived = false;
-  this.archivedBy = null;
-  this.archivedAt = null;
+Conversation.prototype.unarchive = function(userId) {
+  if (this.participant1Id === userId) {
+    this.isArchivedParticipant1 = false;
+  } else if (this.participant2Id === userId) {
+    this.isArchivedParticipant2 = false;
+  }
   return this.save();
 };
 

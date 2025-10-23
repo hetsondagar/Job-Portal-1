@@ -208,6 +208,39 @@ router.post('/', authenticateToken, async (req, res) => {
 
     console.log('✅ Requirement created with id:', requirement.id);
 
+    // Send notification to employer about requirement creation
+    try {
+      const { Notification } = require('../config/index');
+      const { Company } = require('../config/index');
+      
+      // Get company info for notification
+      const company = await Company.findByPk(requirement.companyId);
+      const companyName = company?.name || 'Your Company';
+      
+      await Notification.create({
+        userId: req.user.id,
+        type: 'company_update',
+        title: `✅ Requirement Posted Successfully!`,
+        message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
+        shortMessage: `Requirement posted: ${requirement.title}`,
+        priority: 'low',
+        actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
+        actionText: 'View Requirement',
+        icon: 'briefcase',
+        metadata: {
+          requirementId: requirement.id,
+          requirementTitle: requirement.title,
+          companyId: requirement.companyId,
+          companyName: companyName,
+          action: 'requirement_created'
+        }
+      });
+      console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
+    } catch (notificationError) {
+      console.error('❌ Failed to send requirement creation notification:', notificationError);
+      // Don't fail the requirement creation if notification fails
+    }
+
     // Check and consume quota for requirement posting
     try {
       const EmployerQuotaService = require('../services/employerQuotaService');
@@ -754,6 +787,59 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     });
     
     console.log(`✅ Found ${count} candidates matching requirement criteria`);
+
+    // Send notification to employer if new candidates are found
+    if (count > 0) {
+      try {
+        const { Notification } = require('../config/index');
+        const { Company } = require('../config/index');
+        
+        // Get company info for notification
+        const company = await Company.findByPk(requirement.companyId);
+        const companyName = company?.name || 'Your Company';
+        
+        // Check if we already sent a notification for this requirement recently (within 24 hours)
+        const recentNotification = await Notification.findOne({
+          where: {
+            userId: req.user.id,
+            type: 'company_update',
+            metadata: {
+              requirementId: requirement.id
+            },
+            created_at: {
+              [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
+            }
+          }
+        });
+        
+        if (!recentNotification) {
+          await Notification.create({
+            userId: req.user.id,
+            type: 'company_update',
+            title: `🎯 New Candidates Found for Your Requirement!`,
+            message: `Found ${count} matching candidates for "${requirement.title}" position. Review and contact them now!`,
+            shortMessage: `${count} new candidates for ${requirement.title}`,
+            priority: 'medium',
+            actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
+            actionText: 'View Candidates',
+            icon: 'users',
+            metadata: {
+              requirementId: requirement.id,
+              requirementTitle: requirement.title,
+              candidateCount: count,
+              companyId: requirement.companyId,
+              companyName: companyName
+            }
+          });
+          console.log(`✅ Candidate recommendation notification sent to employer ${req.user.id}`);
+        } else {
+          console.log(`ℹ️ Skipping notification - already sent recently for requirement ${requirement.id}`);
+        }
+      } catch (notificationError) {
+        console.error('❌ Failed to send candidate recommendation notification:', notificationError);
+        // Don't fail the candidate search if notification fails
+      }
+    }
 
     // Smart fallback: if too few candidates, progressively relax filters
     let finalCandidates = candidates;

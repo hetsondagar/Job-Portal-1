@@ -275,6 +275,62 @@ const getIndustryColors = (industry: string) => {
   }
 }
 
+// Get multi-industry gradient colors
+const getMultiIndustryColors = (industries: string[]) => {
+  if (!industries || industries.length === 0) {
+    return {
+      bg: 'from-gray-500 to-slate-600',
+      hover: 'hover:from-gray-600 hover:to-slate-700',
+      text: 'text-gray-600',
+      border: 'border-gray-200',
+      badge: 'bg-gradient-to-r from-purple-100 via-pink-100 to-indigo-100 text-purple-800 border-purple-200'
+    }
+  }
+  
+  // Create a gradient based on the industries present
+  const industryTypes = industries.map(ind => ind.toLowerCase())
+  
+  // Multi-industry gradient combinations
+  if (industryTypes.some(ind => ind.includes('technology') || ind.includes('software'))) {
+    return {
+      bg: 'from-blue-500 to-indigo-600',
+      hover: 'hover:from-blue-600 hover:to-indigo-700',
+      text: 'text-blue-600',
+      border: 'border-blue-200',
+      badge: 'bg-gradient-to-r from-blue-100 via-purple-100 to-indigo-100 text-blue-800 border-blue-200'
+    }
+  }
+  
+  if (industryTypes.some(ind => ind.includes('finance') || ind.includes('banking'))) {
+    return {
+      bg: 'from-green-500 to-emerald-600',
+      hover: 'hover:from-green-600 hover:to-emerald-700',
+      text: 'text-green-600',
+      border: 'border-green-200',
+      badge: 'bg-gradient-to-r from-green-100 via-teal-100 to-emerald-100 text-green-800 border-green-200'
+    }
+  }
+  
+  if (industryTypes.some(ind => ind.includes('healthcare') || ind.includes('medical'))) {
+    return {
+      bg: 'from-emerald-500 to-teal-600',
+      hover: 'hover:from-emerald-600 hover:to-teal-700',
+      text: 'text-emerald-600',
+      border: 'border-emerald-200',
+      badge: 'bg-gradient-to-r from-emerald-100 via-cyan-100 to-teal-100 text-emerald-800 border-emerald-200'
+    }
+  }
+  
+  // Default multi-industry gradient
+  return {
+    bg: 'from-purple-500 to-pink-600',
+    hover: 'hover:from-purple-600 hover:to-pink-700',
+    text: 'text-purple-600',
+    border: 'border-purple-200',
+    badge: 'bg-gradient-to-r from-purple-100 via-pink-100 to-indigo-100 text-purple-800 border-purple-200'
+  }
+}
+
 // Utility functions for advanced search and filtering
 
 const calculateSimilarity = (str1: string, str2: string): number => {
@@ -4012,7 +4068,7 @@ export default function CompaniesPage() {
                                         </Badge>
                                       ) : (
                                         <Badge
-                                          className="bg-gradient-to-r from-indigo-100 via-purple-100 to-blue-100 text-indigo-800 border-indigo-200 text-xs sm:text-sm"
+                                          className={`${getMultiIndustryColors(company.industries).badge} text-xs sm:text-sm`}
                                         >
                                           Multi Industry
                                         </Badge>
@@ -4021,7 +4077,7 @@ export default function CompaniesPage() {
                                       <Badge
                                         className={`${industryColors.badge} text-xs sm:text-sm`}
                                       >
-                                        {company.industry}
+                                        {company.industry && company.industry !== 'General' ? company.industry : 'Other'}
                                       </Badge>
                                     )}
 

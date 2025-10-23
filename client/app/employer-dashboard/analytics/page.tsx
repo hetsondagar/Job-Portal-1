@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line } from "recharts"
 
 export default function EmployerAnalyticsPage() {
@@ -276,6 +277,8 @@ export default function EmployerAnalyticsPage() {
         )}
         </div>
       </div>
+      
+      <EmployerDashboardFooter />
     </div>
   )
 }

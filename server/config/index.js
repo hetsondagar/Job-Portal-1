@@ -158,13 +158,10 @@ User.hasMany(Interview, { foreignKey: 'employerId', as: 'conductedInterviews' })
 User.hasMany(Interview, { foreignKey: 'candidateId', as: 'attendedInterviews' });
 
 // Conversation associations
-Conversation.belongsTo(User, { foreignKey: 'participant1_id', as: 'participant1' });
-Conversation.belongsTo(User, { foreignKey: 'participant2_id', as: 'participant2' });
-Conversation.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
-Conversation.belongsTo(JobApplication, { foreignKey: 'jobApplicationId', as: 'jobApplication' });
-User.hasMany(Conversation, { foreignKey: 'participant1_id', as: 'conversationsAsParticipant1' });
-User.hasMany(Conversation, { foreignKey: 'participant2_id', as: 'conversationsAsParticipant2' });
-JobApplication.hasMany(Conversation, { foreignKey: 'jobApplicationId', as: 'conversations' });
+Conversation.belongsTo(User, { foreignKey: 'participant1Id', as: 'participant1' });
+Conversation.belongsTo(User, { foreignKey: 'participant2Id', as: 'participant2' });
+User.hasMany(Conversation, { foreignKey: 'participant1Id', as: 'conversationsAsParticipant1' });
+User.hasMany(Conversation, { foreignKey: 'participant2Id', as: 'conversationsAsParticipant2' });
 
 // Message associations
 Message.belongsTo(Conversation, { foreignKey: 'conversationId', as: 'conversation' });

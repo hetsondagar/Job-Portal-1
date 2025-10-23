@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 import { apiService } from "@/lib/api"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
+import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 
 interface Conversation {
   id: string
@@ -47,7 +48,7 @@ export default function MessagesPage() {
     if (res.success && res.data?.messages) setMessages(res.data.messages)
     setLoadingThread(false)
     // mark read
-    await apiService.markConversationRead(id)
+    await apiService.markConversationAsRead(id)
     await loadConversations()
   }
 
@@ -187,6 +188,8 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+      
+      <EmployerDashboardFooter />
     </div>
   )
 }

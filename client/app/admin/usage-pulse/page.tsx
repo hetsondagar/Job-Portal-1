@@ -6,6 +6,7 @@ import { apiService } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
 import { EmployerDashboardNavbar } from '@/components/employer-dashboard-navbar'
+import { EmployerDashboardFooter } from '@/components/employer-dashboard-footer'
 
 export default function UsagePulsePage() {
   const { user, loading } = useAuth()
@@ -347,6 +348,8 @@ export default function UsagePulsePage() {
         </table>
       </section>
       </div>
+      
+      <EmployerDashboardFooter />
     </div>
   )
 }

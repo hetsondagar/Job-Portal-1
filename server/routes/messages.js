@@ -56,7 +56,7 @@ router.get('/conversations', authenticateToken, async (req, res) => {
           { participant1Id: req.user.id },
           { participant2Id: req.user.id }
         ],
-        isActive: true
+        isBlocked: false
       },
       include: [
         {
@@ -76,13 +76,17 @@ router.get('/conversations', authenticateToken, async (req, res) => {
     // Transform conversations to include other participant info
     const transformedConversations = conversations.map(conv => {
       const otherParticipant = conv.participant1Id === req.user.id ? conv.participant2 : conv.participant1;
-      const isUnread = conv.unreadCount > 0;
+      const unreadCount = conv.participant1Id === req.user.id ? conv.unreadCountParticipant1 : conv.unreadCountParticipant2;
+      const isUnread = unreadCount > 0;
+      
+      // Generate title from participant names
+      const title = otherParticipant ? `${otherParticipant.first_name} ${otherParticipant.last_name}` : 'Unknown User';
       
       return {
         id: conv.id,
-        title: conv.title,
+        title: title,
         lastMessageAt: conv.lastMessageAt,
-        unreadCount: conv.unreadCount,
+        unreadCount: unreadCount,
         isUnread,
         otherParticipant: {
           id: otherParticipant.id,
@@ -179,9 +183,9 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
     const { conversationId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
-    // Verify user is participant in conversation (raw SQL to honor camelCase columns)
+    // Verify user is participant in conversation
     const [convRows] = await sequelize.query(
-      'SELECT "id" FROM "conversations" WHERE "id" = :cid AND ("participant1Id" = :uid OR "participant2Id" = :uid) LIMIT 1;',
+      'SELECT "id" FROM "conversations" WHERE "id" = :cid AND ("participant1_id" = :uid OR "participant2_id" = :uid) LIMIT 1;',
       { replacements: { cid: conversationId, uid: req.user.id }, type: sequelize.QueryTypes.SELECT }
     )
 
@@ -220,11 +224,16 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
       }
     );
 
-    // Update conversation unread count (raw SQL)
-    await sequelize.query('UPDATE "conversations" SET "unreadCount" = 0, "updated_at" = NOW() WHERE "id" = :cid', {
-      replacements: { cid: conversationId },
-      type: sequelize.QueryTypes.UPDATE
-    })
+    // Update conversation unread count
+    const conversation = await Conversation.findByPk(conversationId);
+    if (conversation) {
+      if (conversation.participant1Id === req.user.id) {
+        conversation.unreadCountParticipant1 = 0;
+      } else if (conversation.participant2Id === req.user.id) {
+        conversation.unreadCountParticipant2 = 0;
+      }
+      await conversation.save();
+    }
 
     // Transform messages
     const transformedMessages = messages.map(msg => ({
@@ -276,9 +285,9 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
       });
     }
 
-    // Verify user is participant in conversation (raw SQL to honor camelCase columns)
+    // Verify user is participant in conversation
     const [convRows] = await sequelize.query(
-      'SELECT "id", "participant1Id", "participant2Id" FROM "conversations" WHERE "id" = :cid AND ("participant1Id" = :uid OR "participant2Id" = :uid) LIMIT 1;',
+      'SELECT "id", "participant1_id" AS "participant1Id", "participant2_id" AS "participant2Id" FROM "conversations" WHERE "id" = :cid AND ("participant1_id" = :uid OR "participant2_id" = :uid) LIMIT 1;',
       { replacements: { cid: conversationId, uid: req.user.id }, type: sequelize.QueryTypes.SELECT }
     )
 
@@ -301,11 +310,21 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
       content: content.trim()
     });
 
-    // Update conversation (raw SQL)
-    await sequelize.query('UPDATE "conversations" SET "lastMessageId" = :mid, "lastMessageAt" = NOW(), "unreadCount" = COALESCE("unreadCount",0) + 1, "updated_at" = NOW() WHERE "id" = :cid', {
-      replacements: { cid: conversationId, mid: message.id },
-      type: sequelize.QueryTypes.UPDATE
-    })
+    // Update conversation
+    const conversation = await Conversation.findByPk(conversationId);
+    if (conversation) {
+      conversation.lastMessageId = message.id;
+      conversation.lastMessageAt = new Date();
+      
+      // Update unread count for the receiver
+      if (conversation.participant1Id === receiverId) {
+        conversation.unreadCountParticipant1 = (conversation.unreadCountParticipant1 || 0) + 1;
+      } else if (conversation.participant2Id === receiverId) {
+        conversation.unreadCountParticipant2 = (conversation.unreadCountParticipant2 || 0) + 1;
+      }
+      
+      await conversation.save();
+    }
 
     res.status(201).json({
       success: true,

@@ -659,6 +659,35 @@ exports.createJob = async (req, res, next) => {
         // Don't fail the job creation if notifications fail
       }
 
+      // Send notification to employer about job creation
+      try {
+        const Notification = require('../models/Notification');
+        
+        await Notification.create({
+          userId: req.user.id,
+          type: 'company_update',
+          title: `✅ Job Posted Successfully!`,
+          message: `Your job "${job.title}" has been posted and is now live. Start receiving applications!`,
+          shortMessage: `Job posted: ${job.title}`,
+          priority: 'low',
+          actionUrl: `/employer-dashboard/jobs/${job.id}`,
+          actionText: 'View Job',
+          icon: 'briefcase',
+          metadata: {
+            jobId: job.id,
+            jobTitle: job.title,
+            companyId: userCompany.id,
+            companyName: userCompany.name,
+            location: job.location,
+            action: 'job_created'
+          }
+        });
+        console.log(`✅ Job creation notification sent to employer ${req.user.id}`);
+      } catch (notificationError) {
+        console.error('❌ Failed to send job creation notification:', notificationError);
+        // Don't fail the job creation if notification fails
+      }
+
       // Send notifications to company followers
       try {
         console.log('🔔 Checking for company followers...');
