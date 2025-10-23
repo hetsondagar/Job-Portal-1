@@ -667,27 +667,27 @@ export default function UserDetailPage() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-600">User Type</label>
-                    <div>
-                      <Badge className={user.user_type === 'employer' ? 'bg-green-600' : 'bg-blue-600'}>
-                        {user.user_type}
-                      </Badge>
-                    </div>
+                  <div>
+                    <Badge className={user.user_type === 'employer' ? 'bg-green-600' : 'bg-blue-600'}>
+                      {user.user_type}
+                    </Badge>
+                  </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-600">Account Status</label>
-                    <div>
-                      <Badge className={getStatusColor(user.account_status)}>
-                        {user.account_status}
-                      </Badge>
-                    </div>
+                  <div>
+                    <Badge className={getStatusColor(user.account_status)}>
+                      {user.account_status}
+                    </Badge>
+                  </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-600">Verification Status</label>
-                    <div>
+                  <div>
                       <Badge className={getUserVerificationStatus(user).color}>
                         {getUserVerificationStatus(user).status}
-                      </Badge>
-                    </div>
+                    </Badge>
+                  </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-600">Created At</label>

@@ -250,15 +250,15 @@ export function CompanyManagementDialog({
                               {industry}
                             </Badge>
                           ))}
-                        </div>
+                </div>
                       ) : (
                         <p className="text-gray-900">{currentCompany.industry || 'Not specified'}</p>
                       )}
-                    </div>
+                </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Company Size</label>
                       <p className="text-gray-900">{currentCompany.companySize || currentCompany.company_size || 'Not specified'}</p>
-                    </div>
+              </div>
                   </CardContent>
                 </Card>
 
@@ -381,14 +381,14 @@ export function CompanyManagementDialog({
                                   View
                                 </Button>
                               )}
-                            </div>
+                              </div>
                             {doc.description && (
                               <p className="text-sm text-gray-600">{doc.description}</p>
                             )}
                           </div>
                       ))}
-                      </div>
                     </div>
+                  </div>
                   )}
 
                   {(gstNumber || panNumber) && (
@@ -432,8 +432,8 @@ export function CompanyManagementDialog({
                         <p className="text-sm font-medium text-gray-600">Total Jobs</p>
                         <p className="text-2xl font-bold text-gray-900">{currentCompany.statistics?.totalJobs || currentCompany.totalJobsPosted || 0}</p>
                         <p className="text-xs text-blue-600 mt-1">Click to view all jobs</p>
-                      </div>
                     </div>
+                  </div>
                   </CardContent>
                 </Card>
 
@@ -444,8 +444,8 @@ export function CompanyManagementDialog({
                       <div className="ml-4">
                         <p className="text-sm font-medium text-gray-600">Total Applications</p>
                         <p className="text-2xl font-bold text-gray-900">{currentCompany.statistics?.totalApplications || currentCompany.totalApplications || 0}</p>
-                      </div>
                     </div>
+                  </div>
                   </CardContent>
                 </Card>
 
@@ -456,8 +456,8 @@ export function CompanyManagementDialog({
                       <div className="ml-4">
                         <p className="text-sm font-medium text-gray-600">Rating</p>
                         <p className="text-2xl font-bold text-gray-900">{currentCompany.statistics?.averageRating || currentCompany.rating || 'N/A'}</p>
-                      </div>
                     </div>
+                  </div>
                   </CardContent>
                 </Card>
               </div>

@@ -348,7 +348,7 @@ export default function CompanyManagementPage({ portal, title, description, icon
             </Button>
             <div className="flex items-center space-x-3">
               {icon}
-              <div>
+            <div>
                 <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
                 <p className="text-gray-600">{description}</p>
               </div>
@@ -447,8 +447,8 @@ export default function CompanyManagementPage({ portal, title, description, icon
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                            <Building2 className="w-8 h-8 text-white" style={{ display: company.logo ? 'none' : 'flex' }} />
-                          </div>
+                        <Building2 className="w-8 h-8 text-white" style={{ display: company.logo ? 'none' : 'flex' }} />
+                      </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">{company.name}</h3>
                             <p className="text-sm text-gray-600">{company.email}</p>
@@ -473,22 +473,22 @@ export default function CompanyManagementPage({ portal, title, description, icon
                           </div>
                         </div>
                         <div className="flex flex-col space-y-2">
-                          <Badge 
-                            variant="outline" 
-                            className={company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}
-                          >
-                            {company.region === 'india' ? (
-                              <>
-                                <MapPin className="w-3 h-3 mr-1" />
-                                India
-                              </>
-                            ) : (
-                              <>
-                                <Globe className="w-3 h-3 mr-1" />
-                                Gulf
-                              </>
-                            )}
-                          </Badge>
+                            <Badge 
+                              variant="outline" 
+                              className={company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}
+                            >
+                              {company.region === 'india' ? (
+                                <>
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  India
+                                </>
+                              ) : (
+                                <>
+                                  <Globe className="w-3 h-3 mr-1" />
+                                  Gulf
+                                </>
+                              )}
+                            </Badge>
                           <Badge 
                             variant={company.isActive ? 'default' : 'destructive'}
                             className={company.isActive ? 'bg-blue-600' : 'bg-gray-600'}
@@ -500,103 +500,103 @@ export default function CompanyManagementPage({ portal, title, description, icon
                       
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center text-sm text-gray-600">
-                          <Briefcase className="w-3 h-3 mr-1" />
-                          {company.totalJobsPosted || 0} jobs
-                        </div>
+                            <Briefcase className="w-3 h-3 mr-1" />
+                            {company.totalJobsPosted || 0} jobs
+                          </div>
                         <div className="flex items-center text-sm text-gray-600">
-                          <Users className="w-3 h-3 mr-1" />
-                          {company.totalApplications || 0} applications
-                        </div>
+                            <Users className="w-3 h-3 mr-1" />
+                            {company.totalApplications || 0} applications
+                          </div>
                         {company.rating && (
                           <div className="flex items-center text-sm text-gray-600">
-                            <Star className="w-3 h-3 mr-1" />
+                              <Star className="w-3 h-3 mr-1" />
                             {typeof company.rating === 'number' ? company.rating.toFixed(1) : company.rating}
-                          </div>
-                        )}
-                      </div>
+                            </div>
+                          )}
+                        </div>
 
                       <div className="flex items-center justify-between">
                         <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
                               setSelectedCompany(company)
                               setShowCompanyDialog(true)
-                            }}
-                            className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                        }}
+                        className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
                           {company.verificationStatus !== 'verified' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
+                      <Button
+                        variant="outline"
+                        size="sm"
                               onClick={() => handleApproveVerification(company.id)}
                               className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white hover:text-green-400"
                             >
                               <CheckCircle2 className="w-4 h-4" />
-                            </Button>
+                      </Button>
                           )}
                           {company.verificationStatus !== 'verified' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleCompanyStatus(company.id, company.isActive)}
-                              className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
-                                company.isActive ? 'hover:text-red-400' : 'hover:text-green-400'
-                              }`}
-                            >
-                              {company.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                            </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleCompanyStatus(company.id, company.isActive)}
+                        className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
+                          company.isActive ? 'hover:text-red-400' : 'hover:text-green-400'
+                        }`}
+                      >
+                        {company.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      </Button>
                           )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => {
-                                setSelectedCompany(company)
-                                setShowCompanyDialog(true)
-                              }}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCompany(company)
+                            setShowCompanyDialog(true)
+                          }}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
                           {company.verificationStatus !== 'verified' && (
                             <DropdownMenuItem onClick={() => handleApproveVerification(company.id)}>
-                              <CheckCircle2 className="w-4 h-4 mr-2" />
-                              Verify
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Verify
                             </DropdownMenuItem>
-                          )}
+                            )}
                               {company.verificationStatus !== 'verified' && (
-                                <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id, company.isActive)}>
-                                  {company.isActive ? (
-                                    <>
-                                      <XCircle className="w-4 h-4 mr-2" />
-                                      Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                                      Activate
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id, company.isActive)}>
+                            {company.isActive ? (
+                              <>
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Activate
+                              </>
+                            )}
+                          </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
-                                onClick={() => deleteCompany(company.id)}
-                                className="text-red-400"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                          <DropdownMenuItem 
+                            onClick={() => deleteCompany(company.id)}
+                            className="text-red-400"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                         {getVerificationStatusBadge(company.verificationStatus || 'unverified')}
-                      </div>
+                  </div>
                     </CardContent>
                   </Card>
                 ))}

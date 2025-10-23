@@ -110,9 +110,15 @@ interface Company {
 
   industry: string
 
+  industries?: string[]
+
   sector: string
 
   location: string
+
+  city?: string
+
+  address?: string
 
   employees: string
 
@@ -147,6 +153,119 @@ interface Company {
 }
 
 
+
+// Industry-specific color schemes for professional hover effects
+const getIndustryColors = (industry: string) => {
+  const industryLower = industry.toLowerCase()
+  
+  // Technology & IT
+  if (industryLower.includes('technology') || industryLower.includes('software') || industryLower.includes('it services') || industryLower.includes('internet') || industryLower.includes('electronics')) {
+    return {
+      bg: 'from-blue-500 to-indigo-600',
+      hover: 'hover:from-blue-600 hover:to-indigo-700',
+      text: 'text-blue-600',
+      border: 'border-blue-200',
+      badge: 'bg-blue-50 text-blue-700 border-blue-200'
+    }
+  }
+  
+  // Healthcare & Medical
+  if (industryLower.includes('medical') || industryLower.includes('healthcare') || industryLower.includes('pharmaceutical') || industryLower.includes('biotechnology')) {
+    return {
+      bg: 'from-emerald-500 to-teal-600',
+      hover: 'hover:from-emerald-600 hover:to-teal-700',
+      text: 'text-emerald-600',
+      border: 'border-emerald-200',
+      badge: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    }
+  }
+  
+  // Finance & Banking
+  if (industryLower.includes('banking') || industryLower.includes('finance') || industryLower.includes('insurance') || industryLower.includes('investment') || industryLower.includes('fintech')) {
+    return {
+      bg: 'from-slate-600 to-gray-700',
+      hover: 'hover:from-slate-700 hover:to-gray-800',
+      text: 'text-slate-600',
+      border: 'border-slate-200',
+      badge: 'bg-slate-50 text-slate-700 border-slate-200'
+    }
+  }
+  
+  // Manufacturing & Industrial
+  if (industryLower.includes('manufacturing') || industryLower.includes('industrial') || industryLower.includes('automobile') || industryLower.includes('chemicals') || industryLower.includes('steel')) {
+    return {
+      bg: 'from-orange-500 to-amber-600',
+      hover: 'hover:from-orange-600 hover:to-amber-700',
+      text: 'text-orange-600',
+      border: 'border-orange-200',
+      badge: 'bg-orange-50 text-orange-700 border-orange-200'
+    }
+  }
+  
+  // Education & Training
+  if (industryLower.includes('education') || industryLower.includes('training') || industryLower.includes('e-learning')) {
+    return {
+      bg: 'from-purple-500 to-violet-600',
+      hover: 'hover:from-purple-600 hover:to-violet-700',
+      text: 'text-purple-600',
+      border: 'border-purple-200',
+      badge: 'bg-purple-50 text-purple-700 border-purple-200'
+    }
+  }
+  
+  // Retail & Consumer
+  if (industryLower.includes('retail') || industryLower.includes('consumer') || industryLower.includes('fmcg') || industryLower.includes('textiles')) {
+    return {
+      bg: 'from-pink-500 to-rose-600',
+      hover: 'hover:from-pink-600 hover:to-rose-700',
+      text: 'text-pink-600',
+      border: 'border-pink-200',
+      badge: 'bg-pink-50 text-pink-700 border-pink-200'
+    }
+  }
+  
+  // Construction & Real Estate
+  if (industryLower.includes('construction') || industryLower.includes('real estate') || industryLower.includes('infrastructure')) {
+    return {
+      bg: 'from-amber-500 to-yellow-600',
+      hover: 'hover:from-amber-600 hover:to-yellow-700',
+      text: 'text-amber-600',
+      border: 'border-amber-200',
+      badge: 'bg-amber-50 text-amber-700 border-amber-200'
+    }
+  }
+  
+  // Media & Entertainment
+  if (industryLower.includes('media') || industryLower.includes('entertainment') || industryLower.includes('advertising') || industryLower.includes('publishing')) {
+    return {
+      bg: 'from-red-500 to-pink-600',
+      hover: 'hover:from-red-600 hover:to-pink-700',
+      text: 'text-red-600',
+      border: 'border-red-200',
+      badge: 'bg-red-50 text-red-700 border-red-200'
+    }
+  }
+  
+  // Logistics & Transportation
+  if (industryLower.includes('logistics') || industryLower.includes('transportation') || industryLower.includes('shipping') || industryLower.includes('aviation')) {
+    return {
+      bg: 'from-cyan-500 to-blue-600',
+      hover: 'hover:from-cyan-600 hover:to-blue-700',
+      text: 'text-cyan-600',
+      border: 'border-cyan-200',
+      badge: 'bg-cyan-50 text-cyan-700 border-cyan-200'
+    }
+  }
+  
+  // Default professional color
+  return {
+    bg: 'from-gray-500 to-slate-600',
+    hover: 'hover:from-gray-600 hover:to-slate-700',
+    text: 'text-gray-600',
+    border: 'border-gray-200',
+    badge: 'bg-gray-50 text-gray-700 border-gray-200'
+  }
+}
 
 // Utility functions for advanced search and filtering
 
@@ -3699,7 +3818,7 @@ export default function CompaniesPage() {
 
                 currentCompanies.map((company, index) => {
 
-                const sectorColors = getSectorColor(company.sector)
+                const industryColors = getIndustryColors(company.industry)
 
 
 
@@ -3799,23 +3918,23 @@ export default function CompaniesPage() {
 
                         <div
 
-                          className={`absolute inset-0 bg-gradient-to-br ${sectorColors.bg} opacity-0 ${!company.urgent ? 'group-hover:opacity-10' : ''} transition-opacity duration-500`}
+                          className={`absolute inset-0 bg-gradient-to-br ${industryColors.bg} opacity-0 ${!company.urgent ? 'group-hover:opacity-10' : ''} transition-opacity duration-500`}
 
                         />
 
 
 
-                        <CardContent className="p-4 sm:p-6 lg:p-8">
+                        <CardContent className="p-3 sm:p-4 lg:p-5">
 
-                          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                          <div className="flex flex-col lg:flex-row gap-2 lg:gap-3">
 
                             <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }}>
 
-                              <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg flex-shrink-0 mx-auto lg:mx-0">
+                              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg flex-shrink-0 mx-auto lg:mx-0">
 
                                 <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
 
-                                <AvatarFallback className={`text-xl sm:text-2xl font-bold ${sectorColors.text}`}>
+                                <AvatarFallback className={`text-lg sm:text-xl font-bold ${industryColors.text}`}>
 
                                   {company.name[0]}
 
@@ -3829,13 +3948,13 @@ export default function CompaniesPage() {
 
                             <div className="flex-1 min-w-0">
 
-                              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4 gap-4">
+                              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 gap-3">
 
                                 <div className="flex-1 min-w-0">
 
                                   <h3
 
-                                    className={`text-xl sm:text-2xl font-bold mb-2 transition-colors duration-300 ${
+                                    className={`text-lg sm:text-xl font-bold mb-1 transition-colors duration-300 ${
 
                                       company.urgent
 
@@ -3851,17 +3970,33 @@ export default function CompaniesPage() {
 
                                   </h3>
 
-                                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3">
+                                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 h-8 overflow-hidden">
 
-                                    <Badge
-
-                                      className={`${sectorColors.text} ${sectorColors.border} bg-gradient-to-r ${sectorColors.bg} bg-opacity-10 text-xs sm:text-sm`}
-
-                                    >
-
-                                      {company.industry}
-
-                                    </Badge>
+                                    {company.industries && company.industries.length > 0 ? (
+                                      <>
+                                        {company.industries.slice(0, 2).map((industry: string, index: number) => (
+                                          <Badge
+                                            key={index}
+                                            className={`${industryColors.badge} text-xs sm:text-sm`}
+                                          >
+                                            {industry}
+                                          </Badge>
+                                        ))}
+                                        {company.industries.length > 2 && (
+                                          <Badge
+                                            className={`${industryColors.badge} text-xs sm:text-sm`}
+                                          >
+                                            +{company.industries.length - 2} more
+                                          </Badge>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <Badge
+                                        className={`${industryColors.badge} text-xs sm:text-sm`}
+                                      >
+                                        {company.industry}
+                                      </Badge>
+                                    )}
 
                                     <Badge variant="secondary" className="text-xs">
 
@@ -3881,17 +4016,11 @@ export default function CompaniesPage() {
 
                                   </div>
 
-                                  <div className="flex items-center mb-3">
+                                  <div className="flex items-center mb-2">
 
                                     <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
 
                                     <span className="font-semibold text-sm sm:text-base">{company.rating}</span>
-
-                                    <span className="text-slate-500 text-xs sm:text-sm ml-1">
-
-                                      ({company.reviews.toLocaleString()} reviews)
-
-                                    </span>
 
                                   </div>
 
@@ -3899,7 +4028,7 @@ export default function CompaniesPage() {
 
 
 
-                                <div className="flex flex-col sm:flex-row lg:flex-col items-center lg:items-end space-y-2 sm:space-y-0 sm:space-x-3 lg:space-x-0 lg:space-y-3 flex-shrink-0">
+                                <div className="flex flex-col sm:flex-row lg:flex-col items-center lg:items-end space-y-1 sm:space-y-0 sm:space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0">
 
                                   <Button
 
@@ -3907,7 +4036,7 @@ export default function CompaniesPage() {
 
                                     size="sm"
 
-                                    className={`w-full sm:w-auto backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm ${
+                                    className={`w-full sm:w-auto backdrop-blur-sm transition-all duration-300 text-xs h-8 px-3 ${
 
                                       followedCompanies.has(company.id) 
 
@@ -3951,7 +4080,7 @@ export default function CompaniesPage() {
 
                                     <Button
 
-                                      className={`w-full sm:w-auto bg-gradient-to-r ${sectorColors.bg} ${sectorColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm`}
+                                      className={`w-full sm:w-auto bg-gradient-to-r ${industryColors.bg} ${industryColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs h-8 px-3`}
 
                                     >
 
@@ -3969,21 +4098,21 @@ export default function CompaniesPage() {
 
 
 
-                              <p className="text-slate-700 dark:text-slate-300 mb-4 sm:mb-6 line-clamp-2 leading-relaxed text-sm sm:text-base">
-
-                                {company.description}
-
-                              </p>
 
 
 
-                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
 
                                 <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
 
                                   <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
 
-                                  <span className="truncate">{company.location}</span>
+                                  <span className="truncate">
+                                    {company.location && company.location !== 'India' 
+                                      ? company.location 
+                                      : company.city || company.address || 'India'
+                                    }
+                                  </span>
 
                                 </div>
 
@@ -3995,13 +4124,6 @@ export default function CompaniesPage() {
 
                                 </div>
 
-                                <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-
-                                  <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-
-                                  <span className="truncate">Founded {company.founded}</span>
-
-                                </div>
 
                                 <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
 
@@ -4015,9 +4137,9 @@ export default function CompaniesPage() {
 
 
 
-                              <div className="flex flex-wrap gap-1 sm:gap-2 mb-4">
+                              <div className="flex flex-wrap gap-1 sm:gap-2 mb-2">
 
-                                {company.benefits.slice(0, 4).map((benefit, benefitIndex) => (
+                                {company.benefits.slice(0, 3).map((benefit, benefitIndex) => (
 
                                   <Badge
 
@@ -4035,11 +4157,11 @@ export default function CompaniesPage() {
 
                                 ))}
 
-                                {company.benefits.length > 4 && (
+                                {company.benefits.length > 3 && (
 
                                   <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
 
-                                    +{company.benefits.length - 4} more
+                                    +{company.benefits.length - 3} more
 
                                   </Badge>
 
@@ -4049,7 +4171,7 @@ export default function CompaniesPage() {
 
 
 
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 gap-2">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700 gap-2">
 
                                 <div className="flex items-center space-x-4">
 
@@ -4068,8 +4190,6 @@ export default function CompaniesPage() {
                                     {company.activeJobsCount || company.openings || 0} open positions
 
                                   </span>
-
-                                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
 
                                 </div>
 
