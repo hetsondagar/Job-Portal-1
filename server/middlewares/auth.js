@@ -84,4 +84,22 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticateToken };
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (req.user.user_type !== 'admin' && req.user.user_type !== 'superadmin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  next();
+};
+
+module.exports = { authenticateToken, requireAdmin };

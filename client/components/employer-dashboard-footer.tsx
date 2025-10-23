@@ -134,7 +134,7 @@ export function EmployerDashboardFooter() {
         {/* Bottom Bar */}
         <div className="mt-4 pt-3 border-t border-slate-600/40 flex flex-col md:flex-row items-center justify-between">
           <div className="flex items-center space-x-4 text-sm text-slate-300">
-            <p>&copy; 2024 Employer Portal. All rights reserved.</p>
+            <p>&copy; 2025 Employer Portal. All rights reserved.</p>
           </div>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
             <Link href="/privacy" className="text-sm text-slate-300 hover:text-blue-400 transition-colors">

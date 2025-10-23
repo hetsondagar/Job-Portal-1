@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { usePayment } from '@/hooks/usePayment';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/navbar';
+import EmployerAuthNavbar from '@/components/employer-auth-navbar';
 
 export default function DatabasePricingPage() {
   const router = useRouter();
@@ -101,7 +101,7 @@ export default function DatabasePricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40">
-      <Navbar />
+      <EmployerAuthNavbar />
       
       <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

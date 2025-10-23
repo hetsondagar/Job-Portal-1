@@ -41,6 +41,7 @@ const BulkJobImport = require('../models/BulkJobImport')(sequelize);
 const CandidateAnalytics = require('../models/CandidateAnalytics')(sequelize);
 const JobTemplate = require('../models/JobTemplate');
 const JobPreference = require('../models/JobPreference');
+const SupportMessage = require('../models/SupportMessage')(sequelize);
 
 // Define associations
 
@@ -252,5 +253,6 @@ module.exports = {
   CandidateAnalytics,
   JobTemplate,
   JobPreference,
+  SupportMessage,
   syncDatabase
 }; 

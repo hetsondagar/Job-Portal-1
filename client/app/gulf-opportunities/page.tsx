@@ -27,7 +27,7 @@ import {
   Clock,
   X
 } from 'lucide-react'
-import { Navbar } from '@/components/navbar'
+import GulfNavbar from '@/components/gulf-navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { apiService } from '@/lib/api'
 import { toast } from 'sonner'
@@ -416,10 +416,10 @@ export default function GulfOpportunitiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-green-100 to-yellow-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <GulfNavbar />
       
-      <div className="pt-16 pb-12">
+      <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Hero Section */}
           <div className="text-center mb-12">
@@ -679,8 +679,7 @@ export default function GulfOpportunitiesPage() {
                 </Button>
                 <Button 
                   size="lg" 
-                  variant="outline"
-                  className="border-white text-white hover:bg-white/10 px-8 py-4 text-lg"
+                  className="bg-white text-green-600 hover:bg-green-50 border-2 border-white px-8 py-4 text-lg font-semibold shadow-lg"
                   onClick={() => setShowRegisterDialog(true)}
                 >
                   <Users className="w-5 h-5 mr-2" />
@@ -694,7 +693,7 @@ export default function GulfOpportunitiesPage() {
 
       {/* Login Dialog */}
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold text-slate-900 dark:text-white">
               Sign In to Explore Gulf Jobs
@@ -808,7 +807,7 @@ export default function GulfOpportunitiesPage() {
 
       {/* Register Dialog */}
       <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold text-slate-900 dark:text-white">
               Create Gulf Account
@@ -963,6 +962,144 @@ export default function GulfOpportunitiesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-600/5 via-yellow-600/5 to-green-600/5"></div>
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-green-500/10 to-yellow-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-gradient-to-br from-yellow-500/10 to-green-500/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            <div className="lg:col-span-1">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Globe className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-2xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Gulf Jobs</span>
+              </div>
+              <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                Your gateway to exciting career opportunities in the Gulf region. Connect with top employers and find your dream job.
+              </p>
+              <div className="flex space-x-4">
+                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-green-600/20 transition-colors cursor-pointer">
+                  <span className="text-sm font-bold">f</span>
+                </div>
+                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-green-600/20 transition-colors cursor-pointer">
+                  <span className="text-sm font-bold">t</span>
+                </div>
+                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-green-600/20 transition-colors cursor-pointer">
+                  <span className="text-sm font-bold">in</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-6 text-white">For Job Seekers</h3>
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link href="/gulf-jobs" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Browse Gulf Jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/gulf-companies" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Browse Companies
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/gulf-opportunities" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Gulf Opportunities
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/register" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Create Account
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Login
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-6 text-white">For Employers</h3>
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link href="/employer-dashboard/post-job" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Post a Job
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/employer-dashboard/requirements" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Search Resume Database
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/employer-dashboard/manage-jobs" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Manage Jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/employer-register" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-green-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Employer Registration
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-6 text-white">Contact Us</h3>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center text-slate-300">
+                  <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-xs">📧</span>
+                  </div>
+                  <span>gulf@jobportal.com</span>
+                </div>
+                <div className="flex items-center text-slate-300">
+                  <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-xs">📞</span>
+                  </div>
+                  <span>+971 4-123-4567</span>
+                </div>
+                <div className="flex items-center text-slate-300">
+                  <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-xs">📍</span>
+                  </div>
+                  <span>Dubai, UAE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-700/50 pt-8 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-slate-400">
+              <p>© 2025 Gulf Jobs. All rights reserved. Made with ❤️ for Gulf opportunities</p>
+              <div className="flex items-center space-x-6 mt-4 sm:mt-0">
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+                <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

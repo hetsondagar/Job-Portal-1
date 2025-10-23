@@ -4279,6 +4279,113 @@ class ApiService {
     });
   }
 
+  // Send support message
+  async sendSupportMessage(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    subject: string;
+    message: string;
+    category: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/support/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error sending support message:', error);
+      return {
+        success: false,
+        message: 'Failed to send support message',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Get support messages (admin only)
+  async getSupportMessages(params?: { 
+    page?: number; 
+    limit?: number; 
+    status?: string; 
+    category?: string; 
+    priority?: string; 
+  }): Promise<ApiResponse<any[]>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.category) queryParams.append('category', params.category);
+      if (params?.priority) queryParams.append('priority', params.priority);
+      
+      const url = `${API_BASE_URL}/support/messages${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('❌ Error fetching support messages:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch support messages',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Update support message (admin only)
+  async updateSupportMessage(messageId: string, data: {
+    status?: string;
+    response?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/support/messages/${messageId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders(),
+        },
+        body: JSON.stringify(data),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error updating support message:', error);
+      return {
+        success: false,
+        message: 'Failed to update support message',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
+  // Get support statistics (admin only)
+  async getSupportStats(): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/support/stats`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching support stats:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch support statistics',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
 }
 
 export const apiService = new ApiService();

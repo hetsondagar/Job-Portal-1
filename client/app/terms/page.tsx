@@ -8,7 +8,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 pt-24 pb-16">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">Terms of Service</h1>
           

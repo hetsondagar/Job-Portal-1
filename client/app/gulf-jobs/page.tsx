@@ -1355,7 +1355,7 @@ export default function GulfJobsPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400">
-            <p>&copy; 2024 Gulf JobPortal. All rights reserved.</p>
+            <p>&copy; 2025 Gulf JobPortal. All rights reserved.</p>
           </div>
         </div>
       </footer>

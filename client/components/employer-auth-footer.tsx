@@ -21,10 +21,10 @@ import { Separator } from "@/components/ui/separator"
 
 export default function EmployerAuthFooter() {
   return (
-    <footer className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-700">
+    <footer className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-6 sm:py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-700">
       <div className="max-w-7xl mx-auto">
         {/* Top Section - Trust Indicators */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 pb-12 border-b border-slate-700">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 pb-6 border-b border-slate-700">
           <div className="text-center">
             <div className="w-12 h-12 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto mb-3">
               <Users className="w-6 h-6 text-blue-400" />
@@ -56,7 +56,7 @@ export default function EmployerAuthFooter() {
         </div>
 
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-6">
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
@@ -218,7 +218,7 @@ export default function EmployerAuthFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <Separator className="bg-slate-700 mb-8" />
+        <Separator className="bg-slate-700 mb-4" />
         
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="text-sm text-slate-400 text-center md:text-left">
