@@ -70,6 +70,28 @@ module.exports = (sequelize) => {
       type: DataTypes.JSON,
       allowNull: true,
       defaultValue: {}
+    },
+    readBy: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],
+      field: 'read_by'
+    },
+    readAt: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {},
+      field: 'read_at'
+    },
+    lastReadBy: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'last_read_by'
+    },
+    lastReadAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'last_read_at'
     }
   }, {
     tableName: 'support_messages',

@@ -61,7 +61,7 @@ export default function AdminDashboardPage() {
   // Handle tab persistence from URL
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab')
-    if (tabFromUrl && ['overview', 'users', 'companies', 'jobs', 'notifications'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'users', 'companies', 'jobs', 'notifications', 'support'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl)
     }
   }, [searchParams])
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-white border-gray-200 shadow-sm">
+          <TabsList className="grid w-full grid-cols-6 bg-white border-gray-200 shadow-sm">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
@@ -199,6 +199,10 @@ export default function AdminDashboardPage() {
             <TabsTrigger value="notifications" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <Bell className="w-4 h-4 mr-2" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="support" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <Shield className="w-4 h-4 mr-2" />
+              Support
             </TabsTrigger>
           </TabsList>
 
@@ -775,6 +779,108 @@ export default function AdminDashboardPage() {
                         <Button className="bg-blue-600 hover:bg-blue-700">
                           <BellRing className="w-4 h-4 mr-2" />
                           Open Notifications
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Support Tab */}
+          <TabsContent value="support" className="mt-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Support Center</h2>
+                <Link href="/super-admin/support">
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Open Support Center
+                  </Button>
+                </Link>
+              </div>
+              
+              <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Support & Whistleblower Reports</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Manage customer support messages and handle anonymous whistleblower reports
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-blue-500 rounded-full">
+                          <Shield className="w-6 h-6 text-white" />
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-800">General</Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Customer Support</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Handle general support requests, technical issues, and customer inquiries.
+                      </p>
+                      <Link href="/super-admin/support?filter=all">
+                        <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                          View All Support
+                        </Button>
+                      </Link>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-red-500 rounded-full">
+                          <AlertCircle className="w-6 h-6 text-white" />
+                        </div>
+                        <Badge className="bg-red-100 text-red-800">🚨 Urgent</Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Whistleblower Reports</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Review anonymous reports of fraud, misconduct, and other serious violations.
+                      </p>
+                      <Link href="/super-admin/support?filter=whistleblower">
+                        <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-50">
+                          View Whistleblower Reports
+                        </Button>
+                      </Link>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-orange-500 rounded-full">
+                          <AlertCircle className="w-6 h-6 text-white" />
+                        </div>
+                        <Badge className="bg-orange-100 text-orange-800">High Priority</Badge>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Fraud & Spam</h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Investigate reports of fraudulent activities and spam violations.
+                      </p>
+                      <Link href="/super-admin/support?filter=fraud">
+                        <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                          View Fraud Reports
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-red-500 rounded-full">
+                        <Shield className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">🚨 Urgent Priority System</h3>
+                        <p className="text-gray-600 text-sm">
+                          Whistleblower reports are automatically flagged as urgent priority and require immediate attention. 
+                          All reports are handled with strict confidentiality and legal protection.
+                        </p>
+                      </div>
+                      <Link href="/super-admin/support?filter=urgent">
+                        <Button className="bg-red-600 hover:bg-red-700">
+                          <AlertCircle className="w-4 h-4 mr-2" />
+                          View Urgent Reports
                         </Button>
                       </Link>
                     </div>

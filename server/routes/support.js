@@ -34,7 +34,7 @@ router.post('/messages', [
       message,
       category,
       status: 'new',
-      priority: ['bug', 'fraud', 'spam', 'misconduct', 'whistleblower'].includes(category) ? 'high' : category === 'technical' ? 'medium' : 'low'
+      priority: ['fraud', 'spam', 'misconduct', 'whistleblower'].includes(category) ? 'urgent' : category === 'bug' ? 'high' : category === 'technical' ? 'medium' : 'low'
     });
 
     console.log('✅ Support message created:', supportMessage.id);
@@ -218,6 +218,44 @@ router.put('/messages/:id/status', authenticateToken, requireAdmin, [
 
     await message.update(updateData);
 
+    // Send email response to user if response is provided
+    if (response && message.email) {
+      try {
+        console.log('📧 Attempting to send support response email...');
+        console.log('📧 Email details:', {
+          to: message.email,
+          subject: message.subject,
+          adminName: req.user.first_name ? `${req.user.first_name} ${req.user.last_name}` : 
+                     req.user.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Support Team',
+          responseLength: response.length
+        });
+        
+        const emailService = require('../services/emailService');
+        const adminName = req.user.first_name ? `${req.user.first_name} ${req.user.last_name}` : 
+                         req.user.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Support Team';
+        
+        const emailResult = await emailService.sendSupportResponse(message, response, adminName);
+        
+        if (emailResult.success) {
+          console.log('✅ Support response email sent successfully to:', message.email);
+          console.log('✅ Email result:', emailResult);
+        } else {
+          console.error('❌ Failed to send support response email:', emailResult.message);
+          console.error('❌ Email result:', emailResult);
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending support response email:', emailError);
+        console.error('❌ Error stack:', emailError.stack);
+        // Don't fail the request if email fails
+      }
+    } else {
+      console.log('📧 Email not sent - missing response or email:', {
+        hasResponse: !!response,
+        hasEmail: !!message.email,
+        email: message.email
+      });
+    }
+
     res.json({
       success: true,
       message: 'Support message updated successfully',
@@ -229,6 +267,58 @@ router.put('/messages/:id/status', authenticateToken, requireAdmin, [
     res.status(500).json({
       success: false,
       message: 'Failed to update support message'
+    });
+  }
+});
+
+// Mark support message as read by admin
+router.post('/messages/:id/read', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { SupportMessage } = require('../config/index');
+    const { id } = req.params;
+    const adminId = req.user.id;
+
+    const message = await SupportMessage.findByPk(id);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support message not found'
+      });
+    }
+
+    // Update read tracking
+    const readBy = message.readBy || [];
+    const readAt = message.readAt || {};
+    const now = new Date();
+
+    if (!readBy.includes(adminId)) {
+      readBy.push(adminId);
+    }
+    readAt[adminId] = now;
+
+    await message.update({
+      readBy,
+      readAt,
+      lastReadBy: adminId,
+      lastReadAt: now
+    });
+
+    res.json({
+      success: true,
+      message: 'Support message marked as read',
+      data: {
+        readBy,
+        readAt,
+        lastReadBy: adminId,
+        lastReadAt: now
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error marking support message as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark support message as read'
     });
   }
 });

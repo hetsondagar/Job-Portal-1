@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { 
   MessageSquare, 
   Clock, 
@@ -15,7 +15,8 @@ import {
   Mail,
   Calendar,
   Tag,
-  Loader2
+  Loader2,
+  BarChart3
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,6 +57,7 @@ export default function SupportPage() {
 
 function SupportPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [messages, setMessages] = useState<SupportMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMessage, setSelectedMessage] = useState<SupportMessage | null>(null)
@@ -66,8 +68,14 @@ function SupportPageContent() {
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
+    // Set initial filter from URL parameters
+    const urlFilter = searchParams.get('filter')
+    if (urlFilter) {
+      setFilter(urlFilter)
+    }
+    
     fetchSupportMessages()
-  }, [])
+  }, [searchParams])
 
   const fetchSupportMessages = async () => {
     try {
@@ -100,7 +108,7 @@ function SupportPageContent() {
       })
 
       if (responseData.success) {
-        toast.success("Response sent successfully")
+        toast.success("Response sent successfully and email notification sent to user")
         setResponse("")
         setStatus("")
         setSelectedMessage(null)
@@ -113,6 +121,16 @@ function SupportPageContent() {
       toast.error("Failed to send response")
     } finally {
       setIsResponding(false)
+    }
+  }
+
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      await apiService.markSupportMessageAsRead(messageId)
+      // Refresh messages to update read status
+      fetchSupportMessages()
+    } catch (error) {
+      console.error("Error marking message as read:", error)
     }
   }
 
@@ -204,8 +222,20 @@ function SupportPageContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Support Center</h1>
-          <p className="text-gray-600">Manage and respond to customer support messages</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Support Center</h1>
+              <p className="text-gray-600">Manage and respond to customer support messages and whistleblower reports</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/super-admin/dashboard?tab=support')}
+              className="flex items-center gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -378,6 +408,15 @@ function SupportPageContent() {
                     </div>
                     
                     <div className="flex gap-2 ml-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleMarkAsRead(message.id)}
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Mark Read
+                      </Button>
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button 
@@ -419,6 +458,29 @@ function SupportPageContent() {
                                   <Badge className={getPriorityColor(selectedMessage.priority)}>
                                     {selectedMessage.priority}
                                   </Badge>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-600">Created</label>
+                                  <p className="text-gray-900">{new Date(selectedMessage.createdAt).toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-600">Read Status</label>
+                                  <div className="flex items-center gap-2">
+                                    {selectedMessage.readBy && selectedMessage.readBy.length > 0 ? (
+                                      <Badge className="bg-green-100 text-green-800">
+                                        Read by {selectedMessage.readBy.length} admin(s)
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-red-100 text-red-800">
+                                        Unread
+                                      </Badge>
+                                    )}
+                                    {selectedMessage.lastReadAt && (
+                                      <span className="text-xs text-gray-500">
+                                        Last read: {new Date(selectedMessage.lastReadAt).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               

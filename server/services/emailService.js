@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 // Try to load SendGrid if available
 let sgMail = null;
@@ -23,13 +24,25 @@ class EmailService {
       if (this.initialized && !forceReinitialize) {
         return;
       }
-      // Skip SendGrid completely - use SMTP only
-      console.log('📧 Using SMTP providers only (SendGrid disabled)');
+      // Use SMTP providers with SendGrid as fallback
+      console.log('📧 Using SMTP providers with SendGrid fallback');
 
       // Try multiple email providers in order of preference
       // Gmail is most reliable in production environments like Render.com
       const providers = [
-        // Priority 1: Gmail SMTP (most reliable in production)
+        // Priority 1: Custom SMTP (supports any provider) - Check first since it's configured
+        {
+          name: 'Custom SMTP',
+          host: process.env.SMTP_HOST,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          tls: {
+            rejectUnauthorized: false
+          }
+        },
+        // Priority 2: Gmail SMTP (most reliable in production)
         {
           name: 'Gmail',
           host: 'smtp.gmail.com',
@@ -38,14 +51,11 @@ class EmailService {
           port: 587,
           secure: false
         },
-        // Priority 2: Custom SMTP (supports any provider)
+        // Priority 3: SendGrid (if API key is available)
         {
-          name: 'Custom SMTP',
-          host: process.env.SMTP_HOST,
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
-          port: parseInt(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true'
+          name: 'SendGrid',
+          apiKey: process.env.SENDGRID_API_KEY,
+          fromEmail: process.env.SENDGRID_FROM_EMAIL
         },
         // Priority 3: Outlook/Hotmail
         {
@@ -109,6 +119,11 @@ class EmailService {
       console.log('=====================================\n');
 
       for (const provider of providers) {
+        console.log(`🔍 Checking provider: ${provider.name}`);
+        console.log(`   Host: ${provider.host}`);
+        console.log(`   User: ${provider.user}`);
+        console.log(`   Pass: ${provider.pass ? '***' + provider.pass.slice(-4) : 'NOT SET'}`);
+        
         if (provider.host && provider.user && provider.pass) {
           console.log(`🔄 Attempting to connect to ${provider.name}...`);
           console.log(`   Host: ${provider.host}:${provider.port}`);
@@ -189,7 +204,7 @@ class EmailService {
         // Additional Yahoo optimizations
         ...(isYahoo && {
           servername: 'smtp.mail.yahoo.com',
-          checkServerIdentity: false
+          checkServerIdentity: () => true
         })
       },
       // Yahoo-specific connection options - more aggressive settings
@@ -666,6 +681,118 @@ support@jobportal.com`
       };
     } catch (error) {
       console.error('❌ Error sending client verification email:', error);
+      return { 
+        success: false, 
+        message: error.message 
+      };
+    }
+  }
+
+  // Send support response email
+  async sendSupportResponse(supportMessage, response, adminName = 'Support Team') {
+    try {
+      console.log('📧 EmailService: Starting support response email...');
+      console.log('📧 EmailService: Support message data:', {
+        firstName: supportMessage.firstName,
+        lastName: supportMessage.lastName,
+        email: supportMessage.email,
+        subject: supportMessage.subject,
+        category: supportMessage.category
+      });
+      
+      await this.initializeTransporter();
+      
+      const { firstName, lastName, email, subject, category } = supportMessage;
+      
+      const mailOptions = {
+        from: `"${this.fromName} Support" <${this.fromEmail}>`,
+        to: email,
+        subject: `Re: ${subject} - Support Response`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+              <h1 style="margin: 0; font-size: 24px;">Support Response</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Job Portal Support Team</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e9ecef;">
+              <p style="color: #333; font-size: 16px; margin-bottom: 20px;">
+                Dear ${firstName} ${lastName},
+              </p>
+              
+              <p style="color: #555; font-size: 14px; margin-bottom: 20px;">
+                Thank you for contacting our support team. We have reviewed your ${category} inquiry and here is our response:
+              </p>
+              
+              <div style="background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #667eea; margin: 20px 0;">
+                <h3 style="color: #333; margin-top: 0;">Response from ${adminName}:</h3>
+                <div style="color: #555; line-height: 1.6; white-space: pre-wrap;">${response}</div>
+              </div>
+              
+              <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                <h4 style="color: #1976d2; margin-top: 0;">Original Inquiry:</h4>
+                <p style="color: #555; margin: 0; font-size: 14px;"><strong>Subject:</strong> ${subject}</p>
+                <p style="color: #555; margin: 5px 0 0 0; font-size: 14px;"><strong>Category:</strong> ${category}</p>
+              </div>
+              
+              <p style="color: #555; font-size: 14px; margin-bottom: 20px;">
+                If you have any further questions or need additional assistance, please don't hesitate to contact us.
+              </p>
+              
+              <div style="text-align: center; margin-top: 30px;">
+                <a href="mailto:support@jobportal.com" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Contact Support
+                </a>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
+              <p>This is an automated response from Job Portal Support Team</p>
+              <p>© 2025 Job Portal. All rights reserved.</p>
+            </div>
+          </div>
+        `,
+        text: `
+Support Response - Job Portal
+
+Dear ${firstName} ${lastName},
+
+Thank you for contacting our support team. We have reviewed your ${category} inquiry and here is our response:
+
+Response from ${adminName}:
+${response}
+
+Original Inquiry:
+Subject: ${subject}
+Category: ${category}
+
+If you have any further questions or need additional assistance, please don't hesitate to contact us at support@jobportal.com.
+
+Best regards,
+Job Portal Support Team
+
+This is an automated response from Job Portal Support Team
+© 2025 Job Portal. All rights reserved.
+        `
+      };
+
+      console.log('📧 EmailService: Sending email with options:', {
+        from: mailOptions.from,
+        to: mailOptions.to,
+        subject: mailOptions.subject
+      });
+      
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('✅ EmailService: Support response email sent successfully to:', email);
+      console.log('✅ EmailService: Email result:', result);
+      
+      return { 
+        success: true, 
+        message: 'Support response email sent successfully',
+        messageId: result.messageId
+      };
+    } catch (error) {
+      console.error('❌ Error sending support response email:', error);
       return { 
         success: false, 
         message: error.message 

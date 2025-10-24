@@ -4367,6 +4367,25 @@ class ApiService {
     }
   }
 
+  // Mark support message as read (admin only)
+  async markSupportMessageAsRead(messageId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/support/messages/${messageId}/read`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      });
+
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error marking support message as read:', error);
+      return {
+        success: false,
+        message: 'Failed to mark support message as read',
+        errors: ['NETWORK_ERROR']
+      };
+    }
+  }
+
   // Get support statistics (admin only)
   async getSupportStats(): Promise<ApiResponse<any>> {
     try {
