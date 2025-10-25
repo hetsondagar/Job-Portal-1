@@ -222,28 +222,59 @@ function CompanyDetailPage() {
 
   // Simple computed values without useMemo to avoid React error #310
   const getLocationDisplay = () => {
-      if (!company) return '—'
+      if (!company) return ''
       
     try {
+      // Get company location fields
       const city = company.city ? String(company.city).trim() : ''
       const state = company.state ? String(company.state).trim() : ''
       const country = company.country ? String(company.country).trim() : ''
-      const address = company.address ? String(company.address).split(',')[0].trim() : ''
+      const address = company.address ? String(company.address).trim() : ''
       
-      // Get location from first job if available
+      // Get location from jobs if available
       let jobLocation = ''
       if (Array.isArray(companyJobs) && companyJobs.length > 0) {
-        const firstJob = companyJobs[0]
-        if (firstJob && (firstJob.city || firstJob.location)) {
-          jobLocation = String(firstJob.city || firstJob.location || '').trim()
+        // Try to find the most common location from jobs
+        const jobLocations = companyJobs
+          .map(job => job.city || job.location || '')
+          .filter(loc => loc && loc.trim())
+          .map(loc => String(loc).trim())
+        
+        if (jobLocations.length > 0) {
+          // Get the most frequent location
+          const locationCounts = jobLocations.reduce((acc, loc) => {
+            acc[loc] = (acc[loc] || 0) + 1
+            return acc
+          }, {} as Record<string, number>)
+          
+          jobLocation = Object.keys(locationCounts).reduce((a, b) => 
+            locationCounts[a] > locationCounts[b] ? a : b
+          )
         }
       }
       
-      const location = city || address || jobLocation || state || (country && country.toLowerCase() !== 'india' ? country : '')
-      return location || '—'
+      // Build location string with priority: city, address, jobLocation, state, country
+      let locationParts = []
+      
+      if (city) locationParts.push(city)
+      if (state && state !== city) locationParts.push(state)
+      if (country && country.toLowerCase() !== 'india' && country !== state) locationParts.push(country)
+      
+      // If no company location, use job location
+      if (locationParts.length === 0 && jobLocation) {
+        locationParts.push(jobLocation)
+      }
+      
+      // If still no location, use address
+      if (locationParts.length === 0 && address) {
+        locationParts.push(address)
+      }
+      
+      const location = locationParts.join(', ')
+      return location || ''
     } catch (error) {
       console.error('Error computing location display:', error)
-      return '—'
+      return ''
     }
   }
 
@@ -1048,7 +1079,7 @@ function CompanyDetailPage() {
 
   return (
     <CompanyErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative">
       <Navbar />
 
       {/* Company Header */}
@@ -1067,57 +1098,77 @@ function CompanyDetailPage() {
           </div>
           
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl overflow-hidden">
-              <div className={`h-32 bg-gradient-to-r ${sectorColors.bg} relative`}>
-                <div className="absolute inset-0 bg-black/10" />
-              </div>
-
-              <CardContent className="p-8 -mt-16 relative">
-                <div className="flex flex-col lg:flex-row items-start lg:items-end space-y-6 lg:space-y-0 lg:space-x-8">
-                  <div className="relative">
-                    {/* Placeholder background image */}
-                    {company.placeholderImage && (
-                      <div className="absolute inset-0 w-32 h-32 rounded-full overflow-hidden opacity-20 z-0">
-                        <img 
-                          src={company.placeholderImage.startsWith('http') ? company.placeholderImage : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.placeholderImage}`} 
-                          alt={`${company.name} background`}
+            <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl shadow-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+              {/* Company Banner */}
+              {company.banner ? (
+                <div className="h-48 relative overflow-hidden">
+                  <img 
+                    src={company.banner.startsWith('http') ? company.banner : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.banner}`} 
+                    alt={`${company.name} banner`}
                           className="w-full h-full object-cover"
-                        />
+                    onLoad={() => {
+                      console.log('✅ Company banner loaded:', company.banner);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ Company banner failed:', company.banner);
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/20" />
+                </div>
+              ) : (
+                <div className={`h-32 bg-gradient-to-r ${sectorColors.bg} relative`}>
+                  <div className="absolute inset-0 bg-black/10" />
                       </div>
                     )}
-                    <Avatar className="w-32 h-32 ring-4 ring-white dark:ring-slate-800 shadow-xl relative z-10">
+
+              <CardContent className={`p-8 ${company.banner ? '-mt-20' : '-mt-16'} relative`}>
+                <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-6">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="w-24 h-24 ring-4 ring-white dark:ring-slate-800 shadow-xl">
                       <AvatarImage 
                         src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder.svg"} 
-                        alt={company.name}
+                        alt={`${company.name} logo`}
                         onLoad={() => {
-                          console.log('✅ Company logo loaded:', company.logo);
+                          console.log('✅ Company logo loaded successfully:', company.logo);
                         }}
                         onError={(e) => {
-                          console.error('❌ Company logo failed:', company.logo);
-                          console.log('🔍 Logo data:', company);
+                          console.error('❌ Company logo failed to load:', company.logo);
+                          console.log('🔍 Full company data:', company);
+                          // Try to reload with different URL format
+                          const img = e.target as HTMLImageElement;
+                          if (company.logo && !company.logo.startsWith('http')) {
+                            img.src = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${company.logo}`;
+                          }
                         }}
                       />
-                      <AvatarFallback className={`text-4xl font-bold ${sectorColors.text}`}>
-                        {(company.name||'')[0]}
+                      <AvatarFallback className={`text-3xl font-bold ${sectorColors.text}`}>
+                        {(company.name||'')[0]?.toUpperCase() || 'C'}
                       </AvatarFallback>
                     </Avatar>
+                    
+                     <div className="flex flex-col justify-end mt-16">
+                       <div className="flex items-center gap-2 mb-1">
+                         <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">{toDisplayText(company.name) || 'Company'}</h1>
+                         <div className="flex items-center bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 px-2 py-1 rounded-md border border-yellow-200/50 dark:border-yellow-700/30 shadow-sm">
+                           <Star className="w-3 h-3 text-yellow-500 fill-current mr-1" />
+                           <span className="font-bold text-sm text-slate-900 dark:text-white">{company.rating || 0}</span>
+                           {(company.reviews && company.reviews > 0) && (
+                             <span className="ml-1 text-xs text-slate-600 dark:text-slate-400 font-medium">({company.reviews})</span>
+                           )}
+                         </div>
                   </div>
 
-                  <div className="flex-1">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                      <div>
-                        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{toDisplayText(company.name) || 'Company'}</h1>
-                        <div className="flex items-center flex-wrap gap-2 mb-3">
+                      <div className="flex items-center flex-wrap gap-1 mb-1">
                           {/* Company Types */}
                           {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
                             <>
                               {company.companyTypes.slice(0, 2).map((type: string, index: number) => (
-                                <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                              <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 text-xs px-2 py-0.5">
                                   {type}
                                 </Badge>
                               ))}
                               {company.companyTypes.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs px-2 py-0.5">
                                   +{company.companyTypes.length - 2} more
                                 </Badge>
                               )}
@@ -1128,36 +1179,33 @@ function CompanyDetailPage() {
                           {company.natureOfBusiness && Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 && (
                             <>
                               {company.natureOfBusiness.slice(0, 1).map((nature: string, index: number) => (
-                                <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                              <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-2 py-0.5">
                                   {nature}
                                 </Badge>
                               ))}
                               {company.natureOfBusiness.length > 1 && (
-                                <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs px-2 py-0.5">
                                   +{company.natureOfBusiness.length - 1} more
                                 </Badge>
                               )}
                             </>
                           )}
                         </div>
-                        <div className="flex items-center space-x-6 text-slate-600 dark:text-slate-300">
-                          <div className="flex items-center">
-                            <Star className="w-5 h-5 text-yellow-400 fill-current mr-2" />
-                            <span className="font-semibold text-lg">{company.rating || 0}</span>
-                            <span className="ml-1">({company.reviews || 0} reviews)</span>
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="w-5 h-5 mr-2" />
+                      
+                      <div className="text-xs text-slate-600 dark:text-slate-400">
                             {locationDisplay}
                           </div>
                         </div>
                       </div>
 
+                  <div className="flex-1">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end mb-4">
+
                       <div className="flex items-center space-x-3 mt-4 lg:mt-0">
                         <Button
                           variant="outline"
                           onClick={toggleFollow}
-                          className={`${isFollowing ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white/50 dark:bg-slate-700/50"} backdrop-blur-sm`}
+                          className={`${isFollowing ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-600 hover:from-blue-100 hover:to-indigo-100" : "bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700"} backdrop-blur-sm shadow-sm transition-all duration-200`}
                         >
                           <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
                           {isFollowing ? "Following" : "Follow"}
@@ -1166,7 +1214,7 @@ function CompanyDetailPage() {
                           <Button
                             variant="outline"
                             onClick={() => setShowRatingDialog(true)}
-                            className={`${userRating ? "bg-yellow-50 border-yellow-200 text-yellow-700" : "bg-white/50 dark:bg-slate-700/50"} backdrop-blur-sm`}
+                            className={`${userRating ? "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200 text-yellow-700 hover:from-yellow-100 hover:to-amber-100" : "bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700"} backdrop-blur-sm shadow-sm transition-all duration-200`}
                           >
                             <Star className={`w-4 h-4 mr-2 ${userRating ? "fill-current" : ""}`} />
                             {userRating ? `Rated ${userRating}★` : "Rate"}
@@ -1174,7 +1222,7 @@ function CompanyDetailPage() {
                         )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
+                            <Button variant="outline" className="bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm shadow-sm transition-all duration-200">
                               <Share2 className="w-4 h-4 mr-2" />
                               Share
                             </Button>
@@ -1207,7 +1255,7 @@ function CompanyDetailPage() {
       {/* Company Details Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className={`grid w-full ${company?.whyJoinUs || company?.why_join_us ? 'grid-cols-3' : 'grid-cols-2'} bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700`}>
+          <TabsList className={`grid w-full ${company?.whyJoinUs || company?.why_join_us ? 'grid-cols-3' : 'grid-cols-2'} bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl`}>
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               Overview
             </TabsTrigger>
@@ -1225,9 +1273,9 @@ function CompanyDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* About Company */}
               <div className="lg:col-span-2 space-y-8">
-                <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
+                <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl shadow-lg border border-slate-200/30 dark:border-slate-700/30">
                   <CardHeader>
-                    <CardTitle className="text-2xl">About {company.name}</CardTitle>
+                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">About {company.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-slate-700 dark:text-slate-300 leading-relaxed mb-6">{company.description || ''}</p>
@@ -1301,13 +1349,6 @@ function CompanyDetailPage() {
                           <div className="text-slate-600 dark:text-slate-400">
                             {companyStats?.profileViews ?? (toDisplayText(company.profileViews) || 'Not provided')}
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
-                        <div>
-                          <div className="font-medium">Revenue</div>
-                          <div className="text-slate-600 dark:text-slate-400">{toDisplayText(company.revenue) || 'Not provided'}</div>
                         </div>
                       </div>
                     </div>
@@ -1404,10 +1445,6 @@ function CompanyDetailPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Headquarters</span>
                       <span className="font-medium">{toDisplayText(company.headquarters) || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Revenue</span>
-                      <span className="font-medium">{toDisplayText(company.revenue) || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Total Jobs</span>
@@ -1816,18 +1853,31 @@ function CompanyDetailPage() {
           </TabsContent>
 
           <TabsContent value="why" className="space-y-8">
-            <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-2xl">Why join {company.name}?</CardTitle>
+            <Card className="border-0 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-slate-800/80 dark:to-slate-700/80 backdrop-blur-xl shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Why join {company.name}?
+                </CardTitle>
+                <p className="text-slate-600 dark:text-slate-400 mt-2">
+                  Discover what makes {company.name} a great place to work
+                </p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {company.whyJoinUs ? (
-                  <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed text-lg">
                     {company.whyJoinUs}
                   </div>
                 ) : (
-                  <div className="text-slate-600 dark:text-slate-300">
-                    This employer hasn’t added their Why Join Us content yet. Check back soon or explore their open roles.
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                      Content Coming Soon
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                      This employer is working on their "Why Join Us" content. Check back soon or explore their open roles below.
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -2059,7 +2109,7 @@ function CompanyDetailPage() {
       </Dialog>
 
       {/* Footer */}
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -2069,7 +2119,7 @@ function CompanyDetailPage() {
                 </div>
                 <span className="text-2xl font-bold">JobPortal</span>
               </div>
-              <p className="text-slate-400 mb-6">India's leading job portal connecting talent with opportunities.</p>
+              <p className="text-slate-400 mb-4">India's leading job portal connecting talent with opportunities.</p>
               <div className="flex space-x-4">
                 <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
                   <span className="text-sm">f</span>
@@ -2112,7 +2162,7 @@ function CompanyDetailPage() {
             ))}
           </div>
 
-          <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
+          <div className="border-t border-slate-800 mt-6 pt-4 text-center text-slate-400">
             <p>&copy; 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
           </div>
         </div>

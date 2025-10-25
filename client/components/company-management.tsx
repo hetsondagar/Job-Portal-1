@@ -30,6 +30,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photos, setPhotos] = useState<any[]>([])
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
   const [showNatureOfBusinessDropdown, setShowNatureOfBusinessDropdown] = useState(false)
   const [showCompanyTypesDropdown, setShowCompanyTypesDropdown] = useState(false)
@@ -212,6 +213,33 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
     }
   }
 
+  const handleBannerUpload = async (file: File) => {
+    if (!file) return
+    try {
+      setUploadingBanner(true)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+      const form = new FormData()
+      form.append('banner', file)
+      const res = await fetch(`${base}/companies/${companyId}/banner`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: form
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.success) {
+        toast.success('Banner updated')
+        setCompany((prev:any) => ({ ...(prev||{}), banner: data.data.banner }))
+      } else {
+        toast.error(data?.message || 'Banner upload failed')
+      }
+    } catch (e:any) {
+      toast.error(e?.message || 'Banner upload failed')
+    } finally {
+      setUploadingBanner(false)
+    }
+  }
+
   const handleSave = async () => {
     try {
       setIsSaving(true)
@@ -383,7 +411,7 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               <div className="flex items-center gap-3">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.jfif,.svg"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
@@ -447,10 +475,13 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
             {/* Company Logo */}
             <div className="space-y-2">
               <Label>Company Logo</Label>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Recommended: 200x200px (square), Max 2MB. Formats: JPG, PNG, JFIF, SVG
+              </p>
               <div className="flex items-center gap-3">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.jfif,.svg"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) handleLogoUpload(file)
@@ -462,6 +493,31 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
               {company?.logo && (
                 <div className="mt-2 w-28 h-28 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900/30">
                   <img src={company.logo} alt="Company logo" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+
+            {/* Company Banner */}
+            <div className="space-y-2">
+              <Label>Company Banner/Placeholder Image</Label>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Recommended: 1200x400px (3:1 ratio), Max 5MB. Formats: JPG, PNG, JFIF, SVG
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*,.jfif,.svg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleBannerUpload(file)
+                  }}
+                  disabled={uploadingBanner}
+                />
+                {uploadingBanner && <span className="text-sm">Uploading...</span>}
+              </div>
+              {company?.banner && (
+                <div className="mt-2 w-full h-32 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900/30">
+                  <img src={company.banner} alt="Company banner" className="w-full h-full object-cover" />
                 </div>
               )}
             </div>
@@ -661,13 +717,6 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                 </div>
               </div>
               
-              <div className="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                <Calendar className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                <div className="text-sm text-slate-600 dark:text-slate-300">Status</div>
-                <Badge variant={company.companyStatus === 'active' ? 'default' : 'secondary'}>
-                  {company.companyStatus || 'N/A'}
-                </Badge>
-              </div>
             </div>
 
             <Separator />
@@ -835,6 +884,26 @@ export function CompanyManagement({ companyId, onCompanyUpdated }: CompanyManage
                     }}
                     onError={(e) => {
                       console.error('❌ Logo failed:', company.logo);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Company Banner Display */}
+            {company?.banner && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Company Banner</h3>
+                <div className="w-full h-48 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900/30">
+                  <img 
+                    src={company.banner} 
+                    alt="Company banner" 
+                    className="w-full h-full object-cover"
+                    onLoad={() => {
+                      console.log('✅ Banner loaded:', company.banner);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ Banner failed:', company.banner);
                     }}
                   />
                 </div>

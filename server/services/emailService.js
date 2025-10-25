@@ -11,7 +11,7 @@ try {
 
 class EmailService {
   constructor() {
-    this.fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@jobportal.com';
+    this.fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || 'hempatel777@yahoo.com';
     this.fromName = process.env.FROM_NAME || 'Job Portal';
     this.transporter = null;
     this.initialized = false;
@@ -798,6 +798,128 @@ This is an automated response from Job Portal Support Team
         message: error.message 
       };
     }
+  }
+
+  // Send invitation email
+  async sendInvitationEmail(email, subject, content, type = 'jobseeker') {
+    try {
+      console.log(`📧 Sending ${type} invitation email to: ${email}`);
+      
+      const result = await this.sendMail({
+        from: this.fromEmail || process.env.SMTP_USER || 'noreply@jobportal.com',
+        to: email,
+        subject: subject,
+        html: this.formatHtmlEmail(content),
+        text: content
+      });
+      
+      if (result.success) {
+        console.log(`✅ ${type} invitation email sent successfully to: ${email}`);
+        return { success: true, messageId: result.messageId };
+      } else {
+        console.error(`❌ Failed to send ${type} invitation email to: ${email}`, result.error);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error(`❌ Error sending ${type} invitation email to: ${email}`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Format content as HTML email
+  formatHtmlEmail(content) {
+    // Convert markdown-style formatting to HTML
+    let html = content
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/•/g, '&bull;')
+      .replace(/\n/g, '<br>')
+      .replace(/---/g, '<hr>');
+    
+    // Wrap in proper HTML structure
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Job Portal Invitation</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9fafb;
+          }
+          .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+          }
+          .content {
+            margin-bottom: 30px;
+          }
+          .cta-button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 10px 5px;
+          }
+          .cta-button:hover {
+            background-color: #1d4ed8;
+          }
+          .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+          }
+          hr {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 20px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Job Portal</div>
+            <p>Your Gateway to Career Success</p>
+          </div>
+          <div class="content">
+            ${html}
+          </div>
+          <div class="footer">
+            <p>This is an automated invitation. If you did not expect this email, please ignore it.</p>
+            <p>&copy; ${new Date().getFullYear()} Job Portal. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   }
 }
 

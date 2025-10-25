@@ -1074,9 +1074,23 @@ export default function HomePage() {
                         <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-4">
-                            <Avatar className="w-12 h-12 bg-white/90 p-2 rounded-xl shadow">
-                            <AvatarImage src={company.logo} alt={company.name} className="object-contain" />
-                            <AvatarFallback className="text-lg font-bold bg-white text-slate-700">
+                            <Avatar className="w-12 h-12 bg-white/95 p-1.5 rounded-xl shadow-lg border border-slate-200/50">
+                            <AvatarImage 
+                              src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder.svg"} 
+                              alt={company.name} 
+                              className="object-contain w-full h-full"
+                              onLoad={() => {
+                                console.log('✅ Company logo loaded in top companies:', company.logo);
+                              }}
+                              onError={(e) => {
+                                console.error('❌ Company logo failed in top companies:', company.logo);
+                                const img = e.target as HTMLImageElement;
+                                if (company.logo && !company.logo.startsWith('http')) {
+                                  img.src = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${company.logo}`;
+                                }
+                              }}
+                            />
+                            <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 border border-slate-300">
                               {company.name ? company.name.substring(0, 2).toUpperCase() : '??'}
                             </AvatarFallback>
                           </Avatar>

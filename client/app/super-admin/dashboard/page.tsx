@@ -23,7 +23,8 @@ import {
   Clock,
   FileCheck,
   Bell,
-  BellRing
+  BellRing,
+  Mail
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -104,7 +105,7 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error('Failed to load stats:', error)
       // Don't show error toast if it's a 401 (unauthorized) error or if user is logging out
-      if (error?.response?.status !== 401 && !isLoggingOut) {
+      if ((error as any)?.response?.status !== 401 && !isLoggingOut) {
         toast.error('Failed to load statistics')
       }
     } finally {
@@ -131,26 +132,27 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-white">
       {/* Header */}
       <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8 text-blue-600" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">System Administration Portal</p>
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-xs sm:text-sm text-gray-600">System Administration Portal</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge className="bg-green-100 text-green-800 border border-green-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs">
                 <UserCheck className="w-3 h-3 mr-1" />
                 Admin
               </Badge>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs sm:text-sm text-gray-600">
                 {user.firstName} {user.lastName}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="text-xs sm:text-sm border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
                 onClick={async () => {
                   try {
                     setIsLoggingOut(true)
@@ -167,7 +169,6 @@ export default function AdminDashboardPage() {
                     router.push('/admin-login')
                   }
                 }}
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
               >
                 <LogOut className="w-4 h-4 mr-1" />
                 Logout
@@ -177,32 +178,36 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-white border-gray-200 shadow-sm">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Overview
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 bg-white border-gray-200 shadow-sm gap-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden">Stats</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <Users className="w-4 h-4 mr-2" />
+            <TabsTrigger value="users" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="companies" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <Building2 className="w-4 h-4 mr-2" />
-              Companies
+            <TabsTrigger value="companies" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Companies</span>
+              <span className="sm:hidden">Co.</span>
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <Briefcase className="w-4 h-4 mr-2" />
+            <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Jobs
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <Bell className="w-4 h-4 mr-2" />
-              Notifications
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <Bell className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Notifications</span>
+              <span className="sm:hidden">Alerts</span>
             </TabsTrigger>
-            <TabsTrigger value="support" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <Shield className="w-4 h-4 mr-2" />
-              Support
+            <TabsTrigger value="support" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Support</span>
+              <span className="sm:hidden">Help</span>
             </TabsTrigger>
           </TabsList>
 
@@ -210,17 +215,17 @@ export default function AdminDashboardPage() {
           <TabsContent value="overview" className="mt-6">
             <div className="space-y-6">
               {/* Quick Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {/* Total Users */}
                 <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                      Total Users
-                      <Users className="w-5 h-5" />
+                    <CardTitle className="text-xs sm:text-sm font-medium flex items-center justify-between">
+                      <span className="truncate">Total Users</span>
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{stats?.users?.total || 0}</div>
+                    <div className="text-2xl sm:text-3xl font-bold">{stats?.users?.total || 0}</div>
                     <p className="text-xs mt-1 text-blue-100">
                       +{stats?.users?.newLast30Days || 0} in last 30 days
                     </p>
@@ -244,13 +249,13 @@ export default function AdminDashboardPage() {
                 {/* Total Companies */}
                 <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                      Companies
-                      <Building2 className="w-5 h-5" />
+                    <CardTitle className="text-xs sm:text-sm font-medium flex items-center justify-between">
+                      <span className="truncate">Companies</span>
+                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{stats?.companies?.total || 0}</div>
+                    <div className="text-2xl sm:text-3xl font-bold">{stats?.companies?.total || 0}</div>
                     <p className="text-xs mt-1 text-purple-100">
                       +{stats?.companies?.newLast30Days || 0} in last 30 days
                     </p>
@@ -270,13 +275,13 @@ export default function AdminDashboardPage() {
                 {/* Total Jobs */}
                 <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                      Jobs Posted
-                      <Briefcase className="w-5 h-5" />
+                    <CardTitle className="text-xs sm:text-sm font-medium flex items-center justify-between">
+                      <span className="truncate">Jobs Posted</span>
+                      <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{stats?.jobs?.total || 0}</div>
+                    <div className="text-2xl sm:text-3xl font-bold">{stats?.jobs?.total || 0}</div>
                     <p className="text-xs mt-1 text-green-100">
                       +{stats?.jobs?.newLast30Days || 0} in last 30 days
                     </p>
@@ -300,13 +305,13 @@ export default function AdminDashboardPage() {
                 {/* Applications */}
                 <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 text-gray-800 shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                      Applications
-                      <TrendingUp className="w-5 h-5" />
+                    <CardTitle className="text-xs sm:text-sm font-medium flex items-center justify-between">
+                      <span className="truncate">Applications</span>
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{stats?.applications?.total || 0}</div>
+                    <div className="text-2xl sm:text-3xl font-bold">{stats?.applications?.total || 0}</div>
                     <p className="text-xs mt-1 text-orange-100">
                       Total applications submitted
                     </p>
@@ -315,22 +320,22 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Users className="w-5 h-5" />
-                      <span>User Management</span>
+                    <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="truncate">User Management</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-gray-600 text-xs sm:text-sm">
                       Manage all users, jobseekers, and employers
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Link href="/super-admin/users/normal">
-                      <Button className="w-full justify-between bg-blue-600 hover:bg-blue-700">
-                        Manage Users
-                        <Users className="w-4 h-4" />
+                      <Button className="w-full justify-between bg-blue-600 hover:bg-blue-700 text-sm">
+                        <span className="truncate">Manage Users</span>
+                        <Users className="w-4 h-4 flex-shrink-0" />
                       </Button>
                     </Link>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -348,19 +353,19 @@ export default function AdminDashboardPage() {
 
                 <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Building2 className="w-5 h-5" />
-                      <span>Company Management</span>
+                    <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="truncate">Company Management</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-gray-600 text-xs sm:text-sm">
                       Verify and manage company accounts
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Link href="/super-admin/companies/all">
-                      <Button className="w-full justify-between bg-purple-600 hover:bg-purple-700">
-                        Manage Companies
-                        <Building2 className="w-4 h-4" />
+                      <Button className="w-full justify-between bg-purple-600 hover:bg-purple-700 text-sm">
+                        <span className="truncate">Manage Companies</span>
+                        <Building2 className="w-4 h-4 flex-shrink-0" />
                       </Button>
                     </Link>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -378,19 +383,19 @@ export default function AdminDashboardPage() {
 
                 <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Briefcase className="w-5 h-5" />
-                      <span>Job Management</span>
+                    <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                      <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="truncate">Job Management</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-gray-600 text-xs sm:text-sm">
                       Manage job postings and approvals
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Link href="/super-admin/jobs/all">
-                      <Button className="w-full justify-between bg-green-600 hover:bg-green-700">
-                        Manage Jobs
-                        <Briefcase className="w-4 h-4" />
+                      <Button className="w-full justify-between bg-green-600 hover:bg-green-700 text-sm">
+                        <span className="truncate">Manage Jobs</span>
+                        <Briefcase className="w-4 h-4 flex-shrink-0" />
                       </Button>
                     </Link>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -408,19 +413,19 @@ export default function AdminDashboardPage() {
 
                 <Card className="bg-white border border-gray-200 text-gray-800 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FileCheck className="w-5 h-5" />
-                      <span>Verifications</span>
+                    <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                      <FileCheck className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="truncate">Verifications</span>
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-gray-600 text-xs sm:text-sm">
                       Review employer verification requests
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Link href="/super-admin/dashboard/verifications">
-                      <Button className="w-full justify-between bg-amber-600 hover:bg-amber-700">
-                        Check Verifications
-                        <FileCheck className="w-4 h-4" />
+                      <Button className="w-full justify-between bg-amber-600 hover:bg-amber-700 text-sm">
+                        <span className="truncate">Check Verifications</span>
+                        <FileCheck className="w-4 h-4 flex-shrink-0" />
                       </Button>
                     </Link>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -431,6 +436,59 @@ export default function AdminDashboardPage() {
                       <div className="bg-white/5 rounded p-2">
                         <div className="text-gray-400">Verified</div>
                         <div className="text-lg font-bold">{stats?.companies?.verified || 0}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Invitation Management - Special Section */}
+              <div className="mt-8">
+                <Card className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-2 border-indigo-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center space-x-3 text-indigo-700">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <Mail className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </div>
+                      <div>
+                        <span className="text-lg sm:text-xl font-bold">Invitation Management</span>
+                        <p className="text-xs sm:text-sm font-normal text-indigo-600 mt-1">
+                          Send professional invitations to jobseekers and companies
+                        </p>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Link href="/super-admin/dashboard/invitations" className="flex-1">
+                        <Button className="w-full justify-between bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 text-sm sm:text-base">
+                          <span className="font-semibold truncate">Manage Invitations</span>
+                          <Mail className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-indigo-100">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-xs sm:text-sm font-medium text-indigo-700">Jobseekers</span>
+                        </div>
+                        <div className="text-xl sm:text-2xl font-bold text-indigo-800">Invite</div>
+                        <div className="text-xs text-indigo-600">Send job opportunities</div>
+                      </div>
+                      <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-indigo-100">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <span className="text-xs sm:text-sm font-medium text-indigo-700">Companies</span>
+                        </div>
+                        <div className="text-xl sm:text-2xl font-bold text-indigo-800">Invite</div>
+                        <div className="text-xs text-indigo-600">Connect with talent</div>
+                      </div>
+                    </div>
+                    <div className="bg-white/40 rounded-lg p-3 border border-indigo-100">
+                      <div className="flex items-center space-x-2 text-xs sm:text-sm text-indigo-700">
+                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full flex-shrink-0"></div>
+                        <span className="truncate">Bulk email support • Custom templates • Email tracking</span>
                       </div>
                     </div>
                   </CardContent>

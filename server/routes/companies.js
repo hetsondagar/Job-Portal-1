@@ -262,6 +262,62 @@ router.post('/:id/logo', authenticateToken, companyLogoUpload.single('logo'), as
   }
 });
 
+// Upload/replace company banner/placeholder image
+router.post('/:id/banner', authenticateToken, companyLogoUpload.single('banner'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No banner file provided' });
+    }
+
+    // Only company owner/admin can update
+    if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(id)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const company = await Company.findByPk(id);
+    if (!company) return res.status(404).json({ success: false, message: 'Company not found' });
+
+    // Upload to Cloudinary (persistent cloud storage)
+    let fileUrl;
+    
+    if (isConfigured()) {
+      console.log('☁️ Uploading banner to Cloudinary...');
+      const cloudinaryResult = await uploadBufferToCloudinary(
+        req.file.buffer,
+        'company-banners',
+        {
+          public_id: `company-banner-${id}-${Date.now()}`,
+          transformation: [
+            { width: 1200, height: 400, crop: 'limit' },
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+          ]
+        }
+      );
+      fileUrl = cloudinaryResult.url;
+      console.log('✅ Banner uploaded to Cloudinary:', fileUrl);
+    } else {
+      console.warn('⚠️ Cloudinary not configured, using local storage (files will be lost on restart!)');
+      const filename = `banner-${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const localPath = path.join(__dirname, '../uploads/company-banners', filename);
+      const fs = require('fs');
+      if (!fs.existsSync(path.dirname(localPath))) {
+        fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      }
+      fs.writeFileSync(localPath, req.file.buffer);
+      fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}/uploads/company-banners/${filename}`;
+    }
+
+    await company.update({ banner: fileUrl });
+
+    return res.status(200).json({ success: true, message: 'Company banner updated', data: { banner: fileUrl } });
+  } catch (error) {
+    console.error('Company banner upload error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload banner' });
+  }
+});
+
 // Middleware to verify JWT token
 const authenticateToken2 = async (req, res, next) => {
   try {
@@ -427,7 +483,7 @@ router.post('/join', authenticateToken, async (req, res) => {
 // Create a new company
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, industries, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs } = req.body;
+    const { name, industries, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs, natureOfBusiness, companyTypes } = req.body;
     
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
@@ -491,7 +547,9 @@ router.post('/', authenticateToken, async (req, res) => {
       contactEmail: req.user.email,
       contactPhone: req.user.phone,
       companyStatus: 'pending_approval',
-      isActive: true
+      isActive: true,
+      natureOfBusiness: Array.isArray(natureOfBusiness) ? natureOfBusiness : [],
+      companyTypes: Array.isArray(companyTypes) ? companyTypes : []
     });
 
     // Update user with company_id and set as admin with Hiring Manager designation
@@ -517,12 +575,14 @@ router.post('/', authenticateToken, async (req, res) => {
           email: company.email,
           phone: company.phone,
           description: company.description,
-        whyJoinUs: company.whyJoinUs,
+          whyJoinUs: company.whyJoinUs,
           address: company.address,
           city: company.city,
           state: company.state,
           country: company.country,
-          region: company.region
+          region: company.region,
+          natureOfBusiness: company.natureOfBusiness || [],
+          companyTypes: company.companyTypes || []
         },
         user: {
           id: updatedUser.id,
@@ -731,6 +791,7 @@ router.get('/:id', async (req, res) => {
       state: company.state,
       country: company.country,
       logo: company.logo,
+      banner: company.banner,
       founded: company.foundedYear, // Map foundedYear to founded for compatibility
       headquarters: `${company.city || ''}, ${company.state || ''}, ${company.country || ''}`.replace(/^,\s*|,\s*$/g, ''),
       revenue: company.revenue,

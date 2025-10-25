@@ -1161,6 +1161,66 @@ class ApiService {
     return this.handleResponse<any>(response);
   }
 
+  /**
+   * Upload company logo
+   */
+  async uploadCompanyLogo(companyId: string, file: File): Promise<ApiResponse<{ logo: string }>> {
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      console.log('🔍 API Service - Uploading company logo...');
+      const response = await fetch(`${API_BASE_URL}/companies/${companyId}/logo`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const result = await this.handleResponse<{ logo: string }>(response);
+      console.log('🔍 API Service - Company logo upload result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - uploadCompanyLogo error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload company banner/placeholder image
+   */
+  async uploadCompanyBanner(companyId: string, file: File): Promise<ApiResponse<{ banner: string }>> {
+    try {
+      const formData = new FormData();
+      formData.append('banner', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      console.log('🔍 API Service - Uploading company banner...');
+      const response = await fetch(`${API_BASE_URL}/companies/${companyId}/banner`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const result = await this.handleResponse<{ banner: string }>(response);
+      console.log('🔍 API Service - Company banner upload result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - uploadCompanyBanner error:', error);
+      throw error;
+    }
+  }
+
   // ========== AGENCY METHODS ==========
   
   /**

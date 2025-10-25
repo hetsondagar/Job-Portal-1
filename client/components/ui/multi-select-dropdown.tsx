@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +28,22 @@ export function MultiSelectDropdown({
 }: MultiSelectDropdownProps) {
   const [localSelected, setLocalSelected] = useState<string[]>(selectedValues)
 
+  // Prevent body scrolling when dropdown is open and focus the dropdown
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    
+    // Focus the overlay to trap focus
+    const overlay = document.querySelector('[data-multiselect-overlay]') as HTMLElement;
+    if (overlay) {
+      overlay.focus();
+    }
+    
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
   const handleToggle = (value: string) => {
     if (localSelected.includes(value)) {
       setLocalSelected(localSelected.filter(v => v !== value))
@@ -45,13 +61,48 @@ export function MultiSelectDropdown({
   }
 
   const handleApply = () => {
+    console.log('✅ MultiSelectDropdown Apply clicked:', { title, localSelected });
     onChange(localSelected)
     onClose()
   }
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    // Only close if clicking on the overlay itself, not on the card
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent clicks on the card from bubbling up to the overlay
+    e.stopPropagation();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Prevent keyboard events from reaching the background
+    e.stopPropagation();
+    
+    // Close on Escape key
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+      onClick={handleOverlayClick}
+      onMouseDown={(e) => e.preventDefault()}
+      onTouchStart={(e) => e.preventDefault()}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+      data-multiselect-overlay
+      style={{ pointerEvents: 'auto' }}
+    >
+      <Card 
+        className="w-full max-w-2xl max-h-[90vh] flex flex-col"
+        onClick={handleCardClick}
+      >
         <CardHeader className="border-b">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{title}</CardTitle>

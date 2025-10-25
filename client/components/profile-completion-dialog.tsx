@@ -556,8 +556,9 @@ export function EmployerProfileCompletionDialog({
 
   // Check if profile is incomplete - COMPREHENSIVE CHECK
   const isProfileIncomplete = () => {
-    // Check if user has marked profile as complete
+    // Check if user has marked profile as complete - THIS IS THE KEY CHECK
     if (user.preferences?.profileCompleted === true) {
+      console.log('✅ Profile already completed, not showing dialog');
       return false
     }
 
@@ -582,6 +583,14 @@ export function EmployerProfileCompletionDialog({
     const hasRequiredFields = user.phone && 
                               (user as any).designation && 
                               user.companyId
+
+    console.log('🔍 Profile completion check:', {
+      profileCompleted: user.preferences?.profileCompleted,
+      hasRequiredFields,
+      phone: user.phone,
+      designation: (user as any).designation,
+      companyId: user.companyId
+    });
 
     return !hasRequiredFields
   }
@@ -698,6 +707,30 @@ export function EmployerProfileCompletionDialog({
         if (companyResponse.success && companyResponse.data) {
           companyId = companyResponse.data.id
           toast.success('Company created successfully!')
+          
+          // Upload company logo if provided
+          if (companyLogo && companyId) {
+            try {
+              const logoResponse = await apiService.uploadCompanyLogo(companyId, companyLogo)
+              if (logoResponse.success) {
+                console.log('✅ Company logo uploaded successfully')
+              }
+            } catch (error) {
+              console.error('❌ Error uploading company logo:', error)
+            }
+          }
+          
+          // Upload company banner/placeholder if provided
+          if (companyPlaceholder && companyId) {
+            try {
+              const bannerResponse = await apiService.uploadCompanyBanner(companyId, companyPlaceholder)
+              if (bannerResponse.success) {
+                console.log('✅ Company banner uploaded successfully')
+              }
+            } catch (error) {
+              console.error('❌ Error uploading company banner:', error)
+            }
+          }
         } else {
           toast.error('Failed to create company')
           setSubmitting(false)
@@ -712,6 +745,30 @@ export function EmployerProfileCompletionDialog({
             natureOfBusiness: formData.natureOfBusiness,
             companyTypes: formData.companyTypes
           })
+          
+          // Upload company logo if provided
+          if (companyLogo && user.companyId) {
+            try {
+              const logoResponse = await apiService.uploadCompanyLogo(user.companyId, companyLogo)
+              if (logoResponse.success) {
+                console.log('✅ Company logo uploaded successfully')
+              }
+            } catch (error) {
+              console.error('❌ Error uploading company logo:', error)
+            }
+          }
+          
+          // Upload company banner/placeholder if provided
+          if (companyPlaceholder && user.companyId) {
+            try {
+              const bannerResponse = await apiService.uploadCompanyBanner(user.companyId, companyPlaceholder)
+              if (bannerResponse.success) {
+                console.log('✅ Company banner uploaded successfully')
+              }
+            } catch (error) {
+              console.error('❌ Error uploading company banner:', error)
+            }
+          }
         } catch (error) {
           console.error('Error updating company details:', error)
           // Continue with user profile update even if company update fails
@@ -785,6 +842,7 @@ export function EmployerProfileCompletionDialog({
   }
 
   const handleInputChange = (field: string, value: string | string[]) => {
+    console.log('🔄 Profile completion form data change:', { field, value });
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -816,9 +874,43 @@ export function EmployerProfileCompletionDialog({
     }
   }
 
+  const handleDialogOpenChange = (open: boolean) => {
+    console.log('🔄 Dialog open change requested:', { open, showNatureOfBusinessDropdown, showCompanyTypesDropdown, showDepartmentDropdown });
+    
+    // Don't close the dialog if any dropdown is open
+    if (!open && (showNatureOfBusinessDropdown || showCompanyTypesDropdown || showDepartmentDropdown)) {
+      console.log('🚫 Preventing dialog close - dropdown is open');
+      return;
+    }
+    
+    console.log('✅ Dialog close allowed');
+    onClose();
+  };
+
+  // Prevent dialog from closing when dropdown is open
+  const handleDialogKeyDown = (e: React.KeyboardEvent) => {
+    // If any dropdown is open, prevent the dialog from handling escape key
+    if (e.key === 'Escape' && (showNatureOfBusinessDropdown || showCompanyTypesDropdown || showDepartmentDropdown)) {
+      e.stopPropagation();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto">
+    <>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={handleDialogOpenChange}
+      modal={true}
+    >
+      <DialogContent 
+        className={`max-w-[95vw] sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto transition-opacity duration-200 ${
+          (showNatureOfBusinessDropdown || showCompanyTypesDropdown || showDepartmentDropdown) ? 'opacity-50' : 'opacity-100'
+        }`}
+        style={{ 
+          pointerEvents: (showNatureOfBusinessDropdown || showCompanyTypesDropdown || showDepartmentDropdown) ? 'none' : 'auto' 
+        }}
+        onKeyDown={handleDialogKeyDown}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="w-5 h-5" />
@@ -1039,7 +1131,7 @@ export function EmployerProfileCompletionDialog({
                       <input
                         type="file"
                         id="companyLogo"
-                        accept="image/*"
+                        accept="image/*,.jfif,.svg"
                         onChange={handleLogoUpload}
                         className="hidden"
                       />
@@ -1074,7 +1166,7 @@ export function EmployerProfileCompletionDialog({
                       <input
                         type="file"
                         id="companyPlaceholder"
-                        accept="image/*"
+                        accept="image/*,.jfif,.svg"
                         onChange={handlePlaceholderUpload}
                         className="hidden"
                       />
@@ -1294,44 +1386,45 @@ export function EmployerProfileCompletionDialog({
           </Button>
         </div>
       </DialogContent>
-      
-      {/* Multi-Select Dropdowns - Rendered outside dialog content for proper positioning */}
-      {showNatureOfBusinessDropdown && (
-        <MultiSelectDropdown
-          title="Select Nature of Business"
-          options={natureOfBusinessOptions}
-          selectedValues={formData.natureOfBusiness}
-          onChange={(values) => {
-            handleInputChange("natureOfBusiness", values)
-          }}
-          onClose={() => setShowNatureOfBusinessDropdown(false)}
-        />
-      )}
-
-      {showCompanyTypesDropdown && (
-        <MultiSelectDropdown
-          title="Select Company Type(s)"
-          options={companyTypeOptions}
-          selectedValues={formData.companyTypes}
-          onChange={(values) => {
-            handleInputChange("companyTypes", values)
-          }}
-          onClose={() => setShowCompanyTypesDropdown(false)}
-        />
-      )}
-
-      {showDepartmentDropdown && (
-        <DepartmentDropdown
-          selectedDepartments={formData.departments}
-          onDepartmentChange={(departments: string[]) => {
-            handleInputChange("departments", departments)
-            // Also update the single department field for backward compatibility
-            handleInputChange("department", departments[0] || '')
-          }}
-          onClose={() => setShowDepartmentDropdown(false)}
-        />
-      )}
     </Dialog>
+
+    {/* Multi-Select Dropdowns - Rendered completely outside dialog to prevent interference */}
+    {showNatureOfBusinessDropdown && (
+      <MultiSelectDropdown
+        title="Select Nature of Business"
+        options={natureOfBusinessOptions}
+        selectedValues={formData.natureOfBusiness}
+        onChange={(values) => {
+          handleInputChange("natureOfBusiness", values)
+        }}
+        onClose={() => setShowNatureOfBusinessDropdown(false)}
+      />
+    )}
+
+    {showCompanyTypesDropdown && (
+      <MultiSelectDropdown
+        title="Select Company Type(s)"
+        options={companyTypeOptions}
+        selectedValues={formData.companyTypes}
+        onChange={(values) => {
+          handleInputChange("companyTypes", values)
+        }}
+        onClose={() => setShowCompanyTypesDropdown(false)}
+      />
+    )}
+
+    {showDepartmentDropdown && (
+      <DepartmentDropdown
+        selectedDepartments={formData.departments}
+        onDepartmentChange={(departments: string[]) => {
+          handleInputChange("departments", departments)
+          // Also update the single department field for backward compatibility
+          handleInputChange("department", departments[0] || '')
+        }}
+        onClose={() => setShowDepartmentDropdown(false)}
+      />
+    )}
+  </>
   )
 }
 

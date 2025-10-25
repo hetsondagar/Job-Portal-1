@@ -74,6 +74,7 @@ const companyClaimRoutes = require('./routes/company-claim');
 const paymentRoutes = require('./routes/payment');
 const verificationRoutes = require('./routes/verification');
 const uploadRoutes = require('./routes/upload');
+const adminInvitationsRoutes = require('./routes/admin-invitations');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -351,6 +352,57 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminAgencyRoutes);
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/notifications', require('./routes/admin-notifications'));
+app.use('/api/admin', adminInvitationsRoutes);
+
+// Email tracking endpoints (public access)
+app.get('/api/track/open/:invitationId', async (req, res) => {
+  try {
+    const { invitationId } = req.params;
+    console.log(`📧 Email opened - Invitation ID: ${invitationId}`);
+    
+    // Return a 1x1 transparent pixel
+    const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(pixel);
+  } catch (error) {
+    console.error('❌ Error tracking email open:', error);
+    res.status(500).send('Error');
+  }
+});
+
+app.get('/api/track/click/:invitationId/:linkType', async (req, res) => {
+  try {
+    const { invitationId, linkType } = req.params;
+    console.log(`🔗 Email link clicked - Invitation ID: ${invitationId}, Link Type: ${linkType}`);
+    
+    // Redirect to the appropriate page
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    let redirectUrl = `${baseUrl}/`;
+    
+    switch (linkType) {
+      case 'signup':
+        redirectUrl = `${baseUrl}/signup`;
+        break;
+      case 'login':
+        redirectUrl = `${baseUrl}/login`;
+        break;
+      case 'jobs':
+        redirectUrl = `${baseUrl}/jobs`;
+        break;
+      case 'postjob':
+        redirectUrl = `${baseUrl}/company/post-job`;
+        break;
+      default:
+        redirectUrl = `${baseUrl}/`;
+    }
+    
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('❌ Error tracking email click:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/`);
+  }
+});
 app.use('/api/support', require('./routes/support'));
 
   // Compatibility redirect for cover-letter download legacy path
