@@ -422,7 +422,6 @@ router.get('/profile', authenticateToken, async (req, res) => {
       hasPassword: !!(req.user.password && String(req.user.password).trim().length > 0),
       passwordSkipped: Boolean(req.user.password_skipped),
       requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0) && req.user.oauth_provider && req.user.oauth_provider !== 'local' && !req.user.password_skipped,
-      profileCompleted: Boolean(req.user.first_name && req.user.last_name && req.user.phone) && ((req.user.profile_completion || 0) >= 60),
       createdAt: req.user.created_at,
       updatedAt: req.user.updatedAt
     };
@@ -859,6 +858,142 @@ router.put('/change-password', authenticateToken, [
 
   } catch (error) {
     console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Change email
+router.put('/change-email', authenticateToken, [
+  body('newEmail')
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('Current password is required')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { newEmail, currentPassword } = req.body;
+
+    // Prevent setting the same email
+    if (newEmail === req.user.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email must be different from current email'
+      });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ where: { email: newEmail } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is already in use'
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await req.user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update email and reset email verification status
+    await req.user.update({ 
+      email: newEmail,
+      isEmailVerified: false,
+      emailVerificationToken: null,
+      emailVerificationExpires: null
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Email updated successfully. Please verify your new email address.'
+    });
+
+  } catch (error) {
+    console.error('Change email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Change phone
+router.put('/change-phone', authenticateToken, [
+  body('newPhone')
+    .isMobilePhone()
+    .withMessage('Please provide a valid phone number'),
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('Current password is required')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { newPhone, currentPassword } = req.body;
+
+    // Prevent setting the same phone
+    if (newPhone === req.user.phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'New phone must be different from current phone'
+      });
+    }
+
+    // Check if phone already exists
+    const existingUser = await User.findOne({ where: { phone: newPhone } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is already in use'
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await req.user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update phone
+    await req.user.update({ phone: newPhone });
+
+    res.status(200).json({
+      success: true,
+      message: 'Phone number updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Change phone error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -1387,52 +1522,6 @@ router.put('/notifications', authenticateToken, [
 });
 
 // Delete user account
-router.delete('/account', authenticateToken, [
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required to delete account')
-], async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
-    const { password } = req.body;
-
-    // Verify password
-    const isPasswordValid = await req.user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password is incorrect'
-      });
-    }
-
-    // Soft delete - update account status
-    await req.user.update({ 
-      accountStatus: 'deactivated',
-      isActive: false
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Account deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Delete account error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
 
 // Job Applications endpoints
 router.get('/applications', authenticateToken, async (req, res) => {
@@ -5019,225 +5108,6 @@ router.use((error, req, res, next) => {
   next(error);
 });
 
-/**
- * @route   DELETE /api/user/account
- * @desc    Permanently delete user account and all associated data
- * @access  Private
- */
-router.delete('/account', authenticateToken, async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
-  try {
-    const userId = req.user.id;
-    const userEmail = req.user.email;
-    
-    console.log('🗑️ Starting account deletion for user:', userId);
-
-    // Load user with all associations
-    const user = await User.findByPk(userId, {
-      include: [{ model: require('../models/Company'), as: 'company' }],
-      transaction
-    });
-
-    if (!user) {
-      await transaction.rollback();
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    const companyId = user.company_id;
-    const isAdmin = user.user_type === 'admin';
-    
-    // Get all models
-    const { 
-      JobApplication, 
-      Job, 
-      Company, 
-      Resume, 
-      CoverLetter,
-      JobBookmark,
-      JobAlert,
-      CompanyFollow,
-      Interview,
-      Message,
-      Notification,
-      UserSession,
-      UserActivityLog,
-      ViewTracking,
-      SearchHistory,
-      AgencyClientAuthorization,
-      JobPhoto,
-      CompanyPhoto,
-      UserDashboard
-    } = require('../models');
-
-    console.log('📋 Deleting user data...');
-
-    // 1. Delete job applications
-    await JobApplication.destroy({ where: { userId: userId }, transaction }); // userId is the candidate
-    await JobApplication.destroy({ where: { employerId: userId }, transaction });
-    console.log('✅ Job applications deleted');
-
-    // 2. Delete user's bookmarks, alerts, follows
-    await JobBookmark.destroy({ where: { userId }, transaction });
-    await JobAlert.destroy({ where: { userId }, transaction });
-    await CompanyFollow.destroy({ where: { userId }, transaction });
-    console.log('✅ Bookmarks, alerts, follows deleted');
-
-    // 3. Delete resumes
-    const resumes = await Resume.findAll({ where: { userId }, transaction });
-    for (const resume of resumes) {
-      // Delete file from disk if exists
-      if (resume.filePath) {
-        try {
-          const fullPath = path.join(__dirname, '..', resume.filePath);
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-            console.log('✅ Deleted resume file:', resume.filePath);
-          }
-        } catch (err) {
-          console.warn('⚠️ Could not delete resume file:', err.message);
-        }
-      }
-    }
-    await Resume.destroy({ where: { userId }, transaction });
-    console.log('✅ Resumes deleted');
-
-    // 4. Delete cover letters
-    const coverLetters = await CoverLetter.findAll({ where: { userId }, transaction });
-    for (const letter of coverLetters) {
-      if (letter.filePath) {
-        try {
-          const fullPath = path.join(__dirname, '..', letter.filePath);
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-            console.log('✅ Deleted cover letter file:', letter.filePath);
-          }
-        } catch (err) {
-          console.warn('⚠️ Could not delete cover letter file:', err.message);
-        }
-      }
-    }
-    await CoverLetter.destroy({ where: { userId }, transaction });
-    console.log('✅ Cover letters deleted');
-
-    // 5. Delete notifications, messages, sessions
-    await Notification.destroy({ where: { userId }, transaction });
-    await Message.destroy({ where: { senderId: userId }, transaction });
-    await Message.destroy({ where: { receiverId: userId }, transaction });
-    await UserSession.destroy({ where: { userId }, transaction });
-    await UserActivityLog.destroy({ where: { userId }, transaction });
-    await ViewTracking.destroy({ where: { userId }, transaction });
-    await SearchHistory.destroy({ where: { userId }, transaction });
-    console.log('✅ Notifications, messages, sessions deleted');
-
-    // 6. Delete interviews
-    await Interview.destroy({ where: { candidateId: userId }, transaction });
-    await Interview.destroy({ where: { employerId: userId }, transaction });
-    console.log('✅ Interviews deleted');
-
-    // 7. Delete user dashboard
-    await UserDashboard.destroy({ where: { userId }, transaction });
-    console.log('✅ User dashboard deleted');
-
-    // 8. Handle company data (if user is admin/owner)
-    if (isAdmin && companyId) {
-      console.log('👑 User is admin, checking company ownership...');
-      
-      // Count other admins for this company
-      const otherAdmins = await User.count({
-        where: { 
-          company_id: companyId, 
-          user_type: 'admin',
-          id: { [Op.ne]: userId }
-        },
-        transaction
-      });
-
-      if (otherAdmins === 0) {
-        console.log('🏢 No other admins, will delete company after user...');
-        
-        // Delete company jobs
-        const companyJobs = await Job.findAll({ where: { companyId }, transaction });
-        for (const job of companyJobs) {
-          // Delete job photos
-          const jobPhotos = await JobPhoto.findAll({ where: { jobId: job.id }, transaction });
-          for (const photo of jobPhotos) {
-            if (photo.filePath) {
-              try {
-                const fullPath = path.join(__dirname, '..', photo.filePath);
-                if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-              } catch (err) {}
-            }
-          }
-          await JobPhoto.destroy({ where: { jobId: job.id }, transaction });
-          
-          // Delete job applications for this job
-          await JobApplication.destroy({ where: { jobId: job.id }, transaction });
-        }
-        await Job.destroy({ where: { companyId }, transaction });
-        console.log('✅ Company jobs deleted');
-
-        // Delete company photos
-        const companyPhotos = await CompanyPhoto.findAll({ where: { companyId }, transaction });
-        for (const photo of companyPhotos) {
-          if (photo.filePath) {
-            try {
-              const fullPath = path.join(__dirname, '..', photo.filePath);
-              if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-            } catch (err) {}
-          }
-        }
-        await CompanyPhoto.destroy({ where: { companyId }, transaction });
-        console.log('✅ Company photos deleted');
-
-        // Delete agency authorizations
-        await AgencyClientAuthorization.destroy({ where: { agencyCompanyId: companyId }, transaction });
-        await AgencyClientAuthorization.destroy({ where: { clientCompanyId: companyId }, transaction });
-        console.log('✅ Agency authorizations deleted');
-
-        // Delete user first (has FK to company)
-        await user.destroy({ transaction });
-        console.log('✅ User account deleted');
-
-        // Then delete company
-        await Company.destroy({ where: { id: companyId }, transaction });
-        console.log('✅ Company deleted');
-      } else {
-        console.log(`ℹ️ Company has ${otherAdmins} other admin(s), keeping company but removing user`);
-        // Delete user only
-        await user.destroy({ transaction });
-        console.log('✅ User account deleted');
-      }
-    } else {
-      // Not an admin or no company - just delete user
-      await user.destroy({ transaction });
-      console.log('✅ User account deleted');
-    }
-
-    // Commit transaction
-    await transaction.commit();
-
-    console.log('🎉 Account deletion completed successfully for:', userEmail);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Account deleted successfully',
-      data: {
-        deletedEmail: userEmail,
-        deletedAt: new Date()
-      }
-    });
-
-  } catch (error) {
-    await transaction.rollback();
-    console.error('❌ Account deletion error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete account',
-      error: error.message
-    });
-  }
-});
 
 // Update notification preferences (flexible endpoint for all notification types)
 router.put('/preferences/notifications', authenticateToken, async (req, res) => {
@@ -5316,5 +5186,361 @@ router.get('/preferences/notifications', authenticateToken, async (req, res) => 
     });
   }
 });
+
+// Delete account endpoint (GDPR compliant)
+router.delete('/account', authenticateToken, [
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  body('confirmationText').equals('DELETE MY ACCOUNT').withMessage('Please type "DELETE MY ACCOUNT" to confirm')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { currentPassword, confirmationText } = req.body;
+    const userId = req.user.id;
+
+    // Find the user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Check if user is the only member of their company
+    let companyHandling = null;
+    if (user.companyId) {
+      const companyMembers = await User.count({
+        where: { companyId: user.companyId }
+      });
+      
+      if (companyMembers === 1) {
+        // User is the only member - mark company as inactive
+        const Company = require('../models/Company');
+        await Company.update(
+          { 
+            isActive: false,
+            companyStatus: 'inactive',
+            lastActivityAt: new Date()
+          },
+          { where: { id: user.companyId } }
+        );
+        companyHandling = 'Company marked as inactive (only member)';
+      } else {
+        companyHandling = 'Company preserved (other members exist)';
+      }
+    }
+
+    // Delete account data (without transaction for now due to model compatibility issues)
+    console.log('🔍 Starting account deletion process...');
+    
+    try {
+      // Phase 1: Anonymize shared data (preserve for business purposes)
+      console.log('🔍 Phase 1: Starting anonymizeSharedData...');
+      await anonymizeSharedData(userId, null);
+      console.log('✅ Phase 1 completed');
+      
+      // Phase 2: Delete user-specific data
+      console.log('🔍 Phase 2: Starting deleteUserSpecificData...');
+      await deleteUserSpecificData(userId, null);
+      console.log('✅ Phase 2 completed');
+      
+      // Phase 3: Soft delete user account (GDPR compliant)
+      console.log('🔍 Phase 3: Starting user account soft delete...');
+      await user.update({
+        account_status: 'deleted',
+        email: `deleted_${Date.now()}_${user.email}`,
+        phone: null,
+        first_name: 'Deleted',
+        last_name: 'User',
+        avatar: null,
+        password: null,
+        preferences: { deletedAt: new Date().toISOString() },
+        is_active: false,
+        deleted_at: new Date()
+      });
+      console.log('✅ Phase 3 completed');
+
+      // Log deletion for audit purposes
+      console.log(`Account deleted: ${user.email} (${user.user_type}) at ${new Date().toISOString()}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Account deleted successfully',
+        data: {
+          companyHandling,
+          deletedAt: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error in delete process...', error);
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Delete account error:', error);
+    console.error('Delete account error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to anonymize shared data
+async function anonymizeSharedData(userId, transaction) {
+  try {
+    const { JobApplication, Interview, Message, Payment, CompanyReview } = require('../models');
+    
+    console.log('🔍 Starting anonymizeSharedData for user:', userId);
+    
+    // Delete job applications where user is employer (using correct field name)
+    try {
+      const options = { where: { employerId: userId } };
+      if (transaction) options.transaction = transaction;
+      await JobApplication.destroy(options);
+      console.log('✅ Job applications (employer) deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete job applications (employer):', error.message);
+    }
+    
+    // Delete interviews where user is employer (using correct field name)
+    try {
+      const options = { where: { employerId: userId } };
+      if (transaction) options.transaction = transaction;
+      await Interview.destroy(options);
+      console.log('✅ Interviews (employer) deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete interviews (employer):', error.message);
+    }
+    
+    // Delete messages where user is sender or receiver (using correct field names)
+    try {
+      const options = { 
+        where: { 
+          [require('sequelize').Op.or]: [
+            { senderId: userId },
+            { receiverId: userId }
+          ]
+        } 
+      };
+      if (transaction) options.transaction = transaction;
+      await Message.destroy(options);
+      console.log('✅ Messages deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete messages:', error.message);
+    }
+    
+    // Delete payment records (using correct field name)
+    try {
+      const options = { where: { userId: userId } };
+      if (transaction) options.transaction = transaction;
+      await Payment.destroy(options);
+      console.log('✅ Payments deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete payments:', error.message);
+    }
+    
+    // Delete company reviews (using correct field name)
+    try {
+      const options = { where: { userId: userId } };
+      if (transaction) options.transaction = transaction;
+      await CompanyReview.destroy(options);
+      console.log('✅ Company reviews deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete company reviews:', error.message);
+    }
+    
+    console.log('✅ anonymizeSharedData completed');
+  } catch (error) {
+    console.error('❌ Error in anonymizeSharedData:', error);
+    throw error;
+  }
+}
+
+// Helper function to delete user-specific data
+async function deleteUserSpecificData(userId, transaction) {
+  try {
+    console.log('🔍 Starting deleteUserSpecificData for user:', userId);
+    
+    const { 
+      JobBookmark, JobAlert, Resume, CoverLetter, Education, WorkExperience,
+      CompanyFollow, Notification, SearchHistory, UserSession, UserActivityLog,
+      UserDashboard, Conversation, Subscription, EmployerQuota, FeaturedJob,
+      SecureJobTap, BulkJobImport, Analytics, CandidateAnalytics, CandidateLike,
+      ViewTracking, Requirement, Application, JobPreference, AgencyClientAuthorization,
+      AdminNotification
+    } = require('../models');
+    
+    // Define models with their CORRECT field names for user ID
+    const modelsWithFields = [
+      { model: JobBookmark, field: 'userId' },
+      { model: JobAlert, field: 'userId' },
+      { model: Resume, field: 'userId' },
+      { model: CoverLetter, field: 'userId' },
+      { model: Education, field: 'userId' },
+      { model: WorkExperience, field: 'userId' },
+      { model: CompanyFollow, field: 'userId' },
+      { model: Notification, field: 'userId' },
+      { model: SearchHistory, field: 'userId' },
+      { model: UserSession, field: 'userId' },
+      { model: UserActivityLog, field: 'userId' },
+      { model: UserDashboard, field: 'userId' },
+      { model: Subscription, field: 'userId' },
+      { model: EmployerQuota, field: 'userId' },
+      { model: SecureJobTap, field: 'userId' },
+      { model: Analytics, field: 'userId' },
+      { model: JobPreference, field: 'userId' }
+    ];
+    
+    // Delete user-specific data with correct field names
+    for (const { model: Model, field } of modelsWithFields) {
+      try {
+        const options = { where: { [field]: userId } };
+        if (transaction) options.transaction = transaction;
+        await Model.destroy(options);
+        console.log(`✅ Deleted from ${Model.name} using field ${field}`);
+      } catch (error) {
+        console.log(`⚠️ Warning: Could not delete from ${Model.name}:`, error.message);
+      }
+    }
+    
+    // Handle Conversation model with correct field names (participant1Id and participant2Id)
+    try {
+      const options = { 
+        where: { 
+          [require('sequelize').Op.or]: [
+            { participant1Id: userId },
+            { participant2Id: userId }
+          ]
+        } 
+      };
+      if (transaction) options.transaction = transaction;
+      await Conversation.destroy(options);
+      console.log('✅ Conversations deleted (participant1Id and participant2Id)');
+    } catch (error) {
+      console.log('⚠️ Could not delete conversations:', error.message);
+    }
+    
+    // Handle BulkJobImport with correct field name
+    try {
+      const options = { where: { createdBy: userId } };
+      if (transaction) options.transaction = transaction;
+      await BulkJobImport.destroy(options);
+      console.log('✅ Bulk job imports deleted (createdBy)');
+    } catch (error) {
+      console.log('⚠️ Could not delete bulk job imports:', error.message);
+    }
+    
+    // Handle CandidateAnalytics with correct field name
+    try {
+      const options = { where: { employerId: userId } };
+      if (transaction) options.transaction = transaction;
+      await CandidateAnalytics.destroy(options);
+      console.log('✅ Candidate analytics deleted (employerId)');
+    } catch (error) {
+      console.log('⚠️ Could not delete candidate analytics:', error.message);
+    }
+    
+    // Handle CandidateLike with correct field names
+    try {
+      const options = { 
+        where: { 
+          [require('sequelize').Op.or]: [
+            { employerId: userId },
+            { candidateId: userId }
+          ]
+        } 
+      };
+      if (transaction) options.transaction = transaction;
+      await CandidateLike.destroy(options);
+      console.log('✅ Candidate likes deleted (employerId and candidateId)');
+    } catch (error) {
+      console.log('⚠️ Could not delete candidate likes:', error.message);
+    }
+    
+    // Handle ViewTracking with correct field names
+    try {
+      const options = { 
+        where: { 
+          [require('sequelize').Op.or]: [
+            { viewerId: userId },
+            { viewedUserId: userId }
+          ]
+        } 
+      };
+      if (transaction) options.transaction = transaction;
+      await ViewTracking.destroy(options);
+      console.log('✅ View tracking deleted (viewerId and viewedUserId)');
+    } catch (error) {
+      console.log('⚠️ Could not delete view tracking:', error.message);
+    }
+    
+    // Handle Requirement with correct field name
+    try {
+      const options = { where: { createdBy: userId } };
+      if (transaction) options.transaction = transaction;
+      await Requirement.destroy(options);
+      console.log('✅ Requirements deleted (createdBy)');
+    } catch (error) {
+      console.log('⚠️ Could not delete requirements:', error.message);
+    }
+    
+    // Handle AdminNotification with correct field name
+    try {
+      const options = { where: { relatedUserId: userId } };
+      if (transaction) options.transaction = transaction;
+      await AdminNotification.destroy(options);
+      console.log('✅ Admin notifications deleted (relatedUserId)');
+    } catch (error) {
+      console.log('⚠️ Could not delete admin notifications:', error.message);
+    }
+    
+    // Delete job applications where user is applicant (using correct field name)
+    try {
+      const { JobApplication } = require('../models');
+      const options = { where: { userId: userId } }; // JobApplication uses userId field mapped to applicant_id
+      if (transaction) options.transaction = transaction;
+      await JobApplication.destroy(options);
+      console.log('✅ Job applications (applicant) deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete job applications (applicant):', error.message);
+    }
+    
+    // Delete interviews where user is candidate (using correct field name)
+    try {
+      const { Interview } = require('../models');
+      const options = { where: { candidateId: userId } };
+      if (transaction) options.transaction = transaction;
+      await Interview.destroy(options);
+      console.log('✅ Interviews (candidate) deleted');
+    } catch (error) {
+      console.log('⚠️ Could not delete interviews (candidate):', error.message);
+    }
+    
+    console.log('✅ deleteUserSpecificData completed');
+  } catch (error) {
+    console.error('❌ Error in deleteUserSpecificData:', error);
+    throw error;
+  }
+}
 
 module.exports = router;

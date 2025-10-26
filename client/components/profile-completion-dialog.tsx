@@ -580,19 +580,30 @@ export function EmployerProfileCompletionDialog({
     }
 
     // Required fields for employer
+    const isAdmin = user.userType === 'admin'
     const hasRequiredFields = user.phone && 
                               (user as any).designation && 
-                              user.companyId
+                              (user.companyId || isAdmin)
 
     console.log('🔍 Profile completion check:', {
       profileCompleted: user.preferences?.profileCompleted,
       hasRequiredFields,
       phone: user.phone,
       designation: (user as any).designation,
-      companyId: user.companyId
+      companyId: user.companyId,
+      isAdmin: isAdmin
     });
 
     return !hasRequiredFields
+  }
+
+  // Determine if user needs company setup (for users in same company, skip steps 1-3)
+  const shouldSkipCompanySteps = () => {
+    // If user already has a companyId, they're in an existing company
+    // Only show step 4 (personal info) for them
+    // For admin users, also skip company steps since they don't need a company
+    const isAdmin = user.userType === 'admin'
+    return !!(user.companyId && !needsCompany) || isAdmin
   }
 
   // Load company data if user has a company
@@ -617,6 +628,21 @@ export function EmployerProfileCompletionDialog({
 
     loadCompanyData()
   }, [user?.companyId, needsCompany])
+
+  // Set initial step based on user's company status
+  useEffect(() => {
+    if (user && isOpen) {
+      if (shouldSkipCompanySteps()) {
+        // User is in existing company, skip to step 4 (personal info)
+        console.log('🏢 User in existing company, skipping to step 4');
+        setCurrentStep(4)
+      } else {
+        // New user or needs company setup, start from step 1
+        console.log('🆕 New user or needs company setup, starting from step 1');
+        setCurrentStep(1)
+      }
+    }
+  }, [user, isOpen])
 
   useEffect(() => {
     setNeedsCompany(!user.companyId)
@@ -656,34 +682,42 @@ export function EmployerProfileCompletionDialog({
   }
 
   const handleSubmit = async () => {
-    // Validate required fields based on current step
-    if (currentStep === 1) {
-      // Step 1 is company branding - no required fields, just move to next step
-      // No validation needed for Step 1
-    }
-    
-    if (currentStep === 2) {
-      // Step 2 is company logo - no required fields, just move to next step
-      // No validation needed for Step 2
-    }
-    
-    if (currentStep === 3) {
-      if (needsCompany && (!formData.companyName || !formData.companyIndustry)) {
-        toast.error('Please provide company name and industry')
-        return
-      }
-    }
-    
-    if (currentStep === 4) {
+    // For users in existing companies, only validate step 4
+    if (shouldSkipCompanySteps()) {
       if (!formData.phone || !formData.designation) {
         toast.error('Please fill in all required fields (Phone, Designation)')
         return
       }
-    }
+    } else {
+      // Validate required fields based on current step for new companies
+      if (currentStep === 1) {
+        // Step 1 is company branding - no required fields, just move to next step
+        // No validation needed for Step 1
+      }
+      
+      if (currentStep === 2) {
+        // Step 2 is company logo - no required fields, just move to next step
+        // No validation needed for Step 2
+      }
+      
+      if (currentStep === 3) {
+        if (needsCompany && (!formData.companyName || !formData.companyIndustry)) {
+          toast.error('Please provide company name and industry')
+          return
+        }
+      }
+      
+      if (currentStep === 4) {
+        if (!formData.phone || !formData.designation) {
+          toast.error('Please fill in all required fields (Phone, Designation)')
+          return
+        }
+      }
 
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1)
-      return
+      if (currentStep < 4) {
+        setCurrentStep(currentStep + 1)
+        return
+      }
     }
 
     setSubmitting(true)
@@ -691,7 +725,11 @@ export function EmployerProfileCompletionDialog({
       // If user needs a company, create it first
       let companyId = user.companyId
 
-      if (needsCompany && formData.companyName) {
+      // For users in existing companies, skip company creation/update
+      if (shouldSkipCompanySteps()) {
+        // User is in existing company, just update personal info
+        companyId = user.companyId
+      } else if (needsCompany && formData.companyName) {
         const companyResponse = await apiService.createCompany({
           name: formData.companyName,
           industry: formData.companyIndustry,
@@ -792,6 +830,8 @@ export function EmployerProfileCompletionDialog({
       
       if (response.success) {
         toast.success('Profile completed successfully! 🎉')
+        // Store in localStorage as backup
+        localStorage.setItem('profileCompleted', 'true');
         onProfileUpdated(response.data)
         onClose()
       } else {
@@ -849,12 +889,36 @@ export function EmployerProfileCompletionDialog({
     }))
   }
 
+  // CRITICAL: Ultimate check - if profile is completed, NEVER render dialog
+  if (user.preferences?.profileCompleted === true) {
+    console.log('🚫 ULTIMATE DIALOG CHECK: Profile is completed - dialog will NEVER render');
+    return null
+  }
+  
+  // Additional localStorage check
+  if (localStorage.getItem('profileCompleted') === 'true') {
+    console.log('🚫 LOCALSTORAGE DIALOG CHECK: Profile completed in localStorage - dialog will NEVER render');
+    return null
+  }
+
   // Don't show dialog if profile is complete
-  if (!isProfileIncomplete()) {
+  const shouldShowDialog = isProfileIncomplete()
+  console.log('🎯 Employer Profile Dialog - Should show:', shouldShowDialog, {
+    profileCompleted: user.preferences?.profileCompleted,
+    preferences: user.preferences
+  });
+  
+  // CRITICAL: Double-check that profile is not completed before rendering
+  if (!shouldShowDialog) {
+    console.log('✅ Profile completed - dialog will not render');
     return null
   }
 
   const getStepTitle = () => {
+    if (shouldSkipCompanySteps()) {
+      return "Your Personal Information"
+    }
+    
     switch (currentStep) {
       case 1: return "About Your Company"
       case 2: return "Company Logo & Branding"
@@ -865,6 +929,14 @@ export function EmployerProfileCompletionDialog({
   }
 
   const getStepDescription = () => {
+    if (shouldSkipCompanySteps()) {
+      const isAdmin = user.userType === 'admin'
+      if (isAdmin) {
+        return "👑 You're an admin user! Let's complete your personal professional information to get started."
+      }
+      return "🏢 You're joining an existing company! Let's complete your personal professional information to get started."
+    }
+    
     switch (currentStep) {
       case 1: return "🎯 Get FREE professional branding! Showcase your company to millions of job seekers and attract top talent."
       case 2: return "🎨 Add your company logo and branding elements to make your company stand out."
@@ -915,7 +987,9 @@ export function EmployerProfileCompletionDialog({
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="w-5 h-5" />
             Complete Your Employer Profile
-            <Badge variant="outline" className="ml-2">Step {currentStep} of 4</Badge>
+            <Badge variant="outline" className="ml-2">
+              {shouldSkipCompanySteps() ? 'Step 1 of 1' : `Step ${currentStep} of 4`}
+            </Badge>
           </DialogTitle>
           <DialogDescription>
             {getStepDescription()}
@@ -925,14 +999,14 @@ export function EmployerProfileCompletionDialog({
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div 
               className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
+              style={{ width: `${shouldSkipCompanySteps() ? '100%' : `${(currentStep / 4) * 100}%`}` }}
             />
           </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Step 1: About Your Company (moved from Step 3) */}
-          {currentStep === 1 && (
+          {/* Step 1: About Your Company (moved from Step 3) - Only for new companies */}
+          {currentStep === 1 && !shouldSkipCompanySteps() && (
             <div className="space-y-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-4">
@@ -1102,8 +1176,8 @@ export function EmployerProfileCompletionDialog({
             </div>
           )}
 
-          {/* Step 2: Company Logo & Branding */}
-          {currentStep === 2 && (
+          {/* Step 2: Company Logo & Branding - Only for new companies */}
+          {currentStep === 2 && !shouldSkipCompanySteps() && (
             <div className="space-y-6 p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-lg">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full mb-4">
@@ -1188,8 +1262,8 @@ export function EmployerProfileCompletionDialog({
             </div>
           )}
 
-          {/* Step 3: Company Details */}
-          {currentStep === 3 && (
+          {/* Step 3: Company Details - Only for new companies */}
+          {currentStep === 3 && !shouldSkipCompanySteps() && (
             <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <h3 className="font-semibold text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
@@ -1265,8 +1339,8 @@ export function EmployerProfileCompletionDialog({
             </div>
           )}
 
-          {/* Step 4: Your Personal Information */}
-          {currentStep === 4 && (
+          {/* Step 4: Your Personal Information - Always show for all users */}
+          {(currentStep === 4 || shouldSkipCompanySteps()) && (
             <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
@@ -1361,7 +1435,7 @@ export function EmployerProfileCompletionDialog({
             >
               Skip for Now
             </Button>
-            {currentStep > 1 && (
+            {currentStep > 1 && !shouldSkipCompanySteps() && (
               <Button
                 variant="outline"
                 onClick={handlePrevious}
@@ -1376,12 +1450,14 @@ export function EmployerProfileCompletionDialog({
             onClick={handleSubmit}
             disabled={
               submitting || 
+              (shouldSkipCompanySteps() && (!formData.phone || !formData.designation)) ||
               (currentStep === 3 && needsCompany && (!formData.companyName || !formData.companyIndustry)) ||
               (currentStep === 4 && (!formData.phone || !formData.designation))
             }
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           >
             {submitting ? 'Saving...' : 
+             shouldSkipCompanySteps() ? '🚀 Complete Profile' :
              currentStep < 4 ? 'Next' : '🚀 Complete & Get FREE Branding'}
           </Button>
         </div>

@@ -251,6 +251,26 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>(isMockMode ? mockUpcomingInterviews : [])
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
   const [profileCheckDone, setProfileCheckDone] = useState(false)
+  
+  // Initialize profile check state based on user data
+  useEffect(() => {
+    if (user) {
+      console.log('🚀 INITIAL CHECK: User loaded, checking profile completion status:', {
+        profileCompleted: user.preferences?.profileCompleted,
+        localStorageCompleted: localStorage.getItem('profileCompleted'),
+        userEmail: user.email
+      });
+      
+      // If profile is completed, immediately set states to prevent dialog
+      if (user.preferences?.profileCompleted === true || localStorage.getItem('profileCompleted') === 'true') {
+        console.log('🚀 INITIAL CHECK: Profile is completed - setting initial states to prevent dialog');
+        setShowProfileCompletion(false)
+        setProfileCheckDone(true)
+      } else {
+        console.log('🚀 INITIAL CHECK: Profile not completed - will check later');
+      }
+    }
+  }, [user])
 
   // Redirect unverified agencies to KYC verification page
   useEffect(() => {
@@ -284,10 +304,30 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   // Check profile completion separately (runs on every user update)
   useEffect(() => {
     if (user && !profileCheckDone) {
+      // CRITICAL: First check - if profile is completed, NEVER show dialog
+      if (user.preferences?.profileCompleted === true) {
+        console.log('🚫 ULTIMATE CHECK: Profile is completed - dialog will NEVER show');
+        // Also store in localStorage as backup
+        localStorage.setItem('profileCompleted', 'true');
+        setShowProfileCompletion(false)
+        setProfileCheckDone(true)
+        return
+      }
+      
+      // Additional check: localStorage backup
+      const localStorageCompleted = localStorage.getItem('profileCompleted') === 'true';
+      if (localStorageCompleted) {
+        console.log('🚫 LOCALSTORAGE CHECK: Profile completed in localStorage - dialog will NEVER show');
+        setShowProfileCompletion(false)
+        setProfileCheckDone(true)
+        return
+      }
+      
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
-        // Check if user has marked profile as complete
+        // CRITICAL: If user has marked profile as complete, NEVER show dialog again
         if (user.preferences?.profileCompleted === true) {
+          console.log('✅ Profile already completed - dialog will NEVER show again');
           return false
         }
         
@@ -307,21 +347,62 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           }
         }
         
-        // Required fields for employer
-        return !user.phone || !(user as any).designation || !user.companyId
+        // Required fields for employer - only check if profile is not completed
+        const hasPhone = !!user.phone
+        const hasDesignation = !!(user as any).designation
+        const hasCompanyId = !!user.companyId
+        const isAdmin = user.userType === 'admin'
+        
+        // For admin users, companyId is not required
+        const hasRequiredFields = hasPhone && hasDesignation && (hasCompanyId || isAdmin)
+        
+        console.log('🔍 Required fields check:', {
+          phone: hasPhone,
+          designation: hasDesignation,
+          companyId: hasCompanyId,
+          isAdmin: isAdmin,
+          hasRequiredFields
+        });
+        
+        return !hasRequiredFields
       }
       
       const incomplete = isIncomplete()
-      console.log('🔍 Employer profile completion check:', { incomplete, user: { phone: user.phone, designation: (user as any).designation, companyId: user.companyId } })
+      console.log('🔍 Employer profile completion check:', { 
+        incomplete, 
+        user: { 
+          phone: user.phone, 
+          designation: (user as any).designation, 
+          companyId: user.companyId,
+          userType: user.userType,
+          preferences: user.preferences,
+          profileCompleted: user.preferences?.profileCompleted,
+          fullUserObject: user
+        } 
+      })
       
       if (incomplete) {
-        // Show dialog after a short delay to avoid UI conflicts
-        const timeoutId = setTimeout(() => {
-          console.log('✅ Showing employer profile completion dialog')
-          setShowProfileCompletion(true)
-        }, 1000)
-        return () => clearTimeout(timeoutId)
+        // CRITICAL: Double-check that profile is not completed before showing dialog
+        if (user.preferences?.profileCompleted === true) {
+          console.log('🚫 CRITICAL: Profile is completed but logic says incomplete - forcing dialog to stay hidden');
+          setShowProfileCompletion(false)
+        } else {
+          // TRIPLE CHECK: localStorage backup
+          const localStorageCompleted = localStorage.getItem('profileCompleted') === 'true';
+          if (localStorageCompleted) {
+            console.log('🚫 TRIPLE CHECK: Profile completed in localStorage - forcing dialog to stay hidden');
+            setShowProfileCompletion(false)
+          } else {
+            // Show dialog after a short delay to avoid UI conflicts
+            const timeoutId = setTimeout(() => {
+              console.log('✅ Showing employer profile completion dialog')
+              setShowProfileCompletion(true)
+            }, 1000)
+            return () => clearTimeout(timeoutId)
+          }
+        }
       } else {
+        console.log('✅ Profile complete or incomplete but not showing dialog');
         setShowProfileCompletion(false)
       }
       setProfileCheckDone(true)
@@ -329,9 +410,17 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   }, [user, profileCheckDone])
   
   // Reset profile check when user updates (after skip or completion)
+  // BUT NOT if profile is already completed
   useEffect(() => {
     if (user) {
-      setProfileCheckDone(false)
+      // Only reset if profile is not completed
+      if (user.preferences?.profileCompleted !== true) {
+        setProfileCheckDone(false)
+      } else {
+        // Profile is completed, ensure dialog stays hidden
+        setShowProfileCompletion(false)
+        setProfileCheckDone(true)
+      }
     }
   }, [user])
 
@@ -1187,11 +1276,15 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       {user && (
         <EmployerProfileCompletionDialog
           isOpen={showProfileCompletion}
-          onClose={() => setShowProfileCompletion(false)}
+          onClose={() => {
+            console.log('🚫 Dialog closed by user');
+            setShowProfileCompletion(false)
+          }}
           user={user}
           onProfileUpdated={handleProfileUpdated}
         />
       )}
+      
     </div>
   )
 }

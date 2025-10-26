@@ -149,6 +149,12 @@ const Job = sequelize.define('Job', {
     defaultValue: 'on-site',
     field: 'remoteWork'
   },
+  locationType: {
+    type: DataTypes.ENUM('on-site', 'remote', 'hybrid'),
+    allowNull: false,
+    defaultValue: 'on-site',
+    field: 'location_type'
+  },
   travelRequired: {
     type: DataTypes.BOOLEAN,
     allowNull: true,

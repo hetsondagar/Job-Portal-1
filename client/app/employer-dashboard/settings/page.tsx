@@ -288,27 +288,39 @@ export default function EmployerSettingsPage() {
 
   const handleDeleteAccount = async () => {
     // Verify confirmation text
-    if (deleteConfirmText !== 'DELETE') {
-      toast.error('Please type DELETE to confirm account deletion')
+    if (deleteConfirmText !== 'DELETE MY ACCOUNT') {
+      toast.error('Please type "DELETE MY ACCOUNT" to confirm account deletion')
       return
     }
 
     setIsDeleting(true)
 
     try {
-      const response = await apiService.deleteAccount()
+      // Get current password from user
+      const currentPassword = prompt('Please enter your current password to confirm account deletion:')
+      if (!currentPassword) {
+        toast.error('Password is required to delete account')
+        setIsDeleting(false)
+        return
+      }
+
+      // Call the delete account API with proper parameters
+      const response = await apiService.deleteAccount({
+        currentPassword,
+        confirmationText: deleteConfirmText
+      })
       
       if (response.success) {
         toast.success('Account deleted successfully')
         
-        // Clear local storage
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        // Clear all local storage
+        localStorage.clear()
+        sessionStorage.clear()
         
         // Redirect to home page
         setTimeout(() => {
           router.push('/')
-        }, 2000)
+        }, 3000)
       } else {
         toast.error(response.message || 'Failed to delete account')
       }
@@ -329,17 +341,17 @@ export default function EmployerSettingsPage() {
   // Show loading state while checking authentication or loading data
   if (loading || loadingData) {
     return (
-    <EmployerAuthGuard>
-      return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-        <EmployerDashboardNavbar />
-        <div className="flex items-center justify-center min-h-screen pt-20">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-slate-600">Loading profile data...</p>
+      <EmployerAuthGuard>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+          <EmployerDashboardNavbar />
+          <div className="flex items-center justify-center min-h-screen pt-20">
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+              <p className="text-slate-600">Loading profile data...</p>
+            </div>
           </div>
         </div>
-      </div>
+      </EmployerAuthGuard>
     )
   }
 
@@ -350,7 +362,8 @@ export default function EmployerSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
+    <EmployerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <EmployerDashboardNavbar />
 
       {/* Background decorative elements */}
@@ -736,14 +749,14 @@ export default function EmployerSettingsPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="delete-confirm" className="text-sm font-medium">
-                          Type <span className="font-mono font-bold bg-red-100 px-2 py-1 rounded">DELETE</span> to confirm
+                          Type <span className="font-mono font-bold bg-red-100 px-2 py-1 rounded">DELETE MY ACCOUNT</span> to confirm
                         </Label>
                         <Input
                           id="delete-confirm"
                           type="text"
                           value={deleteConfirmText}
                           onChange={(e) => setDeleteConfirmText(e.target.value)}
-                          placeholder="Type DELETE"
+                          placeholder="Type DELETE MY ACCOUNT"
                           className="font-mono"
                           autoFocus
                         />
@@ -764,7 +777,7 @@ export default function EmployerSettingsPage() {
                         <Button
                           variant="destructive"
                           onClick={handleDeleteAccount}
-                          disabled={isDeleting || deleteConfirmText !== 'DELETE'}
+                          disabled={isDeleting || deleteConfirmText !== 'DELETE MY ACCOUNT'}
                           className="flex-1"
                         >
                           {isDeleting ? (
@@ -790,7 +803,7 @@ export default function EmployerSettingsPage() {
       </div>
 
       <EmployerDashboardFooter />
-    </div>
-    </EmployerAuthGuard></div>
+      </div>
+    </EmployerAuthGuard>
   )
 } 

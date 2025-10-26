@@ -20,7 +20,7 @@ const CompanyReview = sequelize.define('CompanyReview', {
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'user_id',
+    field: 'reviewer_id',
     references: {
       model: 'users',
       key: 'id'

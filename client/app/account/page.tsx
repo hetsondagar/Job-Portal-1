@@ -97,6 +97,27 @@ export default function AccountPage() {
   const [newLocation, setNewLocation] = useState('')
   const [newPreferredSkill, setNewPreferredSkill] = useState('')
 
+  // Security-related state
+  const [showChangeEmail, setShowChangeEmail] = useState(false)
+  const [showChangePhone, setShowChangePhone] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [securityLoading, setSecurityLoading] = useState(false)
+  
+  // Security form data
+  const [emailData, setEmailData] = useState({
+    newEmail: '',
+    currentPassword: ''
+  })
+  const [phoneData, setPhoneData] = useState({
+    newPhone: '',
+    currentPassword: ''
+  })
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+
   useEffect(() => {
     if (!loading && !user) {
       toast.error('Please sign in to access your account')
@@ -194,6 +215,113 @@ export default function AccountPage() {
       router.push('/')
     } catch (error) {
       toast.error('Logout failed')
+    }
+  }
+
+  // Security functions
+  const handleChangeEmail = async () => {
+    if (!emailData.newEmail || !emailData.currentPassword) {
+      toast.error('Please fill in all fields')
+      return
+    }
+
+    if (emailData.newEmail === user?.email) {
+      toast.error('New email must be different from current email')
+      return
+    }
+
+    try {
+      setSecurityLoading(true)
+      const response = await apiService.updateUserEmail({
+        newEmail: emailData.newEmail,
+        currentPassword: emailData.currentPassword
+      })
+
+      if (response.success) {
+        toast.success('Email updated successfully. Please check your new email for verification.')
+        setEmailData({ newEmail: '', currentPassword: '' })
+        setShowChangeEmail(false)
+        await refreshUser()
+      } else {
+        toast.error(response.message || 'Failed to update email')
+      }
+    } catch (error: any) {
+      console.error('Email update error:', error)
+      toast.error(error.response?.data?.message || 'Failed to update email')
+    } finally {
+      setSecurityLoading(false)
+    }
+  }
+
+  const handleChangePhone = async () => {
+    if (!phoneData.newPhone || !phoneData.currentPassword) {
+      toast.error('Please fill in all fields')
+      return
+    }
+
+    if (phoneData.newPhone === user?.phone) {
+      toast.error('New phone must be different from current phone')
+      return
+    }
+
+    try {
+      setSecurityLoading(true)
+      const response = await apiService.updateUserPhone({
+        newPhone: phoneData.newPhone,
+        currentPassword: phoneData.currentPassword
+      })
+
+      if (response.success) {
+        toast.success('Phone number updated successfully')
+        setPhoneData({ newPhone: '', currentPassword: '' })
+        setShowChangePhone(false)
+        await refreshUser()
+      } else {
+        toast.error(response.message || 'Failed to update phone')
+      }
+    } catch (error: any) {
+      console.error('Phone update error:', error)
+      toast.error(error.response?.data?.message || 'Failed to update phone')
+    } finally {
+      setSecurityLoading(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error('Please fill in all fields')
+      return
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New passwords do not match')
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long')
+      return
+    }
+
+    try {
+      setSecurityLoading(true)
+      const response = await apiService.updateUserPassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      })
+
+      if (response.success) {
+        toast.success('Password updated successfully')
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setShowChangePassword(false)
+      } else {
+        toast.error(response.message || 'Failed to update password')
+      }
+    } catch (error: any) {
+      console.error('Password update error:', error)
+      toast.error(error.response?.data?.message || 'Failed to update password')
+    } finally {
+      setSecurityLoading(false)
     }
   }
 
@@ -1292,36 +1420,7 @@ export default function AccountPage() {
 
             {/* Security Tab */}
             <TabsContent value="security" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Shield className="w-5 h-5" />
-                      <span>Account Security</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600 dark:text-slate-300">Password</span>
-                        <Badge variant="default">Strong</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600 dark:text-slate-300">Two-Factor Auth</span>
-                        <Badge variant="secondary">Disabled</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600 dark:text-slate-300">Login History</span>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Security Settings
-                    </Button>
-                  </CardContent>
-                </Card>
-
+              <div className="max-w-2xl mx-auto">
                 <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -1329,22 +1428,179 @@ export default function AccountPage() {
                       <span>Account Actions</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <Button variant="outline" className="w-full justify-start">
-                        <Mail className="w-4 h-4 mr-2" />
-                        Change Email
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start">
-                        <Phone className="w-4 h-4 mr-2" />
-                        Change Phone
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start">
-                        <Shield className="w-4 h-4 mr-2" />
-                        Change Password
-                      </Button>
+                  <CardContent className="space-y-6">
+                    {/* Change Email Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <h3 className="font-medium">Change Email</h3>
+                            <p className="text-sm text-slate-500">Update your email address</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowChangeEmail(!showChangeEmail)}
+                        >
+                          {showChangeEmail ? 'Cancel' : 'Change'}
+                        </Button>
+                      </div>
+                      
+                      {showChangeEmail && (
+                        <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                          <div>
+                            <Label htmlFor="new-email">New Email Address</Label>
+                            <Input
+                              id="new-email"
+                              type="email"
+                              value={emailData.newEmail}
+                              onChange={(e) => setEmailData({...emailData, newEmail: e.target.value})}
+                              placeholder="Enter new email address"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="email-password">Current Password</Label>
+                            <Input
+                              id="email-password"
+                              type="password"
+                              value={emailData.currentPassword}
+                              onChange={(e) => setEmailData({...emailData, currentPassword: e.target.value})}
+                              placeholder="Enter current password"
+                            />
+                          </div>
+                          <Button 
+                            onClick={handleChangeEmail}
+                            disabled={securityLoading}
+                            className="w-full"
+                          >
+                            {securityLoading ? 'Updating...' : 'Update Email'}
+                          </Button>
+                        </div>
+                      )}
                     </div>
+
                     <Separator />
+
+                    {/* Change Phone Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Phone className="w-5 h-5 text-green-600" />
+                          <div>
+                            <h3 className="font-medium">Change Phone</h3>
+                            <p className="text-sm text-slate-500">Update your phone number</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowChangePhone(!showChangePhone)}
+                        >
+                          {showChangePhone ? 'Cancel' : 'Change'}
+                        </Button>
+                      </div>
+                      
+                      {showChangePhone && (
+                        <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                          <div>
+                            <Label htmlFor="new-phone">New Phone Number</Label>
+                            <Input
+                              id="new-phone"
+                              type="tel"
+                              value={phoneData.newPhone}
+                              onChange={(e) => setPhoneData({...phoneData, newPhone: e.target.value})}
+                              placeholder="Enter new phone number"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="phone-password">Current Password</Label>
+                            <Input
+                              id="phone-password"
+                              type="password"
+                              value={phoneData.currentPassword}
+                              onChange={(e) => setPhoneData({...phoneData, currentPassword: e.target.value})}
+                              placeholder="Enter current password"
+                            />
+                          </div>
+                          <Button 
+                            onClick={handleChangePhone}
+                            disabled={securityLoading}
+                            className="w-full"
+                          >
+                            {securityLoading ? 'Updating...' : 'Update Phone'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Change Password Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Shield className="w-5 h-5 text-red-600" />
+                          <div>
+                            <h3 className="font-medium">Change Password</h3>
+                            <p className="text-sm text-slate-500">Update your account password</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowChangePassword(!showChangePassword)}
+                        >
+                          {showChangePassword ? 'Cancel' : 'Change'}
+                        </Button>
+                      </div>
+                      
+                      {showChangePassword && (
+                        <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                          <div>
+                            <Label htmlFor="current-password">Current Password</Label>
+                            <Input
+                              id="current-password"
+                              type="password"
+                              value={passwordData.currentPassword}
+                              onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                              placeholder="Enter current password"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input
+                              id="new-password"
+                              type="password"
+                              value={passwordData.newPassword}
+                              onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                              placeholder="Enter new password"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input
+                              id="confirm-password"
+                              type="password"
+                              value={passwordData.confirmPassword}
+                              onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                              placeholder="Confirm new password"
+                            />
+                          </div>
+                          <Button 
+                            onClick={handleChangePassword}
+                            disabled={securityLoading}
+                            className="w-full"
+                          >
+                            {securityLoading ? 'Updating...' : 'Update Password'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
                     <Button 
                       variant="destructive" 
                       className="w-full"

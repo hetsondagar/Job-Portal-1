@@ -933,6 +933,60 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async updateUserEmail(data: { newEmail: string; currentPassword: string }): Promise<ApiResponse> {
+    try {
+      console.log('🔍 API Service - Updating user email...');
+      const response = await fetch(`${API_BASE_URL}/user/change-email`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      const result = await this.handleResponse(response);
+      console.log('✅ API Service - Email update result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - updateUserEmail error:', error);
+      throw error;
+    }
+  }
+
+  async updateUserPhone(data: { newPhone: string; currentPassword: string }): Promise<ApiResponse> {
+    try {
+      console.log('🔍 API Service - Updating user phone...');
+      const response = await fetch(`${API_BASE_URL}/user/change-phone`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      const result = await this.handleResponse(response);
+      console.log('✅ API Service - Phone update result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - updateUserPhone error:', error);
+      throw error;
+    }
+  }
+
+  async updateUserPassword(data: { currentPassword: string; newPassword: string }): Promise<ApiResponse> {
+    try {
+      console.log('🔍 API Service - Updating user password...');
+      const response = await fetch(`${API_BASE_URL}/user/change-password`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      const result = await this.handleResponse(response);
+      console.log('✅ API Service - Password update result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - updateUserPassword error:', error);
+      throw error;
+    }
+  }
+
   async updateNotificationPreferences(
     emailNotifications?: any,
     pushNotifications?: any
@@ -4263,13 +4317,6 @@ class ApiService {
   /**
    * Delete user account permanently
    */
-  async deleteAccount(): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/user/account`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-    return this.handleResponse<any>(response);
-  }
 
   // Admin Notifications API methods
   async getAdminNotifications(params?: {
@@ -4463,6 +4510,19 @@ class ApiService {
         errors: ['NETWORK_ERROR']
       };
     }
+  }
+
+  // Delete account (GDPR compliant)
+  async deleteAccount(data: { currentPassword: string; confirmationText: string }) {
+    const response = await fetch('/api/user/account', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getToken()}`
+      },
+      body: JSON.stringify(data)
+    });
+    return response.json();
   }
 
 }

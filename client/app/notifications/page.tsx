@@ -159,9 +159,22 @@ export default function NotificationsPage() {
   }
 
   const formatTimeAgo = (dateString: string) => {
+    if (!dateString) return 'Recently'
+    
     const date = new Date(dateString)
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString)
+      return 'Recently'
+    }
+    
     const now = new Date()
     const diffInMs = now.getTime() - date.getTime()
+    
+    // Handle future dates
+    if (diffInMs < 0) return 'Just now'
+    
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
     const diffInHours = Math.floor(diffInMinutes / 60)
     const diffInDays = Math.floor(diffInHours / 24)
