@@ -190,10 +190,37 @@ export default function RegisterPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <Navbar />
       
-      <div className="pt-16 pb-12">
+      {/* Landing Page Style Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        {/* Enhanced Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-800/5 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
+        
+        {/* Enhanced Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Layer A: far glow */}
+          <div className="absolute -top-40 -right-40 w-[28rem] h-[28rem] rounded-full parallax-far" style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(90,0,242,0.35) 0%, rgba(90,0,242,0) 100%)' }}></div>
+          {/* Layer B: gradient strip */}
+          <div className="absolute top-1/3 left-0 right-0 h-24 opacity-20 gradient-strip"></div>
+          
+          {/* Semicircles and Rectangles for Enhanced UI */}
+          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full blur-xl"></div>
+          <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-full blur-lg"></div>
+          <div className="absolute bottom-32 left-1/4 w-40 h-40 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-2xl"></div>
+          
+          {/* Rectangular shapes */}
+          <div className="absolute top-1/4 right-1/3 w-16 h-32 bg-gradient-to-b from-purple-500/15 to-blue-500/15 rounded-lg rotate-12 blur-sm"></div>
+          <div className="absolute bottom-1/4 left-1/3 w-20 h-24 bg-gradient-to-b from-blue-500/15 to-indigo-500/15 rounded-lg -rotate-12 blur-sm"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-28 bg-gradient-to-b from-indigo-500/15 to-purple-500/15 rounded-lg rotate-45 blur-sm"></div>
+          
+          {/* Layer C: small particles placeholder (non-interactive) */}
+          <div className="pointer-events-none absolute inset-0 opacity-20"></div>
+        </div>
+      </div>
+      
+      <div className="pt-20 pb-12 relative z-10">
         <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center px-4 sm:px-6 lg:px-8">
         {/* Left Side - Benefits */}
         <motion.div
@@ -234,8 +261,8 @@ export default function RegisterPage() {
 
         {/* Right Side - Registration Form */}
         <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-          <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl">
-            <CardHeader className="text-center pb-8">
+          <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl shadow-[0_20px_60px_rgba(90,0,242,0.1)] rounded-3xl border border-white/20 dark:border-slate-700/30">
+            <CardHeader className="text-center pb-8 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-t-3xl border-b border-purple-100/30 dark:border-purple-800/30">
               <div className="lg:hidden mb-6">
                 <Link href="/" className="flex items-center justify-center space-x-2">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
@@ -246,7 +273,10 @@ export default function RegisterPage() {
                   </span>
                 </Link>
               </div>
-              <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Create Account</CardTitle>
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Create Account</CardTitle>
               <p className="text-slate-600 dark:text-slate-300 mt-2 mb-4">
                 Join thousands of professionals finding their dream jobs
               </p>
@@ -480,7 +510,7 @@ export default function RegisterPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
                 >
                   {loading ? "Creating Account..." : "Create Account"}
                   {!loading && <ArrowRight className="w-5 h-5 ml-2" />}
@@ -541,7 +571,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-12 sm:mt-16">
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-4 sm:py-6 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-6 sm:mt-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
             {/* Company Logo */}

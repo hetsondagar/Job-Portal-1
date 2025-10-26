@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { CompanyManagement } from "@/components/company-management"
 import { CompanyRegistration } from "@/components/company-registration"
 
@@ -328,6 +329,8 @@ export default function EmployerSettingsPage() {
   // Show loading state while checking authentication or loading data
   if (loading || loadingData) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
         <EmployerDashboardNavbar />
         <div className="flex items-center justify-center min-h-screen pt-20">
@@ -788,5 +791,6 @@ export default function EmployerSettingsPage() {
 
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 } 

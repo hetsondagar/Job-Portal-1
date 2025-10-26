@@ -4442,7 +4442,7 @@ export default function CompaniesPage() {
 
       {/* Footer */}
 
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-6 sm:py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-12 sm:mt-16">
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-3 sm:py-4 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-6 sm:mt-8">
 
         <div className="max-w-7xl mx-auto">
 

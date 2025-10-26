@@ -23,6 +23,7 @@ import { toast } from "sonner"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
 import RoleCategoryDropdown from "@/components/ui/role-category-dropdown"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function PostJobPage() {
   const router = useRouter()
@@ -2975,7 +2976,8 @@ export default function PostJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+    <EmployerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       <EmployerDashboardNavbar />
 
       {/* Background Effects - Blue theme */}
@@ -3462,6 +3464,7 @@ export default function PostJobPage() {
           hideSelectAllButtons={true}
         />
       )}
-    </div>
+      </div>
+    </EmployerAuthGuard>
   )
 }

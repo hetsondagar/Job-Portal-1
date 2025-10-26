@@ -230,29 +230,43 @@ export function EmployerDashboardNavbar() {
               </AnimatePresence>
             </div>
 
-            {/* Database Dropdown (Admin Only) */}
-            {isAdmin && (
-              <div className="relative">
-                <button
-                  onMouseEnter={() => setShowDatabaseDropdown(true)}
-                  onMouseLeave={() => setShowDatabaseDropdown(false)}
-                  className="flex items-center space-x-1 text-slate-700 hover:text-blue-600 font-medium transition-colors"
-                >
-                  <Database className="w-4 h-4" />
-                  <span>Database</span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
+            {/* Database Dropdown */}
+            <div className="relative">
+              <button
+                onMouseEnter={() => setShowDatabaseDropdown(true)}
+                onMouseLeave={() => setShowDatabaseDropdown(false)}
+                className="flex items-center space-x-1 text-slate-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                <Database className="w-4 h-4" />
+                <span>Database</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
 
-                <AnimatePresence>
-                  {showDatabaseDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      onMouseEnter={() => setShowDatabaseDropdown(true)}
-                      onMouseLeave={() => setShowDatabaseDropdown(false)}
-                      className="absolute top-full left-0 mt-2 w-48 bg-white/90 backdrop-blur-xl border border-white/40 rounded-xl shadow-[0_8px_30px_rgba(59,130,246,0.12)] py-2"
+              <AnimatePresence>
+                {showDatabaseDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    onMouseEnter={() => setShowDatabaseDropdown(true)}
+                    onMouseLeave={() => setShowDatabaseDropdown(false)}
+                    className="absolute top-full left-0 mt-2 w-56 bg-white/90 backdrop-blur-xl border border-white/40 rounded-xl shadow-[0_8px_30px_rgba(59,130,246,0.12)] py-2"
+                  >
+                    <Link
+                      href="/employer-dashboard/create-requirement"
+                      className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     >
+                      <FileText className="w-4 h-4" />
+                      <span>Create Requirement</span>
+                    </Link>
+                    <Link
+                      href="/employer-dashboard/requirements"
+                      className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Manage Requirements</span>
+                    </Link>
+                    {isAdmin && (
                       <Link
                         href="/employer-dashboard/bulk-import"
                         className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
@@ -260,25 +274,11 @@ export function EmployerDashboardNavbar() {
                         <Database className="w-4 h-4" />
                         <span>Bulk Import</span>
                       </Link>
-                      <Link
-                        href="/employer-dashboard/create-requirement"
-                        className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      >
-                        <FileText className="w-4 h-4" />
-                        <span>Create Requirement</span>
-                      </Link>
-                      <Link
-                        href="/employer-dashboard/requirements"
-                        className="flex items-center space-x-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      >
-                        <Users className="w-4 h-4" />
-                        <span>Manage Requirements</span>
-                      </Link>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Right Side */}
@@ -414,6 +414,39 @@ export function EmployerDashboardNavbar() {
                       <Users className="w-4 h-4" />
                       <span>View Applications</span>
                     </Link>
+                  </div>
+
+                  {/* Database Section */}
+                  <div className="space-y-2">
+                    <div className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Database
+                    </div>
+                    <Link
+                      href="/employer-dashboard/create-requirement"
+                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Create Requirement</span>
+                    </Link>
+                    <Link
+                      href="/employer-dashboard/requirements"
+                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Manage Requirements</span>
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/employer-dashboard/bulk-import"
+                        className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Database className="w-4 h-4" />
+                        <span>Bulk Import</span>
+                      </Link>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t border-white/30">

@@ -5576,7 +5576,7 @@ export default function JobsPage() {
 
       {/* Footer */}
 
-      <footer className="bg-slate-900 text-white py-6 mt-20">
+      <footer className="bg-slate-900 text-white py-3 mt-10">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 

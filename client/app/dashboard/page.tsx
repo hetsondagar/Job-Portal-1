@@ -29,9 +29,11 @@ import {
   Calendar,
   Zap,
   CheckCircle,
+  Briefcase,
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { EmployerAuthGuard } from '@/components/employer-auth-guard'
+import { motion } from 'framer-motion'
 
 import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'
@@ -538,48 +540,83 @@ export default function DashboardPage() {
 
   return (
     <JobseekerAuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <Navbar />
       
-      <div className="pt-16 pb-12">
+      {/* Landing Page Style Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        {/* Enhanced Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-800/5 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-indigo-800/20"></div>
+        
+        {/* Enhanced Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Layer A: far glow */}
+          <div className="absolute -top-40 -right-40 w-[28rem] h-[28rem] rounded-full parallax-far" style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(90,0,242,0.35) 0%, rgba(90,0,242,0) 100%)' }}></div>
+          {/* Layer B: gradient strip */}
+          <div className="absolute top-1/3 left-0 right-0 h-24 opacity-20 gradient-strip"></div>
+          {/* Layer C: small particles placeholder (non-interactive) */}
+          <div className="pointer-events-none absolute inset-0 opacity-20"></div>
+        </div>
+      </div>
+      
+      <div className="pt-20 pb-12 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Welcome Section */}
-          <div className="mb-8">
+          {/* Welcome Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="relative bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-3xl p-6 text-white overflow-hidden mb-6 shadow-[0_10px_40px_rgba(90,0,242,0.3)]"
+          >
+            <div className="relative z-10">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  Welcome back, {user.firstName}!
+                <div className="flex-1">
+                  <h1 className="text-3xl font-bold mb-2">
+                    Welcome back, {user.firstName}! 👋
                 </h1>
-                <p className="text-slate-600 dark:text-slate-300">
-                  Here's what's happening with your job search
+                  <p className="text-purple-100 text-lg">
+                    Here's what's happening with your job search journey
                 </p>
                 {!dataLoaded && (
-                  <div className="mt-2 flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <div className="mt-3 flex items-center space-x-2 text-sm text-purple-200">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     <span>Loading dashboard data...</span>
                   </div>
                 )}
               </div>
+                <div className="hidden lg:block">
+                  <div className="w-32 h-32 bg-white/10 ring-1 ring-white/30 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(255,255,255,0.15)]">
+                    <User className="w-16 h-16 text-white/80" />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center space-x-4">
               <Button
                 onClick={refreshDashboard}
                 variant="outline"
                 size="sm"
-                className="flex items-center space-x-2"
+                  className="bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-md"
                 disabled={statsLoading || applicationsLoading || bookmarksLoading}
               >
-                <RefreshCw className={`w-4 h-4 ${(statsLoading || applicationsLoading || bookmarksLoading) ? 'animate-spin' : ''}`} />
-                <span>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${(statsLoading || applicationsLoading || bookmarksLoading) ? 'animate-spin' : ''}`} />
                   {(statsLoading || applicationsLoading || bookmarksLoading) ? 'Refreshing...' : 'Refresh'}
-                </span>
               </Button>
+                <div className="text-sm text-purple-200">
+                  Last updated: {new Date().toLocaleTimeString()}
             </div>
           </div>
+            </div>
+            <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-purple-400/20 blur-3xl"></div>
+            <div className="absolute -bottom-16 -left-20 w-72 h-72 rounded-full bg-indigo-400/10 blur-3xl"></div>
+          </motion.div>
 
           {/* User Info Card */}
-          <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+          <Card className="mb-8 bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)]">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <User className="w-5 h-5" />
+              <CardTitle className="flex items-center space-x-2 text-slate-900">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <User className="w-5 h-5 text-white" />
+                </div>
                 <span>Profile Information</span>
               </CardTitle>
             </CardHeader>
@@ -613,7 +650,7 @@ export default function DashboardPage() {
                         {user.userType}
                       </Badge>
                         {/* Premium Badge */}
-                        {(user.verification_level === 'premium' || user.verificationLevel === 'premium' || user?.preferences?.premium) && (
+                        {((user as any).verification_level === 'premium' || (user as any).verificationLevel === 'premium' || user?.preferences?.premium) && (
                           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
                             Premium
                           </Badge>
@@ -642,11 +679,12 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
             <Link href="/jobs">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Search className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Search className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Find Jobs</h3>
@@ -658,11 +696,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/applications">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <FileText className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Applications</h3>
@@ -681,11 +720,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/interviews">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-violet-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Calendar className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Interviews</h3>
@@ -704,11 +744,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/job-alerts">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Bell className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Bell className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Job Alerts</h3>
@@ -722,11 +763,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/bookmarks">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Bookmark className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-yellow-500 to-amber-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Bookmark className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Saved Jobs</h3>
@@ -739,11 +781,12 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
               <CardContent className="p-6 h-full flex flex-col justify-center">
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Search className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                  <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                    <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                    <Search className="relative w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900 dark:text-white text-base">Search History</h3>
@@ -781,13 +824,14 @@ export default function DashboardPage() {
             </Card>
 
             <Card 
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full"
+              className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full"
               onClick={() => router.push('/resumes')}
             >
               <CardContent className="p-6 h-full flex flex-col justify-center">
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileText className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                  <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                    <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                    <FileText className="relative w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Resumes</h3>
@@ -827,13 +871,14 @@ export default function DashboardPage() {
             </Card>
 
             <Card 
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full"
+              className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full"
               onClick={() => router.push('/cover-letters')}
             >
               <CardContent className="p-6 h-full flex flex-col justify-center">
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                  <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-indigo-500 to-blue-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                    <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                    <FileText className="relative w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900 dark:text-white text-base">My Cover Letters</h3>
@@ -873,11 +918,12 @@ export default function DashboardPage() {
             </Card>
 
             <Link href="/companies">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Building2 className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Companies</h3>
@@ -889,11 +935,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/notifications">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Bell className="w-6 h-6 text-red-600 dark:text-red-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Bell className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Notifications</h3>
@@ -905,11 +952,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/followed-companies">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(90,0,242,0.08)] hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Building2 className="w-6 h-6 text-pink-600 dark:text-pink-400" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <Building2 className="relative w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-base">Followed Companies</h3>
@@ -923,11 +971,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/gulf-opportunities">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-2 border-green-200 dark:border-green-800">
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-2 border-green-200/50 dark:border-green-800/50 shadow-[0_8px_28px_rgba(34,197,94,0.08)] hover:shadow-[0_18px_60px_rgba(34,197,94,0.16)] transition-all duration-300 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.02] group h-full">
                 <CardContent className="p-6 h-full flex flex-col justify-center">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform">
+                      <div className="absolute inset-0 rounded-2xl blur-md opacity-40 bg-white" />
+                      <svg className="relative w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -941,138 +990,6 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Hot Vacancy Section */}
-          <Card className="mb-8 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-xl border-red-200 dark:border-red-800">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                    <span className="text-lg">🔥</span>
-                  </div>
-                  <span>Hot Vacancy Jobs</span>
-                  <Badge variant="destructive" className="animate-pulse">Premium</Badge>
-                </CardTitle>
-                <Link href="/jobs?hot=true">
-                  <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20">
-                    View All Hot Jobs
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Sample Hot Vacancy Cards */}
-                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-red-200 dark:border-red-800 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
-                          🔥 Hot
-                        </Badge>
-                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
-                          URGENT
-                        </Badge>
-                      </div>
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Senior Software Engineer</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">TechCorp Solutions</p>
-                    <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
-                      <span>📍 Mumbai</span>
-                      <span>💼 3-5 years</span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-sm font-medium text-green-600">₹8-12 LPA</span>
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-                        Apply Now
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-red-200 dark:border-red-800 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
-                          🔥 Hot
-                        </Badge>
-                        <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
-                          Super Featured
-                        </Badge>
-                      </div>
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Product Manager</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">InnovateTech</p>
-                    <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
-                      <span>📍 Bangalore</span>
-                      <span>💼 5-7 years</span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-sm font-medium text-green-600">₹12-18 LPA</span>
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-                        Apply Now
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-red-200 dark:border-red-800 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Badge className="bg-red-100 text-red-800 border-red-200 animate-pulse text-xs">
-                          🔥 Hot
-                        </Badge>
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                          Boosted
-                        </Badge>
-                      </div>
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Data Scientist</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">AnalyticsPro</p>
-                    <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
-                      <span>📍 Delhi</span>
-                      <span>💼 2-4 years</span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-sm font-medium text-green-600">₹6-10 LPA</span>
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-                        Apply Now
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Zap className="w-4 h-4 text-red-600" />
-                  <span className="font-medium text-red-800 dark:text-red-200">Hot Vacancy Benefits</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-red-700 dark:text-red-300">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Priority visibility in search results</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Proactive candidate alerts</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Enhanced company branding</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Faster hiring process</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Upcoming Interviews Section */}
           {upcomingInterviews.length > 0 && (
@@ -1143,10 +1060,12 @@ export default function DashboardPage() {
 
           {/* Stats Overview - Enhanced for Jobseekers */}
           {user.userType === 'jobseeker' && (
-            <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <Card className="mb-8 bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)]">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5" />
+                <CardTitle className="flex items-center space-x-2 text-slate-900">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
                   <span>Application Overview</span>
                 </CardTitle>
               </CardHeader>
@@ -1213,62 +1132,14 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {/* General Stats Overview */}
-          <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5" />
-                <span>Activity Overview</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                    {applicationsLoading ? (
-                      <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                    ) : (
-                      applications.length
-                    )}
-                  </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300">Applications</div>
-                </div>
-                <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                    {statsLoading ? (
-                      <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded mx-auto"></div>
-                    ) : (
-                      stats?.profileViews || 0
-                    )}
-                  </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300">Profile Views</div>
-                </div>
-                <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                    {bookmarks.length}
-                  </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300">Saved Jobs</div>
-                </div>
-                <div className="text-center p-4 bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1 flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5 fill-green-600 text-green-600" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 5l7 12H5l7-12z"/></svg>
-                    {statsLoading ? (
-                      <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-6 w-8 rounded"></div>
-                    ) : (
-                      stats?.profileLikes || 0
-                    )}
-                  </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300">Profile Upvotes</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Account Actions */}
-          <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+          <Card className="mb-8 bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)]">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="w-5 h-5" />
+              <CardTitle className="flex items-center space-x-2 text-slate-900">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-slate-500 to-gray-500 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-white" />
+                </div>
                 <span>Account Actions</span>
               </CardTitle>
             </CardHeader>
@@ -1316,7 +1187,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Gulf Opportunities Banner */}
-          <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800">
+          <Card className="mb-8 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200/50 dark:border-green-800/50 shadow-[0_8px_30px_rgba(34,197,94,0.06)] backdrop-blur-xl">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                 <div className="flex items-center space-x-4">
@@ -1343,10 +1214,12 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Applications */}
-          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+          <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)]">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="w-5 h-5" />
+              <CardTitle className="flex items-center space-x-2 text-slate-900">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
                 <span>Recent Applications</span>
                 {applications.length > 0 && (
                   <Badge variant="secondary" className="ml-2">
@@ -1614,6 +1487,97 @@ export default function DashboardPage() {
           onProfileUpdated={handleProfileUpdated}
         />
       )}
+
+      {/* Footer */}
+      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-4 sm:py-6 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-6 sm:mt-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            {/* Company Logo */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  JobPortal
+                </span>
+              </div>
+              <p className="text-slate-400 text-sm">
+                Connecting talented professionals with amazing opportunities across India and the Gulf region.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Quick Links</h3>
+              <div className="space-y-2">
+                <Link href="/jobs" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Find Jobs
+                </Link>
+                <Link href="/companies" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Browse Companies
+                </Link>
+                <Link href="/dashboard" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Dashboard
+                </Link>
+                <Link href="/profile" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Profile
+                </Link>
+              </div>
+            </div>
+
+            {/* Support */}
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Support</h3>
+              <div className="space-y-2">
+                <Link href="/help" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Help Center
+                </Link>
+                <Link href="/contact" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Contact Us
+                </Link>
+                <Link href="/privacy" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="block text-slate-400 hover:text-white transition-colors text-sm">
+                  Terms of Service
+                </Link>
+              </div>
+            </div>
+
+            {/* Connect */}
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Connect</h3>
+              <div className="flex space-x-4">
+                <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <span className="sr-only">LinkedIn</span>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.338 16.338H13.67V12.16c0-.995-.017-2.277-1.387-2.277-1.39 0-1.601 1.086-1.601 2.207v4.248H8.014v-8.59h2.559v1.174h.037c.356-.675 1.227-1.387 2.526-1.387 2.703 0 3.203 1.778 3.203 4.092v4.711zM5.005 6.575a1.548 1.548 0 11-.003-3.096 1.548 1.548 0 01.003 3.096zm-1.337 9.763H6.34v-8.59H3.667v8.59zM17.668 1H2.328C1.595 1 1 1.581 1 2.298v15.403C1 18.418 1.595 19 2.328 19h15.34c.734 0 1.332-.582 1.332-1.299V2.298C19 1.581 18.402 1 17.668 1z" clipRule="evenodd" />
+                  </svg>
+                </Link>
+                <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <span className="sr-only">Twitter</span>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84" />
+                  </svg>
+                </Link>
+                <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <span className="sr-only">Facebook</span>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M20 10C20 4.477 15.523 0 10 0S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" clipRule="evenodd" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800 mt-6 pt-6 text-center">
+            <p className="text-slate-400 text-sm">
+              © 2024 JobPortal. All rights reserved. Made with ❤️ for job seekers and employers.
+            </p>
+          </div>
+        </div>
+      </footer>
       </div>
     </JobseekerAuthGuard>
   )

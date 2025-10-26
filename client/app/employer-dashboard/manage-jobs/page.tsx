@@ -40,6 +40,7 @@ import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function ManageJobsPage() {
   const { user, loading: authLoading } = useAuth()
@@ -319,6 +320,7 @@ export default function ManageJobsPage() {
   }
 
   return (
+    <EmployerAuthGuard>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <EmployerDashboardNavbar />
 
@@ -631,6 +633,7 @@ export default function ManageJobsPage() {
       </div>
 
       <EmployerDashboardFooter />
-    </div>
+      </div>
+    </EmployerAuthGuard>
   )
 }

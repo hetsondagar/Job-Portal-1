@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService } from "@/lib/api"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function FeaturedJobsPage() {
   const [featuredJobs, setFeaturedJobs] = useState<any[]>([])
@@ -118,6 +119,8 @@ export default function FeaturedJobsPage() {
   const totalApplications = featuredJobs.reduce((sum, job) => sum + job.applications, 0)
 
   return (
+    <EmployerAuthGuard>
+      return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       <EmployerDashboardNavbar />
       
@@ -506,6 +509,7 @@ function CreatePromotionForm({
           )}
         </Button>
       </div>
+    </EmployerAuthGuard></div>
     </form>
   )
 }

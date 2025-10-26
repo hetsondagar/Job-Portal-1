@@ -19,6 +19,7 @@ import { EmployerFooter } from "@/components/employer-footer"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function PostInternshipPage() {
   const router = useRouter()
@@ -407,6 +408,8 @@ export default function PostInternshipPage() {
 
   if (loading || loadingDraft) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
         <EmployerNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -944,5 +947,6 @@ export default function PostInternshipPage() {
 
       <EmployerFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }

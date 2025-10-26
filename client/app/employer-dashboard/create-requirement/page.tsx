@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast"
 import { apiService } from "@/lib/api"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function CreateRequirementPage() {
   const params = useParams()
@@ -234,6 +235,8 @@ export default function CreateRequirementPage() {
   // Removed industries and departments arrays - using custom dropdowns now
 
   return (
+    <EmployerAuthGuard>
+      return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
       <EmployerDashboardNavbar />
 
@@ -699,5 +702,6 @@ export default function CreateRequirementPage() {
 
       <EmployerFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 } 

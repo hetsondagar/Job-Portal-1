@@ -16,6 +16,7 @@ import { motion } from "framer-motion"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { useToast } from "@/hooks/use-toast"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function EditRequirementPage() {
   const params = useParams()
@@ -159,6 +160,8 @@ export default function EditRequirementPage() {
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
 
   return (
+    <EmployerAuthGuard>
+      return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -583,5 +586,6 @@ export default function EditRequirementPage() {
 
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 } 

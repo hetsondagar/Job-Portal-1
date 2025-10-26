@@ -13,6 +13,7 @@ import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function CandidateProfilePage() {
   const params = useParams()
@@ -203,6 +204,8 @@ export default function CandidateProfilePage() {
   // Loading state
   if (loading) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-gray-50">
         <EmployerNavbar />
         <div className="container mx-auto px-4 py-8">
@@ -836,5 +839,6 @@ export default function CandidateProfilePage() {
 
       <EmployerFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }

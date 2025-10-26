@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { apiService } from "@/lib/api"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
@@ -181,6 +182,8 @@ export default function EmployerAnalyticsPage() {
   const isCompanyAdmin = user.userType === "admin" && !!user.companyId
 
   return (
+    <EmployerAuthGuard>
+      return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <EmployerDashboardNavbar />
       
@@ -280,6 +283,7 @@ export default function EmployerAnalyticsPage() {
       
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }
 

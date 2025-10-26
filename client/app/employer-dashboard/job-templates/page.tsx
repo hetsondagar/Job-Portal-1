@@ -15,6 +15,7 @@ import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { useAuth } from "@/hooks/useAuth"
 
 interface JobTemplate {
@@ -221,6 +222,8 @@ export default function JobTemplatesPage() {
 
   if (loading) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
         <EmployerDashboardNavbar />
         
@@ -753,6 +756,7 @@ function EditTemplateForm({ template, onSubmit, loading }: {
           {loading ? 'Updating...' : 'Update Template'}
         </Button>
       </div>
+    </EmployerAuthGuard></div>
     </form>
   )
 }

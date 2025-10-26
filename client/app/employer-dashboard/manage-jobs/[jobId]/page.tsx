@@ -37,6 +37,7 @@ import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function JobDetailPage() {
   const params = useParams()
@@ -137,6 +138,8 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
         <EmployerNavbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -608,5 +611,6 @@ export default function JobDetailPage() {
 
       <EmployerFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 } 

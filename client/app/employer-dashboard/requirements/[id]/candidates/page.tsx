@@ -17,6 +17,7 @@ import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService, constructAvatarUrl } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 interface Candidate {
   id: string;
@@ -304,6 +305,8 @@ export default function CandidatesPage() {
   }
 
   return (
+    <EmployerAuthGuard>
+      return (
     <div key={String(params.id)} className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -970,5 +973,6 @@ export default function CandidatesPage() {
 
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }

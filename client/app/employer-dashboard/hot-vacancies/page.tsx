@@ -35,6 +35,7 @@ import { EmployerNavbar } from "@/components/employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 interface HotVacancy {
   id: string;
@@ -200,6 +201,8 @@ export default function HotVacanciesPage() {
 
   if (loading) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
@@ -497,5 +500,6 @@ export default function HotVacanciesPage() {
       
       <EmployerFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }

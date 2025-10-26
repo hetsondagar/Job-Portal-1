@@ -163,18 +163,29 @@ export default function GulfNavbar() {
             >
               Opportunities
             </Link>
-            <Link 
-              href="/gulf-dashboard" 
-              className="text-white hover:text-green-100 transition-colors font-medium"
-            >
-              Dashboard
-            </Link>
+            {/* Show appropriate dashboard link based on user region */}
+            {user?.region === 'gulf' ? (
+              <Link 
+                href="/gulf-dashboard" 
+                className="text-white hover:text-green-100 transition-colors font-medium"
+              >
+                Gulf Dashboard
+              </Link>
+            ) : (
+              <Link 
+                href="/dashboard" 
+                className="text-white hover:text-green-100 transition-colors font-medium"
+              >
+                Dashboard
+              </Link>
+            )}
           </div>
 
           {/* User Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            {user ? (
+            {user && user.region === 'gulf' ? (
               <div className="flex items-center space-x-4">
+                {/* Only show Gulf-specific features for Gulf users */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -187,6 +198,9 @@ export default function GulfNavbar() {
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-white font-medium">{user.firstName}</span>
+                  <span className="text-xs bg-green-500/20 text-green-200 px-2 py-1 rounded-full">
+                    Gulf
+                  </span>
                 </div>
                 <Button
                   variant="ghost"
@@ -256,22 +270,36 @@ export default function GulfNavbar() {
               >
                 Opportunities
               </Link>
-              <Link 
-                href="/gulf-dashboard" 
-                className="text-gray-700 hover:text-green-600 transition-colors font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
+              {/* Show appropriate dashboard link based on user region */}
+              {user?.region === 'gulf' ? (
+                <Link 
+                  href="/gulf-dashboard" 
+                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Gulf Dashboard
+                </Link>
+              ) : (
+                <Link 
+                  href="/dashboard" 
+                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              )}
               
               <div className="border-t pt-4">
-                {user ? (
+                {user && user.region === 'gulf' ? (
                   <div className="flex flex-col space-y-3">
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                         <User className="w-4 h-4 text-green-600" />
                       </div>
-                      <span className="text-gray-700 font-medium">{user.firstName}</span>
+                      <div className="flex flex-col">
+                        <span className="text-gray-700 font-medium">{user.firstName}</span>
+                        <span className="text-xs text-green-600 font-medium">Gulf User</span>
+                      </div>
                     </div>
                     <Button
                       variant="outline"

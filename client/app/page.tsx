@@ -1477,7 +1477,7 @@ export default function HomePage() {
 
 
       {/* Footer */}
-      <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-4 sm:py-6 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-indigo-600/5"></div>

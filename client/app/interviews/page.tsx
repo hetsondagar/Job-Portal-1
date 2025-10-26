@@ -163,10 +163,21 @@ export default function InterviewsPage() {
 
   return (
     <JobseekerAuthGuard>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      {/* Welcome Back Div Style Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        {/* Base gradient overlay matching welcome back div */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-200/45 via-blue-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-purple-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-blue-300/10 to-indigo-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-indigo-300/10 to-purple-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent gradient strip matching welcome back div */}
+        <div className="absolute top-1/4 left-0 right-0 h-24 bg-gradient-to-r from-purple-400/20 via-blue-400/20 to-indigo-400/20"></div>
+      </div>
+      
+      <div className="container mx-auto px-4 pt-20 pb-12 relative z-10">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Interviews</h1>
           <p className="text-gray-600">Manage and view your scheduled interviews</p>

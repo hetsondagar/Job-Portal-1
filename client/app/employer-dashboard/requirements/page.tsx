@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { apiService, Requirement } from "@/lib/api"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function RequirementsPage() {
   const router = useRouter()
@@ -324,6 +325,8 @@ export default function RequirementsPage() {
 
 
   return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <EmployerDashboardNavbar />
       
@@ -637,5 +640,6 @@ export default function RequirementsPage() {
 
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }

@@ -47,7 +47,7 @@ const getGulfJobs = async (req, res) => {
       education,
       companyName,
       recruiterType,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'DESC'
     } = req.query;
 
@@ -178,7 +178,7 @@ const getGulfJobById = async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'logo', 'description', 'industry', 'region', 'website']
+          attributes: ['id', 'name', 'logo', 'description', 'industries', 'region', 'website']
         },
         {
           model: User,
@@ -247,11 +247,11 @@ const getSimilarGulfJobs = async (req, res) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'logo', 'industry']
+          attributes: ['id', 'name', 'logo', 'industries']
         }
       ],
       limit: parseInt(limit),
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({
@@ -277,7 +277,7 @@ const getGulfCompanies = async (req, res) => {
       search,
       industry,
       companySize,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'DESC'
     } = req.query;
 
@@ -386,7 +386,7 @@ const getGulfJobApplications = async (req, res) => {
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'logo', 'industry'],
+              attributes: ['id', 'name', 'logo', 'industries'],
               required: false // Use LEFT JOIN for company
             }
           ]
@@ -475,7 +475,7 @@ const getGulfEmployerApplications = async (req, res) => {
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'logo', 'industry'],
+              attributes: ['id', 'name', 'logo', 'industries'],
               required: false // Use LEFT JOIN for company
             }
           ]
@@ -554,7 +554,7 @@ const getGulfJobBookmarks = async (req, res) => {
         {
           model: Job,
           as: 'job',
-          attributes: ['id', 'title', 'location', 'salary', 'salaryMin', 'salaryMax', 'salaryCurrency', 'experienceLevel', 'createdAt'],
+          attributes: ['id', 'title', 'location', 'salary', 'salaryMin', 'salaryMax', 'salaryCurrency', 'experienceLevel', 'created_at'],
           where: {
             [Op.or]: [
               { region: 'gulf' },
@@ -571,12 +571,12 @@ const getGulfJobBookmarks = async (req, res) => {
             {
               model: Company,
               as: 'company',
-              attributes: ['id', 'name', 'logo', 'industry']
+              attributes: ['id', 'name', 'logo', 'industries']
             }
           ]
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -618,7 +618,7 @@ const getGulfJobAlerts = async (req, res) => {
 
     const { count, rows: alerts } = await JobAlert.findAndCountAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

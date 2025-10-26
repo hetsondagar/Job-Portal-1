@@ -37,6 +37,7 @@ import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function CandidateProfilePage() {
   const params = useParams()
@@ -429,6 +430,8 @@ export default function CandidateProfilePage() {
 
   if (loading) {
     return (
+    <EmployerAuthGuard>
+      return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
         <EmployerDashboardNavbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1508,5 +1511,6 @@ export default function CandidateProfilePage() {
 
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 } 

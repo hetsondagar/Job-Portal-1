@@ -288,10 +288,21 @@ export default function BookmarksPage() {
 
   return (
     <JobseekerAuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <Navbar />
       
-      <div className="pt-16 pb-12">
+      {/* Welcome Back Div Style Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        {/* Base gradient overlay matching welcome back div */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-200/45 via-blue-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-purple-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-blue-300/10 to-indigo-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-indigo-300/10 to-purple-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent gradient strip matching welcome back div */}
+        <div className="absolute top-1/4 left-0 right-0 h-24 bg-gradient-to-r from-purple-400/20 via-blue-400/20 to-indigo-400/20"></div>
+      </div>
+      
+      <div className="pt-20 pb-12 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
@@ -390,7 +401,7 @@ export default function BookmarksPage() {
 
           {/* Edit Form */}
           {editingBookmark && (
-            <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <Card className="mb-8 bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)] rounded-3xl">
               <CardHeader>
                 <CardTitle>Edit Bookmark</CardTitle>
               </CardHeader>
@@ -449,7 +460,7 @@ export default function BookmarksPage() {
           {bookmarksLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+                <Card key={i} className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)] rounded-3xl">
                   <CardContent className="p-6">
                     <div className="animate-pulse">
                       <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
@@ -460,7 +471,7 @@ export default function BookmarksPage() {
               ))}
             </div>
           ) : sortedBookmarks.length === 0 ? (
-            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+            <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)] rounded-3xl">
               <CardContent className="p-12 text-center">
                 <Bookmark className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
@@ -482,7 +493,7 @@ export default function BookmarksPage() {
                {sortedBookmarks.map((bookmark) => {
                 const jobDetails = bookmark.job || getJobById(bookmark.jobId)
                 return (
-                  <Card key={bookmark.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
+                  <Card key={bookmark.id} className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(90,0,242,0.06)] rounded-3xl hover:shadow-[0_18px_60px_rgba(90,0,242,0.16)] transition-all duration-300">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

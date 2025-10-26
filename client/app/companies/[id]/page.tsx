@@ -122,6 +122,8 @@ function CompanyDetailPage() {
   const [jobsError, setJobsError] = useState<string>("")
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
   const [selectedJob, setSelectedJob] = useState<any>(null)
+  const [showAllCompanyTypes, setShowAllCompanyTypes] = useState(false)
+  const [showAllNatureOfBusiness, setShowAllNatureOfBusiness] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [applicationData, setApplicationData] = useState({
     expectedSalary: '',
@@ -1162,14 +1164,18 @@ function CompanyDetailPage() {
                           {/* Company Types */}
                           {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
                             <>
-                              {company.companyTypes.slice(0, 2).map((type: string, index: number) => (
+                              {(showAllCompanyTypes ? company.companyTypes : company.companyTypes.slice(0, 2)).map((type: string, index: number) => (
                               <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 text-xs px-2 py-0.5">
                                   {type}
                                 </Badge>
                               ))}
                               {company.companyTypes.length > 2 && (
-                              <Badge variant="outline" className="text-xs px-2 py-0.5">
-                                  +{company.companyTypes.length - 2} more
+                              <Badge 
+                                variant="outline" 
+                                className="text-xs px-2 py-0.5 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                                onClick={() => setShowAllCompanyTypes(!showAllCompanyTypes)}
+                              >
+                                  {showAllCompanyTypes ? 'Show Less' : `+${company.companyTypes.length - 2} more`}
                                 </Badge>
                               )}
                             </>
@@ -1178,14 +1184,18 @@ function CompanyDetailPage() {
                           {/* Nature of Business */}
                           {company.natureOfBusiness && Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 && (
                             <>
-                              {company.natureOfBusiness.slice(0, 1).map((nature: string, index: number) => (
+                              {(showAllNatureOfBusiness ? company.natureOfBusiness : company.natureOfBusiness.slice(0, 1)).map((nature: string, index: number) => (
                               <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-2 py-0.5">
                                   {nature}
                                 </Badge>
                               ))}
                               {company.natureOfBusiness.length > 1 && (
-                              <Badge variant="outline" className="text-xs px-2 py-0.5">
-                                  +{company.natureOfBusiness.length - 1} more
+                              <Badge 
+                                variant="outline" 
+                                className="text-xs px-2 py-0.5 cursor-pointer hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                                onClick={() => setShowAllNatureOfBusiness(!showAllNatureOfBusiness)}
+                              >
+                                  {showAllNatureOfBusiness ? 'Show Less' : `+${company.natureOfBusiness.length - 1} more`}
                                 </Badge>
                               )}
                             </>

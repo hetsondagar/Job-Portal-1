@@ -20,6 +20,7 @@ import { EmployerFooter } from "@/components/employer-footer"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
+import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
 export default function DraftsPage() {
   const { user, loading: authLoading } = useAuth()
@@ -173,6 +174,8 @@ export default function DraftsPage() {
   }
 
   return (
+    <EmployerAuthGuard>
+      return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <EmployerNavbar />
 
@@ -388,5 +391,6 @@ export default function DraftsPage() {
 
       <EmployerFooter />
     </div>
+    </EmployerAuthGuard></div>
   )
 }
