@@ -666,6 +666,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'preferredCompanySize': 'preferred_company_size',
       'preferredWorkMode': 'preferred_work_mode',
       'preferredEmploymentType': 'preferred_employment_type'
+      // Note: 'preferences' is handled separately below
     };
 
     const updateData = {};
@@ -702,6 +703,24 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
     // Debug: Log preferences update
     if (req.body.preferences) {
       console.log('🔍 Profile update - preferences received:', JSON.stringify(req.body.preferences, null, 2));
+    }
+
+    // CRITICAL FIX: Properly merge preferences instead of overwriting
+    if (req.body.preferences) {
+      const currentPreferences = req.user.preferences || {};
+      const newPreferences = req.body.preferences;
+      
+      // Merge preferences properly
+      const mergedPreferences = {
+        ...currentPreferences,
+        ...newPreferences
+      };
+      
+      console.log('🔍 Profile update - current preferences:', JSON.stringify(currentPreferences, null, 2));
+      console.log('🔍 Profile update - new preferences:', JSON.stringify(newPreferences, null, 2));
+      console.log('🔍 Profile update - merged preferences:', JSON.stringify(mergedPreferences, null, 2));
+      
+      updateData.preferences = mergedPreferences;
     }
     
     // For first-time OAuth users completing profile setup, update last_login_at

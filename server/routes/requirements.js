@@ -213,29 +213,43 @@ router.post('/', authenticateToken, async (req, res) => {
       const { Notification } = require('../config/index');
       const { Company } = require('../config/index');
       
-      // Get company info for notification
-      const company = await Company.findByPk(requirement.companyId);
-      const companyName = company?.name || 'Your Company';
-      
-      await Notification.create({
-        userId: req.user.id,
-        type: 'company_update',
-        title: `✅ Requirement Posted Successfully!`,
-        message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
-        shortMessage: `Requirement posted: ${requirement.title}`,
-        priority: 'low',
-        actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
-        actionText: 'View Requirement',
-        icon: 'briefcase',
-        metadata: {
-          requirementId: requirement.id,
-          requirementTitle: requirement.title,
-          companyId: requirement.companyId,
-          companyName: companyName,
-          action: 'requirement_created'
+      // Check if notification already exists for this requirement (prevent duplicates)
+      const existingNotification = await Notification.findOne({
+        where: {
+          userId: req.user.id,
+          type: 'company_update',
+          'metadata.requirementId': requirement.id,
+          'metadata.action': 'requirement_created'
         }
       });
-      console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
+
+      if (!existingNotification) {
+        // Get company info for notification
+        const company = await Company.findByPk(requirement.companyId);
+        const companyName = company?.name || 'Your Company';
+        
+        await Notification.create({
+          userId: req.user.id,
+          type: 'company_update',
+          title: `✅ Requirement Posted Successfully!`,
+          message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
+          shortMessage: `Requirement posted: ${requirement.title}`,
+          priority: 'low',
+          actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
+          actionText: 'View Requirement',
+          icon: 'briefcase',
+          metadata: {
+            requirementId: requirement.id,
+            requirementTitle: requirement.title,
+            companyId: requirement.companyId,
+            companyName: companyName,
+            action: 'requirement_created'
+          }
+        });
+        console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
+      } else {
+        console.log(`ℹ️ Notification already exists for requirement ${requirement.id}, skipping duplicate`);
+      }
     } catch (notificationError) {
       console.error('❌ Failed to send requirement creation notification:', notificationError);
       // Don't fail the requirement creation if notification fails
@@ -1423,90 +1437,42 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.log('⚠️ Could not fetch education:', eduError.message);
     }
     
-    // Get resumes using raw query; handle different column naming conventions (userId vs user_id)
+    // Get resumes using raw query with correct column names
     let resumes = [];
     try {
-      let resumeResults = await sequelize.query(`
+      const resumeResults = await sequelize.query(`
         SELECT 
           id,
-          "userId",
+          user_id as "userId",
           title,
           summary,
-          "isDefault",
-          "isPublic",
-          views,
-          downloads,
-          "lastUpdated",
-          "createdAt",
-          metadata
+          is_primary as "isDefault",
+          is_public as "isPublic",
+          view_count as "views",
+          download_count as "downloads",
+          updated_at as "lastUpdated",
+          created_at as "createdAt",
+          metadata,
+          file_url as "fileUrl",
+          file_type as "fileType",
+          file_size as "fileSize",
+          skills
         FROM resumes 
-        WHERE "userId" = :userId 
-        ORDER BY "isDefault" DESC, "createdAt" DESC
+        WHERE user_id = :userId 
+        ORDER BY is_primary DESC, created_at DESC
       `, {
         replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       
-      // If no rows and perhaps column isn't camel-cased, try snake_case variant
-      if (!resumeResults || resumeResults.length === 0) {
-        try {
-          resumeResults = await sequelize.query(`
-            SELECT 
-              id,
-              user_id as "userId",
-              title,
-              summary,
-              "isDefault",
-              "isPublic",
-              views,
-              downloads,
-              last_updated as "lastUpdated",
-              createdAt as "createdAt",
-              metadata
-            FROM resumes 
-            WHERE user_id = :userId 
-            ORDER BY "isDefault" DESC, "createdAt" DESC
-          `, {
-            replacements: { userId: candidateId },
-            type: QueryTypes.SELECT
-          });
-        } catch (altErr) {
-          console.log('⚠️ Fallback resume query failed:', altErr.message);
-        }
-      }
       resumes = resumeResults || [];
       console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId}`);
       if (resumes.length > 0) {
         console.log('📄 Sample resume data:', JSON.stringify(resumes[0], null, 2));
       }
     } catch (resumeError) {
-      console.log('⚠️ Could not fetch resumes (primary query):', resumeError.message);
-      try {
-        const resumeResults = await sequelize.query(`
-          SELECT 
-            id,
-            user_id as "userId",
-            title,
-            summary,
-            "isDefault",
-            "isPublic",
-            views,
-            downloads,
-            last_updated as "lastUpdated",
-            createdAt as "createdAt",
-            metadata
-          FROM resumes 
-          WHERE user_id = :userId 
-          ORDER BY "isDefault" DESC, "createdAt" DESC
-        `, {
-          replacements: { userId: candidateId },
-          type: QueryTypes.SELECT
-        });
-        resumes = resumeResults || [];
-        console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId} (fallback)`);
-      } catch (altError) {
-        console.log('⚠️ Could not fetch resumes (fallback query):', altError.message);
-      }
+      console.log('⚠️ Could not fetch resumes:', resumeError.message);
+      resumes = [];
     }
     
     // Fetch cover letters for the candidate
@@ -1739,12 +1705,18 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               title: resume.title || 'Resume',
               filename: filename,
               fileSize: fileSize,
-              uploadDate: resume.created_at || resume.created_at,
-              lastUpdated: resume.lastUpdated || resume.last_updated,
-              is_default: resume.isDefault ?? resume.is_default ?? false,
+              uploadDate: resume.createdAt || resume.created_at,
+              lastUpdated: resume.lastUpdated || resume.updated_at,
+              is_default: resume.isDefault ?? resume.is_primary ?? false,
+              isPublic: resume.isPublic ?? resume.is_public ?? true,
+              views: resume.views || resume.view_count || 0,
+              downloads: resume.downloads || resume.download_count || 0,
+              summary: resume.summary || '',
+              skills: resume.skills || [],
               viewUrl,
               downloadUrl,
-              fileUrl: downloadUrl
+              fileUrl: downloadUrl,
+              metadata: resume.metadata || {}
             };
             
             console.log(`📄 Transformed resume:`, transformedResume);
@@ -1832,12 +1804,18 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 title: resume.title || 'Resume',
                 filename: filename,
                 fileSize: fileSize,
-                uploadDate: resume.created_at || resume.created_at,
-                lastUpdated: resume.lastUpdated || resume.last_updated,
-                is_default: resume.isDefault ?? resume.is_default ?? false,
+                uploadDate: resume.createdAt || resume.created_at,
+                lastUpdated: resume.lastUpdated || resume.updated_at,
+                is_default: resume.isDefault ?? resume.is_primary ?? false,
+                isPublic: resume.isPublic ?? resume.is_public ?? true,
+                views: resume.views || resume.view_count || 0,
+                downloads: resume.downloads || resume.download_count || 0,
+                summary: resume.summary || '',
+                skills: resume.skills || [],
                 viewUrl,
                 downloadUrl,
-                fileUrl: downloadUrl
+                fileUrl: downloadUrl,
+                metadata: resume.metadata || {}
               };
             });
           } catch (resumeErr) {

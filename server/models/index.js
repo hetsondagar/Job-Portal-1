@@ -6,7 +6,7 @@ const JobBookmark = require('./JobBookmark');
 const JobAlert = require('./JobAlert');
 const JobCategory = require('./JobCategory');
 const JobPhoto = require('./JobPhoto');
-const JobTemplate = require('./JobTemplate');
+const JobTemplateFactory = require('./JobTemplate');
 const Resume = require('./Resume');
 const CoverLetter = require('./CoverLetter');
 const Education = require('./Education');
@@ -60,6 +60,8 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
 });
 
 // Initialize models - they are already defined in their respective files
+const JobTemplate = JobTemplateFactory(sequelize);
+
 const models = {
   User,
   Company,

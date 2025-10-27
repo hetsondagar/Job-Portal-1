@@ -654,65 +654,65 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
       {/* Template Metadata */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-slate-900">Template Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">Template Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Senior Software Engineer"
-              required
-            />
-          </div>
-
-        </div>
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Describe what this template is for..."
-            rows={3}
+          <Label htmlFor="name">Template Name *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g., Senior Software Engineer"
+            required
           />
         </div>
 
-        <div>
-          <Label htmlFor="tags">Tags</Label>
-          <div className="flex space-x-2 mb-2">
-            <Input
-              value={currentTag}
-              onChange={(e) => setCurrentTag(e.target.value)}
-              placeholder="Add a tag..."
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-            />
-            <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formData.tags.map((tag, index) => (
-              <Badge key={index} variant="outline" className="flex items-center">
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="ml-2 text-red-500 hover:text-red-700"
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Describe what this template is for..."
+          rows={3}
+        />
+      </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="isPublic" 
-            checked={formData.isPublic}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <div className="flex space-x-2 mb-2">
+          <Input
+            value={currentTag}
+            onChange={(e) => setCurrentTag(e.target.value)}
+            placeholder="Add a tag..."
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
           />
-          <Label htmlFor="isPublic">Make this template public</Label>
+          <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {formData.tags.map((tag, index) => (
+            <Badge key={index} variant="outline" className="flex items-center">
+              {tag}
+              <button
+                type="button"
+                onClick={() => handleRemoveTag(tag)}
+                className="ml-2 text-red-500 hover:text-red-700"
+              >
+                ×
+              </button>
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id="isPublic" 
+          checked={formData.isPublic}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+        />
+        <Label htmlFor="isPublic">Make this template public</Label>
         </div>
       </div>
 
@@ -1310,65 +1310,65 @@ function EditTemplateForm({ template, onSubmit, loading }: {
       {/* Template Metadata */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-slate-900">Template Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">Template Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Senior Software Engineer"
-              required
-            />
-          </div>
-
-        </div>
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Describe what this template is for..."
-            rows={3}
+          <Label htmlFor="name">Template Name *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g., Senior Software Engineer"
+            required
           />
         </div>
 
-        <div>
-          <Label htmlFor="tags">Tags</Label>
-          <div className="flex space-x-2 mb-2">
-            <Input
-              value={currentTag}
-              onChange={(e) => setCurrentTag(e.target.value)}
-              placeholder="Add a tag..."
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-            />
-            <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formData.tags.map((tag, index) => (
-              <Badge key={index} variant="outline" className="flex items-center">
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="ml-2 text-red-500 hover:text-red-700"
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Describe what this template is for..."
+          rows={3}
+        />
+      </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="isPublic" 
-            checked={formData.isPublic}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <div className="flex space-x-2 mb-2">
+          <Input
+            value={currentTag}
+            onChange={(e) => setCurrentTag(e.target.value)}
+            placeholder="Add a tag..."
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
           />
-          <Label htmlFor="isPublic">Make this template public</Label>
+          <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {formData.tags.map((tag, index) => (
+            <Badge key={index} variant="outline" className="flex items-center">
+              {tag}
+              <button
+                type="button"
+                onClick={() => handleRemoveTag(tag)}
+                className="ml-2 text-red-500 hover:text-red-700"
+              >
+                ×
+              </button>
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id="isPublic" 
+          checked={formData.isPublic}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+        />
+        <Label htmlFor="isPublic">Make this template public</Label>
         </div>
       </div>
 

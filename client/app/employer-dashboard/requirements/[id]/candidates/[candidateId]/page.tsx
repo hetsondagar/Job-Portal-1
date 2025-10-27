@@ -35,6 +35,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
+import { PDFViewer } from "@/components/pdf-viewer"
 import { apiService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
@@ -56,6 +57,9 @@ export default function CandidateProfilePage() {
   const [message, setMessage] = useState("")
   const [subject, setSubject] = useState("")
   const [isSendingMessage, setIsSendingMessage] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(true)
+  const [pdfError, setPdfError] = useState(false)
+  const [pdfLoaded, setPdfLoaded] = useState(false)
   const { toast } = useToast()
 
   // Ensure API links hit backend, not the Next.js origin
@@ -125,6 +129,37 @@ export default function CandidateProfilePage() {
       fetchCandidateProfile()
     }
   }, [params.id, params.candidateId, toast])
+
+  // Reset PDF states when candidate changes
+  useEffect(() => {
+    setPdfLoading(true);
+    setPdfError(false);
+    setPdfLoaded(false);
+    
+    // Set a timeout to show error if PDF doesn't load within 10 seconds
+    const timeout = setTimeout(() => {
+      if (pdfLoading && !pdfLoaded) {
+        console.log('📄 PDF loading timeout - showing error');
+        setPdfError(true);
+        setPdfLoading(false);
+      }
+    }, 10000);
+    
+    return () => clearTimeout(timeout);
+  }, [candidate?.id, pdfLoading, pdfLoaded])
+
+  // Additional timeout for better error handling
+  useEffect(() => {
+    if (pdfLoading && !pdfLoaded) {
+      const timeout = setTimeout(() => {
+        console.log('📄 PDF loading timeout - showing error state');
+        setPdfError(true);
+        setPdfLoading(false);
+      }, 8000); // 8 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [pdfLoading, pdfLoaded])
 
   // Handle resume download
   const handleDownloadResume = async (resume: any) => {
@@ -978,66 +1013,35 @@ export default function CandidateProfilePage() {
                             PDF • {candidate.resumes[0].fileSize || 'Document'} • Uploaded {new Date(candidate.resumes[0].uploadDate || candidate.resumes[0].lastUpdated).toLocaleDateString()}
                       </p>
                       
-                      {/* CV Preview */}
+                      {/* CV Preview using PDFViewer */}
                       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mb-4">
-                        <div className="bg-white dark:bg-slate-900">
-                          {(() => {
-                            // Use the download URL with token for preview
-                            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-                            const pdfUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/requirements/${requirementId}/candidates/${candidateIdStr}/resume/${candidate.resumes[0].id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-                            console.log('📄 PDF URL for preview:', pdfUrl);
-                            
-                            if (!pdfUrl) {
-                              return (
-                                <div className="flex items-center justify-center h-[800px] bg-slate-50 dark:bg-slate-800">
-                                  <div className="text-center p-8">
-                                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                      <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
-                            </div>
-                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No PDF URL</h3>
-                                    <p className="text-sm text-slate-600 dark:text-slate-400">Resume URL not available.</p>
-                          </div>
-                                </div>
-                              );
-                            }
-                            
+                        {(() => {
+                          // Use the view URL with token for preview
+                          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                          const pdfUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/requirements/${requirementId}/candidates/${candidateIdStr}/resume/${candidate.resumes[0].id}/view`;
+                          console.log('📄 PDF URL for preview:', pdfUrl);
+                          
+                          if (!pdfUrl || !candidate.resumes[0]?.id) {
                             return (
-                              <div className="relative h-[800px]">
-                                {/* Use object tag instead of iframe to avoid CSP issues */}
-                                <object
-                                  data={`${pdfUrl}#view=FitH`}
-                                  type="application/pdf"
-                                  className="w-full h-full border-0"
-                                  style={{ display: 'block' }}
-                                >
-                                  <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-800">
-                                    <div className="text-center p-8">
-                                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                                      </div>
-                                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Preview Not Available</h3>
-                                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Your browser doesn't support PDF preview.</p>
-                                      <Button onClick={() => window.open(pdfUrl, '_blank')}>
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        View in New Tab
-                                      </Button>
-                                    </div>
+                              <div className="flex items-center justify-center h-[500px] sm:h-[600px] lg:h-[700px] xl:h-[800px] bg-slate-50 dark:bg-slate-800">
+                                <div className="text-center p-8">
+                                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
                                   </div>
-                                </object>
-                                <div className="absolute bottom-4 right-4 space-x-2">
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => window.open(pdfUrl, '_blank')}
-                                  >
-                                    <ExternalLink className="w-4 h-4 mr-1" />
-                                    Open in New Tab
-                                  </Button>
+                                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No PDF URL</h3>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400">Resume URL not available.</p>
                                 </div>
                               </div>
                             );
-                          })()}
-                        </div>
+                          }
+                          
+                          return (
+                            <PDFViewer 
+                              pdfUrl={pdfUrl} 
+                              className="h-[500px] sm:h-[600px] lg:h-[700px] xl:h-[800px] w-full"
+                            />
+                          );
+                        })()}
                       </div>
                       
                       <div className="flex flex-col sm:flex-row gap-3 justify-center">

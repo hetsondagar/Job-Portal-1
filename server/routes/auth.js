@@ -863,6 +863,64 @@ router.post('/login', validateLogin, async (req, res) => {
 
     console.log('✅ Login successful for user:', user.email);
 
+    // Create greeting notification for first-time login
+    try {
+      const { Notification } = require('../config/index');
+      
+      // Check if this is the first login (no previous notifications)
+      const existingNotifications = await Notification.count({
+        where: { userId: user.id }
+      });
+
+      if (existingNotifications === 0) {
+        // Create a personalized greeting notification
+        const greetingMessages = {
+          jobseeker: {
+            title: '🎉 Welcome to JobPortal!',
+            message: `Hi ${user.first_name}! Welcome to your job search journey. Complete your profile, upload your resume, and start applying to amazing opportunities. We're here to help you find your dream job!`,
+            actionUrl: '/dashboard',
+            actionText: 'Complete Profile'
+          },
+          employer: {
+            title: '🚀 Welcome to JobPortal!',
+            message: `Hello ${user.first_name}! Welcome to our employer platform. Post your first job, find talented candidates, and grow your team. Let's get started with creating your company profile!`,
+            actionUrl: '/employer-dashboard',
+            actionText: 'Post Your First Job'
+          },
+          admin: {
+            title: '👋 Welcome to JobPortal!',
+            message: `Welcome ${user.first_name}! You now have admin access to manage the platform. Explore the admin dashboard to oversee users, companies, and system operations.`,
+            actionUrl: '/admin/dashboard',
+            actionText: 'Admin Dashboard'
+          },
+          superadmin: {
+            title: '🔧 Welcome to JobPortal!',
+            message: `Welcome ${user.first_name}! You have super admin privileges. Access the super admin panel to manage the entire platform and system configurations.`,
+            actionUrl: '/super-admin/dashboard',
+            actionText: 'Super Admin Panel'
+          }
+        };
+
+        const greeting = greetingMessages[user.user_type] || greetingMessages.jobseeker;
+        
+        await Notification.create({
+          userId: user.id,
+          type: 'system',
+          title: greeting.title,
+          message: greeting.message,
+          priority: 'high',
+          actionUrl: greeting.actionUrl,
+          actionText: greeting.actionText,
+          isRead: false
+        });
+
+        console.log('✅ Greeting notification created for first-time user:', user.email);
+      }
+    } catch (notificationError) {
+      console.warn('⚠️ Failed to create greeting notification:', notificationError?.message || notificationError);
+      // Don't fail the login if notification creation fails
+    }
+
     // Return success response
     res.status(200).json({
       success: true,

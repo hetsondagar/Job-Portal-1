@@ -326,7 +326,7 @@ function NotificationsPageContent({ user }: { user: any }) {
                             <div className="flex items-center space-x-4">
                               <span className="text-xs text-slate-500 flex items-center">
                                 <Clock className="w-3 h-3 mr-1" />
-                                {formatTimeAgo(notification.createdAt)}
+                                {formatTimeAgo(notification.createdAt || notification.created_at)}
                               </span>
                               {notification.metadata?.action && (
                                 <Button

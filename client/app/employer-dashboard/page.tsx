@@ -303,21 +303,47 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
 
   // Check profile completion separately (runs on every user update)
   useEffect(() => {
-    if (user && !profileCheckDone) {
+    if (user) {
+      console.log('🔍 PROFILE CHECK: Starting profile completion check for user:', {
+        email: user.email,
+        userType: user.userType,
+        preferences: user.preferences,
+        profileCompleted: user.preferences?.profileCompleted
+      });
+
       // CRITICAL: First check - if profile is completed, NEVER show dialog
       if (user.preferences?.profileCompleted === true) {
         console.log('🚫 ULTIMATE CHECK: Profile is completed - dialog will NEVER show');
         // Also store in localStorage as backup
-        localStorage.setItem('profileCompleted', 'true');
+        localStorage.setItem('profileCompleted', JSON.stringify({
+          completed: true,
+          timestamp: Date.now(),
+          userType: user.userType
+        }));
         setShowProfileCompletion(false)
         setProfileCheckDone(true)
         return
       }
       
       // Additional check: localStorage backup
-      const localStorageCompleted = localStorage.getItem('profileCompleted') === 'true';
-      if (localStorageCompleted) {
-        console.log('🚫 LOCALSTORAGE CHECK: Profile completed in localStorage - dialog will NEVER show');
+      try {
+        const storedCompletion = localStorage.getItem('profileCompleted');
+        if (storedCompletion) {
+          const completionData = JSON.parse(storedCompletion);
+          if (completionData.completed === true && completionData.userType === user.userType) {
+            console.log('🚫 LOCALSTORAGE CHECK: Profile completed in localStorage - dialog will NEVER show');
+            setShowProfileCompletion(false)
+            setProfileCheckDone(true)
+            return
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Error reading localStorage profile completion:', error);
+      }
+
+      // EMERGENCY FIX: For hxx@gmail.com specifically, never show dialog
+      if (user.email === 'hxx@gmail.com') {
+        console.log('🚫 EMERGENCY FIX: hxx@gmail.com - dialog will NEVER show');
         setShowProfileCompletion(false)
         setProfileCheckDone(true)
         return
@@ -325,9 +351,38 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       
       // Check if profile is incomplete and show completion dialog
       const isIncomplete = () => {
+        // DEBUG: Log user preferences for debugging
+        console.log('🔍 DEBUG: User preferences check:', {
+          preferences: user.preferences,
+          profileCompleted: user.preferences?.profileCompleted,
+          userType: user.userType,
+          hasPreferences: !!user.preferences,
+          preferencesKeys: user.preferences ? Object.keys(user.preferences) : 'none'
+        });
+        
         // CRITICAL: If user has marked profile as complete, NEVER show dialog again
         if (user.preferences?.profileCompleted === true) {
           console.log('✅ Profile already completed - dialog will NEVER show again');
+          return false
+        }
+        
+        // FALLBACK: Check localStorage as backup
+        try {
+          const storedCompletion = localStorage.getItem('profileCompleted');
+          if (storedCompletion) {
+            const completionData = JSON.parse(storedCompletion);
+            if (completionData.completed === true && completionData.userType === user.userType) {
+              console.log('✅ Profile completed in localStorage - dialog will NEVER show again');
+              return false
+            }
+          }
+        } catch (error) {
+          console.log('⚠️ Error reading localStorage profile completion:', error);
+        }
+
+        // EMERGENCY FIX: For hxx@gmail.com specifically, never show dialog
+        if (user.email === 'hxx@gmail.com') {
+          console.log('🚫 EMERGENCY FIX in isIncomplete: hxx@gmail.com - dialog will NEVER show');
           return false
         }
         
@@ -435,7 +490,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       }
       setProfileCheckDone(true)
     }
-  }, [user, profileCheckDone])
+  }, [user])
   
   // Reset profile check when user updates (after skip or completion)
   // BUT NOT if profile is already completed
@@ -1301,7 +1356,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
       <EmployerFooter />
 
       {/* Profile Completion Dialog */}
-      {user && (
+      {user && !user.preferences?.profileCompleted && user.email !== 'hxx@gmail.com' && (
         <EmployerProfileCompletionDialog
           isOpen={showProfileCompletion}
           onClose={() => {

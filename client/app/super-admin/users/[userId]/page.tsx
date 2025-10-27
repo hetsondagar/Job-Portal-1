@@ -362,6 +362,60 @@ export default function UserDetailPage() {
     }
   }
 
+  const handleViewResume = async (resume: any) => {
+    try {
+      // Open resume in new tab for viewing
+      const resumeUrl = `/api/resumes/${resume.id}/view`
+      window.open(resumeUrl, '_blank')
+      toast.success('Opening resume for viewing...')
+    } catch (error: any) {
+      toast.error('Failed to view resume: ' + error.message)
+    }
+  }
+
+  const handleDownloadResume = async (resume: any) => {
+    try {
+      // Download resume file
+      const resumeUrl = `/api/resumes/${resume.id}/download`
+      const link = document.createElement('a')
+      link.href = resumeUrl
+      link.download = `${resume.title || 'resume'}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('Resume download started...')
+    } catch (error: any) {
+      toast.error('Failed to download resume: ' + error.message)
+    }
+  }
+
+  const handleViewDocument = async (document: any) => {
+    try {
+      // Open verification document in new tab for viewing
+      const docUrl = `/api/verification/documents/${document.id || document.name}/view`
+      window.open(docUrl, '_blank')
+      toast.success('Opening document for viewing...')
+    } catch (error: any) {
+      toast.error('Failed to view document: ' + error.message)
+    }
+  }
+
+  const handleDownloadDocument = async (document: any) => {
+    try {
+      // Download verification document
+      const docUrl = `/api/verification/documents/${document.id || document.name}/download`
+      const link = document.createElement('a')
+      link.href = docUrl
+      link.download = `${document.name || 'verification-document'}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('Document download started...')
+    } catch (error: any) {
+      toast.error('Failed to download document: ' + error.message)
+    }
+  }
+
   const getUserVerificationStatus = (user: any) => {
     // Jobseekers don't need verification
     if (user.user_type === 'jobseeker') {
@@ -493,53 +547,94 @@ export default function UserDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-white border-gray-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Applications</p>
-                  <p className="text-3xl font-bold text-gray-900">{user.statistics.totalApplications}</p>
+        {/* Statistics Cards - Jobseekers only */}
+        {user.user_type === 'jobseeker' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Applications</p>
+                    <p className="text-3xl font-bold text-gray-900">{user.statistics.totalApplications}</p>
+                  </div>
+                  <Briefcase className="w-8 h-8 text-blue-600" />
                 </div>
-                <Briefcase className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-gray-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Bookmarks</p>
-                  <p className="text-3xl font-bold text-gray-900">{user.statistics.totalBookmarks}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Bookmarks</p>
+                    <p className="text-3xl font-bold text-gray-900">{user.statistics.totalBookmarks}</p>
+                  </div>
+                  <Bookmark className="w-8 h-8 text-green-600" />
                 </div>
-                <Bookmark className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-gray-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Resumes</p>
-                  <p className="text-3xl font-bold text-gray-900">{user.statistics.totalResumes}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Resumes</p>
+                    <p className="text-3xl font-bold text-gray-900">{user.statistics.totalResumes}</p>
+                  </div>
+                  <FileText className="w-8 h-8 text-purple-600" />
                 </div>
-                <FileText className="w-8 h-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-gray-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Experience</p>
-                  <p className="text-3xl font-bold text-gray-900">{user.statistics.totalWorkExperiences}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Experience</p>
+                    <p className="text-3xl font-bold text-gray-900">{user.statistics.totalWorkExperiences}</p>
+                  </div>
+                  <Award className="w-8 h-8 text-orange-600" />
                 </div>
-                <Award className="w-8 h-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Statistics Cards - Admin/Employer users */}
+        {(user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Posted Jobs</p>
+                    <p className="text-3xl font-bold text-gray-900">{user.statistics.totalJobsPosted}</p>
+                  </div>
+                  <Briefcase className="w-8 h-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Company Status</p>
+                    <p className="text-lg font-bold text-gray-900">{user.company?.verificationStatus || 'Not Set'}</p>
+                  </div>
+                  <Building2 className="w-8 h-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Account Status</p>
+                    <p className="text-lg font-bold text-gray-900">{user.account_status || 'Active'}</p>
+                  </div>
+                  <Shield className="w-8 h-8 text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Detailed Information Tabs - Dynamic based on user type */}
         <Tabs defaultValue="overview" className="space-y-6">
@@ -888,7 +983,7 @@ export default function UserDetailPage() {
                     {user.resumes.map((resume: any) => (
                       <div key={resume.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="flex-1">
                             <h4 className="text-gray-900 font-semibold">{resume.title || 'Resume'}</h4>
                             {resume.summary && (
                               <p className="text-sm text-gray-600 mt-1">{resume.summary}</p>
@@ -902,6 +997,26 @@ export default function UserDetailPage() {
                             <p className="text-xs text-gray-500 mt-1">
                               Last updated: {new Date(resume.lastUpdated || resume.createdAt).toLocaleDateString()}
                             </p>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewResume(resume)}
+                              className="flex items-center gap-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownloadResume(resume)}
+                              className="flex items-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              Download
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -1042,8 +1157,78 @@ export default function UserDetailPage() {
                 </div>
                 {user.company.verificationDocuments && (
                   <div>
-                    <label className="text-sm text-gray-600">Verification Documents</label>
-                    <p className="text-gray-900">{user.company.verificationDocuments.documents?.length || 0} documents submitted</p>
+                    <label className="text-sm text-gray-600 mb-3 block">Verification Documents</label>
+                    <div className="space-y-3">
+                      {user.company.verificationDocuments.documents && user.company.verificationDocuments.documents.length > 0 ? (
+                        user.company.verificationDocuments.documents.map((doc: any, index: number) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex justify-between items-center">
+                              <div className="flex-1">
+                                <h4 className="text-sm font-medium text-gray-900">{doc.name || `Document ${index + 1}`}</h4>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Type: {doc.type || 'Unknown'} | 
+                                  Size: {doc.size ? `${(doc.size / 1024).toFixed(1)} KB` : 'Unknown'} |
+                                  Uploaded: {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Unknown'}
+                                </p>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleViewDocument(doc)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDownloadDocument(doc)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  Download
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm">No verification documents uploaded</p>
+                      )}
+                    </div>
+                    
+                    {/* Additional verification info */}
+                    {user.company.verificationDocuments.gstNumber && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Company Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-600">GST Number:</span>
+                            <span className="ml-2 text-gray-900">{user.company.verificationDocuments.gstNumber}</span>
+                          </div>
+                          {user.company.verificationDocuments.panNumber && (
+                            <div>
+                              <span className="text-gray-600">PAN Number:</span>
+                              <span className="ml-2 text-gray-900">{user.company.verificationDocuments.panNumber}</span>
+                            </div>
+                          )}
+                          {user.company.verificationDocuments.submittedBy && (
+                            <div>
+                              <span className="text-gray-600">Submitted By:</span>
+                              <span className="ml-2 text-gray-900">{user.company.verificationDocuments.submittedBy}</span>
+                            </div>
+                          )}
+                        </div>
+                        {user.company.verificationDocuments.additionalNotes && (
+                          <div className="mt-2">
+                            <span className="text-gray-600">Notes:</span>
+                            <p className="text-gray-900 text-sm mt-1">{user.company.verificationDocuments.additionalNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

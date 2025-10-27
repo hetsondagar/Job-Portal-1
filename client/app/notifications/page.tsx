@@ -85,7 +85,7 @@ export default function NotificationsPage() {
           const isShortA = a.type === 'candidate_shortlisted' || a.type === 'application_shortlisted'
           const isShortB = b.type === 'candidate_shortlisted' || b.type === 'application_shortlisted'
           if (isShortA !== isShortB) return isShortA ? -1 : 1
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          return new Date(b.createdAt || b.created_at).getTime() - new Date(a.createdAt || a.created_at).getTime()
         })
         setNotifications(prioritized)
       }
@@ -328,7 +328,7 @@ export default function NotificationsPage() {
                                   {notification.title}
                                 </h4>
                                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                                  {formatTimeAgo(notification.createdAt)}
+                                  {formatTimeAgo(notification.createdAt || notification.created_at)}
                                 </span>
                               </div>
                               <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">

@@ -236,11 +236,17 @@ export default function CreateRequirementPage() {
 
   return (
     <EmployerAuthGuard>
-      return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerDashboardNavbar />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
+        <EmployerDashboardNavbar />
+        
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+          <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -264,7 +270,7 @@ export default function CreateRequirementPage() {
             {/* Main Form */}
             <div className="lg:col-span-2 space-y-6">
               {/* Basic Information */}
-              <Card>
+              <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
                 <CardHeader>
                   <CardTitle>Basic Information</CardTitle>
                 </CardHeader>
@@ -345,7 +351,7 @@ export default function CreateRequirementPage() {
               </Card>
 
               {/* Skills */}
-              <Card>
+              <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
                 <CardHeader>
                   <CardTitle>Required Skills</CardTitle>
                 </CardHeader>
@@ -420,7 +426,7 @@ export default function CreateRequirementPage() {
               </Card>
 
               {/* Benefits */}
-              <Card>
+              <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
                 <CardHeader>
                   <CardTitle>Benefits & Perks</CardTitle>
                 </CardHeader>
@@ -482,7 +488,7 @@ export default function CreateRequirementPage() {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Job Details */}
-              <Card>
+              <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
                 <CardHeader>
                   <CardTitle>Job Details</CardTitle>
                 </CardHeader>
@@ -619,7 +625,7 @@ export default function CreateRequirementPage() {
               </Card>
 
               {/* Work Preferences */}
-              <Card>
+              <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
                 <CardHeader>
                   <CardTitle>Work Preferences</CardTitle>
                 </CardHeader>
@@ -682,7 +688,7 @@ export default function CreateRequirementPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-[0_8px_30px_rgba(59,130,246,0.3)]"
             >
               {isLoading ? (
                 <div className="flex items-center space-x-2">

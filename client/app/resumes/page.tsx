@@ -435,14 +435,6 @@ export default function ResumesPage() {
                        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
                          <div className="flex flex-wrap items-center gap-4">
                            <div className="flex items-center space-x-1">
-                             <Eye className="w-4 h-4" />
-                             <span>{resume.views} views</span>
-                           </div>
-                           <div className="flex items-center space-x-1">
-                             <Download className="w-4 h-4" />
-                             <span>{resume.downloads} downloads</span>
-                           </div>
-                           <div className="flex items-center space-x-1">
                              <span>Updated: {new Date(resume.lastUpdated).toLocaleDateString()}</span>
                            </div>
                          </div>
