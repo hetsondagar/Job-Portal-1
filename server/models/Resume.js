@@ -74,7 +74,9 @@ const Resume = sequelize.define('Resume', {
     field: 'updated_at'
   },
   metadata: {
-    type: DataTypes.VIRTUAL
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: {}
   }
 }, {
   tableName: 'resumes',

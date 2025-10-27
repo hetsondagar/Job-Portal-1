@@ -391,6 +391,6 @@ export default function DraftsPage() {
 
       <EmployerFooter />
     </div>
-    </EmployerAuthGuard></div>
+    </EmployerAuthGuard>
   )
 }

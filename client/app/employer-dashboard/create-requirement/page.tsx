@@ -702,6 +702,6 @@ export default function CreateRequirementPage() {
 
       <EmployerFooter />
     </div>
-    </EmployerAuthGuard></div>
+    </EmployerAuthGuard>
   )
 } 

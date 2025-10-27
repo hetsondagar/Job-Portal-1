@@ -205,7 +205,6 @@ export default function CandidateProfilePage() {
   if (loading) {
     return (
     <EmployerAuthGuard>
-      return (
       <div className="min-h-screen bg-gray-50">
         <EmployerNavbar />
         <div className="container mx-auto px-4 py-8">
@@ -218,6 +217,7 @@ export default function CandidateProfilePage() {
         </div>
         <EmployerFooter />
       </div>
+    </EmployerAuthGuard>
     );
   }
 
@@ -839,6 +839,6 @@ export default function CandidateProfilePage() {
 
       <EmployerFooter />
     </div>
-    </EmployerAuthGuard></div>
+    </EmployerAuthGuard>
   )
 }

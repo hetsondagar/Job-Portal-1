@@ -18,8 +18,10 @@ import {
   Star,
   Eye,
   Download,
+  AlertCircle,
   Plus,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { toast } from 'sonner'
@@ -47,16 +49,27 @@ export default function ResumesPage() {
     }
   }, [user, loading])
 
-  const fetchResumes = async () => {
+  const fetchResumes = async (showToast = false) => {
     try {
       setResumesLoading(true)
+      console.log('🔄 Fetching resumes...')
       const response = await apiService.getResumes()
+      console.log('📋 Resumes response:', response)
+      
       if (response.success && response.data) {
         setResumes(response.data)
+        console.log('✅ Resumes loaded:', response.data.length, 'resumes')
+        if (showToast) {
+          toast.success('Resume list refreshed')
+        }
+      } else {
+        console.log('❌ Failed to load resumes:', response.message)
+        setResumes([])
       }
     } catch (error) {
       console.error('Error fetching resumes:', error)
       toast.error('Failed to load resumes')
+      setResumes([])
     } finally {
       setResumesLoading(false)
     }
@@ -82,7 +95,11 @@ export default function ResumesPage() {
 
     try {
       setUploading(true)
+      console.log('📤 Uploading resume:', file.name, 'Size:', file.size, 'Type:', file.type)
+      
       const response = await apiService.uploadResumeFile(file)
+      console.log('📤 Upload response:', response)
+      
       if (response.success) {
         toast.success('Resume uploaded successfully!')
         fetchResumes()
@@ -91,10 +108,20 @@ export default function ResumesPage() {
         if (resumes.length === 0) {
           toast.success('This resume has been set as your default resume.')
         }
+      } else {
+        toast.error(response.message || 'Failed to upload resume')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading resume:', error)
-      toast.error('Failed to upload resume. Please try again.')
+      
+      // Handle specific error cases
+      if (error.message?.includes('ERR_CONNECTION_RESET')) {
+        toast.error('Connection lost. Please check your internet connection and try again.')
+      } else if (error.message?.includes('Failed to fetch')) {
+        toast.error('Network error. Please check your connection and try again.')
+      } else {
+        toast.error('Failed to upload resume. Please try again.')
+      }
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -106,15 +133,41 @@ export default function ResumesPage() {
   const handleDeleteResume = async (resumeId: string) => {
     if (!confirm('Are you sure you want to delete this resume?')) return
 
+    // Check if resume exists in current list
+    const resumeExists = resumes.some(resume => resume.id === resumeId)
+    if (!resumeExists) {
+      console.log('⚠️ Resume not found in current list, refreshing...')
+      toast.error('Resume not found. Refreshing list...')
+      fetchResumes()
+      return
+    }
+
     try {
+      console.log('🗑️ Deleting resume:', resumeId)
       const response = await apiService.deleteResume(resumeId)
+      console.log('🗑️ Delete response:', response)
+      
       if (response.success) {
         toast.success('Resume deleted successfully')
-        fetchResumes()
+        fetchResumes() // Refresh the list
+      } else {
+        toast.error(response.message || 'Failed to delete resume')
+        fetchResumes() // Refresh the list
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting resume:', error)
-      toast.error('Failed to delete resume')
+      
+      // Handle specific error cases
+      if (error.message?.includes('Resume not found') || error.message?.includes('404')) {
+        toast.error('Resume not found. The list will be refreshed.')
+        fetchResumes() // Refresh the list to get current data
+      } else if (error.message?.includes('500') || error.message?.includes('Internal Server Error')) {
+        toast.error('Server error. The list will be refreshed.')
+        fetchResumes() // Refresh the list to get current data
+      } else {
+        toast.error('Failed to delete resume. The list will be refreshed.')
+        fetchResumes() // Refresh the list to get current data
+      }
     }
   }
 
@@ -135,9 +188,15 @@ export default function ResumesPage() {
     try {
       await apiService.downloadResume(resumeId)
       toast.success('Resume downloaded successfully')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error downloading resume:', error)
-      toast.error('Failed to download resume')
+      
+      // Check if it's a "no file uploaded" error
+      if (error.message?.includes('without a file upload') || error.code === 'NO_FILE_UPLOADED') {
+        toast.error('This resume has no file attached. Please upload a resume file first.')
+      } else {
+        toast.error('Failed to download resume')
+      }
     }
   }
 
@@ -149,25 +208,43 @@ export default function ResumesPage() {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/user/resumes/${resumeId}/download`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/user/resumes/${resumeId}/view`, {
         headers,
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.code === 'NO_FILE_UPLOADED') {
+          throw new Error('This resume has no file attached. Please upload a resume file first.');
+        }
         throw new Error('Failed to view resume');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      
+      // Open in new tab
+      const newWindow = window.open(url, '_blank');
+      
+      if (newWindow) {
+        toast.success('Resume opened in new tab');
+      } else {
+        toast.error('Please allow popups to view the resume');
+      }
       
       // Clean up the URL after a delay
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
       }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error viewing resume:', error)
-      toast.error('Failed to view resume')
+      
+      // Check if it's a "no file uploaded" error
+      if (error.message?.includes('no file attached') || error.message?.includes('without a file upload')) {
+        toast.error('This resume has no file attached. Please upload a resume file first.')
+      } else {
+        toast.error('Failed to view resume')
+      }
     }
   }
 
@@ -225,6 +302,15 @@ export default function ResumesPage() {
                    <FileText className="w-3 h-3 mr-1" />
                    {resumes.length} resumes
                  </Badge>
+                 <Button 
+                   variant="outline" 
+                   onClick={() => fetchResumes(true)}
+                   disabled={resumesLoading}
+                   className="flex items-center space-x-2"
+                 >
+                   <RefreshCw className={`w-4 h-4 ${resumesLoading ? 'animate-spin' : ''}`} />
+                   <span>Refresh</span>
+                 </Button>
                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                    <Upload className="w-4 h-4 mr-2" />
                    Upload Resume
@@ -301,12 +387,34 @@ export default function ResumesPage() {
                              <Badge variant={resume.isPublic ? "default" : "secondary"} className="flex-shrink-0">
                                {resume.isPublic ? "Public" : "Private"}
                              </Badge>
+                             {resume.metadata?.filename || resume.metadata?.cloudinaryUrl ? (
+                               <Badge variant="outline" className="flex-shrink-0 text-green-600 border-green-200">
+                                 <FileText className="w-3 h-3 mr-1" />
+                                 File Attached
+                               </Badge>
+                             ) : (
+                               <Badge variant="outline" className="flex-shrink-0 text-orange-600 border-orange-200">
+                                 <AlertCircle className="w-3 h-3 mr-1" />
+                                 No File
+                               </Badge>
+                             )}
                            </div>
                            
                            {resume.summary && (
                              <p className="text-slate-600 dark:text-slate-300 mb-3 line-clamp-2 text-sm">
                                {resume.summary}
                              </p>
+                           )}
+                           
+                           {(!resume.metadata?.filename && !resume.metadata?.cloudinaryUrl) && (
+                             <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-3">
+                               <div className="flex items-center space-x-2">
+                                 <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                                 <p className="text-sm text-orange-700 dark:text-orange-300">
+                                   This resume has no file attached. Upload a file to enable viewing and downloading.
+                                 </p>
+                               </div>
+                             </div>
                            )}
 
                            <div className="flex flex-wrap gap-2 mb-3">
@@ -345,6 +453,7 @@ export default function ResumesPage() {
                            variant="outline" 
                            size="sm"
                            onClick={() => handleViewResume(resume.id)}
+                           disabled={!resume.metadata?.filename && !resume.metadata?.cloudinaryUrl}
                            className="flex-1 sm:flex-none"
                          >
                            <Eye className="w-4 h-4 mr-1" />
@@ -354,6 +463,7 @@ export default function ResumesPage() {
                            variant="outline" 
                            size="sm"
                            onClick={() => handleDownloadResume(resume.id)}
+                           disabled={!resume.metadata?.filename && !resume.metadata?.cloudinaryUrl}
                            className="flex-1 sm:flex-none"
                          >
                            <Download className="w-4 h-4 mr-1" />

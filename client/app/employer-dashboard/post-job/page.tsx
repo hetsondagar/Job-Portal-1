@@ -1530,7 +1530,6 @@ export default function PostJobPage() {
                     <SelectItem value="full-time">Full-time</SelectItem>
                     <SelectItem value="part-time">Part-time</SelectItem>
                     <SelectItem value="contract">Contract</SelectItem>
-                    <SelectItem value="internship">Internship</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1651,7 +1650,6 @@ export default function PostJobPage() {
                   <SelectItem value="Part Time, Permanent">Part Time, Permanent</SelectItem>
                   <SelectItem value="Full Time, Contract">Full Time, Contract</SelectItem>
                   <SelectItem value="Part Time, Contract">Part Time, Contract</SelectItem>
-                  <SelectItem value="Internship">Internship</SelectItem>
                   <SelectItem value="Freelance">Freelance</SelectItem>
                   <SelectItem value="Temporary">Temporary</SelectItem>
                 </SelectContent>

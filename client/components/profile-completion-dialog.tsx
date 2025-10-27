@@ -830,8 +830,13 @@ export function EmployerProfileCompletionDialog({
       
       if (response.success) {
         toast.success('Profile completed successfully! 🎉')
-        // Store in localStorage as backup
-        localStorage.setItem('profileCompleted', 'true');
+        // Store in localStorage as backup with timestamp
+        const completionData = {
+          completed: true,
+          timestamp: Date.now(),
+          userType: user.userType
+        }
+        localStorage.setItem('profileCompleted', JSON.stringify(completionData));
         onProfileUpdated(response.data)
         onClose()
       } else {
@@ -895,10 +900,28 @@ export function EmployerProfileCompletionDialog({
     return null
   }
   
-  // Additional localStorage check
-  if (localStorage.getItem('profileCompleted') === 'true') {
-    console.log('🚫 LOCALSTORAGE DIALOG CHECK: Profile completed in localStorage - dialog will NEVER render');
-    return null
+  // Additional localStorage check with timestamp validation
+  try {
+    const storedCompletion = localStorage.getItem('profileCompleted');
+    if (storedCompletion) {
+      const completionData = JSON.parse(storedCompletion);
+      if (completionData.completed === true && completionData.userType === user.userType) {
+        // Check if completion is recent (within last 30 days)
+        const completionAge = Date.now() - completionData.timestamp;
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+        
+        if (completionAge < thirtyDaysInMs) {
+          console.log('🚫 LOCALSTORAGE DIALOG CHECK: Profile completed in localStorage - dialog will NEVER render');
+          return null
+        } else {
+          // Clear old completion data
+          localStorage.removeItem('profileCompleted');
+        }
+      }
+    }
+  } catch (error) {
+    // If parsing fails, clear the invalid data
+    localStorage.removeItem('profileCompleted');
   }
 
   // Don't show dialog if profile is complete

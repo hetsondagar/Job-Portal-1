@@ -307,11 +307,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (force = false) => {
     const now = Date.now();
     
-    // Check if enough time has passed since last refresh
-    if (now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
+    // Check if enough time has passed since last refresh (unless forced)
+    if (!force && now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
       console.log('🔄 Rate limiting refreshUser - too soon since last refresh');
       toast.info('Please wait a moment before refreshing user data.');
       return;

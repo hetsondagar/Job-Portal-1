@@ -3004,15 +3004,18 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async uploadResumeFile(file: File): Promise<ApiResponse<{ resumeId: string; filename: string }>> {
+  async uploadResumeFile(file: File, title?: string, description?: string): Promise<ApiResponse<{ resumeId: string; filename: string }>> {
     const formData = new FormData();
     formData.append('resume', file);
+    if (title) formData.append('title', title);
+    if (description) formData.append('description', description);
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers: HeadersInit = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
+    // Don't set Content-Type header - let the browser set it with boundary for FormData
 
     const response = await fetch(`${API_BASE_URL}/user/resumes/upload`, {
       method: 'POST',

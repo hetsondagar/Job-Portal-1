@@ -973,6 +973,6 @@ export default function CandidatesPage() {
 
       <EmployerDashboardFooter />
     </div>
-    </EmployerAuthGuard></div>
+    </EmployerAuthGuard>
   )
 }

@@ -223,7 +223,6 @@ export default function JobTemplatesPage() {
   if (loading) {
     return (
     <EmployerAuthGuard>
-      return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
         <EmployerDashboardNavbar />
         
@@ -245,6 +244,7 @@ export default function JobTemplatesPage() {
         </div>
         <EmployerDashboardFooter />
       </div>
+    </EmployerAuthGuard>
     )
   }
 
@@ -756,7 +756,7 @@ function EditTemplateForm({ template, onSubmit, loading }: {
           {loading ? 'Updating...' : 'Update Template'}
         </Button>
       </div>
-    </EmployerAuthGuard></div>
+    </EmployerAuthGuard>
     </form>
   )
 }

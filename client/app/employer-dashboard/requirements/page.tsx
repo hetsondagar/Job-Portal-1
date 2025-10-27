@@ -640,6 +640,6 @@ export default function RequirementsPage() {
 
       <EmployerDashboardFooter />
     </div>
-    </EmployerAuthGuard></div>
+    </EmployerAuthGuard>
   )
 }

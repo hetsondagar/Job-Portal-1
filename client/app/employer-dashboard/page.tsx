@@ -29,7 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { motion } from "framer-motion"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
-import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
+import { EmployerFooter } from "@/components/employer-footer"
 import { CompanyInfoDisplay } from "@/components/company-info-display"
 import { CompanyRegistration } from "@/components/company-registration"
 import { CompanyManagement } from "@/components/company-management"
@@ -387,15 +387,43 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           console.log('🚫 CRITICAL: Profile is completed but logic says incomplete - forcing dialog to stay hidden');
           setShowProfileCompletion(false)
         } else {
-          // TRIPLE CHECK: localStorage backup
-          const localStorageCompleted = localStorage.getItem('profileCompleted') === 'true';
-          if (localStorageCompleted) {
-            console.log('🚫 TRIPLE CHECK: Profile completed in localStorage - forcing dialog to stay hidden');
-            setShowProfileCompletion(false)
-          } else {
-            // Show dialog after a short delay to avoid UI conflicts
+          // TRIPLE CHECK: localStorage backup with timestamp validation
+          try {
+            const storedCompletion = localStorage.getItem('profileCompleted');
+            let localStorageCompleted = false;
+            
+            if (storedCompletion) {
+              const completionData = JSON.parse(storedCompletion);
+              if (completionData.completed === true && completionData.userType === user.userType) {
+                // Check if completion is recent (within last 30 days)
+                const completionAge = Date.now() - completionData.timestamp;
+                const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+                
+                if (completionAge < thirtyDaysInMs) {
+                  localStorageCompleted = true;
+                } else {
+                  // Clear old completion data
+                  localStorage.removeItem('profileCompleted');
+                }
+              }
+            }
+            
+            if (localStorageCompleted) {
+              console.log('🚫 TRIPLE CHECK: Profile completed in localStorage - forcing dialog to stay hidden');
+              setShowProfileCompletion(false)
+            } else {
+              // Show dialog after a short delay to avoid UI conflicts
+              const timeoutId = setTimeout(() => {
+                console.log('✅ Showing employer profile completion dialog')
+                setShowProfileCompletion(true)
+              }, 1000)
+              return () => clearTimeout(timeoutId)
+            }
+          } catch (error) {
+            // If parsing fails, clear the invalid data and show dialog
+            localStorage.removeItem('profileCompleted');
             const timeoutId = setTimeout(() => {
-              console.log('✅ Showing employer profile completion dialog')
+              console.log('✅ Showing employer profile completion dialog (after localStorage error)')
               setShowProfileCompletion(true)
             }, 1000)
             return () => clearTimeout(timeoutId)
@@ -792,8 +820,8 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
   }
 
   const handleProfileUpdated = async (updatedData: any) => {
-    // Refresh user data to get updated profile
-    await refreshUser()
+    // Force refresh user data to get updated profile (bypass rate limiting)
+    await refreshUser(true)
     setShowProfileCompletion(false)
     // Reload dashboard data to reflect changes
     loadDashboardData()
@@ -1270,7 +1298,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
         </div>
       </div>
 
-      <EmployerDashboardFooter />
+      <EmployerFooter />
 
       {/* Profile Completion Dialog */}
       {user && (
