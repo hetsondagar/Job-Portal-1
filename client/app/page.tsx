@@ -1098,11 +1098,7 @@ export default function HomePage() {
                             {company.industry}
                           </Badge>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{company.name}</h3>
-                          <div className="flex items-center justify-between text-sm mb-4">
-                            <span className="text-slate-600 dark:text-slate-300">Open Positions</span>
-                            <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0}</span>
-                          </div>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">{company.name}</h3>
                           <div className="flex items-center justify-between">
                             <Button className="rounded-full bg-slate-900/80 dark:bg-white/10 text-white hover:bg-slate-900 transition-colors px-5">View Jobs</Button>
                             <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
@@ -1351,8 +1347,7 @@ export default function HomePage() {
                             {company.rating} ({company.reviews} reviews)
                           </span>
                           </div>
-                        <div className="flex items-center justify-between text-sm mb-4">
-                          <span className="text-slate-600 dark:text-slate-400">{company.employees}</span>
+                        <div className="flex items-center justify-center text-sm mb-4">
                           <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0} openings</span>
                           </div>
                           <div className={`w-0 group-hover:w-full h-[2px] bg-gradient-to-r ${getSectorColor(company.sector)} transition-all duration-300 mx-auto rounded-full`} />

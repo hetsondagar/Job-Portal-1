@@ -224,29 +224,29 @@ router.post('/', authenticateToken, async (req, res) => {
       });
 
       if (!existingNotification) {
-        // Get company info for notification
-        const company = await Company.findByPk(requirement.companyId);
-        const companyName = company?.name || 'Your Company';
-        
-        await Notification.create({
-          userId: req.user.id,
-          type: 'company_update',
-          title: `✅ Requirement Posted Successfully!`,
-          message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
-          shortMessage: `Requirement posted: ${requirement.title}`,
-          priority: 'low',
-          actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
-          actionText: 'View Requirement',
-          icon: 'briefcase',
-          metadata: {
-            requirementId: requirement.id,
-            requirementTitle: requirement.title,
-            companyId: requirement.companyId,
-            companyName: companyName,
-            action: 'requirement_created'
-          }
-        });
-        console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
+      // Get company info for notification
+      const company = await Company.findByPk(requirement.companyId);
+      const companyName = company?.name || 'Your Company';
+      
+      await Notification.create({
+        userId: req.user.id,
+        type: 'company_update',
+        title: `✅ Requirement Posted Successfully!`,
+        message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
+        shortMessage: `Requirement posted: ${requirement.title}`,
+        priority: 'low',
+        actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
+        actionText: 'View Requirement',
+        icon: 'briefcase',
+        metadata: {
+          requirementId: requirement.id,
+          requirementTitle: requirement.title,
+          companyId: requirement.companyId,
+          companyName: companyName,
+          action: 'requirement_created'
+        }
+      });
+      console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
       } else {
         console.log(`ℹ️ Notification already exists for requirement ${requirement.id}, skipping duplicate`);
       }
@@ -1441,11 +1441,11 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     let resumes = [];
     try {
       const resumeResults = await sequelize.query(`
-        SELECT 
-          id,
-          user_id as "userId",
-          title,
-          summary,
+            SELECT 
+              id,
+              user_id as "userId",
+              title,
+              summary,
           is_primary as "isDefault",
           is_public as "isPublic",
           view_count as "views",
@@ -1457,13 +1457,13 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           file_type as "fileType",
           file_size as "fileSize",
           skills
-        FROM resumes 
-        WHERE user_id = :userId 
+            FROM resumes 
+            WHERE user_id = :userId 
         ORDER BY is_primary DESC, created_at DESC
-      `, {
-        replacements: { userId: candidateId },
-        type: QueryTypes.SELECT
-      });
+          `, {
+            replacements: { userId: candidateId },
+            type: QueryTypes.SELECT
+          });
       
       resumes = resumeResults || [];
       console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId}`);
