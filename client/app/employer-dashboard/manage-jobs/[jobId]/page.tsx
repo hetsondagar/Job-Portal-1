@@ -157,7 +157,8 @@ export default function JobDetailPage() {
 
   if (error || !job) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <EmployerAuthGuard>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
         <EmployerNavbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[400px]">
@@ -172,6 +173,7 @@ export default function JobDetailPage() {
         </div>
         <EmployerFooter />
       </div>
+      </EmployerAuthGuard>
     )
   }
 
@@ -218,7 +220,8 @@ export default function JobDetailPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <EmployerAuthGuard>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <EmployerNavbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

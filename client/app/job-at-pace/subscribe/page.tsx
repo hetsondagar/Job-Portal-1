@@ -33,7 +33,21 @@ import { usePayment } from "@/hooks/usePayment"
 import { toast } from "sonner"
 
 // Define all plan types
-const allPlans = {
+type Plan = {
+  id: string
+  name: string
+  tagline: string
+  price: number
+  originalPrice: number
+  duration: string
+  type: string
+  color: string
+  icon: any
+  popular?: boolean
+  features: string[]
+}
+
+const allPlans: Record<string, Plan> = {
   // Regular Premium Plans
   basic: {
     id: "basic",

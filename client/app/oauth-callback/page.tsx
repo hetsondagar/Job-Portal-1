@@ -73,10 +73,10 @@ export default function OAuthCallbackPage() {
             
             // Redirect based on user type and region
             setTimeout(() => {
-              if (userResponse.data.user.userType === 'employer' || userResponse.data.user.userType === 'admin') {
+              if (userResponse.data?.user?.userType === 'employer' || userResponse.data?.user?.userType === 'admin') {
                 router.push('/employer-dashboard')
-              } else if (userResponse.data.user.userType === 'jobseeker') {
-                if (stateParam === 'gulf' || userResponse.data.user.region === 'gulf') {
+              } else if (userResponse.data?.user?.userType === 'jobseeker') {
+                if (stateParam === 'gulf' || userResponse.data?.user?.region === 'gulf') {
                   router.push('/jobseeker-gulf-dashboard')
                 } else {
                   router.push('/dashboard')

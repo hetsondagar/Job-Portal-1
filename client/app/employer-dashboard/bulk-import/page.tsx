@@ -20,9 +20,23 @@ import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
+interface BulkImport {
+  id: string;
+  importName: string;
+  importType: string;
+  status: string;
+  totalRecords: number;
+  successfulImports: number;
+  failedImports: number;
+  progress: number;
+  startedAt: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+
 export default function BulkImportPage() {
   const { user } = useAuth()
-  const [imports, setImports] = useState([])
+  const [imports, setImports] = useState<BulkImport[]>([])
   const [loading, setLoading] = useState(true)
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
 
@@ -35,8 +49,8 @@ export default function BulkImportPage() {
     try {
       setLoading(true)
       const response = await apiService.getBulkImports()
-      if (response.success) {
-        setImports(response.data.imports)
+      if (response.success && response.data) {
+        setImports(response.data.imports || [])
       }
     } catch (error) {
       console.error('Error fetching bulk imports:', error)
@@ -301,6 +315,7 @@ export default function BulkImportPage() {
 
       <EmployerDashboardFooter />
     </div>
+    </EmployerAuthGuard>
   )
 }
 
@@ -478,7 +493,6 @@ function UploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           )}
         </Button>
       </div>
-    </EmployerAuthGuard>
     </form>
   )
 }

@@ -510,7 +510,9 @@ export default function PostInternshipPage() {
           key={currentStep}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="min-h-[500px]"
         >
           {/* Validation Info */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
@@ -527,7 +529,29 @@ export default function PostInternshipPage() {
               </div>
             </div>
           </div>
+
+          {/* Current Step Indicator */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">{currentStep}</span>
+              </div>
+              <div>
+                <p className="text-blue-800 dark:text-blue-200 font-semibold">
+                  Step {currentStep} of 5
+                </p>
+                <p className="text-blue-700 dark:text-blue-300 text-sm">
+                  {currentStep === 1 && "Internship Details"}
+                  {currentStep === 2 && "Requirements & Skills"}
+                  {currentStep === 3 && "Benefits & Compensation"}
+                  {currentStep === 4 && "Workplace Photos"}
+                  {currentStep === 5 && "Review & Post"}
+                </p>
+              </div>
+            </div>
+          </div>
           
+          {/* Step 1 - Internship Details */}
           {currentStep === 1 && (
             <Card className="bg-white/50 backdrop-blur-2xl border-white/40 shadow-xl overflow-hidden">
               <CardHeader>
@@ -650,6 +674,7 @@ export default function PostInternshipPage() {
             </Card>
           )}
 
+          {/* Step 2 - Requirements & Skills */}
           {currentStep === 2 && (
             <Card className="bg-white/50 backdrop-blur-2xl border-white/40 shadow-xl overflow-hidden">
               <CardHeader>
@@ -733,6 +758,7 @@ export default function PostInternshipPage() {
             </Card>
           )}
 
+          {/* Step 3 - Benefits & Compensation */}
           {currentStep === 3 && (
             <Card className="bg-white/50 backdrop-blur-2xl border-white/40 shadow-xl overflow-hidden">
               <CardHeader>
@@ -766,6 +792,7 @@ export default function PostInternshipPage() {
             </Card>
           )}
 
+          {/* Step 4 - Workplace Photos */}
           {currentStep === 4 && (
             <Card className="bg-white/50 backdrop-blur-2xl border-white/40 shadow-xl overflow-hidden">
               <CardHeader>
@@ -829,6 +856,7 @@ export default function PostInternshipPage() {
             </Card>
           )}
 
+          {/* Step 5 - Review & Post */}
           {currentStep === 5 && (
             <Card className="bg-white/50 backdrop-blur-2xl border-white/40 shadow-xl overflow-hidden">
               <CardHeader>

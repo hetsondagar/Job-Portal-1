@@ -140,16 +140,15 @@ export const processPayment = async (
       case PAYMENT_GATEWAY.RAZORPAY:
         return await processRazorpayPayment(options);
       
-      case PAYMENT_GATEWAY.STRIPE:
-        // TODO: Implement Stripe payment
-        throw new Error('Stripe integration not implemented yet');
-      
-      case PAYMENT_GATEWAY.PAYPAL:
-        // TODO: Implement PayPal payment
-        throw new Error('PayPal integration not implemented yet');
-      
       default:
-        throw new Error('Invalid payment gateway');
+        // For future implementations
+        if (ACTIVE_GATEWAY === PAYMENT_GATEWAY.STRIPE) {
+          throw new Error('Stripe integration not implemented yet');
+        } else if (ACTIVE_GATEWAY === PAYMENT_GATEWAY.PAYPAL) {
+          throw new Error('PayPal integration not implemented yet');
+        } else {
+          throw new Error('Invalid payment gateway');
+        }
     }
   } catch (error: any) {
     return {

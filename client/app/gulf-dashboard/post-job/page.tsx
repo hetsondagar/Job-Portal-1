@@ -75,7 +75,7 @@ function GulfPostJobContent({ user }: { user: any }) {
           benefits: prefill.benefits || prev.benefits,
           remoteWork: prefill.remoteWork || prev.remoteWork,
           shiftTiming: prefill.shiftTiming || prev.shiftTiming,
-          travelRequired: (prefill.travelRequired ? 'yes' : 'no') || prev.travelRequired,
+          travelRequired: prefill.travelRequired ? 'yes' : 'no',
           noticePeriod: prefill.noticePeriod ?? prev.noticePeriod
         }))
         if (templateName) {
@@ -110,8 +110,8 @@ function GulfPostJobContent({ user }: { user: any }) {
       if (requirementsArr.length === 0) throw new Error('Please add at least one requirement')
       if (!formData.jobType) throw new Error('Job type is required')
       if (!formData.experienceLevel) throw new Error('Experience level is required')
-      if (!formData.salary && !formData.salaryMin && !formData.salaryMax) {
-        if (!formData.salaryMin && !formData.salaryMax) throw new Error('Please provide salary range')
+      if (!formData.salaryMin && !formData.salaryMax) {
+        throw new Error('Please provide salary range')
       }
 
       const payload = {

@@ -702,7 +702,7 @@ export default function JobseekerGulfDashboardPage() {
                         Gulf Jobseeker
                       </Badge>
                         {/* Premium Badge */}
-                        {(user.verification_level === 'premium' || user.verificationLevel === 'premium' || user?.preferences?.premium) && (
+                        {(user?.preferences?.premium) && (
                           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
                             Premium
                           </Badge>

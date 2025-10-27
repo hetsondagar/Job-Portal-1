@@ -43,6 +43,8 @@ interface SupportMessage {
   response?: string
   respondedAt?: string
   respondedBy?: string
+  readBy?: string[]
+  lastReadAt?: string
   createdAt: string
   updatedAt: string
 }
@@ -82,7 +84,7 @@ function SupportPageContent() {
       setLoading(true)
       const response = await apiService.getSupportMessages()
       if (response.success) {
-        setMessages(response.data)
+        setMessages(response.data || [])
       } else {
         toast.error("Failed to fetch support messages")
       }

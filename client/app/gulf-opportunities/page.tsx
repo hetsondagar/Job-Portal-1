@@ -590,7 +590,7 @@ export default function GulfOpportunitiesPage() {
                     </div>
                     
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {job.benefits.slice(0, 2).map((benefit, index) => (
+                      {job.benefits.slice(0, 2).map((benefit: string, index: number) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {benefit}
                         </Badge>

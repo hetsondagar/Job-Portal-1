@@ -83,7 +83,7 @@ export function SuperAdminAuthGuard({ children }: SuperAdminAuthGuardProps) {
               This area is restricted to administrators and super administrators only.
             </p>
             <div className="space-y-2">
-              {user.userType === "employer" || user.userType === "admin" ? (
+              {user.userType === "employer" ? (
                 <Button onClick={() => router.push("/employer-dashboard")} className="w-full">
                   Go to Employer Dashboard
                 </Button>

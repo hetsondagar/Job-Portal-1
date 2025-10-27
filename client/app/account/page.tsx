@@ -157,15 +157,15 @@ export default function AccountPage() {
           portfolio: user.socialLinks?.portfolio || ''
         },
         jobPreferences: {
-          preferredJobTitles: user.jobPreferences?.preferredJobTitles || [],
-          preferredLocations: user.jobPreferences?.preferredLocations || [],
-          preferredJobTypes: user.jobPreferences?.preferredJobTypes || [],
-          preferredExperienceLevels: user.jobPreferences?.preferredExperienceLevels || [],
-          preferredSalaryMin: user.jobPreferences?.preferredSalaryMin?.toString() || '',
-          preferredSalaryMax: user.jobPreferences?.preferredSalaryMax?.toString() || '',
-          preferredSkills: user.jobPreferences?.preferredSkills || [],
-          preferredWorkMode: user.jobPreferences?.preferredWorkMode || [],
-          willingToTravel: user.jobPreferences?.willingToTravel || false
+          preferredJobTitles: user.preferences?.preferredJobTitles || [],
+          preferredLocations: user.preferences?.preferredLocations || [],
+          preferredJobTypes: user.preferences?.preferredJobTypes || [],
+          preferredExperienceLevels: user.preferences?.preferredExperienceLevels || [],
+          preferredSalaryMin: user.preferences?.preferredSalaryMin?.toString() || '',
+          preferredSalaryMax: user.preferences?.preferredSalaryMax?.toString() || '',
+          preferredSkills: user.preferences?.preferredSkills || [],
+          preferredWorkMode: user.preferences?.preferredWorkMode || [],
+          willingToTravel: user.preferences?.willingToTravel || false
         }
       })
     }

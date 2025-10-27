@@ -223,9 +223,9 @@ This is an automated invitation. If you did not expect this email, please ignore
         content: jobseekerCustomContent
       } : jobseekerTemplate
 
-      const response = await apiService.post('/api/admin/send-invitations', {
+      const response = await apiService.sendInvitations({
         emails,
-        template,
+        template: typeof template === 'string' ? template : template?.content || '',
         type: 'jobseeker'
       })
 
@@ -262,9 +262,9 @@ This is an automated invitation. If you did not expect this email, please ignore
         content: companyCustomContent
       } : companyTemplate
 
-      const response = await apiService.post('/api/admin/send-invitations', {
+      const response = await apiService.sendInvitations({
         emails,
-        template,
+        template: typeof template === 'string' ? template : template?.content || '',
         type: 'company'
       })
 

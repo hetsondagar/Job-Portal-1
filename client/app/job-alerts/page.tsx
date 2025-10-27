@@ -99,7 +99,7 @@ export default function JobAlertsPage() {
         locations: formData.locations ? formData.locations.split(',').map(l => l.trim()) : [],
         categories: formData.categories ? formData.categories.split(',').map(c => c.trim()) : [],
         jobType: formData.jobType ? formData.jobType.split(',').map(t => t.trim()) : [],
-        experienceLevel: formData.experienceLevel && formData.experienceLevel.trim() && formData.experienceLevel !== 'any' ? formData.experienceLevel : null,
+        experienceLevel: formData.experienceLevel && formData.experienceLevel.trim() && formData.experienceLevel !== 'any' ? formData.experienceLevel : undefined,
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
         salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined,
         currency: formData.currency,
@@ -122,17 +122,17 @@ export default function JobAlertsPage() {
       } else {
         toast.error(response.message || 'Failed to create job alert')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error creating alert:', error)
       console.error('❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        data: alertData
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+        data: formData
       })
       
       // Check if it's an authentication error
-      if (error.message && error.message.includes('401')) {
+      if (error?.message && error.message.includes('401')) {
         toast.error('Authentication failed. Please log in again.')
         // Redirect to login
         router.push('/login')
@@ -140,12 +140,12 @@ export default function JobAlertsPage() {
       }
       
       // Check if it's a network error
-      if (error.message && error.message.includes('fetch')) {
+      if (error?.message && error.message.includes('fetch')) {
         toast.error('Network error. Please check your connection and try again.')
         return
       }
       
-      toast.error(error.message || 'Failed to create job alert')
+      toast.error(error?.message || 'Failed to create job alert')
     } finally {
       setSubmitting(false)
     }
@@ -161,7 +161,7 @@ export default function JobAlertsPage() {
         locations: formData.locations ? formData.locations.split(',').map(l => l.trim()) : [],
         categories: formData.categories ? formData.categories.split(',').map(c => c.trim()) : [],
         jobType: formData.jobType ? formData.jobType.split(',').map(t => t.trim()) : [],
-        experienceLevel: formData.experienceLevel && formData.experienceLevel.trim() && formData.experienceLevel !== 'any' ? formData.experienceLevel : null,
+        experienceLevel: formData.experienceLevel && formData.experienceLevel.trim() && formData.experienceLevel !== 'any' ? formData.experienceLevel : undefined,
         salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
         salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : undefined,
         currency: formData.currency,
@@ -442,7 +442,7 @@ export default function JobAlertsPage() {
                   </div>
                   <div>
                     <Label htmlFor="remoteWork">Remote Work Preference</Label>
-                    <Select value={formData.remoteWork || 'any'} onValueChange={(value) => setFormData({ ...formData, remoteWork: value })}>
+                    <Select value={formData.remoteWork || 'any'} onValueChange={(value) => setFormData({ ...formData, remoteWork: value as 'remote' | 'hybrid' | 'any' | 'on_site' })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

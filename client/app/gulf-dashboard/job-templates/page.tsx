@@ -26,12 +26,12 @@ interface JobTemplate {
   category: string
   isPublic: boolean
   usageCount: number
-  lastUsedAt: string
+  lastUsedAt?: string
   tags: string[]
   templateData: any
   createdBy: string
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export default function GulfJobTemplatesPage() {
@@ -345,7 +345,7 @@ export default function GulfJobTemplatesPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm text-slate-600">
                     <span>Used {template.usageCount} times</span>
-                    <span>Last used: {new Date(template.lastUsedAt).toLocaleDateString()}</span>
+                    <span>Last used: {template.lastUsedAt ? new Date(template.lastUsedAt).toLocaleDateString() : 'Never'}</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {template.tags.slice(0, 3).map((tag, index) => (

@@ -754,7 +754,7 @@ export default function HomePage() {
       let companiesCountLocal = 0
       try {
         console.log('🔄 Fetching companies from API...')
-        const companiesResp = await apiService.listCompanies({ limit: 20, offset: 0, isActive: true, isVerified: true })
+        const companiesResp = await apiService.listCompanies({ limit: 20, offset: 0 })
         console.log('📊 Companies API response:', companiesResp)
         if (companiesResp.success && Array.isArray(companiesResp.data)) {
           // Filter for verified and active companies

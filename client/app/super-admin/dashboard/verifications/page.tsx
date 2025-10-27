@@ -26,11 +26,20 @@ interface PendingVerification {
   contactEmail: string
   contactPhone: string
   companyAccountType: string
-  verificationDocuments?: Array<{
-    type: string
-    url: string
-    name: string
-  }>
+  verificationDocuments?: {
+    gstNumber?: string
+    panNumber?: string
+    additionalNotes?: string
+    submittedBy?: {
+      userName: string
+      userEmail: string
+    }
+    documents?: Array<{
+      type: string
+      url: string
+      name: string
+    }>
+  }
   createdAt: string
   users: Array<{
     id: string
@@ -231,7 +240,7 @@ export default function AdminVerificationsPage() {
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-slate-500" />
                     <span className="text-sm text-slate-600">
-                      {company.verificationDocuments?.length || 0} documents uploaded
+                      {company.verificationDocuments?.documents?.length || 0} documents uploaded
                     </span>
                   </div>
                   

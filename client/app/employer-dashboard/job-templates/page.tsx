@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, Filter, Edit, Copy, Trash2, Eye, BookOpen, Users, User, Star, Clock, Globe, Lock } from "lucide-react"
+import { Plus, Search, Filter, Edit, Copy, Trash2, Eye, BookOpen, Users, User, Star, Clock, Globe, Lock, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +17,9 @@ import { apiService } from "@/lib/api"
 import { toast } from "sonner"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { useAuth } from "@/hooks/useAuth"
+import DepartmentDropdown from "@/components/ui/department-dropdown"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
+import RoleCategoryDropdown from "@/components/ui/role-category-dropdown"
 
 interface JobTemplate {
   id: string
@@ -25,12 +28,12 @@ interface JobTemplate {
   category: string
   isPublic: boolean
   usageCount: number
-  lastUsedAt: string
+  lastUsedAt?: string
   tags: string[]
   templateData: any
   createdBy: string
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export default function JobTemplatesPage() {
@@ -277,7 +280,7 @@ export default function JobTemplatesPage() {
                 Create Template
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Template</DialogTitle>
                 <DialogDescription>
@@ -375,7 +378,7 @@ export default function JobTemplatesPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm text-slate-600">
                     <span>Used {template.usageCount} times</span>
-                    <span>Last used: {new Date(template.lastUsedAt).toLocaleDateString()}</span>
+                    <span>Last used: {template.lastUsedAt ? new Date(template.lastUsedAt).toLocaleDateString() : 'Never'}</span>
                   </div>
                   
                   <div className="flex flex-wrap gap-1">
@@ -505,11 +508,13 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "",
-    isPublic: false,
+    category: "technical", // Default category
+    isPublic: true, // Make templates public by default
     tags: [] as string[],
     templateData: {
+      // Basic Job Information
       title: "",
+      companyName: "",
       department: "",
       location: "",
       type: "",
@@ -518,10 +523,37 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
       description: "",
       requirements: "",
       benefits: "",
-      skills: []
+      skills: [] as string[],
+      role: "",
+      industryType: "",
+      roleCategory: "",
+      education: [] as string[],
+      employmentType: "",
+      // Consultancy fields
+      postingType: "company" as "company" | "consultancy",
+      consultancyName: "",
+      hiringCompanyName: "",
+      hiringCompanyIndustry: "",
+      hiringCompanyDescription: "",
+      showHiringCompanyDetails: false,
+      // Additional fields
+      whyWorkWithUs: "",
+      companyProfile: "",
+      externalApplyUrl: "",
+      keywords: [] as string[]
     }
   })
+  
+  // Dropdown state variables
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
+  const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>([])
   const [currentTag, setCurrentTag] = useState("")
+  const [currentSkill, setCurrentSkill] = useState("")
+  const [currentKeyword, setCurrentKeyword] = useState("")
+  const [selectedEducation, setSelectedEducation] = useState<string[]>([])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -529,6 +561,16 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
       toast.error('Please fill in all required fields')
       return
     }
+    
+    // Validate template data
+    const requiredFields = ['title', 'department', 'location', 'type', 'experience', 'description', 'requirements']
+    const missingFields = requiredFields.filter(field => !formData.templateData[field as keyof typeof formData.templateData])
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in required job fields: ${missingFields.join(', ')}`)
+      return
+    }
+    
     onSubmit(formData)
   }
 
@@ -549,88 +591,568 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
     }))
   }
 
+  const handleAddSkill = () => {
+    if (currentSkill.trim() && !formData.templateData.skills.includes(currentSkill.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        templateData: {
+          ...prev.templateData,
+          skills: [...prev.templateData.skills, currentSkill.trim()]
+        }
+      }))
+      setCurrentSkill("")
+    }
+  }
+
+  const handleRemoveSkill = (skill: string) => {
+    setFormData(prev => ({
+      ...prev,
+      templateData: {
+        ...prev.templateData,
+        skills: prev.templateData.skills.filter((s: string) => s !== skill)
+      }
+    }))
+  }
+
+  const handleAddKeyword = () => {
+    if (currentKeyword.trim() && !formData.templateData.keywords.includes(currentKeyword.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        templateData: {
+          ...prev.templateData,
+          keywords: [...prev.templateData.keywords, currentKeyword.trim()]
+        }
+      }))
+      setCurrentKeyword("")
+    }
+  }
+
+  const handleRemoveKeyword = (keyword: string) => {
+    setFormData(prev => ({
+      ...prev,
+      templateData: {
+        ...prev.templateData,
+        keywords: prev.templateData.keywords.filter((k: string) => k !== keyword)
+      }
+    }))
+  }
+
+  const handleEducationChange = (education: string[]) => {
+    setSelectedEducation(education)
+    setFormData(prev => ({
+      ...prev,
+      templateData: {
+        ...prev.templateData,
+        education: education
+      }
+    }))
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
+    <form onSubmit={handleSubmit} className="space-y-8 max-h-[80vh] overflow-y-auto">
+      {/* Template Metadata */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Template Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="name">Template Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="e.g., Senior Software Engineer"
+              required
+            />
+          </div>
+
+        </div>
+        
         <div>
-          <Label htmlFor="name">Template Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g., Senior Software Engineer"
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Describe what this template is for..."
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="tags">Tags</Label>
+          <div className="flex space-x-2 mb-2">
+            <Input
+              value={currentTag}
+              onChange={(e) => setCurrentTag(e.target.value)}
+              placeholder="Add a tag..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+            />
+            <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.tags.map((tag, index) => (
+              <Badge key={index} variant="outline" className="flex items-center">
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="isPublic" 
+            checked={formData.isPublic}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+          />
+          <Label htmlFor="isPublic">Make this template public</Label>
+        </div>
+      </div>
+
+      {/* Job Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Job Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="title">Job Title *</Label>
+            <Input
+              id="title"
+              value={formData.templateData.title}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, title: e.target.value }
+              }))}
+              placeholder="e.g., Senior Software Engineer"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="companyName">Company Name</Label>
+            <Input
+              id="companyName"
+              value={formData.templateData.companyName}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, companyName: e.target.value }
+              }))}
+              placeholder="Company name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="department">Department *</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowDepartmentDropdown(true)}
+            >
+              <span>{formData.templateData.department || "Select department"}</span>
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            
+            {showDepartmentDropdown && (
+              <DepartmentDropdown
+                selectedDepartments={formData.templateData.department ? [formData.templateData.department] : []}
+                onDepartmentChange={(departments: string[]) => {
+                  // For template creation, we only allow single selection
+                  if (departments.length > 0) {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      templateData: { ...prev.templateData, department: departments[0] }
+                    }))
+                  }
+                  setShowDepartmentDropdown(false)
+                }}
+                onClose={() => setShowDepartmentDropdown(false)}
+                hideSelectAllButtons={true}
+              />
+            )}
+          </div>
+          <div>
+            <Label htmlFor="location">Location *</Label>
+            <Input
+              id="location"
+              value={formData.templateData.location}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, location: e.target.value }
+              }))}
+              placeholder="e.g., Mumbai, India"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="type">Job Type *</Label>
+            <Select 
+              value={formData.templateData.type} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, type: value }
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select job type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full-time">Full-time</SelectItem>
+                <SelectItem value="part-time">Part-time</SelectItem>
+                <SelectItem value="contract">Contract</SelectItem>
+                <SelectItem value="internship">Internship</SelectItem>
+                <SelectItem value="freelance">Freelance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="experience">Experience Level *</Label>
+            <Select 
+              value={formData.templateData.experience} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, experience: value }
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select experience level">
+                  {formData.templateData.experience === "fresher" && "Fresher (0-1 years)"}
+                  {formData.templateData.experience === "junior" && "Junior (1-3 years)"}
+                  {formData.templateData.experience === "mid" && "Mid-level (3-5 years)"}
+                  {formData.templateData.experience === "senior" && "Senior (5+ years)"}
+                  {!formData.templateData.experience && "Select experience level"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fresher">Fresher (0-1 years)</SelectItem>
+                <SelectItem value="junior">Junior (1-3 years)</SelectItem>
+                <SelectItem value="mid">Mid-level (3-5 years)</SelectItem>
+                <SelectItem value="senior">Senior (5+ years)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="salary">Salary Range</Label>
+            <Input
+              id="salary"
+              value={formData.templateData.salary}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, salary: e.target.value }
+              }))}
+              placeholder="e.g., 8-15 LPA"
+            />
+          </div>
+          <div>
+            <Label htmlFor="employmentType">Employment Type</Label>
+            <Select 
+              value={formData.templateData.employmentType} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, employmentType: value }
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select employment type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Full Time, Permanent">Full Time, Permanent</SelectItem>
+                <SelectItem value="Part Time, Permanent">Part Time, Permanent</SelectItem>
+                <SelectItem value="Full Time, Contract">Full Time, Contract</SelectItem>
+                <SelectItem value="Part Time, Contract">Part Time, Contract</SelectItem>
+                <SelectItem value="Freelance">Freelance</SelectItem>
+                <SelectItem value="Temporary">Temporary</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="description">Job Description *</Label>
+          <Textarea
+            id="description"
+            value={formData.templateData.description}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, description: e.target.value }
+            }))}
+            placeholder="Describe the role and responsibilities..."
+            rows={4}
             required
           />
         </div>
+
         <div>
-          <Label htmlFor="category">Category *</Label>
-          <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="technical">Technical</SelectItem>
-              <SelectItem value="non-technical">Non-Technical</SelectItem>
-              <SelectItem value="management">Management</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="Describe what this template is for..."
-          rows={3}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="tags">Tags</Label>
-        <div className="flex space-x-2 mb-2">
-          <Input
-            value={currentTag}
-            onChange={(e) => setCurrentTag(e.target.value)}
-            placeholder="Add a tag..."
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+          <Label htmlFor="requirements">Requirements *</Label>
+          <Textarea
+            id="requirements"
+            value={formData.templateData.requirements}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, requirements: e.target.value }
+            }))}
+            placeholder="List the required qualifications and skills..."
+            rows={4}
+            required
           />
-          <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {formData.tags.map((tag, index) => (
-            <Badge key={index} variant="outline" className="flex items-center">
-              {tag}
-              <button
-                type="button"
-                onClick={() => handleRemoveTag(tag)}
-                className="ml-2 text-red-500 hover:text-red-700"
-              >
-                ×
-              </button>
-            </Badge>
-          ))}
+
+        <div>
+          <Label htmlFor="benefits">Benefits & Perks</Label>
+          <Textarea
+            id="benefits"
+            value={formData.templateData.benefits}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, benefits: e.target.value }
+            }))}
+            placeholder="List the benefits and perks offered..."
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="whyWorkWithUs">Why Work With Us</Label>
+          <Textarea
+            id="whyWorkWithUs"
+            value={formData.templateData.whyWorkWithUs}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, whyWorkWithUs: e.target.value }
+            }))}
+            placeholder="Describe why candidates should work with your company..."
+            rows={3}
+          />
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="isPublic" 
-          checked={formData.isPublic}
-          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
-        />
-        <Label htmlFor="isPublic">Make this template public</Label>
+      {/* Skills and Keywords */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Skills & Keywords</h3>
+        
+        <div>
+          <Label htmlFor="skills">Required Skills</Label>
+          <div className="flex space-x-2 mb-2">
+            <Input
+              value={currentSkill}
+              onChange={(e) => setCurrentSkill(e.target.value)}
+              placeholder="Add a skill..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
+            />
+            <Button type="button" variant="outline" onClick={handleAddSkill}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.templateData.skills.map((skill: string, index: number) => (
+              <Badge key={index} variant="outline" className="flex items-center">
+                {skill}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSkill(skill)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="keywords">Keywords</Label>
+          <div className="flex space-x-2 mb-2">
+            <Input
+              value={currentKeyword}
+              onChange={(e) => setCurrentKeyword(e.target.value)}
+              placeholder="Add a keyword..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddKeyword())}
+            />
+            <Button type="button" variant="outline" onClick={handleAddKeyword}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.templateData.keywords.map((keyword: string, index: number) => (
+              <Badge key={index} variant="outline" className="flex items-center">
+                {keyword}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveKeyword(keyword)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="flex justify-end space-x-3">
+      {/* Additional Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Additional Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="role">Role</Label>
+            <Input
+              id="role"
+              value={formData.templateData.role}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, role: e.target.value }
+              }))}
+              placeholder="e.g., Software Developer"
+            />
+          </div>
+          <div>
+            <Label htmlFor="industryType">Industry Type</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowIndustryDropdown(true)}
+            >
+              {selectedIndustries.length > 0 
+                ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
+                : "Select industry type"
+              }
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            
+            {showIndustryDropdown && (
+              <IndustryDropdown
+                selectedIndustries={selectedIndustries}
+                onIndustryChange={(industries) => {
+                  setSelectedIndustries(industries)
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    templateData: { ...prev.templateData, industryType: industries.join(', ') }
+                  }))
+                }}
+                onClose={() => setShowIndustryDropdown(false)}
+                hideSelectAllButtons={false}
+              />
+            )}
+          </div>
+          <div>
+            <Label htmlFor="roleCategory">Role Category</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowRoleCategoryDropdown(true)}
+            >
+              {selectedRoleCategories.length > 0 
+                ? `${selectedRoleCategories.length} role${selectedRoleCategories.length > 1 ? 's' : ''} selected`
+                : "Select role category"
+              }
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            
+            {showRoleCategoryDropdown && (
+              <RoleCategoryDropdown
+                selectedRoles={selectedRoleCategories}
+                onRoleChange={(roles) => {
+                  setSelectedRoleCategories(roles)
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    templateData: { ...prev.templateData, roleCategory: roles.join(', ') }
+                  }))
+                }}
+                onClose={() => setShowRoleCategoryDropdown(false)}
+                hideSelectAllButtons={true}
+              />
+            )}
+          </div>
+          <div>
+            <Label htmlFor="externalApplyUrl">External Apply URL</Label>
+            <Input
+              id="externalApplyUrl"
+              value={formData.templateData.externalApplyUrl}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, externalApplyUrl: e.target.value }
+              }))}
+              placeholder="https://company.com/apply"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="companyProfile">Company Profile</Label>
+          <Textarea
+            id="companyProfile"
+            value={formData.templateData.companyProfile}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, companyProfile: e.target.value }
+            }))}
+            placeholder="Brief description of your company..."
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4 border-t">
         <Button type="button" variant="outline">Cancel</Button>
         <Button type="submit" disabled={loading}>
           {loading ? 'Creating...' : 'Create Template'}
         </Button>
       </div>
     </form>
+    
+    {/* Department Dropdown */}
+    {showDepartmentDropdown && (
+      <DepartmentDropdown
+        selectedDepartments={formData.templateData.department ? [formData.templateData.department] : []}
+        onDepartmentChange={(departments: string[]) => {
+          // For template creation, we only allow single selection
+          if (departments.length > 0) {
+            setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, department: departments[0] }
+            }))
+          }
+          setShowDepartmentDropdown(false)
+        }}
+        onClose={() => setShowDepartmentDropdown(false)}
+        hideSelectAllButtons={true}
+      />
+    )}
+
+    {/* Industry Dropdown */}
+    {showIndustryDropdown && (
+      <IndustryDropdown
+        selectedIndustries={selectedIndustries}
+        onIndustryChange={(industries) => {
+          setSelectedIndustries(industries)
+          setFormData(prev => ({ 
+            ...prev, 
+            templateData: { ...prev.templateData, industryType: industries.join(', ') }
+          }))
+        }}
+        onClose={() => setShowIndustryDropdown(false)}
+        hideSelectAllButtons={false}
+      />
+    )}
+
+    {/* Role Category Dropdown */}
+    {showRoleCategoryDropdown && (
+      <RoleCategoryDropdown
+        selectedRoles={selectedRoleCategories}
+        onRoleChange={(roles) => {
+          setSelectedRoleCategories(roles)
+          setFormData(prev => ({ 
+            ...prev, 
+            templateData: { ...prev.templateData, roleCategory: roles.join(', ') }
+          }))
+        }}
+        onClose={() => setShowRoleCategoryDropdown(false)}
+        hideSelectAllButtons={true}
+      />
+    )}
+  </>
   )
 }
 
@@ -645,9 +1167,49 @@ function EditTemplateForm({ template, onSubmit, loading }: {
     category: template.category,
     isPublic: template.isPublic,
     tags: template.tags,
-    templateData: template.templateData
+    templateData: {
+      // Basic Job Information
+      title: template.templateData?.title || "",
+      companyName: template.templateData?.companyName || "",
+      department: template.templateData?.department || "",
+      location: template.templateData?.location || "",
+      type: template.templateData?.type || "",
+      experience: template.templateData?.experience || "",
+      salary: template.templateData?.salary || "",
+      description: template.templateData?.description || "",
+      requirements: template.templateData?.requirements || "",
+      benefits: template.templateData?.benefits || "",
+      skills: template.templateData?.skills || [],
+      role: template.templateData?.role || "",
+      industryType: template.templateData?.industryType || "",
+      roleCategory: template.templateData?.roleCategory || "",
+      education: template.templateData?.education || [],
+      employmentType: template.templateData?.employmentType || "",
+      // Consultancy fields
+      postingType: template.templateData?.postingType || "company",
+      consultancyName: template.templateData?.consultancyName || "",
+      hiringCompanyName: template.templateData?.hiringCompanyName || "",
+      hiringCompanyIndustry: template.templateData?.hiringCompanyIndustry || "",
+      hiringCompanyDescription: template.templateData?.hiringCompanyDescription || "",
+      showHiringCompanyDetails: template.templateData?.showHiringCompanyDetails || false,
+      // Additional fields
+      whyWorkWithUs: template.templateData?.whyWorkWithUs || "",
+      companyProfile: template.templateData?.companyProfile || "",
+      externalApplyUrl: template.templateData?.externalApplyUrl || "",
+      keywords: template.templateData?.keywords || []
+    }
   })
   const [currentTag, setCurrentTag] = useState("")
+  const [currentSkill, setCurrentSkill] = useState("")
+  const [currentKeyword, setCurrentKeyword] = useState("")
+  const [selectedEducation, setSelectedEducation] = useState<string[]>(template.templateData?.education || [])
+  
+  // Dropdown state variables
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showRoleCategoryDropdown, setShowRoleCategoryDropdown] = useState(false)
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>(template.templateData?.industryType ? template.templateData.industryType.split(', ') : [])
+  const [selectedRoleCategories, setSelectedRoleCategories] = useState<string[]>(template.templateData?.roleCategory ? template.templateData.roleCategory.split(', ') : [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -655,6 +1217,16 @@ function EditTemplateForm({ template, onSubmit, loading }: {
       toast.error('Please fill in all required fields')
       return
     }
+    
+    // Validate template data
+    const requiredFields = ['title', 'department', 'location', 'type', 'experience', 'description', 'requirements']
+    const missingFields = requiredFields.filter(field => !formData.templateData[field as keyof typeof formData.templateData])
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in required job fields: ${missingFields.join(', ')}`)
+      return
+    }
+    
     onSubmit(formData)
   }
 
@@ -675,88 +1247,567 @@ function EditTemplateForm({ template, onSubmit, loading }: {
     }))
   }
 
+  const handleAddSkill = () => {
+    if (currentSkill.trim() && !formData.templateData.skills.includes(currentSkill.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        templateData: {
+          ...prev.templateData,
+          skills: [...prev.templateData.skills, currentSkill.trim()]
+        }
+      }))
+      setCurrentSkill("")
+    }
+  }
+
+  const handleRemoveSkill = (skill: string) => {
+    setFormData(prev => ({
+      ...prev,
+      templateData: {
+        ...prev.templateData,
+        skills: prev.templateData.skills.filter((s: string) => s !== skill)
+      }
+    }))
+  }
+
+  const handleAddKeyword = () => {
+    if (currentKeyword.trim() && !formData.templateData.keywords.includes(currentKeyword.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        templateData: {
+          ...prev.templateData,
+          keywords: [...prev.templateData.keywords, currentKeyword.trim()]
+        }
+      }))
+      setCurrentKeyword("")
+    }
+  }
+
+  const handleRemoveKeyword = (keyword: string) => {
+    setFormData(prev => ({
+      ...prev,
+      templateData: {
+        ...prev.templateData,
+        keywords: prev.templateData.keywords.filter((k: string) => k !== keyword)
+      }
+    }))
+  }
+
+  const handleEducationChange = (education: string[]) => {
+    setSelectedEducation(education)
+    setFormData(prev => ({
+      ...prev,
+      templateData: {
+        ...prev.templateData,
+        education: education
+      }
+    }))
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
+    <form onSubmit={handleSubmit} className="space-y-8 max-h-[80vh] overflow-y-auto">
+      {/* Template Metadata */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Template Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="name">Template Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="e.g., Senior Software Engineer"
+              required
+            />
+          </div>
+
+        </div>
+        
         <div>
-          <Label htmlFor="name">Template Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g., Senior Software Engineer"
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Describe what this template is for..."
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="tags">Tags</Label>
+          <div className="flex space-x-2 mb-2">
+            <Input
+              value={currentTag}
+              onChange={(e) => setCurrentTag(e.target.value)}
+              placeholder="Add a tag..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+            />
+            <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.tags.map((tag, index) => (
+              <Badge key={index} variant="outline" className="flex items-center">
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="isPublic" 
+            checked={formData.isPublic}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
+          />
+          <Label htmlFor="isPublic">Make this template public</Label>
+        </div>
+      </div>
+
+      {/* Job Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Job Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="title">Job Title *</Label>
+            <Input
+              id="title"
+              value={formData.templateData.title}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, title: e.target.value }
+              }))}
+              placeholder="e.g., Senior Software Engineer"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="companyName">Company Name</Label>
+            <Input
+              id="companyName"
+              value={formData.templateData.companyName}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, companyName: e.target.value }
+              }))}
+              placeholder="Company name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="department">Department *</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowDepartmentDropdown(true)}
+            >
+              <span>{formData.templateData.department || "Select department"}</span>
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            
+            {showDepartmentDropdown && (
+              <DepartmentDropdown
+                selectedDepartments={formData.templateData.department ? [formData.templateData.department] : []}
+                onDepartmentChange={(departments: string[]) => {
+                  // For template creation, we only allow single selection
+                  if (departments.length > 0) {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      templateData: { ...prev.templateData, department: departments[0] }
+                    }))
+                  }
+                  setShowDepartmentDropdown(false)
+                }}
+                onClose={() => setShowDepartmentDropdown(false)}
+                hideSelectAllButtons={true}
+              />
+            )}
+          </div>
+          <div>
+            <Label htmlFor="location">Location *</Label>
+            <Input
+              id="location"
+              value={formData.templateData.location}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, location: e.target.value }
+              }))}
+              placeholder="e.g., Mumbai, India"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="type">Job Type *</Label>
+            <Select 
+              value={formData.templateData.type} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, type: value }
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select job type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full-time">Full-time</SelectItem>
+                <SelectItem value="part-time">Part-time</SelectItem>
+                <SelectItem value="contract">Contract</SelectItem>
+                <SelectItem value="internship">Internship</SelectItem>
+                <SelectItem value="freelance">Freelance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="experience">Experience Level *</Label>
+            <Select 
+              value={formData.templateData.experience} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, experience: value }
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select experience level">
+                  {formData.templateData.experience === "fresher" && "Fresher (0-1 years)"}
+                  {formData.templateData.experience === "junior" && "Junior (1-3 years)"}
+                  {formData.templateData.experience === "mid" && "Mid-level (3-5 years)"}
+                  {formData.templateData.experience === "senior" && "Senior (5+ years)"}
+                  {!formData.templateData.experience && "Select experience level"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fresher">Fresher (0-1 years)</SelectItem>
+                <SelectItem value="junior">Junior (1-3 years)</SelectItem>
+                <SelectItem value="mid">Mid-level (3-5 years)</SelectItem>
+                <SelectItem value="senior">Senior (5+ years)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="salary">Salary Range</Label>
+            <Input
+              id="salary"
+              value={formData.templateData.salary}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, salary: e.target.value }
+              }))}
+              placeholder="e.g., 8-15 LPA"
+            />
+          </div>
+          <div>
+            <Label htmlFor="employmentType">Employment Type</Label>
+            <Select 
+              value={formData.templateData.employmentType} 
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, employmentType: value }
+              }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select employment type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Full Time, Permanent">Full Time, Permanent</SelectItem>
+                <SelectItem value="Part Time, Permanent">Part Time, Permanent</SelectItem>
+                <SelectItem value="Full Time, Contract">Full Time, Contract</SelectItem>
+                <SelectItem value="Part Time, Contract">Part Time, Contract</SelectItem>
+                <SelectItem value="Freelance">Freelance</SelectItem>
+                <SelectItem value="Temporary">Temporary</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="description">Job Description *</Label>
+          <Textarea
+            id="description"
+            value={formData.templateData.description}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, description: e.target.value }
+            }))}
+            placeholder="Describe the role and responsibilities..."
+            rows={4}
             required
           />
         </div>
+
         <div>
-          <Label htmlFor="category">Category *</Label>
-          <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="technical">Technical</SelectItem>
-              <SelectItem value="non-technical">Non-Technical</SelectItem>
-              <SelectItem value="management">Management</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="Describe what this template is for..."
-          rows={3}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="tags">Tags</Label>
-        <div className="flex space-x-2 mb-2">
-          <Input
-            value={currentTag}
-            onChange={(e) => setCurrentTag(e.target.value)}
-            placeholder="Add a tag..."
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+          <Label htmlFor="requirements">Requirements *</Label>
+          <Textarea
+            id="requirements"
+            value={formData.templateData.requirements}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, requirements: e.target.value }
+            }))}
+            placeholder="List the required qualifications and skills..."
+            rows={4}
+            required
           />
-          <Button type="button" variant="outline" onClick={handleAddTag}>Add</Button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {formData.tags.map((tag, index) => (
-            <Badge key={index} variant="outline" className="flex items-center">
-              {tag}
-              <button
-                type="button"
-                onClick={() => handleRemoveTag(tag)}
-                className="ml-2 text-red-500 hover:text-red-700"
-              >
-                ×
-              </button>
-            </Badge>
-          ))}
+
+        <div>
+          <Label htmlFor="benefits">Benefits & Perks</Label>
+          <Textarea
+            id="benefits"
+            value={formData.templateData.benefits}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, benefits: e.target.value }
+            }))}
+            placeholder="List the benefits and perks offered..."
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="whyWorkWithUs">Why Work With Us</Label>
+          <Textarea
+            id="whyWorkWithUs"
+            value={formData.templateData.whyWorkWithUs}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, whyWorkWithUs: e.target.value }
+            }))}
+            placeholder="Describe why candidates should work with your company..."
+            rows={3}
+          />
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="isPublic" 
-          checked={formData.isPublic}
-          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked as boolean }))}
-        />
-        <Label htmlFor="isPublic">Make this template public</Label>
+      {/* Skills and Keywords */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Skills & Keywords</h3>
+        
+        <div>
+          <Label htmlFor="skills">Required Skills</Label>
+          <div className="flex space-x-2 mb-2">
+            <Input
+              value={currentSkill}
+              onChange={(e) => setCurrentSkill(e.target.value)}
+              placeholder="Add a skill..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
+            />
+            <Button type="button" variant="outline" onClick={handleAddSkill}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.templateData.skills.map((skill: string, index: number) => (
+              <Badge key={index} variant="outline" className="flex items-center">
+                {skill}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSkill(skill)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="keywords">Keywords</Label>
+          <div className="flex space-x-2 mb-2">
+            <Input
+              value={currentKeyword}
+              onChange={(e) => setCurrentKeyword(e.target.value)}
+              placeholder="Add a keyword..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddKeyword())}
+            />
+            <Button type="button" variant="outline" onClick={handleAddKeyword}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.templateData.keywords.map((keyword: string, index: number) => (
+              <Badge key={index} variant="outline" className="flex items-center">
+                {keyword}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveKeyword(keyword)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="flex justify-end space-x-3">
+      {/* Additional Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Additional Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="role">Role</Label>
+            <Input
+              id="role"
+              value={formData.templateData.role}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, role: e.target.value }
+              }))}
+              placeholder="e.g., Software Developer"
+            />
+          </div>
+          <div>
+            <Label htmlFor="industryType">Industry Type</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowIndustryDropdown(true)}
+            >
+              {selectedIndustries.length > 0 
+                ? `${selectedIndustries.length} industry${selectedIndustries.length > 1 ? 'ies' : ''} selected`
+                : "Select industry type"
+              }
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            
+            {showIndustryDropdown && (
+              <IndustryDropdown
+                selectedIndustries={selectedIndustries}
+                onIndustryChange={(industries) => {
+                  setSelectedIndustries(industries)
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    templateData: { ...prev.templateData, industryType: industries.join(', ') }
+                  }))
+                }}
+                onClose={() => setShowIndustryDropdown(false)}
+                hideSelectAllButtons={false}
+              />
+            )}
+          </div>
+          <div>
+            <Label htmlFor="roleCategory">Role Category</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setShowRoleCategoryDropdown(true)}
+            >
+              {selectedRoleCategories.length > 0 
+                ? `${selectedRoleCategories.length} role${selectedRoleCategories.length > 1 ? 's' : ''} selected`
+                : "Select role category"
+              }
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            
+            {showRoleCategoryDropdown && (
+              <RoleCategoryDropdown
+                selectedRoles={selectedRoleCategories}
+                onRoleChange={(roles) => {
+                  setSelectedRoleCategories(roles)
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    templateData: { ...prev.templateData, roleCategory: roles.join(', ') }
+                  }))
+                }}
+                onClose={() => setShowRoleCategoryDropdown(false)}
+                hideSelectAllButtons={true}
+              />
+            )}
+          </div>
+          <div>
+            <Label htmlFor="externalApplyUrl">External Apply URL</Label>
+            <Input
+              id="externalApplyUrl"
+              value={formData.templateData.externalApplyUrl}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                templateData: { ...prev.templateData, externalApplyUrl: e.target.value }
+              }))}
+              placeholder="https://company.com/apply"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="companyProfile">Company Profile</Label>
+          <Textarea
+            id="companyProfile"
+            value={formData.templateData.companyProfile}
+            onChange={(e) => setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, companyProfile: e.target.value }
+            }))}
+            placeholder="Brief description of your company..."
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4 border-t">
         <Button type="button" variant="outline">Cancel</Button>
         <Button type="submit" disabled={loading}>
           {loading ? 'Updating...' : 'Update Template'}
         </Button>
       </div>
-    </EmployerAuthGuard>
     </form>
+    
+    {/* Department Dropdown */}
+    {showDepartmentDropdown && (
+      <DepartmentDropdown
+        selectedDepartments={formData.templateData.department ? [formData.templateData.department] : []}
+        onDepartmentChange={(departments: string[]) => {
+          // For template editing, we only allow single selection
+          if (departments.length > 0) {
+            setFormData(prev => ({ 
+              ...prev, 
+              templateData: { ...prev.templateData, department: departments[0] }
+            }))
+          }
+          setShowDepartmentDropdown(false)
+        }}
+        onClose={() => setShowDepartmentDropdown(false)}
+        hideSelectAllButtons={true}
+      />
+    )}
+
+    {/* Industry Dropdown */}
+    {showIndustryDropdown && (
+      <IndustryDropdown
+        selectedIndustries={selectedIndustries}
+        onIndustryChange={(industries) => {
+          setSelectedIndustries(industries)
+          setFormData(prev => ({ 
+            ...prev, 
+            templateData: { ...prev.templateData, industryType: industries.join(', ') }
+          }))
+        }}
+        onClose={() => setShowIndustryDropdown(false)}
+        hideSelectAllButtons={false}
+      />
+    )}
+
+    {/* Role Category Dropdown */}
+    {showRoleCategoryDropdown && (
+      <RoleCategoryDropdown
+        selectedRoles={selectedRoleCategories}
+        onRoleChange={(roles) => {
+          setSelectedRoleCategories(roles)
+          setFormData(prev => ({ 
+            ...prev, 
+            templateData: { ...prev.templateData, roleCategory: roles.join(', ') }
+          }))
+        }}
+        onClose={() => setShowRoleCategoryDropdown(false)}
+        hideSelectAllButtons={true}
+      />
+    )}
+  </>
   )
 }

@@ -244,7 +244,8 @@ export default function CandidateProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <EmployerAuthGuard>
+      <div className="min-h-screen bg-gray-50">
       <EmployerNavbar />
 
       {/* Breadcrumb */}
@@ -293,7 +294,7 @@ export default function CandidateProfilePage() {
                     <AvatarFallback className="text-2xl bg-blue-100 text-blue-600">
                       {candidate.name
                         .split(" ")
-                        .map((n) => n[0])
+                        .map((n: string) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
@@ -392,7 +393,7 @@ export default function CandidateProfilePage() {
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Key skills</h3>
                         <div className="flex flex-wrap gap-2">
-                          {candidate.keySkills.map((skill) => (
+                          {candidate.keySkills.map((skill: string) => (
                             <Badge key={skill} className="bg-yellow-100 text-yellow-800 border-yellow-200">
                               {skill}
                             </Badge>
@@ -429,7 +430,7 @@ export default function CandidateProfilePage() {
                       {/* Other Projects */}
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Other projects</h3>
-                        {candidate.projects.map((project, index) => (
+                        {candidate.projects.map((project: any, index: number) => (
                           <div key={index} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="font-medium text-gray-900">{project.title}</h4>
@@ -478,12 +479,12 @@ export default function CandidateProfilePage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                              {candidate.itSkills.map((skill, index) => (
+                              {candidate.itSkills.map((skill: any, index: number) => (
                                 <tr key={index}>
-                                  <td className="px-4 py-2 text-sm text-gray-900">{skill.name}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-900">{skill.name || skill}</td>
                                   <td className="px-4 py-2 text-sm text-gray-600">{skill.version || "-"}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-600">{skill.lastUsed}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-600">{skill.experience}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-600">{skill.lastUsed || "-"}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-600">{skill.experience || "-"}</td>
                                 </tr>
                               ))}
                             </tbody>

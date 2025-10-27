@@ -34,10 +34,10 @@ export function SecureJobTapButton({ jobId, isSecure, onTapSuccess }: SecureJobT
       
       if (response.success) {
         setHasTapped(true)
-        toast.success(`Secure job tapped! ${response.data.premiumAwarded ? 'Premium badge awarded!' : ''}`)
+        toast.success(`Secure job tapped! ${response.data?.premiumAwarded ? 'Premium badge awarded!' : ''}`)
         
         if (onTapSuccess) {
-          onTapSuccess(response.data.tapCount, response.data.premiumAwarded)
+          onTapSuccess(response.data?.tapCount || 0, response.data?.premiumAwarded || false)
         }
       } else {
         toast.error(response.message || 'Failed to tap secure job')

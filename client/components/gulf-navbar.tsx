@@ -75,7 +75,7 @@ export default function GulfNavbar() {
 
     setIsLoggingIn(true)
     try {
-      await login(loginData.email, loginData.password)
+      await login(loginData)
       toast.success("Welcome to Gulf Jobs!")
       setShowLoginDialog(false)
       setLoginData({ email: '', password: '' })
@@ -106,7 +106,7 @@ export default function GulfNavbar() {
 
     setIsRegistering(true)
     try {
-      await signup(registerData.email, registerData.password, registerData.fullName)
+      await signup(registerData)
       toast.success("Account created successfully! Welcome to Gulf Jobs!")
       setShowRegisterDialog(false)
       setRegisterData({ 

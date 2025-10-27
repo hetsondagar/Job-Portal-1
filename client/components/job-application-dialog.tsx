@@ -248,7 +248,7 @@ export function JobApplicationDialog({
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
                             <span className="font-medium text-sm truncate">
-                              {resume.title || resume.filename || 'Untitled Resume'}
+                              {resume.title || 'Untitled Resume'}
                             </span>
                             {resume.isDefault && (
                               <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex-shrink-0">

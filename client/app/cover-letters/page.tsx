@@ -310,7 +310,7 @@ export default function CoverLettersPage() {
                           )}
                           <div className="flex items-center space-x-1">
                             <span>
-                              Uploaded: {new Date(coverLetter.createdAt).toLocaleDateString()}
+                              Uploaded: {new Date(coverLetter.lastUpdated).toLocaleDateString()}
                             </span>
                           </div>
                         </div>

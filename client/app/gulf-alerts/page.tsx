@@ -96,9 +96,9 @@ export default function GulfAlertsPage() {
   }
 
   const toPayload = () => ({
-    keywords: form.keywords ? form.keywords.split(',').map(k => k.trim()).filter(Boolean).join(',') : undefined,
+    keywords: form.keywords ? form.keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
     location: form.locations,
-    jobType: form.jobType,
+    jobType: form.jobType ? form.jobType.split(',').map(t => t.trim()) : [],
     experienceLevel: form.experienceLevel === 'any' ? undefined : form.experienceLevel,
     salaryMin: form.salaryMin ? parseInt(form.salaryMin) : undefined,
     salaryMax: form.salaryMax ? parseInt(form.salaryMax) : undefined,

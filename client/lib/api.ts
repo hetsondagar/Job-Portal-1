@@ -278,6 +278,128 @@ export interface JobBookmark {
   updatedAt?: string;
 }
 
+export interface JobTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  isPublic: boolean;
+  tags: string[];
+  templateData: JobTemplateData;
+  createdBy: string;
+  companyId: string;
+  usageCount: number;
+  lastUsedAt?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  creator?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  company?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface JobTemplateData {
+  // Basic Info (Step 1)
+  title: string;
+  companyName: string;
+  department: string;
+  location: string;
+  type: string;
+  experience: string;
+  salary: string;
+  description: string;
+  requirements: string;
+  benefits: string;
+  skills: string[];
+  role: string;
+  industryType: string;
+  roleCategory: string;
+  education: string[];
+  employmentType: string;
+  
+  // Consultancy fields
+  postingType: 'company' | 'consultancy';
+  consultancyName: string;
+  hiringCompanyName: string;
+  hiringCompanyIndustry: string;
+  hiringCompanyDescription: string;
+  showHiringCompanyDetails: boolean;
+  
+  // Hot Vacancy Premium Features
+  isHotVacancy: boolean;
+  urgentHiring: boolean;
+  multipleEmailIds: string[];
+  boostedSearch: boolean;
+  searchBoostLevel: string;
+  citySpecificBoost: string[];
+  videoBanner: string;
+  whyWorkWithUs: string;
+  companyReviews: string[];
+  autoRefresh: boolean;
+  refreshDiscount: number;
+  attachmentFiles: string[];
+  officeImages: string[];
+  companyProfile: string;
+  proactiveAlerts: boolean;
+  alertRadius: number;
+  alertFrequency: string;
+  featuredKeywords: string[];
+  customBranding: any;
+  superFeatured: boolean;
+  tierLevel: string;
+  externalApplyUrl: string;
+  hotVacancyPrice: number;
+  hotVacancyCurrency: string;
+  hotVacancyPaymentStatus: string;
+  
+  // Critical Premium Hot Vacancy Features
+  urgencyLevel: string;
+  hiringTimeline: string;
+  maxApplications: number;
+  applicationDeadline: string;
+  pricingTier: string;
+  price: number;
+  currency: string;
+  paymentId: string;
+  paymentDate: string;
+  priorityListing: boolean;
+  featuredBadge: boolean;
+  unlimitedApplications: boolean;
+  advancedAnalytics: boolean;
+  candidateMatching: boolean;
+  directContact: boolean;
+  seoTitle: string;
+  seoDescription: string;
+  keywords: string[];
+  impressions: number;
+  clicks: number;
+}
+
+export interface CreateJobTemplateRequest {
+  name: string;
+  description?: string;
+  category: string;
+  isPublic?: boolean;
+  tags?: string[];
+  templateData: JobTemplateData;
+}
+
+export interface UpdateJobTemplateRequest {
+  name?: string;
+  description?: string;
+  category?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  templateData?: Partial<JobTemplateData>;
+}
+
 export interface DashboardStats {
   applicationCount: number;
   profileViews: number;
@@ -3293,121 +3415,6 @@ class ApiService {
     }
   }
 
-  // Job Template endpoints
-  async getJobTemplates(params?: {
-    category?: string;
-    search?: string;
-    isPublic?: boolean;
-  }): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams();
-    if (params?.category && params.category !== 'all') {
-      queryParams.append('category', params.category);
-    }
-    if (params?.search) {
-      queryParams.append('search', params.search);
-    }
-    if (params?.isPublic !== undefined) {
-      queryParams.append('isPublic', params.isPublic.toString());
-    }
-
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    const response = await fetch(`${API_BASE_URL}/job-templates${query}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any[]>(response);
-  }
-
-  async getJobTemplateById(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async createJobTemplate(data: {
-    name: string;
-    description?: string;
-    category: string;
-    isPublic?: boolean;
-    templateData: any;
-    tags?: string[];
-  }): Promise<ApiResponse<any>> {
-    // Backend expects: title, description, categoryId, (companyId optional)
-    const payload = {
-      title: data.name,
-      description: data.description,
-      categoryId: data.category,
-    } as any;
-
-    const response = await fetch(`${API_BASE_URL}/job-templates`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload),
-      });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async updateJobTemplate(id: string, data: Partial<{
-    name: string;
-    description: string;
-    category: string;
-    isPublic: boolean;
-    templateData: any;
-    tags: string[];
-  }>): Promise<ApiResponse<any>> {
-    // Backend expects: title, description, categoryId
-    const payload: any = {};
-    if (data.name !== undefined) payload.title = data.name;
-    if (data.description !== undefined) payload.description = data.description;
-    if (data.category !== undefined) payload.categoryId = data.category;
-
-    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async deleteJobTemplate(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async toggleTemplatePublic(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/toggle-public`, {
-      method: 'PATCH',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async useJobTemplate(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/use`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
-
-  async createJobFromTemplate(id: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/create-job`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-    });
-
-    return this.handleResponse<any>(response);
-  }
 
   // Job At Pace: activate premium visibility for jobseeker (no payment)
   async activateJobAtPace(planId: string): Promise<ApiResponse<any>> {
@@ -4526,6 +4533,105 @@ class ApiService {
       body: JSON.stringify(data)
     });
     return response.json();
+  }
+
+  // ========== JOB TEMPLATES API ==========
+  
+  async getJobTemplates(params?: { category?: string; search?: string; isPublic?: boolean }): Promise<ApiResponse<JobTemplate[]>> {
+    const queryParams = new URLSearchParams();
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.isPublic !== undefined) queryParams.append('isPublic', params.isPublic.toString());
+    
+    const response = await fetch(`${API_BASE_URL}/job-templates?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobTemplate[]>(response);
+  }
+
+  async getJobTemplate(id: string): Promise<ApiResponse<JobTemplate>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobTemplate>(response);
+  }
+
+  async createJobTemplate(templateData: CreateJobTemplateRequest): Promise<ApiResponse<JobTemplate>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(templateData),
+    });
+
+    return this.handleResponse<JobTemplate>(response);
+  }
+
+  async updateJobTemplate(id: string, templateData: UpdateJobTemplateRequest): Promise<ApiResponse<JobTemplate>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(templateData),
+    });
+
+    return this.handleResponse<JobTemplate>(response);
+  }
+
+  async deleteJobTemplate(id: string): Promise<ApiResponse<void>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<void>(response);
+  }
+
+  async useJobTemplate(id: string): Promise<ApiResponse<JobTemplate>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/use`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobTemplate>(response);
+  }
+
+  async getJobTemplateCategories(): Promise<ApiResponse<string[]>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/categories`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<string[]>(response);
+  }
+
+  async toggleTemplatePublic(id: string): Promise<ApiResponse<JobTemplate>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/toggle-public`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<JobTemplate>(response);
+  }
+
+  async createJobFromTemplate(id: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/job-templates/${id}/apply`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getJobTemplateById(id: string): Promise<ApiResponse<JobTemplate>> {
+    return this.getJobTemplate(id);
+  }
+
+  // Send invitations (admin only)
+  async sendInvitations(data: { emails: string[]; template: string; type: string }): Promise<ApiResponse<any>> {
+    return this.post('/admin/send-invitations', data);
   }
 
 }

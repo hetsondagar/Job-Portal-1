@@ -821,7 +821,7 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
 
   const handleProfileUpdated = async (updatedData: any) => {
     // Force refresh user data to get updated profile (bypass rate limiting)
-    await refreshUser(true)
+    await refreshUser()
     setShowProfileCompletion(false)
     // Reload dashboard data to reflect changes
     loadDashboardData()
