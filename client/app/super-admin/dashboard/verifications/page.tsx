@@ -35,10 +35,10 @@ interface PendingVerification {
       userEmail: string
     }
     documents?: Array<{
-      type: string
-      url: string
-      name: string
-    }>
+    type: string
+    url: string
+    name: string
+  }>
   }
   createdAt: string
   users: Array<{

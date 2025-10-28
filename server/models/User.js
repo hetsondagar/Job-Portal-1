@@ -248,7 +248,7 @@ const User = sequelize.define('User', {
   },
   // Account status & verification
   account_status: {
-    type: DataTypes.ENUM('active', 'suspended', 'deleted', 'pending_verification', 'rejected'),
+    type: DataTypes.ENUM('active', 'suspended', 'deleted', 'pending_verification', 'rejected', 'inactive'),
     defaultValue: 'active'
   },
   session_version: {

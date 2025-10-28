@@ -1397,6 +1397,36 @@ class ApiService {
     }
   }
 
+  /**
+   * Upload branding media (for hot vacancy)
+   */
+  async uploadBrandingMedia(file: File): Promise<ApiResponse<{ filename: string; fileUrl: string; filePath: string; fileSize: number; originalName: string; mimeType: string; type: 'video' | 'photo' }>> {
+    try {
+      const formData = new FormData();
+      formData.append('media', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      console.log('🔍 API Service - Uploading branding media...');
+      const response = await fetch(`${API_BASE_URL}/user/branding-media/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const result = await this.handleResponse<{ filename: string; fileUrl: string; filePath: string; fileSize: number; originalName: string; mimeType: string; type: 'video' | 'photo' }>(response);
+      console.log('🔍 API Service - Branding media upload result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ API Service - uploadBrandingMedia error:', error);
+      throw error;
+    }
+  }
+
   // ========== AGENCY METHODS ==========
   
   /**

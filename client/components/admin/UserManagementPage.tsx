@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
@@ -33,9 +33,65 @@ interface UserManagementPageProps {
   icon: React.ReactNode
 }
 
+// Helper functions for status display
+const getStatusVariant = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'default'
+    case 'suspended':
+    case 'deleted':
+    case 'rejected':
+      return 'destructive'
+    case 'inactive':
+    case 'pending_verification':
+      return 'secondary'
+    default:
+      return 'secondary'
+  }
+}
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'bg-green-600 text-white'
+    case 'suspended':
+      return 'bg-red-600 text-white'
+    case 'inactive':
+      return 'bg-yellow-600 text-white'
+    case 'deleted':
+      return 'bg-gray-600 text-white'
+    case 'pending_verification':
+      return 'bg-blue-600 text-white'
+    case 'rejected':
+      return 'bg-red-500 text-white'
+    default:
+      return 'bg-gray-500 text-white'
+  }
+}
+
+const getStatusDisplayText = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'Active'
+    case 'suspended':
+      return 'Suspended'
+    case 'inactive':
+      return 'Inactive'
+    case 'deleted':
+      return 'Deleted'
+    case 'pending_verification':
+      return 'Pending Verification'
+    case 'rejected':
+      return 'Rejected'
+    default:
+      return status || 'Unknown'
+  }
+}
+
 export default function UserManagementPage({ portal, title, description, icon }: UserManagementPageProps) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,6 +103,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [showUserDialog, setShowUserDialog] = useState(false)
 
+  // Initialize state from URL parameters and load users
   useEffect(() => {
     if (authLoading) return
 
@@ -55,18 +112,59 @@ export default function UserManagementPage({ portal, title, description, icon }:
       return
     }
 
-    loadUsers()
-  }, [user, authLoading, router, currentPage, filterType, filterStatus])
+    // Get parameters from URL
+    const page = searchParams.get('page')
+    const search = searchParams.get('search')
+    const type = searchParams.get('type')
+    const status = searchParams.get('status')
+    
+    // Update state from URL parameters
+    if (page) setCurrentPage(parseInt(page))
+    if (search) setSearchTerm(search)
+    if (type) setFilterType(type)
+    if (status) setFilterStatus(status)
 
-  const loadUsers = async () => {
+    // Load users with URL parameters
+    loadUsers(
+      page ? parseInt(page) : undefined,
+      search || undefined,
+      type || undefined,
+      status || undefined
+    )
+  }, [user, authLoading, router, searchParams])
+
+  // Update URL parameters when state changes
+  const updateURL = (newParams: Record<string, string | number>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value && value !== 'all' && value !== 1) {
+        params.set(key, value.toString())
+      } else {
+        params.delete(key)
+      }
+    })
+    
+    const newURL = `${window.location.pathname}?${params.toString()}`
+    router.replace(newURL, { scroll: false })
+  }
+
+  const loadUsers = async (page?: number, search?: string, type?: string, status?: string) => {
     try {
       setLoading(true)
+      
+      // Use provided parameters or current state
+      const pageNum = page ?? currentPage
+      const searchQuery = search ?? searchTerm
+      const userType = type ?? filterType
+      const userStatus = status ?? filterStatus
+      
       const response = await apiService.getUsersByPortal(portal, {
-        page: currentPage,
+        page: pageNum,
         limit: 20,
-        search: searchTerm,
-        userType: filterType === 'all' ? undefined : filterType,
-        status: filterStatus === 'all' ? undefined : filterStatus
+        search: searchQuery,
+        userType: userType === 'all' ? undefined : userType,
+        status: userStatus === 'all' ? undefined : userStatus
       })
       
       if (response.success && response.data) {
@@ -87,12 +185,23 @@ export default function UserManagementPage({ portal, title, description, icon }:
     }
   }
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+  const toggleUserStatus = async (userId: string, currentStatus: string) => {
     try {
-      const response = await apiService.updateUserStatus(userId, !currentStatus ? 'active' : 'inactive')
+      // Determine new status based on current status
+      let newStatus: string
+      if (currentStatus === 'active') {
+        newStatus = 'suspended'
+      } else if (currentStatus === 'suspended') {
+        newStatus = 'active'
+      } else {
+        // For other statuses, toggle to active
+        newStatus = 'active'
+      }
+      
+      const response = await apiService.updateUserStatus(userId, newStatus)
       
       if (response.success) {
-        toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`)
+        toast.success(`User status updated to ${getStatusDisplayText(newStatus)}`)
         loadUsers()
       } else {
         toast.error('Failed to update user status')
@@ -106,11 +215,19 @@ export default function UserManagementPage({ portal, title, description, icon }:
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
+    updateURL({ page: 1, search: searchTerm })
     loadUsers()
   }
 
   const handleFilterChange = () => {
     setCurrentPage(1)
+    updateURL({ page: 1, type: filterType, status: filterStatus })
+    loadUsers()
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+    updateURL({ page: newPage })
     loadUsers()
   }
 
@@ -190,10 +307,10 @@ export default function UserManagementPage({ portal, title, description, icon }:
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button
-              onClick={loadUsers}
-              variant="outline"
-              className="text-white border-white/20 hover:bg-white/10"
+              <Button
+                onClick={() => loadUsers()}
+                variant="outline"
+                className="text-white border-white/20 hover:bg-white/10"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
@@ -225,6 +342,9 @@ export default function UserManagementPage({ portal, title, description, icon }:
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="jobseeker">Jobseekers</SelectItem>
                     <SelectItem value="employer">Employers</SelectItem>
+                    <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="superadmin">Super Admins</SelectItem>
+                    <SelectItem value="recruiter">Recruiters</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={(value) => { setFilterStatus(value); handleFilterChange() }}>
@@ -234,7 +354,11 @@ export default function UserManagementPage({ portal, title, description, icon }:
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="deleted">Deleted</SelectItem>
+                    <SelectItem value="pending_verification">Pending Verification</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
@@ -290,10 +414,10 @@ export default function UserManagementPage({ portal, title, description, icon }:
                             {user.user_type}
                           </Badge>
                           <Badge 
-                            variant={user.is_active ? 'default' : 'destructive'}
-                            className={user.is_active ? 'bg-green-600' : 'bg-gray-600'}
+                            variant={getStatusVariant(user.account_status)}
+                            className={getStatusColor(user.account_status)}
                           >
-                            {user.is_active ? 'Active' : 'Inactive'}
+                            {getStatusDisplayText(user.account_status)}
                           </Badge>
                           {user.region && (
                             <Badge variant="outline" className="text-blue-200 border-blue-200">
@@ -322,10 +446,10 @@ export default function UserManagementPage({ portal, title, description, icon }:
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleUserStatus(user.id, user.is_active)}
-                        className={user.is_active ? 'hover:text-red-400' : 'hover:text-green-400'}
+                        onClick={() => toggleUserStatus(user.id, user.account_status)}
+                        className={user.account_status === 'active' ? 'hover:text-red-400' : 'hover:text-green-400'}
                       >
-                        {user.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        {user.account_status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>
@@ -343,7 +467,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className="text-gray-900 border-gray-300 hover:bg-gray-100"
                   >
@@ -353,7 +477,7 @@ export default function UserManagementPage({ portal, title, description, icon }:
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="text-gray-900 border-gray-300 hover:bg-gray-100"
                   >
@@ -406,10 +530,10 @@ export default function UserManagementPage({ portal, title, description, icon }:
                   <div>
                     <label className="text-sm font-medium text-slate-300">Status</label>
                     <Badge 
-                      variant={selectedUser.is_active ? 'default' : 'destructive'}
-                      className={selectedUser.is_active ? 'bg-green-600' : 'bg-gray-600'}
+                      variant={getStatusVariant(selectedUser.account_status)}
+                      className={getStatusColor(selectedUser.account_status)}
                     >
-                      {selectedUser.is_active ? 'Active' : 'Inactive'}
+                      {getStatusDisplayText(selectedUser.account_status)}
                     </Badge>
                   </div>
                   <div>
@@ -449,10 +573,10 @@ export default function UserManagementPage({ portal, title, description, icon }:
                     Close
                   </Button>
                   <Button
-                    onClick={() => toggleUserStatus(selectedUser.id, selectedUser.is_active)}
-                    className={selectedUser.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                    onClick={() => toggleUserStatus(selectedUser.id, selectedUser.account_status)}
+                    className={selectedUser.account_status === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
                   >
-                    {selectedUser.is_active ? 'Deactivate' : 'Activate'} User
+                    {selectedUser.account_status === 'active' ? 'Suspend' : 'Activate'} User
                   </Button>
                 </div>
               </div>

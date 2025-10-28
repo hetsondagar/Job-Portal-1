@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown, TrendingUp, Zap, Star, Plus, Mail, ExternalLink, Building2, Video } from "lucide-react"
+import { ArrowLeft, Save, Eye, Send, AlertCircle, Camera, Upload, X, Image as ImageIcon, CheckCircle, ChevronDown, TrendingUp, Zap, Star, Plus, Mail, ExternalLink, Building2, Video, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -46,6 +46,7 @@ export default function PostJobPage() {
     requirements: "",
     benefits: "",
     skills: [] as string[],
+    currentSkillInput: "",
     role: "",
     industryType: "",
     roleCategory: "",
@@ -81,7 +82,7 @@ export default function PostJobPage() {
     superFeatured: false,
     tierLevel: "basic",
     externalApplyUrl: "",
-    hotVacancyPrice: 0,
+    hotVacancyPrice: 1000,
     hotVacancyCurrency: "INR",
     hotVacancyPaymentStatus: "pending",
     // CRITICAL PREMIUM HOT VACANCY FEATURES (from hot_vacancies table)
@@ -109,7 +110,7 @@ export default function PostJobPage() {
   const [jobPhotos, setJobPhotos] = useState<any[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [uploadedJobId, setUploadedJobId] = useState<string | null>(null)
-  const [brandingMedia, setBrandingMedia] = useState<{type: 'video' | 'photo', file: File, preview: string}[]>([])
+  const [brandingMedia, setBrandingMedia] = useState<{type: 'video' | 'photo', file?: File, preview: string, filename?: string}[]>([])
   const [uploadingBranding, setUploadingBranding] = useState(false)
   const [templates, setTemplates] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
@@ -131,6 +132,7 @@ export default function PostJobPage() {
   const [selectedClient, setSelectedClient] = useState<string>('') // 'own' or client ID
   const [loadingClients, setLoadingClients] = useState(false)
   const [clientSelectionMade, setClientSelectionMade] = useState(false)
+  const [companyData, setCompanyData] = useState<any>(null)
 
   // Dynamic steps based on whether it's a hot vacancy or not
   const allSteps = [
@@ -150,16 +152,28 @@ export default function PostJobPage() {
         id: index + 1 // Renumber steps when Step 4 is excluded
       }))
 
-  // ========== LOAD AGENCY CLIENTS ==========
+  // ========== LOAD COMPANY DATA AND AGENCY CLIENTS ==========
   useEffect(() => {
-    const checkAgencyAndLoadClients = async () => {
+    const loadCompanyDataAndClients = async () => {
       // Only proceed if user is authenticated and has a valid token
       if (user && user.companyId && !loading && apiService.isAuthenticated()) {
         try {
-          // Check if user's company is an agency
+          // Load company data
           const companyResponse = await apiService.getCompany(user.companyId)
           if (companyResponse.success && companyResponse.data) {
-            const companyAccountType = companyResponse.data.companyAccountType || 'direct'
+            const company = companyResponse.data
+            setCompanyData(company)
+            
+            // Auto-populate company name if not already set
+            if (company.name && !formData.companyName) {
+              setFormData(prev => ({
+                ...prev,
+                companyName: company.name
+              }))
+            }
+            
+            // Check if user's company is an agency
+            const companyAccountType = company.companyAccountType || 'direct'
             const isAgencyAccount = companyAccountType === 'recruiting_agency' || companyAccountType === 'consulting_firm'
             setIsAgency(isAgencyAccount)
             
@@ -178,7 +192,7 @@ export default function PostJobPage() {
             }
           }
         } catch (error) {
-          console.error('Error checking agency status:', error)
+          console.error('Error loading company data:', error)
         }
       } else if (user && !loading) {
         // Direct employer - auto-select "own company"
@@ -187,7 +201,7 @@ export default function PostJobPage() {
       }
     }
 
-    checkAgencyAndLoadClients()
+    loadCompanyDataAndClients()
   }, [user, loading])
 
   // Load job photos when uploadedJobId changes
@@ -249,8 +263,40 @@ export default function PostJobPage() {
                 .map((i: string) => i.replace(/\s*\(\d+\)\s*$/, '').trim()) : []
             setSelectedIndustries(industryArray)
             
+            // Sync selectedRoleCategories state
+            const roleCategoryArray = jobData.roleCategory ? 
+              jobData.roleCategory.split(', ')
+                .filter((r: string) => r.trim()) : []
+            setSelectedRoleCategories(roleCategoryArray)
+            
             // Extract metadata for consultancy fields
             const metadata = jobData.metadata || {};
+            
+            // Parse benefits to separate written text and selected checkboxes
+            const benefitsStr = jobData.benefits || '';
+            let writtenBenefits = '';
+            const commonBenefits = ["Health Insurance", "Dental Insurance", "Vision Insurance", "Life Insurance", "401(k) Plan", "Paid Time Off", "Flexible Hours", "Remote Work", "Professional Development", "Gym Membership", "Free Lunch", "Stock Options"];
+            const selectedBenefitsFromData: string[] = [];
+            
+            if (benefitsStr) {
+              // Split by newlines
+              const benefitLines = benefitsStr.split('\n').filter((b: string) => b.trim());
+              benefitLines.forEach((line: string) => {
+                const trimmed = line.trim();
+                // Check if it's a common benefit
+                if (commonBenefits.includes(trimmed)) {
+                  selectedBenefitsFromData.push(trimmed);
+                } else {
+                  // It's written text
+                  if (writtenBenefits) {
+                    writtenBenefits += '\n' + trimmed;
+                  } else {
+                    writtenBenefits = trimmed;
+                  }
+                }
+              });
+            }
+            setSelectedBenefits(selectedBenefitsFromData);
             
             setFormData((prev) => ({
               ...prev,
@@ -270,7 +316,7 @@ export default function PostJobPage() {
               salary: jobData.salary || '',
               description: jobData.description || '',
               requirements: jobData.requirements || '',
-              benefits: jobData.benefits || '',
+              benefits: writtenBenefits, // Only store written text, checkboxes handled separately
               skills: jobData.skills || [],
               role: jobData.role || '',
               industryType: jobData.industryType || '',
@@ -298,6 +344,8 @@ export default function PostJobPage() {
               featuredKeywords: jobData.featuredKeywords || [],
               customBranding: jobData.customBranding || {},
               superFeatured: jobData.superFeatured || false,
+              // Restore branding media from customBranding if it exists
+              brandingMediaRestored: jobData.customBranding?.brandingMedia || [],
               tierLevel: jobData.tierLevel || "basic",
               externalApplyUrl: jobData.externalApplyUrl || "",
               hotVacancyPrice: jobData.hotVacancyPrice || jobData.price || 0,
@@ -334,6 +382,32 @@ export default function PostJobPage() {
               }
             } catch (photoError) {
               console.error('Failed to load job photos:', photoError);
+            }
+            
+            // Restore branding media from customBranding
+            if (jobData.customBranding?.brandingMedia && Array.isArray(jobData.customBranding.brandingMedia)) {
+              console.log('📸 Restoring branding media:', jobData.customBranding.brandingMedia);
+              // Note: Blob URLs from previous sessions are invalid - we can only show metadata
+              // For actual preview, files need to be stored server-side with permanent URLs
+              const restoredMedia = jobData.customBranding.brandingMedia
+                .filter((item: any) => {
+                  // Only include items with valid server URLs (not blob URLs)
+                  const preview = item.preview || item.url || '';
+                  return preview && !preview.startsWith('blob:');
+                })
+                .map((item: any) => ({
+                  type: item.type || 'photo',
+                  preview: item.preview || item.url || '',
+                  filename: item.filename || 'uploaded-file'
+                }));
+              
+              if (restoredMedia.length > 0) {
+                setBrandingMedia(restoredMedia);
+              } else if (jobData.customBranding.brandingMedia.length > 0) {
+                // If we have media metadata but no valid URLs, show a message
+                console.log('⚠️ Branding media found but blob URLs expired. Files need to be re-uploaded or stored with permanent URLs.');
+                toast.info(`${jobData.customBranding.brandingMedia.length} branding media item(s) found. Please re-upload files for preview.`);
+              }
             }
             
             const isDraft = jobData.status === 'draft';
@@ -571,7 +645,8 @@ export default function PostJobPage() {
           seoDescription: template.templateData.seoDescription || "",
           keywords: template.templateData.keywords || [],
           impressions: template.templateData.impressions || 0,
-          clicks: template.templateData.clicks || 0
+          clicks: template.templateData.clicks || 0,
+          currentSkillInput: ""
         };
         
         console.log('📝 Setting form data:', newFormData);
@@ -591,6 +666,12 @@ export default function PostJobPage() {
   };
 
   const handleNext = () => {
+    // Validate hot vacancy pricing before proceeding to next step
+    if (formData.isHotVacancy && (!formData.hotVacancyPrice || formData.hotVacancyPrice <= 0)) {
+      toast.error('Please set a valid hot vacancy price in Step 4 before proceeding')
+      return
+    }
+    
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1)
     }
@@ -629,7 +710,19 @@ export default function PostJobPage() {
         type: formData.type || 'full-time',
         experience: formData.experience || 'fresher',
         salary: formData.salary || '',
-        benefits: formData.benefits || (selectedBenefits.length > 0 ? selectedBenefits.join(', ') : ''),
+        benefits: (() => {
+          const writtenBenefits = formData.benefits || '';
+          const selectedBenefitsList = selectedBenefits.length > 0 ? selectedBenefits : [];
+          // Combine written text and selected checkboxes
+          if (writtenBenefits && selectedBenefitsList.length > 0) {
+            return `${writtenBenefits}\n${selectedBenefitsList.join('\n')}`;
+          } else if (writtenBenefits) {
+            return writtenBenefits;
+          } else if (selectedBenefitsList.length > 0) {
+            return selectedBenefitsList.join('\n');
+          }
+          return '';
+        })(),
         skills: formData.skills || [],
         department: formData.department || '',
         role: formData.role || '',
@@ -799,6 +892,13 @@ export default function PostJobPage() {
       validationErrors.push('Salary range is required')
     }
     
+    // Validate hot vacancy pricing if it's a hot vacancy
+    if (formData.isHotVacancy) {
+      if (!formData.hotVacancyPrice || formData.hotVacancyPrice <= 0) {
+        validationErrors.push('Hot vacancy price is required and must be greater than 0')
+      }
+    }
+    
     if (validationErrors.length > 0) {
       toast.error(`Please fill in the following required fields: ${validationErrors.join(', ')}`)
       return
@@ -807,6 +907,18 @@ export default function PostJobPage() {
     try {
       setPublishing(true)
       console.log('📝 Submitting job data:', formData)
+      console.log('🔥 Hot vacancy details:', {
+        isHotVacancy: formData.isHotVacancy,
+        hotVacancyPrice: formData.hotVacancyPrice,
+        hotVacancyCurrency: formData.hotVacancyCurrency
+      })
+      
+      // Debug logging
+      console.log('🔍 Form Data before sending:', {
+        department: formData.department,
+        brandingMediaCount: brandingMedia.length,
+        isHotVacancy: formData.isHotVacancy
+      });
       
       const jobData = {
         title: formData.title,
@@ -816,9 +928,21 @@ export default function PostJobPage() {
         type: formData.type || 'full-time',
         experience: formData.experience || 'fresher',
         salary: formData.salary,
-        benefits: formData.benefits || (selectedBenefits.length > 0 ? selectedBenefits.join(', ') : ''),
+        benefits: (() => {
+          const writtenBenefits = formData.benefits || '';
+          const selectedBenefitsList = selectedBenefits.length > 0 ? selectedBenefits : [];
+          // Combine written text and selected checkboxes
+          if (writtenBenefits && selectedBenefitsList.length > 0) {
+            return `${writtenBenefits}\n${selectedBenefitsList.join('\n')}`;
+          } else if (writtenBenefits) {
+            return writtenBenefits;
+          } else if (selectedBenefitsList.length > 0) {
+            return selectedBenefitsList.join('\n');
+          }
+          return '';
+        })(),
         skills: formData.skills,
-        department: formData.department,
+        department: formData.department || '',
         role: formData.role,
         industryType: formData.industryType,
         roleCategory: formData.roleCategory,
@@ -868,9 +992,25 @@ export default function PostJobPage() {
           proactiveAlerts: formData.proactiveAlerts,
           superFeatured: formData.superFeatured,
           tierLevel: formData.tierLevel,
-          externalApplyUrl: formData.externalApplyUrl
+          externalApplyUrl: formData.externalApplyUrl,
+          customBranding: {
+            ...formData.customBranding,
+            brandingMedia: brandingMedia.length > 0 ? brandingMedia.map(item => ({
+              type: item.type,
+              preview: item.preview, // Now using server URLs from upload
+              filename: item.filename || (item.file ? item.file.name : 'unknown'),
+              size: item.file ? item.file.size : 0
+            })) : []
+          }
         })
       }
+      
+      // Debug logging for final jobData
+      console.log('📤 Sending jobData to backend:', {
+        department: jobData.department,
+        hasCustomBranding: !!jobData.customBranding,
+        brandingMediaCount: jobData.customBranding?.brandingMedia?.length || 0
+      });
 
              let response;
        if (editingJobId) {
@@ -900,7 +1040,7 @@ export default function PostJobPage() {
            // Only reset form for new jobs, not when editing
            setFormData({
              title: "",
-            companyName: "",
+            companyName: companyData?.name || "",
              department: "",
              location: "",
              type: "",
@@ -910,6 +1050,7 @@ export default function PostJobPage() {
              requirements: "",
              benefits: "",
              skills: [],
+             currentSkillInput: "",
              role: "",
              industryType: "",
              roleCategory: "",
@@ -1113,7 +1254,7 @@ export default function PostJobPage() {
   }
 
   // Branding Media Handlers
-  const handleBrandingMediaAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBrandingMediaAdd = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files) return
 
@@ -1127,10 +1268,9 @@ export default function PostJobPage() {
     }
 
     const newFiles = Array.from(files).slice(0, remainingSlots)
-    const newMedia: {type: 'video' | 'photo', file: File, preview: string}[] = []
-
-    newFiles.forEach(file => {
-      // Check file type
+    
+    // Validate files first
+    for (const file of newFiles) {
       const isVideo = file.type.startsWith('video/')
       const isPhoto = file.type.startsWith('image/')
 
@@ -1139,37 +1279,55 @@ export default function PostJobPage() {
         return
       }
 
-      // Check file size (videos: 50MB, photos: 5MB)
       const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024
       if (file.size > maxSize) {
         toast.error(`${file.name}: File too large. Max ${isVideo ? '50MB for videos' : '5MB for photos'}`)
         return
       }
-
-      // Create preview
-      const preview = URL.createObjectURL(file)
-      newMedia.push({
-        type: isVideo ? 'video' : 'photo',
-        file,
-        preview
-      })
-    })
-
-    setBrandingMedia(prev => [...prev, ...newMedia])
-    
-    if (newMedia.length > 0) {
-      toast.success(`Added ${newMedia.length} item(s). ${MAX_ITEMS - currentCount - newMedia.length} slots remaining`)
     }
 
-    // Reset input
-    event.target.value = ''
+    // Upload files to server
+    setUploadingBranding(true)
+    const uploadedMedia: {type: 'video' | 'photo', file?: File, preview: string, filename?: string}[] = []
+    
+    try {
+      for (const file of newFiles) {
+        // Upload to server
+        const uploadResponse = await apiService.uploadBrandingMedia(file)
+        
+        if (uploadResponse.success && uploadResponse.data) {
+          uploadedMedia.push({
+            type: uploadResponse.data.type as 'video' | 'photo',
+            file,
+            preview: uploadResponse.data.fileUrl,
+            filename: uploadResponse.data.filename
+          })
+        } else {
+          toast.error(`Failed to upload ${file.name}`)
+        }
+      }
+      
+      if (uploadedMedia.length > 0) {
+        setBrandingMedia(prev => [...prev, ...uploadedMedia])
+        toast.success(`Successfully uploaded ${uploadedMedia.length} file(s)`)
+      }
+    } catch (error: any) {
+      console.error('Error uploading branding media:', error)
+      toast.error(`Failed to upload files: ${error.message || 'Unknown error'}`)
+    } finally {
+      setUploadingBranding(false)
+      // Reset input
+      event.target.value = ''
+    }
   }
 
   const handleBrandingMediaRemove = (index: number) => {
     setBrandingMedia(prev => {
       const updated = prev.filter((_, i) => i !== index)
-      // Clean up object URL
-      URL.revokeObjectURL(prev[index].preview)
+      // Clean up object URL only if it's a blob URL
+      if (prev[index].preview.startsWith('blob:')) {
+        URL.revokeObjectURL(prev[index].preview)
+      }
       return updated
     })
     toast.info('Item removed')
@@ -1177,6 +1335,12 @@ export default function PostJobPage() {
 
   // Navigation handlers
   const goToNextStep = () => {
+    // Validate hot vacancy pricing before proceeding to next step
+    if (formData.isHotVacancy && (!formData.hotVacancyPrice || formData.hotVacancyPrice <= 0)) {
+      toast.error('Please set a valid hot vacancy price in Step 4 before proceeding')
+      return
+    }
+    
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1)
     }
@@ -1249,11 +1413,11 @@ export default function PostJobPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => {
+                        onClick={() => {
                         setSelectedTemplate("");
                         setFormData({
                           title: "",
-                          companyName: "",
+                          companyName: companyData?.name || "",
                           department: "",
                           location: "",
                           type: "",
@@ -1263,6 +1427,7 @@ export default function PostJobPage() {
                           requirements: "",
                           benefits: "",
                           skills: [],
+                          currentSkillInput: "",
                           role: "",
                           industryType: "",
                           roleCategory: "",
@@ -1425,7 +1590,14 @@ export default function PostJobPage() {
                     ...formData, 
                     [formData.postingType === "consultancy" ? "consultancyName" : "companyName"]: e.target.value 
                   })}
+                  disabled={formData.postingType === "company" && companyData?.name}
+                  className={formData.postingType === "company" && companyData?.name ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
+                {formData.postingType === "company" && companyData?.name && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Company name is automatically fetched from your company profile
+                  </p>
+                )}
               </div>
 
               {/* Consultancy Hiring Company Fields */}
@@ -1621,11 +1793,25 @@ export default function PostJobPage() {
                 <DepartmentDropdown
                   selectedDepartments={formData.department ? [formData.department] : []}
                   onDepartmentChange={(departments: string[]) => {
+                    console.log('📋 Department selected:', departments);
                     // For job posting, we only allow single selection
                     if (departments.length > 0) {
-                      setFormData({ ...formData, department: departments[0] })
+                      const selectedDept = departments[0];
+                      console.log('✅ Setting department to:', selectedDept);
+                      setFormData(prev => {
+                        const updated = { ...prev, department: selectedDept };
+                        console.log('📝 Updated formData.department:', updated.department);
+                        return updated;
+                      });
+                      setShowDepartmentDropdown(false);
+                      toast.success(`Selected: ${selectedDept}`);
                     } else {
-                      setFormData({ ...formData, department: "" })
+                      setFormData(prev => {
+                        const updated = { ...prev, department: "" };
+                        console.log('📝 Clearing department');
+                        return updated;
+                      });
+                      setShowDepartmentDropdown(false);
                     }
                   }}
                   onClose={() => setShowDepartmentDropdown(false)}
@@ -1791,14 +1977,54 @@ export default function PostJobPage() {
                 )}
               </label>
               <Input 
-                placeholder="e.g. SAP Security, SAP GRC, JavaScript, React (separate with commas)"
-                value={Array.isArray(formData.skills) ? formData.skills.join(', ') : formData.skills || ''}
+                placeholder="e.g. SAP Security, SAP GRC, JavaScript, React (press Enter or comma to add)"
+                value={formData.currentSkillInput || ''}
                 onChange={(e) => {
-                  const skillsArray = e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill);
-                  setFormData({ ...formData, skills: skillsArray });
+                  // Store current input value separately for editing
+                  setFormData({ ...formData, currentSkillInput: e.target.value });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const input = e.currentTarget.value.trim();
+                    if (input) {
+                      // Split by comma if it exists, otherwise use the entire input
+                      const newSkills = input.includes(',') 
+                        ? input.split(',').map(skill => skill.trim()).filter(skill => skill)
+                        : [input];
+                      
+                      // Add to existing skills, avoiding duplicates
+                      const existingSkills = Array.isArray(formData.skills) ? formData.skills : [];
+                      const combinedSkills = [...existingSkills, ...newSkills];
+                      const uniqueSkills = Array.from(new Set(combinedSkills));
+                      
+                      setFormData({ ...formData, skills: uniqueSkills, currentSkillInput: '' });
+                    }
+                  }
                 }}
               />
-              <p className="text-sm text-gray-500 mt-1">Skills highlighted with '' are preferred key skills</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Press <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Enter</kbd> or <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">,</kbd> to add skills
+              </p>
+              {Array.isArray(formData.skills) && formData.skills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.skills.map((skill, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {skill}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedSkills = formData.skills.filter((_, i) => i !== index);
+                          setFormData({ ...formData, skills: updatedSkills });
+                        }}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )
@@ -1907,11 +2133,26 @@ export default function PostJobPage() {
                   <Checkbox
                     id="isHotVacancy"
                     checked={formData.isHotVacancy}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isHotVacancy: checked as boolean })}
+                    onCheckedChange={(checked) => {
+                      const newValue = checked as boolean;
+                      setFormData({ 
+                        ...formData, 
+                        isHotVacancy: newValue,
+                        // Set default pricing when enabling hot vacancy
+                        hotVacancyPrice: newValue && formData.hotVacancyPrice === 0 ? 1000 : formData.hotVacancyPrice
+                      });
+                    }}
                   />
                   <label htmlFor="isHotVacancy" className="text-sm font-medium">
                     Make this a Hot Vacancy (Premium Job Posting)
                   </label>
+                  {formData.isHotVacancy && (
+                    <div className="ml-6 mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ <strong>Important:</strong> You'll need to set pricing in Step 4 (Hot Vacancy Features) before posting.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 {formData.isHotVacancy && (
@@ -2126,7 +2367,62 @@ export default function PostJobPage() {
                       </div>
                     </div>
                     
-                      {/* External Application URL */}
+                    {/* Hot Vacancy Pricing */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-300">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        💰 Hot Vacancy Pricing
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Hot Vacancy Price (INR)*
+                          </label>
+                          <Input
+                            type="number"
+                            placeholder="5000"
+                            value={formData.hotVacancyPrice}
+                            onChange={(e) => setFormData({ ...formData, hotVacancyPrice: parseInt(e.target.value) || 0 })}
+                            min="1"
+                            className="border-green-300"
+                          />
+                          <p className="text-xs text-gray-600 mt-1">
+                            Minimum ₹1,000 for hot vacancy features
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Currency
+                          </label>
+                          <Select 
+                            value={formData.hotVacancyCurrency} 
+                            onValueChange={(value) => setFormData({ ...formData, hotVacancyCurrency: value })}
+                          >
+                            <SelectTrigger className="border-green-300">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="INR">🇮🇳 INR (Indian Rupee)</SelectItem>
+                              <SelectItem value="USD">🇺🇸 USD (US Dollar)</SelectItem>
+                              <SelectItem value="EUR">🇪🇺 EUR (Euro)</SelectItem>
+                              <SelectItem value="GBP">🇬🇧 GBP (British Pound)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-yellow-800">
+                            <strong className="font-semibold">Important:</strong> Hot vacancy pricing is required for premium features. 
+                            This ensures your job gets maximum visibility and priority placement in search results.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* External Application URL */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-300">
                       <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         <ExternalLink className="h-5 w-5 text-blue-600" />
@@ -2269,22 +2565,31 @@ export default function PostJobPage() {
                               accept="image/*,video/*"
                               multiple
                               onChange={handleBrandingMediaAdd}
-                              disabled={brandingMedia.length >= 5}
+                              disabled={brandingMedia.length >= 5 || uploadingBranding}
                               className="hidden"
                               id="branding-media-upload"
                             />
                             <label
                               htmlFor="branding-media-upload"
-                              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed transition-all cursor-pointer ${
-                                brandingMedia.length >= 5
+                              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed transition-all ${
+                                brandingMedia.length >= 5 || uploadingBranding
                                   ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                                  : 'border-indigo-300 bg-white hover:bg-indigo-50 hover:border-indigo-400'
+                                  : 'border-indigo-300 bg-white hover:bg-indigo-50 hover:border-indigo-400 cursor-pointer'
                               }`}
                             >
-                              <Upload className="h-5 w-5 text-indigo-600" />
-                              <span className="text-sm font-medium text-gray-700">
-                                {brandingMedia.length >= 5 ? 'Maximum 5 items reached' : 'Click to upload photos or video'}
-                              </span>
+                              {uploadingBranding ? (
+                                <>
+                                  <Loader2 className="h-5 w-5 text-indigo-600 animate-spin" />
+                                  <span className="text-sm font-medium text-gray-700">Uploading...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-5 w-5 text-indigo-600" />
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {brandingMedia.length >= 5 ? 'Maximum 5 items reached' : 'Click to upload photos or video'}
+                                  </span>
+                                </>
+                              )}
                             </label>
                           </div>
                           
@@ -2307,13 +2612,33 @@ export default function PostJobPage() {
                                       src={item.preview}
                                       className="w-full h-full object-cover"
                                       muted
+                                      controls={false}
                                     />
                                   ) : (
-                                    <img
-                                      src={item.preview}
-                                      alt={`Branding ${index + 1}`}
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <>
+                                      {item.preview && !item.preview.startsWith('blob:') ? (
+                                        <img
+                                          src={item.preview}
+                                          alt={`Branding ${index + 1}`}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            console.error('Failed to load image:', item.preview);
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                          <div className="text-center text-gray-500 p-4">
+                                            <ImageIcon className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                                            <p className="text-xs font-medium">{item.filename || 'Image'}</p>
+                                            <p className="text-xs text-gray-400 mt-1">Preview unavailable</p>
+                                            {item.preview?.startsWith('blob:') && (
+                                              <p className="text-xs text-yellow-600 mt-1">Please re-upload file</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                   
                                   {/* Overlay */}
@@ -2338,15 +2663,17 @@ export default function PostJobPage() {
                                   </div>
                                   
                                   {/* File Size */}
-                                  <div className="absolute bottom-2 right-2">
-                                    <Badge variant="secondary" className="bg-white/90 backdrop-blur text-xs">
-                                      {(item.file.size / (1024 * 1024)).toFixed(1)} MB
-                                    </Badge>
-                                  </div>
+                                  {item.file && (
+                                    <div className="absolute bottom-2 right-2">
+                                      <Badge variant="secondary" className="bg-white/90 backdrop-blur text-xs">
+                                        {(item.file.size / (1024 * 1024)).toFixed(1)} MB
+                                      </Badge>
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 <p className="text-xs text-gray-600 mt-1 truncate">
-                                  {item.file.name}
+                                  {item.filename || (item.file ? item.file.name : 'Uploaded file')}
                                 </p>
                               </div>
                             ))}
@@ -2860,7 +3187,7 @@ export default function PostJobPage() {
                         <div className="flex flex-wrap gap-2">
                           {brandingMedia.map((item, index) => (
                             <Badge key={index} variant="secondary" className="text-xs">
-                              {item.type === 'video' ? '🎥' : '📸'} {item.file.name.substring(0, 20)}...
+                              {item.type === 'video' ? '🎥' : '📸'} {(item.filename || (item.file?.name || 'File')).substring(0, 20)}...
                             </Badge>
                           ))}
                         </div>

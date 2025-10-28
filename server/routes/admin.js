@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const router = express.Router();
 const { 
   User, 
@@ -502,6 +504,79 @@ router.get('/users/:userId/details', async (req, res) => {
   }
 });
 
+// Serve verification documents for admin/superadmin
+router.get('/verification-documents/:filename', authenticateToken, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+
+    console.log(`🔍 Admin document access request: ${filename} by user: ${user?.email} (${user?.user_type})`);
+
+    // Check if user is admin or superadmin
+    if (!['admin', 'superadmin'].includes(user.user_type)) {
+      console.log(`❌ Access denied for user: ${user?.email} (${user?.user_type})`);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    // Try multiple possible file paths and patterns
+    const possiblePaths = [
+      path.join(__dirname, '../uploads/verification-documents', filename),
+      // Try with different filename patterns
+      path.join(__dirname, '../uploads/verification-documents', filename.replace(/^.*\//, '')), // Remove any path prefix
+    ];
+    
+    // Also try to find files that start with the same pattern
+    const uploadDir = path.join(__dirname, '../uploads/verification-documents');
+    if (fs.existsSync(uploadDir)) {
+      try {
+        const files = fs.readdirSync(uploadDir);
+        const matchingFile = files.find(file => 
+          file === filename || 
+          file.includes(filename) || 
+          filename.includes(file.split('-').pop()?.split('.')[0]) // Match by the random number part
+        );
+        if (matchingFile) {
+          possiblePaths.push(path.join(uploadDir, matchingFile));
+        }
+      } catch (error) {
+        console.log('⚠️ Could not read upload directory:', error.message);
+      }
+    }
+    
+    console.log(`📁 Looking for file: ${filename}`);
+    console.log(`📁 Trying paths:`, possiblePaths);
+    
+    let filePath = possiblePaths.find(p => fs.existsSync(p));
+    
+    if (!filePath) {
+      console.log(`❌ File not found in any of the expected locations`);
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    // Set headers for PDF viewing
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    console.log(`✅ Serving file: ${filePath}`);
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error serving verification document:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve document',
+      error: error.message
+    });
+  }
+});
+
 // Get comprehensive company details for superadmin
 router.get('/companies/:companyId/details', async (req, res) => {
   try {
@@ -638,8 +713,22 @@ router.get('/companies/:companyId/details', async (req, res) => {
       limit: 50
     });
 
+    // Process verification documents to include proper URLs
+    let processedVerificationDocuments = company.verificationDocuments;
+    if (processedVerificationDocuments && processedVerificationDocuments.documents) {
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      processedVerificationDocuments = {
+        ...processedVerificationDocuments,
+        documents: processedVerificationDocuments.documents.map(doc => ({
+          ...doc,
+          url: doc.filename ? `${baseUrl}/api/admin/verification-documents/${doc.filename}` : doc.url
+        }))
+      };
+    }
+
     const companyDetails = {
       ...company.toJSON(),
+      verificationDocuments: processedVerificationDocuments,
       jobs: companyJobsWithApplications || [],
       statistics: {
         totalJobs,
@@ -934,7 +1023,7 @@ router.get('/users/portal/:portal', async (req, res) => {
 router.patch('/users/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { isActive } = req.body;
+    const { isActive, status } = req.body;
 
     const user = await User.findByPk(id);
     if (!user) {
@@ -944,12 +1033,75 @@ router.patch('/users/:id/status', async (req, res) => {
       });
     }
 
-    await user.update({ is_active: isActive });
+    // Handle both isActive (legacy) and status (new) parameters
+    let updateData = {};
+    let message = '';
+
+    if (status !== undefined) {
+      // New status-based suspension system
+      const validStatuses = ['active', 'suspended', 'deleted', 'pending_verification', 'rejected', 'inactive'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status. Must be one of: active, suspended, deleted, pending_verification, rejected, inactive'
+        });
+      }
+
+      updateData.account_status = status;
+      
+      // Also update is_active based on status
+      updateData.is_active = status === 'active';
+      
+      // Track the status change in activity logs
+      const { trackAdminAction } = require('../middleware/activityTracker');
+      await trackAdminAction(req.user.id, req, 'user_status_change', user.id, `${user.first_name} ${user.last_name}`);
+
+      switch (status) {
+        case 'active':
+          message = 'User activated successfully';
+          break;
+        case 'suspended':
+          message = 'User suspended successfully';
+          break;
+        case 'deleted':
+          message = 'User deleted successfully';
+          break;
+        case 'pending_verification':
+          message = 'User status set to pending verification';
+          break;
+        case 'rejected':
+          message = 'User status set to rejected';
+          break;
+        case 'inactive':
+          message = 'User status set to inactive due to inactivity';
+          break;
+        default:
+          message = 'User status updated successfully';
+      }
+    } else if (isActive !== undefined) {
+      // Legacy isActive system
+      updateData.is_active = isActive;
+      updateData.account_status = isActive ? 'active' : 'suspended';
+      message = `User ${isActive ? 'activated' : 'deactivated'} successfully`;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Either isActive or status parameter is required'
+      });
+    }
+
+    await user.update(updateData);
 
     res.json({
       success: true,
-      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-      data: { user: { id: user.id, is_active: user.is_active } }
+      message,
+      data: { 
+        user: { 
+          id: user.id, 
+          is_active: user.is_active,
+          account_status: user.account_status
+        } 
+      }
     });
   } catch (error) {
     console.error('Error updating user status:', error);

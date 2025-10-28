@@ -18,6 +18,8 @@ exports.createJob = async (req, res, next) => {
   try {
     console.log('🔍 Creating job with data:', req.body);
     console.log('👤 Authenticated user:', req.user.id, req.user.email);
+    console.log('📥 Received request body department:', req.body.department);
+    console.log('📥 Received request body customBranding:', req.body.customBranding ? 'Present' : 'Missing');
 
     const {
       title,
@@ -441,7 +443,7 @@ exports.createJob = async (req, res, next) => {
       department: department && department.trim() ? department : (region === 'gulf' ? 'General' : null),
       category,
       skills: Array.isArray(skills) ? skills : [],
-      benefits: Array.isArray(benefits) ? benefits : [],
+      benefits: benefits ? (Array.isArray(benefits) ? benefits : (typeof benefits === 'string' ? benefits.split('\n').filter(b => b.trim()) : [])) : null,
       remoteWork: remoteWork && remoteWork.trim() ? remoteWork : 'on-site',
       travelRequired: Boolean(travelRequired),
       shiftTiming: shiftTiming && shiftTiming.trim() ? shiftTiming : 'day',
@@ -478,7 +480,7 @@ exports.createJob = async (req, res, next) => {
       alertRadius: alertRadius || 50,
       alertFrequency: alertFrequency || 'immediate',
       featuredKeywords: Array.isArray(featuredKeywords) ? featuredKeywords : [],
-      customBranding: customBranding || {},
+      customBranding: (customBranding && typeof customBranding === 'object' && !Array.isArray(customBranding)) ? customBranding : {},
       superFeatured: Boolean(superFeatured),
       tierLevel: tierLevel || 'basic',
       externalApplyUrl: externalApplyUrl && externalApplyUrl.trim() ? externalApplyUrl.trim() : null,
@@ -545,11 +547,65 @@ exports.createJob = async (req, res, next) => {
       company_id: jobData.companyId,
       employerId: jobData.employerId,
       jobType: jobData.jobType,
+      department: jobData.department,
+      customBranding: jobData.customBranding ? JSON.stringify(jobData.customBranding).substring(0, 100) : 'None',
       location: jobData.location,
       status: jobData.status
     });
+    
+    // Debug JSONB fields
+    console.log('🔍 JSONB fields debug:', {
+      skills: jobData.skills,
+      certifications: jobData.certifications,
+      languages: jobData.languages,
+      tags: jobData.tags,
+      metadata: jobData.metadata,
+      multipleEmailIds: jobData.multipleEmailIds,
+      citySpecificBoost: jobData.citySpecificBoost,
+      companyReviews: jobData.companyReviews,
+      attachmentFiles: jobData.attachmentFiles,
+      officeImages: jobData.officeImages,
+      featuredKeywords: jobData.featuredKeywords,
+      customBranding: jobData.customBranding,
+      keywords: jobData.keywords
+    });
+    
+    console.log('✅ Final jobData before create - department:', jobData.department);
+    console.log('✅ Final jobData before create - customBranding:', jobData.customBranding?.brandingMedia ? `${jobData.customBranding.brandingMedia.length} items` : 'empty');
 
-    const job = await Job.create(jobData);
+    let job;
+    try {
+      job = await Job.create(jobData);
+      console.log('✅ Job created successfully with department:', job.department);
+      console.log('✅ Job created with customBranding:', job.customBranding?.brandingMedia ? `${job.customBranding.brandingMedia.length} items` : 'empty');
+    } catch (createError) {
+      console.error('❌ Job creation error:', createError);
+      console.error('Error details:', {
+        name: createError.name,
+        message: createError.message,
+        stack: createError.stack,
+        code: createError.code
+      });
+      
+      // Check if it's a JSON validation error
+      if (createError.message && createError.message.includes('invalid input syntax for type json')) {
+        console.error('🔍 JSON validation error detected. Checking JSONB fields...');
+        // Log each JSONB field to identify the problematic one
+        const jsonbFields = ['skills', 'certifications', 'languages', 'tags', 'metadata', 'multipleEmailIds', 'citySpecificBoost', 'companyReviews', 'attachmentFiles', 'officeImages', 'featuredKeywords', 'customBranding', 'keywords'];
+        jsonbFields.forEach(field => {
+          const value = jobData[field];
+          console.error(`Field ${field}:`, {
+            value,
+            type: typeof value,
+            isArray: Array.isArray(value),
+            isObject: typeof value === 'object' && value !== null,
+            stringified: JSON.stringify(value)
+          });
+        });
+      }
+      
+      throw createError;
+    }
 
     // Consume job posting quota
     try {
@@ -1117,22 +1173,13 @@ exports.getJobById = async (req, res, next) => {
           attributes: ['id', 'name', 'logo', 'industries', 'companySize', 'city', 'website', 'contactEmail', 'contactPhone'],
           required: false // Make it optional since companyId can be NULL
         },
-        {
-          model: Company,
-          as: 'HiringCompany',
-          attributes: ['id', 'name', 'logo', 'industries', 'city', 'companySize', 'website'],
-          required: false // Optional - only for agency jobs
-        },
-        {
-          model: Company,
-          as: 'PostedByAgency',
-          attributes: ['id', 'name', 'logo', 'companyAccountType', 'industry', 'city'],
-          required: false // Optional - only for agency jobs
-        },
+        // Removed HiringCompany and PostedByAgency includes as they use VIRTUAL fields
+        // These can be added back if the database columns exist
         {
           model: User,
           as: 'employer',
-          attributes: ['id', 'first_name', 'last_name', 'email']
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          required: false
         },
         {
           model: JobPhoto,
@@ -1141,7 +1188,10 @@ exports.getJobById = async (req, res, next) => {
           where: { isActive: true },
           required: false
         }
-      ]
+      ],
+      attributes: {
+        exclude: ['hiringCompanyId', 'postedByAgencyId'] // Exclude VIRTUAL fields from SELECT
+      }
     });
 
     if (!job) {
@@ -1520,7 +1570,7 @@ exports.getSimilarJobs = async (req, res, next) => {
           }
         ],
       limit: 200, // Increased for better selection
-      order: [['createdAt', 'DESC']] // Start with recent jobs
+      order: [['created_at', 'DESC']] // Start with recent jobs (using database column name)
     });
 
     debugInfo.steps.push(`Found ${candidateJobs.length} candidate jobs for analysis`);
@@ -1923,10 +1973,23 @@ exports.updateJob = async (req, res, next) => {
       // For consultancy jobs, use hiringCompanyIndustry if industryType is not provided
       industryType: (industryType && industryType.trim() ? industryType.trim() : null) || 
                     (postingType === 'consultancy' && hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null) ||
-                    job.industryType
+                    job.industryType,
+      // Ensure department is properly set
+      department: updateData.department !== undefined ? (updateData.department && updateData.department.trim() ? updateData.department.trim() : null) : job.department
     };
+    
+    console.log('🔄 Update job data:', {
+      department: finalUpdateData.department,
+      hasCustomBranding: !!finalUpdateData.customBranding,
+      brandingMediaCount: finalUpdateData.customBranding?.brandingMedia?.length || 0
+    });
 
     await job.update(finalUpdateData);
+    
+    // Reload to get updated values
+    await job.reload();
+    console.log('✅ Job updated successfully with department:', job.department);
+    console.log('✅ Job updated with customBranding:', job.customBranding?.brandingMedia ? `${job.customBranding.brandingMedia.length} items` : 'empty');
 
     return res.status(200).json({
       success: true,

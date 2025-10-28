@@ -49,6 +49,34 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // Check account status for suspended users
+    if (user.account_status === 'suspended') {
+      console.log('❌ [AUTH] User account is suspended');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been suspended. Please contact support for assistance.',
+        status: 'suspended'
+      });
+    }
+
+    if (user.account_status === 'deleted') {
+      console.log('❌ [AUTH] User account is deleted');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Account not found or has been deleted.',
+        status: 'deleted'
+      });
+    }
+
+    if (user.account_status === 'inactive') {
+      console.log('❌ [AUTH] User account is inactive due to inactivity');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been marked as inactive due to prolonged inactivity. Please log in to reactivate your account.',
+        status: 'inactive'
+      });
+    }
+
     console.log('✅ [AUTH] User authenticated successfully:', { id: user.id, type: user.user_type });
     req.user = {
       id: user.id,

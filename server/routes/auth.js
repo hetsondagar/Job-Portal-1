@@ -9,6 +9,7 @@ const { sequelize } = require('../config/sequelize');
 const { Op } = require('sequelize');
 const emailService = require('../services/emailService');
 const AdminNotificationService = require('../services/adminNotificationService');
+const { trackLogin, trackLogout } = require('../middleware/activityTracker');
 
 const router = express.Router();
 
@@ -820,6 +821,16 @@ router.post('/login', validateLogin, async (req, res) => {
     // Update last login
     await user.update({ last_login_at: new Date() });
 
+    // Reactivate inactive jobseekers when they log in
+    if (user.user_type === 'jobseeker' && user.account_status === 'inactive') {
+      const JobseekerInactivityService = require('../services/jobseekerInactivityService');
+      await JobseekerInactivityService.reactivateJobseekerAccount(user.id);
+      console.log('✅ Reactivated inactive jobseeker account:', user.email);
+    }
+
+    // Track login activity
+    await trackLogin(user.id, req, 'email');
+
     // Generate JWT token
     const token = generateToken(user);
 
@@ -1005,11 +1016,24 @@ router.get('/me', async (req, res) => {
 });
 
 // Logout endpoint
-router.post('/logout', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Logged out successfully'
-  });
+router.post('/logout', async (req, res) => {
+  try {
+    // Track logout activity if user is authenticated
+    if (req.user) {
+      await trackLogout(req.user.id, req);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout tracking error:', error);
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  }
 });
 
 // Refresh token endpoint

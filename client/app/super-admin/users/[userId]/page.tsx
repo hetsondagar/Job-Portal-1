@@ -346,10 +346,13 @@ export default function UserDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-600'
-      case 'suspended': return 'bg-red-600'
-      case 'deleted': return 'bg-gray-600'
-      default: return 'bg-gray-600'
+      case 'active': return 'bg-green-600 text-white'
+      case 'inactive': return 'bg-yellow-600 text-white'
+      case 'suspended': return 'bg-red-600 text-white'
+      case 'deleted': return 'bg-gray-600 text-white'
+      case 'pending_verification': return 'bg-blue-600 text-white'
+      case 'rejected': return 'bg-red-500 text-white'
+      default: return 'bg-gray-500 text-white'
     }
   }
 
@@ -392,7 +395,7 @@ export default function UserDetailPage() {
   const handleViewDocument = async (document: any) => {
     try {
       // Open verification document in new tab for viewing
-      const docUrl = `/api/verification/documents/${document.id || document.name}/view`
+      const docUrl = `/api/admin/verification-documents/${document.filename || document.id || document.name}`
       window.open(docUrl, '_blank')
       toast.success('Opening document for viewing...')
     } catch (error: any) {
@@ -403,7 +406,7 @@ export default function UserDetailPage() {
   const handleDownloadDocument = async (document: any) => {
     try {
       // Download verification document
-      const docUrl = `/api/verification/documents/${document.id || document.name}/download`
+      const docUrl = `/api/admin/verification-documents/${document.filename || document.id || document.name}`
       const link = document.createElement('a')
       link.href = docUrl
       link.download = `${document.name || 'verification-document'}.pdf`
@@ -469,7 +472,11 @@ export default function UserDetailPage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <Button
-              onClick={() => router.back()}
+              onClick={() => {
+                // Get current page from URL or default to 1
+                const currentPage = new URLSearchParams(window.location.search).get('page') || '1'
+                router.push(`/super-admin/users/normal?page=${currentPage}`)
+              }}
               variant="outline"
               size="sm"
               className="border-gray-300 text-gray-900 hover:bg-gray-100"
@@ -1344,29 +1351,58 @@ export default function UserDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-gray-900 flex items-center">
                     <Activity className="w-5 h-5 mr-2" />
-                    Activity Logs ({user.activityLogs.length})
+                    Activity Logs ({user.activityLogs?.length || 0})
                   </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Recent user activities and actions
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {user.activityLogs.length > 0 ? (
-                    <div className="space-y-3">
-                      {user.activityLogs.slice(0, 10).map((log) => (
+                  {user.activityLogs && user.activityLogs.length > 0 ? (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {user.activityLogs.slice(0, 20).map((log: any, index: number) => (
                         <div key={log.id} className="p-3 bg-gray-50 rounded border border-gray-200">
                           <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-gray-900 font-medium">{log.action}</p>
-                              <p className="text-sm text-gray-600">{log.details}</p>
-                              <p className="text-xs text-gray-500">{log.ipAddress}</p>
+                            <div className="flex-1">
+                              <p className="text-gray-900 font-medium capitalize">
+                                {log.activityType?.replace(/_/g, ' ') || 'Unknown Activity'}
+                              </p>
+                              {log.details && (
+                                <div className="text-sm text-gray-600 mt-1">
+                                  {typeof log.details === 'string' ? (
+                                    <p>{log.details}</p>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      {Object.entries(log.details).map(([key, value]) => (
+                                        <p key={key} className="text-xs">
+                                          <span className="font-medium">{key}:</span> {String(value)}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                <span>ID: {String(log.id || 'N/A')}</span>
+                                {log.jobId && <span>Job: {String(log.jobId)}</span>}
+                                {log.applicationId && <span>Application: {String(log.applicationId)}</span>}
+                              </div>
                             </div>
-                            <p className="text-xs text-gray-500">
-                              {new Date(log.createdAt).toLocaleDateString()}
-                            </p>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500">
+                                {new Date(log.timestamp || log.createdAt).toLocaleString()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-center py-8">No activity logs found</p>
+                    <div className="text-center py-8">
+                      <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No activity logs found</p>
+                      <p className="text-sm text-gray-400 mt-1">User activities will appear here</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -1376,37 +1412,86 @@ export default function UserDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-gray-900 flex items-center">
                     <Shield className="w-5 h-5 mr-2" />
-                    Active Sessions ({user.sessions.filter(s => s.isActive).length})
+                    Active Sessions ({user.sessions?.filter((s: any) => s.isActive).length || 0})
                   </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Current and recent login sessions
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {user.sessions.length > 0 ? (
-                    <div className="space-y-3">
-                      {user.sessions.slice(0, 5).map((session) => (
+                  {user.sessions && user.sessions.length > 0 ? (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {user.sessions.slice(0, 10).map((session: any, index: number) => (
                         <div key={session.id} className="p-3 bg-gray-50 rounded border border-gray-200">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-gray-900 text-sm">{session.ipAddress}</p>
-                              <p className="text-xs text-gray-600 truncate max-w-xs">
-                                {session.userAgent}
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <p className="text-gray-900 text-sm font-medium">{session.ipAddress || 'Unknown IP'}</p>
+                                <Badge className={session.isActive ? 'bg-green-600' : 'bg-gray-600'}>
+                                  {session.isActive ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              {session.userAgent && (
+                                <p className="text-xs text-gray-600 truncate max-w-xs mb-1">
+                                  {session.userAgent}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                                <span>Device: {String(session.deviceType || 'Unknown')}</span>
+                                <span>Method: {String(session.loginMethod || 'email')}</span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Last activity: {new Date(session.lastActivityAt || session.lastActivity || session.createdAt).toLocaleString()}
                               </p>
-                              <p className="text-xs text-gray-500">
-                                Last activity: {new Date(session.lastActivity).toLocaleString()}
-                              </p>
+                              {session.expiresAt && (
+                                <p className="text-xs text-gray-500">
+                                  Expires: {new Date(session.expiresAt).toLocaleString()}
+                                </p>
+                              )}
                             </div>
-                            <Badge className={session.isActive ? 'bg-green-600' : 'bg-gray-600'}>
-                              {session.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-center py-8">No sessions found</p>
+                    <div className="text-center py-8">
+                      <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No sessions found</p>
+                      <p className="text-sm text-gray-400 mt-1">User login sessions will appear here</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </div>
+
+            {/* Activity Summary */}
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2" />
+                  Activity Summary
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Overview of user activity patterns
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-2xl font-bold text-blue-600">{user.activityLogs?.length || 0}</p>
+                    <p className="text-sm text-gray-600">Total Activities</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <p className="text-2xl font-bold text-green-600">{user.sessions?.filter((s: any) => s.isActive).length || 0}</p>
+                    <p className="text-sm text-gray-600">Active Sessions</p>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <p className="text-2xl font-bold text-purple-600">{user.sessions?.length || 0}</p>
+                    <p className="text-sm text-gray-600">Total Sessions</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

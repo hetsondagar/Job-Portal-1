@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -26,6 +26,7 @@ import {
   Github,
   Edit,
   Loader2,
+  Video,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +34,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
@@ -51,14 +52,7 @@ export default function JobDetailPage() {
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
 
-  useEffect(() => {
-    if (params.jobId) {
-      fetchJobDetails()
-      fetchJobApplications()
-    }
-  }, [params.jobId])
-
-  const fetchJobDetails = async () => {
+  const fetchJobDetails = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -68,6 +62,7 @@ export default function JobDetailPage() {
       
       if (response.success && response.data) {
         console.log('✅ Job details fetched:', response.data)
+        console.log('🔍 Benefits data:', response.data.benefits, 'Type:', typeof response.data.benefits)
         
         // Extract consultancy metadata
         const metadata = response.data.metadata || {};
@@ -83,9 +78,25 @@ export default function JobDetailPage() {
         
         setJob(enrichedJob)
         
-        // Fetch other jobs from same company
+        // Fetch other jobs from same company - will be handled in a separate effect
+        // Store companyId for later fetching
         const companyId = (response.data as any).companyId || response.data?.company?.id
-        await fetchCompanyJobs(companyId)
+        if (companyId) {
+          // Call fetchCompanyJobs separately to avoid circular dependency
+          setCompanyJobsLoading(true)
+          try {
+            const jobsResponse = await apiService.getCompanyJobs(companyId, { limit: 5 })
+            if (jobsResponse.success && jobsResponse.data) {
+              const jobs = (jobsResponse.data.jobs || jobsResponse.data || []) as any[]
+              const filtered = jobs.filter(j => String(j.id) !== String(params.jobId))
+              setCompanyJobs(filtered)
+            }
+          } catch (error) {
+            setCompanyJobs([])
+          } finally {
+            setCompanyJobsLoading(false)
+          }
+        }
       } else {
         console.error('❌ Failed to fetch job details:', response)
         setError(response.message || 'Failed to fetch job details')
@@ -98,28 +109,9 @@ export default function JobDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.jobId])
 
-  const fetchCompanyJobs = async (companyId?: string) => {
-    try {
-      if (!companyId) return
-      setCompanyJobsLoading(true)
-      const response = await apiService.getCompanyJobs(companyId, { limit: 5 })
-      if (response.success && response.data) {
-        const jobs = (response.data.jobs || response.data || []) as any[]
-        const filtered = jobs.filter(j => String(j.id) !== String(params.jobId))
-        setCompanyJobs(filtered)
-      } else {
-        setCompanyJobs([])
-      }
-    } catch (error) {
-      setCompanyJobs([])
-    } finally {
-      setCompanyJobsLoading(false)
-    }
-  }
-
-  const fetchJobApplications = async () => {
+  const fetchJobApplications = useCallback(async () => {
     try {
       setApplicationsLoading(true)
       const response = await apiService.getEmployerApplications()
@@ -134,51 +126,17 @@ export default function JobDetailPage() {
     } finally {
       setApplicationsLoading(false)
     }
-  }
+  }, [params.jobId])
 
-  if (loading) {
-    return (
-    <EmployerAuthGuard>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-        <EmployerNavbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-              <p className="text-slate-600 dark:text-slate-400">Loading job details...</p>
-            </div>
-          </div>
-        </div>
-        <EmployerFooter />
-      </div>
-    </EmployerAuthGuard>
-    )
-  }
+  useEffect(() => {
+    if (params.jobId) {
+      fetchJobDetails()
+      fetchJobApplications()
+    }
+  }, [params.jobId, fetchJobDetails, fetchJobApplications])
 
-  if (error || !job) {
-    return (
-      <EmployerAuthGuard>
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-        <EmployerNavbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <p className="text-red-600 dark:text-red-400 mb-4">{error || 'Job not found'}</p>
-              <Button onClick={() => router.back()}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Go Back
-              </Button>
-            </div>
-          </div>
-        </div>
-        <EmployerFooter />
-      </div>
-      </EmployerAuthGuard>
-    )
-  }
-
-  // Transform job data for display
-  const transformedJob = {
+  // Transform job data for display (only if job exists)
+  const transformedJob = job ? {
     id: job.id,
     title: job.title || 'Untitled Job',
     // Company name - check for consultancy first
@@ -198,13 +156,27 @@ export default function JobDetailPage() {
     experience: job.experienceLevel || job.experience || 'Experience not specified',
     salary: job.salary || (job.salaryMin && job.salaryMax ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
     postedDate: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Date not available',
+    postedDateTime: job.createdAt ? new Date(job.createdAt).toLocaleString() : 'Date not available',
+    applicationDeadline: job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : null,
     applications: (job.applicationsCount ?? applications.length) || applications.length || 0,
     views: job.views || 0,
     status: job.status || 'draft',
     department: job.department || 'Department not specified',
     skills: Array.isArray(job.skills) ? job.skills : (job.skills ? job.skills.split(',').map((s: string) => s.trim()) : []),
     description: job.description || 'No description provided',
-    benefits: Array.isArray(job.benefits) ? job.benefits : (job.benefits ? job.benefits.split('\n').filter((b: string) => b.trim()) : []),
+    benefits: (() => {
+      // Handle different benefit formats: array (JSONB), string with newlines, or comma-separated
+      if (!job.benefits) return [];
+      if (Array.isArray(job.benefits)) return job.benefits.filter((b: string) => b && b.trim());
+      if (typeof job.benefits === 'string') {
+        // Try splitting by newlines first (for combined written + selected benefits)
+        const newlineSplit = job.benefits.split('\n').filter((b: string) => b.trim());
+        if (newlineSplit.length > 0) return newlineSplit;
+        // Fallback to comma-separated
+        return job.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b);
+      }
+      return [];
+    })(),
     companyInfo: {
       description: job.isConsultancy && job.showHiringCompanyDetails
         ? job.hiringCompany?.description || 'Company description not available'
@@ -215,16 +187,68 @@ export default function JobDetailPage() {
       website: job.company?.website || '',
       linkedin: job.company?.linkedin || '',
       location: job.company?.location || job.location || 'Location not specified'
-    }
+    },
+    brandingMedia: job.customBranding?.brandingMedia || []
+  } : null
+
+  if (loading) {
+    return (
+    <EmployerAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
+        <EmployerDashboardNavbar />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">Loading job details...</p>
+            </div>
+          </div>
+        </div>
+        <EmployerFooter />
+      </div>
+    </EmployerAuthGuard>
+    )
   }
 
+  if (error || !job || !transformedJob) {
+    return (
+      <EmployerAuthGuard>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
+        <EmployerDashboardNavbar />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-red-600 dark:text-red-400 mb-4">{error || 'Job not found'}</p>
+              <Button onClick={() => router.back()}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Go Back
+              </Button>
+            </div>
+          </div>
+        </div>
+        <EmployerFooter />
+      </div>
+      </EmployerAuthGuard>
+    )
+  }
 
   return (
     <EmployerAuthGuard>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <EmployerNavbar />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
+      <EmployerDashboardNavbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Background Effects - Blue theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base blue gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent blue gradient strip */}
+        <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         {/* Back Button */}
         <div className="mb-6">
           <Button
@@ -241,19 +265,19 @@ export default function JobDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Job Header */}
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-lg">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start space-x-4">
-                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-slate-400" />
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                         {transformedJob.title}
                       </h1>
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="text-lg text-slate-600 dark:text-slate-400">
+                        <p className="text-lg text-gray-700 dark:text-gray-300">
                         {transformedJob.company}
                       </p>
                         {transformedJob.isConsultancy && (
@@ -262,7 +286,7 @@ export default function JobDetailPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex items-center space-x-1">
                           <MapPin className="w-4 h-4" />
                           <span>{transformedJob.location}</span>
@@ -273,7 +297,7 @@ export default function JobDetailPage() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <Calendar className="w-4 h-4" />
-                          <span>{transformedJob.postedDate}</span>
+                          <span>{transformedJob.applicationDeadline ? `Deadline: ${transformedJob.applicationDeadline}` : transformedJob.postedDate}</span>
                         </div>
                       </div>
                     </div>
@@ -335,7 +359,7 @@ export default function JobDetailPage() {
             </Card>
 
             {/* Job Details Tabs */}
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-lg">
               <CardContent className="p-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                   <TabsList className="grid w-full grid-cols-3">
@@ -357,18 +381,18 @@ export default function JobDetailPage() {
                     <Separator />
 
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Benefits & Perks</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Benefits & Perks</h3>
                       {transformedJob.benefits && transformedJob.benefits.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {transformedJob.benefits.map((benefit: string, index: number) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                            <span className="text-slate-600 dark:text-slate-400">{benefit}</span>
+                          <div key={index} className="flex items-start space-x-2">
+                            <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-700 dark:text-gray-300">{benefit}</span>
                           </div>
                         ))}
                       </div>
                       ) : (
-                        <p className="text-slate-500 dark:text-slate-400 italic">No benefits information provided</p>
+                        <p className="text-gray-500 dark:text-gray-400 italic">No benefits information provided</p>
                       )}
                     </div>
                   </TabsContent>
@@ -400,15 +424,7 @@ export default function JobDetailPage() {
                         {transformedJob.companyInfo.description}
                       </p>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Founded</p>
-                          <p className="font-medium">{transformedJob.companyInfo.founded}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Employees</p>
-                          <p className="font-medium">{transformedJob.companyInfo.employees}</p>
-                        </div>
+                      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-slate-500 dark:text-slate-400">Industry</p>
                           <p className="font-medium">{transformedJob.companyInfo.industry}</p>
@@ -438,6 +454,55 @@ export default function JobDetailPage() {
                         )}
                       </div>
                     </div>
+                    
+                    {/* Company Branding Media - Hot Vacancy Feature */}
+                    {(Array.isArray(transformedJob.brandingMedia) && transformedJob.brandingMedia.length > 0) && (
+                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                          <Video className="h-5 w-5 text-indigo-600" />
+                          Company Branding Media
+                          {job?.isHotVacancy && (
+                            <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-700">
+                              Hot Vacancy
+                            </Badge>
+                          )}
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {transformedJob.brandingMedia.map((media: any, index: number) => {
+                            const previewUrl = media.preview || media.url || media;
+                            const isVideo = media.type === 'video' || previewUrl.includes('.mp4') || previewUrl.includes('.webm') || previewUrl.includes('.mov');
+                            
+                            return (
+                              <div key={index} className="relative group rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                                {isVideo ? (
+                                  <video
+                                    src={previewUrl}
+                                    className="w-full h-48 object-cover"
+                                    controls
+                                    preload="metadata"
+                                  />
+                                ) : (
+                                  <img
+                                    src={previewUrl}
+                                    alt={`Company branding ${index + 1}`}
+                                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => {
+                                      console.error('Failed to load branding media:', previewUrl);
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                )}
+                                <div className="absolute top-2 left-2">
+                                  <Badge variant="secondary" className="bg-white/90 backdrop-blur dark:bg-gray-800/90">
+                                    {isVideo ? '🎥 Video' : '📸 Photo'}
+                                  </Badge>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="applications" className="space-y-6">
@@ -485,7 +550,7 @@ export default function JobDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Job Actions */}
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-lg">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Job Actions</h3>
                 <div className="space-y-3">
@@ -504,7 +569,30 @@ export default function JobDetailPage() {
                     <Eye className="w-4 h-4 mr-2" />
                     Preview Job
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}/jobs/${transformedJob.id}`;
+                      const shareText = `Check out this job: ${transformedJob.title} at ${transformedJob.company}`;
+                      
+                      if (navigator.share) {
+                        navigator.share({
+                          title: transformedJob.title,
+                          text: shareText,
+                          url: shareUrl
+                        }).catch(err => {
+                          console.log('Error sharing:', err);
+                          // Fallback to clipboard
+                          navigator.clipboard.writeText(shareUrl);
+                          toast.success('Job link copied to clipboard!');
+                        });
+                      } else {
+                        navigator.clipboard.writeText(shareUrl);
+                        toast.success('Job link copied to clipboard!');
+                      }
+                    }}
+                  >
                     <Share2 className="w-4 h-4 mr-2" />
                     Share Job
                   </Button>
@@ -517,7 +605,7 @@ export default function JobDetailPage() {
             </Card>
 
             {/* Job Stats */}
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-lg">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Job Statistics</h3>
                 <div className="space-y-4">
@@ -537,14 +625,17 @@ export default function JobDetailPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-slate-400">Posted</span>
-                    <span className="font-semibold">{transformedJob.postedDate}</span>
+                    <div className="text-right">
+                      <div className="font-semibold">{transformedJob.postedDate}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{transformedJob.postedDateTime}</div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Other Jobs from Your Company */}
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-lg">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Other Jobs from Your Company</h3>

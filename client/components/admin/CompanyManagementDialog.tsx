@@ -370,16 +370,36 @@ export function CompanyManagementDialog({
                           <div key={index} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-2">
                               <h4 className="font-medium text-gray-900">{doc.type || `Document ${index + 1}`}</h4>
-                              {doc.url && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => window.open(doc.url, '_blank')}
-                                  className="text-blue-600 border-blue-500 hover:bg-blue-50"
-                                >
-                                  <Eye className="w-4 h-4 mr-1" />
-                                  View
-                                </Button>
+                              {(doc.url || doc.filename) && (
+                                <div className="flex space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const documentUrl = doc.url || `/api/admin/verification-documents/${doc.filename}`;
+                                      window.open(documentUrl, '_blank');
+                                    }}
+                                    className="text-blue-600 border-blue-500 hover:bg-blue-50"
+                                  >
+                                    <Eye className="w-4 h-4 mr-1" />
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const documentUrl = doc.url || `/api/admin/verification-documents/${doc.filename}`;
+                                      const link = document.createElement('a');
+                                      link.href = documentUrl;
+                                      link.download = doc.filename || `document-${index + 1}.pdf`;
+                                      link.click();
+                                    }}
+                                    className="text-green-600 border-green-500 hover:bg-green-50"
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Download
+                                  </Button>
+                                </div>
                               )}
                               </div>
                             {doc.description && (

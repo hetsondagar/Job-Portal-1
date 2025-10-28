@@ -50,8 +50,17 @@ router.post('/submit', authenticateToken, async (req, res) => {
     const { documents, companyInfo, additionalNotes, gstNumber, panNumber } = req.body;
     const userId = req.user.id;
 
+    console.log('📝 Verification submission request:', {
+      userId,
+      documentsCount: documents ? documents.length : 0,
+      documents: documents,
+      gstNumber,
+      panNumber
+    });
+
     // Validate documents
     if (!documents || documents.length === 0) {
+      console.log('❌ No documents provided in request');
       return res.status(400).json({
         success: false,
         message: 'At least one document is required for verification'

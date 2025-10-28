@@ -40,6 +40,42 @@ const authenticateToken = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    if (!user.is_active) {
+      console.log('❌ authenticateToken - User account is inactive');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Account is deactivated' 
+      });
+    }
+
+    // Check account status for suspended users
+    if (user.account_status === 'suspended') {
+      console.log('❌ authenticateToken - User account is suspended');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been suspended. Please contact support for assistance.',
+        status: 'suspended'
+      });
+    }
+
+    if (user.account_status === 'deleted') {
+      console.log('❌ authenticateToken - User account is deleted');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Account not found or has been deleted.',
+        status: 'deleted'
+      });
+    }
+
+    if (user.account_status === 'inactive') {
+      console.log('❌ authenticateToken - User account is inactive due to inactivity');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been marked as inactive due to prolonged inactivity. Please log in to reactivate your account.',
+        status: 'inactive'
+      });
+    }
+
     console.log('✅ authenticateToken - User authenticated:', user.email, user.user_type);
     req.user = user;
     next();

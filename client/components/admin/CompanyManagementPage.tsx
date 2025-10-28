@@ -275,27 +275,28 @@ export default function CompanyManagementPage({ portal, title, description, icon
       case 'verified':
       case 'premium_verified':
         return (
-          <Badge className="bg-green-600">
+          <Badge className="bg-green-600 text-xs px-2 py-1">
+            <ShieldCheck className="w-3 h-3 mr-1" />
             Verified
           </Badge>
         )
       case 'pending':
         return (
-          <Badge className="bg-amber-600">
+          <Badge className="bg-amber-600 text-xs px-2 py-1">
             <Clock className="w-3 h-3 mr-1" />
             Pending
           </Badge>
         )
       case 'rejected':
         return (
-          <Badge className="bg-red-600">
+          <Badge className="bg-red-600 text-xs px-2 py-1">
             <XCircle className="w-3 h-3 mr-1" />
             Rejected
           </Badge>
         )
       default:
         return (
-          <Badge className="bg-gray-600">
+          <Badge className="bg-gray-600 text-xs px-2 py-1">
             <AlertCircle className="w-3 h-3 mr-1" />
             Unverified
           </Badge>
@@ -440,154 +441,159 @@ export default function CompanyManagementPage({ portal, title, description, icon
                 <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {companies.map((company) => (
-                  <Card key={company.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                        <Building2 className="w-8 h-8 text-white" style={{ display: company.logo ? 'none' : 'flex' }} />
-                      </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{company.name}</h3>
-                            <p className="text-sm text-gray-600">{company.email}</p>
-                            {company.industries && company.industries.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {company.industries.slice(0, 2).map((industry: string, index: number) => (
-                                  <Badge key={index} variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                                    {industry}
-                                  </Badge>
-                                ))}
-                                {company.industries.length > 2 && (
-                                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                                    +{company.industries.length - 2} more
-                                  </Badge>
-                                )}
-                              </div>
-                            ) : company.industry && (
-                              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 mt-1">
-                                {company.industry}
-                              </Badge>
-                            )}
+                  <Card key={company.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow h-fit">
+                    <CardContent className="p-4">
+                      {/* Header Section */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            <Building2 className="w-6 h-6 text-white" style={{ display: company.logo ? 'none' : 'flex' }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-gray-900 text-sm truncate" title={company.name}>
+                              {company.name}
+                            </h3>
+                            <p className="text-xs text-gray-600 truncate" title={company.email}>
+                              {company.email}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex flex-col space-y-2">
-                            <Badge 
-                              variant="outline" 
-                              className={company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}
-                            >
-                              {company.region === 'india' ? (
-                                <>
-                                  <MapPin className="w-3 h-3 mr-1" />
-                                  India
-                                </>
-                              ) : (
-                                <>
-                                  <Globe className="w-3 h-3 mr-1" />
-                                  Gulf
-                                </>
-                              )}
-                            </Badge>
+                        <div className="flex flex-col space-y-1 flex-shrink-0">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${company.region === 'india' ? 'border-orange-500 text-orange-400' : 'border-cyan-500 text-cyan-400'}`}
+                          >
+                            {company.region === 'india' ? (
+                              <>
+                                <MapPin className="w-2 h-2 mr-1" />
+                                India
+                              </>
+                            ) : (
+                              <>
+                                <Globe className="w-2 h-2 mr-1" />
+                                Gulf
+                              </>
+                            )}
+                          </Badge>
                           <Badge 
                             variant={company.isActive ? 'default' : 'destructive'}
-                            className={company.isActive ? 'bg-blue-600' : 'bg-gray-600'}
+                            className={`text-xs ${company.isActive ? 'bg-blue-600' : 'bg-gray-600'}`}
                           >
                             {company.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>
                       </div>
-                      
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center text-sm text-gray-600">
-                            <Briefcase className="w-3 h-3 mr-1" />
-                            {company.totalJobsPosted || 0} jobs
-                          </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                            <Users className="w-3 h-3 mr-1" />
-                            {company.totalApplications || 0} applications
-                          </div>
-                        {company.rating && (
-                          <div className="flex items-center text-sm text-gray-600">
-                              <Star className="w-3 h-3 mr-1" />
-                            {typeof company.rating === 'number' ? company.rating.toFixed(1) : company.rating}
-                            </div>
-                          )}
-                        </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
+                      {/* Industry Tags */}
+                      <div className="mb-3">
+                        {company.industries && company.industries.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {company.industries.slice(0, 2).map((industry: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="text-xs bg-gray-100 text-gray-700 px-2 py-1">
+                                {industry}
+                              </Badge>
+                            ))}
+                            {company.industries.length > 2 && (
+                              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 px-2 py-1">
+                                +{company.industries.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : company.industry && (
+                          <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 px-2 py-1">
+                            {company.industry}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Stats Section */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="flex items-center text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
+                          <Briefcase className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{company.totalJobsPosted || 0} jobs</span>
+                        </div>
+                        <div className="flex items-center text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
+                          <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{company.totalApplications || 0} apps</span>
+                        </div>
+                      </div>
+
+                      {/* Verification Status */}
+                      <div className="mb-3">
+                        {getVerificationStatusBadge(company.verificationStatus)}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
                               setSelectedCompany(company)
                               setShowCompanyDialog(true)
-                        }}
-                        className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                          {company.verificationStatus !== 'verified' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                              onClick={() => handleApproveVerification(company.id)}
-                              className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white hover:text-green-400"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                      </Button>
-                          )}
-                          {company.verificationStatus !== 'verified' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleCompanyStatus(company.id, company.isActive)}
-                        className={`text-gray-900 hover:bg-gray-100 border-gray-300 bg-white ${
-                          company.isActive ? 'hover:text-red-400' : 'hover:text-green-400'
-                        }`}
-                      >
-                        {company.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                      </Button>
-                          )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-gray-900 hover:bg-gray-100 border-gray-300 bg-white">
-                            <MoreVertical className="w-4 h-4" />
+                            }}
+                            className="text-gray-700 hover:bg-gray-100 border-gray-300 bg-white text-xs px-2 py-1 h-7"
+                            title="View Details"
+                          >
+                            <Eye className="w-3 h-3" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedCompany(company)
-                            setShowCompanyDialog(true)
-                          }}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
                           {company.verificationStatus !== 'verified' && (
-                            <DropdownMenuItem onClick={() => handleApproveVerification(company.id)}>
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                Verify
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApproveVerification(company.id)}
+                              className="text-gray-700 hover:bg-green-50 hover:text-green-600 border-gray-300 bg-white text-xs px-2 py-1 h-7"
+                              title="Approve Verification"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-gray-700 hover:bg-gray-100 border-gray-300 bg-white text-xs px-2 py-1 h-7"
+                              title="More Actions"
+                            >
+                              <MoreVertical className="w-3 h-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedCompany(company)
+                              setShowCompanyDialog(true)
+                            }}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
                             </DropdownMenuItem>
-                            )}
-                              {company.verificationStatus !== 'verified' && (
-                          <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id, company.isActive)}>
-                            {company.isActive ? (
-                              <>
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
+                            {company.verificationStatus !== 'verified' && (
+                              <DropdownMenuItem onClick={() => handleApproveVerification(company.id)}>
                                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                                Activate
-                              </>
+                                Approve Verification
+                              </DropdownMenuItem>
                             )}
-                          </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleCompanyStatus(company.id, company.isActive)}>
+                              {company.isActive ? (
+                                <>
+                                  <XCircle className="w-4 h-4 mr-2" />
+                                  Deactivate Company
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                                  Activate Company
+                                </>
                               )}
-                          <DropdownMenuItem 
-                            onClick={() => deleteCompany(company.id)}
-                            className="text-red-400"
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => deleteCompany(company.id)}
+                              className="text-red-400"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete
@@ -595,8 +601,6 @@ export default function CompanyManagementPage({ portal, title, description, icon
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                        {getVerificationStatusBadge(company.verificationStatus || 'unverified')}
-                  </div>
                     </CardContent>
                   </Card>
                 ))}

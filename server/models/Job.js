@@ -82,8 +82,9 @@ const Job = sequelize.define('Job', {
     allowNull: true
   },
   benefits: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: null
   },
   jobType: {
     type: DataTypes.ENUM('full-time', 'part-time', 'contract', 'internship', 'freelance'),
@@ -131,8 +132,8 @@ const Job = sequelize.define('Job', {
     comment: 'Virtual locally; production may have is_salary_visible'
   },
   department: {
-    type: DataTypes.VIRTUAL,
-    comment: 'Virtual locally; jobs table has no department column'
+    type: DataTypes.STRING,
+    allowNull: true
   },
   category: {
     type: DataTypes.STRING,

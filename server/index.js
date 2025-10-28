@@ -18,6 +18,7 @@ const uploadDirs = [
   'uploads/resumes',
   'uploads/job-photos',
   'uploads/hot-vacancy-photos',
+  'uploads/branding-media',
   'uploads/agency-documents',
   'uploads/verification-documents',
   'uploads/profile-photos',
@@ -48,6 +49,12 @@ const userRoutes = require('./routes/user');
 const oauthRoutes = require('./routes/oauth');
 const companiesRoutes = require('./routes/companies');
 const jobsRoutes = require('./routes/jobs');
+
+// Import activity tracking middleware
+const { sessionManager } = require('./middleware/activityTracker');
+
+// Import inactivity management service
+const InactivityCronService = require('./services/inactivityCronService');
 const requirementsRoutes = require('./routes/requirements');
 const jobAlertsRoutes = require('./routes/job-alerts');
 const jobTemplatesRoutes = require('./routes/job-templates');
@@ -266,6 +273,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Activity tracking middleware
+app.use(sessionManager);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -614,6 +624,9 @@ const startServer = async () => {
         const contractExpiryService = require('./services/contractExpiryService');
         contractExpiryService.start();
         console.log('✅ Contract expiry monitoring service started');
+        
+        // Start inactivity management cron jobs
+        InactivityCronService.start();
       } catch (error) {
         console.warn('⚠️ Failed to start contract expiry service:', error.message);
       }

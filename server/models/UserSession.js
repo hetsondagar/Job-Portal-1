@@ -73,10 +73,6 @@ const UserSession = sequelize.define('UserSession', {
     allowNull: false,
     defaultValue: 'email',
     field: 'login_method'
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
   }
 }, {
   tableName: 'user_sessions',

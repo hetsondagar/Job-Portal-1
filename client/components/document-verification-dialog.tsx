@@ -161,7 +161,10 @@ export function DocumentVerificationDialog({
         documents: uploadedDocs.map(doc => ({
           type: doc.type,
           url: doc.url,
-          name: doc.file.name
+          filename: doc.url ? doc.url.split('/').pop() : null, // Extract filename from URL
+          name: doc.file.name,
+          size: doc.file.size,
+          uploadedAt: new Date().toISOString()
         })),
         companyInfo: companyData,
         gstNumber: formData.gstNumber,

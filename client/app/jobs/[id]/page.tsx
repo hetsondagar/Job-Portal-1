@@ -142,7 +142,9 @@ export default function JobDetailPage() {
               videoBanner: res.data.videoBanner || '',
               companyProfile: res.data.companyProfile || '',
               officeImages: res.data.officeImages || [],
-              attachmentFiles: res.data.attachmentFiles || []
+              attachmentFiles: res.data.attachmentFiles || [],
+              // Branding Media from customBranding
+              brandingMedia: res.data.customBranding?.brandingMedia || []
               }
               
               console.log('✅ Transformed job data:', transformedJob)
@@ -208,7 +210,9 @@ export default function JobDetailPage() {
               videoBanner: res.data.videoBanner || '',
               companyProfile: res.data.companyProfile || '',
               officeImages: res.data.officeImages || [],
-              attachmentFiles: res.data.attachmentFiles || []
+              attachmentFiles: res.data.attachmentFiles || [],
+              // Branding Media from customBranding
+              brandingMedia: res.data.customBranding?.brandingMedia || []
             }
             
             console.log('✅ Transformed job data (fallback):', transformedJob)
@@ -1129,8 +1133,67 @@ export default function JobDetailPage() {
                 </motion.div>
               )}
 
-              {/* Company Branding Media - MOVED UP FOR PROMINENCE */}
-              {(Array.isArray(job?.officeImages) && job.officeImages.length > 0) && (
+              {/* Company Branding Media - Hot Vacancy Feature */}
+              {(Array.isArray(job?.brandingMedia) && job.brandingMedia.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                >
+                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        <Video className="h-6 w-6 text-indigo-600" />
+                        Company Branding & Culture
+                        {job?.isHotVacancy && (
+                          <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-300">
+                            Hot Vacancy Feature
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {job.brandingMedia.map((media: any, index: number) => {
+                          const previewUrl = media.preview || media.url || media;
+                          const isVideo = media.type === 'video' || previewUrl.includes('.mp4') || previewUrl.includes('.webm') || previewUrl.includes('.mov');
+                          
+                          return (
+                            <div key={index} className="relative group rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                              {isVideo ? (
+                                <video
+                                  src={previewUrl}
+                                  className="w-full h-64 object-cover"
+                                  controls
+                                  preload="metadata"
+                                />
+                              ) : (
+                                <img
+                                  src={previewUrl}
+                                  alt={`Company branding ${index + 1}`}
+                                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => {
+                                    console.error('Failed to load branding media:', previewUrl);
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              )}
+                              <div className="absolute top-2 left-2">
+                                <Badge variant="secondary" className="bg-white/90 backdrop-blur">
+                                  {isVideo ? '🎥 Video' : '📸 Photo'}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+              
+              {/* Fallback: Display officeImages if brandingMedia is not available */}
+              {(Array.isArray(job?.officeImages) && job.officeImages.length > 0 && (!Array.isArray(job?.brandingMedia) || job.brandingMedia.length === 0)) && (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1140,7 +1203,7 @@ export default function JobDetailPage() {
                     <CardHeader>
                       <CardTitle className="text-2xl flex items-center gap-2">
                         <Building2 className="h-6 w-6 text-indigo-600" />
-                        Company Branding & Culture
+                        Office Photos
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1157,7 +1220,7 @@ export default function JobDetailPage() {
                             ) : (
                               <img
                                 src={typeof media === 'string' ? media : media.url}
-                                alt={`Company branding ${index + 1}`}
+                                alt={`Office photo ${index + 1}`}
                                 className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                               />
                             )}

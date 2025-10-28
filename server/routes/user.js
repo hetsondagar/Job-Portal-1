@@ -233,6 +233,56 @@ const jobPhotoUpload = multer({
   }
 });
 
+// Configure multer for branding media uploads (photos and videos)
+const brandingMediaStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/branding-media');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      console.log('📁 Created uploads/branding-media directory');
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    const filename = 'branding-' + uniqueSuffix + extension;
+    console.log('📄 Generated branding media filename:', filename);
+    cb(null, filename);
+  }
+});
+
+const brandingMediaUpload = multer({
+  storage: brandingMediaStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit for videos, 5MB for photos (checked in fileFilter)
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedImageTypes = ['.jpg', '.jpeg', '.jfif', '.png', '.gif', '.webp', '.bmp', '.svg'];
+    const allowedVideoTypes = ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.wmv', '.flv', '.m4v'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isImage = allowedImageTypes.includes(ext);
+    const isVideo = allowedVideoTypes.includes(ext);
+    
+    // Also check MIME type as fallback
+    const mimeIsImage = file.mimetype && file.mimetype.startsWith('image/');
+    const mimeIsVideo = file.mimetype && file.mimetype.startsWith('video/');
+    
+    console.log('🔍 Branding media file type check:', {
+      extension: ext,
+      mimetype: file.mimetype,
+      isImage: isImage || mimeIsImage,
+      isVideo: isVideo || mimeIsVideo
+    });
+    
+    if (isImage || isVideo || mimeIsImage || mimeIsVideo) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Only images (JPG, JPEG, JFIF, PNG, GIF, WebP, BMP, SVG) and videos (MP4, MOV, AVI, WebM, MKV, WMV, FLV, M4V) are allowed. Received: ${ext} (${file.mimetype})`));
+    }
+  }
+});
+
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
@@ -261,6 +311,42 @@ const authenticateToken = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+
+    if (!user.is_active) {
+      console.log('❌ User account is inactive');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Account is deactivated' 
+      });
+    }
+
+    // Check account status for suspended users
+    if (user.account_status === 'suspended') {
+      console.log('❌ User account is suspended');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been suspended. Please contact support for assistance.',
+        status: 'suspended'
+      });
+    }
+
+    if (user.account_status === 'deleted') {
+      console.log('❌ User account is deleted');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Account not found or has been deleted.',
+        status: 'deleted'
+      });
+    }
+
+    if (user.account_status === 'inactive') {
+      console.log('❌ User account is inactive due to inactivity');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been marked as inactive due to prolonged inactivity. Please log in to reactivate your account.',
+        status: 'inactive'
       });
     }
 
@@ -5200,6 +5286,65 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
     res.status(500).json({
       success: false,
       message: 'Failed to upload job photo: ' + error.message
+    });
+  }
+});
+
+// Branding media upload endpoint (for hot vacancy)
+router.post('/branding-media/upload', authenticateToken, (req, res, next) => {
+  brandingMediaUpload.single('media')(req, res, (err) => {
+    if (err) {
+      console.error('❌ Multer error:', err.message);
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'File upload failed'
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    console.log('🔍 Branding media upload request received');
+    console.log('🔍 File:', req.file);
+    console.log('🔍 User:', req.user.id);
+    console.log('🔍 Body:', req.body);
+
+    if (!req.file) {
+      console.log('❌ No file uploaded');
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const filename = req.file.filename;
+    const filePath = `/uploads/branding-media/${filename}`;
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
+    
+    console.log('✅ Generated branding media URL:', fileUrl);
+
+    // Determine file type
+    const isVideo = req.file.mimetype.startsWith('video/');
+    const fileType = isVideo ? 'video' : 'photo';
+
+    res.status(201).json({
+      success: true,
+      data: {
+        filename: filename,
+        fileUrl: fileUrl,
+        filePath: filePath,
+        fileSize: req.file.size,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        type: fileType
+      },
+      message: 'Branding media uploaded successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error uploading branding media:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload branding media: ' + error.message
     });
   }
 });
