@@ -158,6 +158,8 @@ interface Company {
 
   placeholderImage?: string
 
+  region?: string
+
 }
 
 

@@ -266,6 +266,8 @@ interface Job {
 
   showHiringCompanyDetails?: boolean
 
+  applicationDeadline?: string
+
 }
 
 
@@ -5429,13 +5431,13 @@ export default function JobsPage() {
 
                                   ? 'bg-green-600 hover:bg-green-700 cursor-default' 
 
-                                  : isApplicationDeadlinePassed(job.applicationDeadline)
+                                  : isApplicationDeadlinePassed(job.applicationDeadline || null)
                                     ? 'bg-gray-400 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
 
                               }`}
 
-                              disabled={appliedJobs.has(job.id) || isApplicationDeadlinePassed(job.applicationDeadline)}
+                              disabled={appliedJobs.has(job.id) || isApplicationDeadlinePassed(job.applicationDeadline || null)}
 
                             >
 
@@ -5449,7 +5451,7 @@ export default function JobsPage() {
 
                                 </>
 
-                              ) : isApplicationDeadlinePassed(job.applicationDeadline) ? (
+                              ) : isApplicationDeadlinePassed(job.applicationDeadline || null) ? (
 
                                 <>
 

@@ -184,6 +184,7 @@ export interface Job {
   employmentType?: string;
   department?: string;
   education?: string;
+  applicationDeadline?: string;
   // Hot Vacancy Premium Features
   isHotVacancy?: boolean;
   urgentHiring?: boolean;
