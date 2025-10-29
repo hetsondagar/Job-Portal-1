@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
@@ -155,8 +156,8 @@ export default function JobDetailPage() {
     type: job.jobType || job.type || 'Full-time',
     experience: job.experienceLevel || job.experience || 'Experience not specified',
     salary: job.salary || (job.salaryMin && job.salaryMax ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
-    postedDate: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Date not available',
-    postedDateTime: job.createdAt ? new Date(job.createdAt).toLocaleString() : 'Date not available',
+    postedDate: job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : (job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Date not available'),
+    postedDateTime: job.publishedAt ? new Date(job.publishedAt).toLocaleString() : (job.createdAt ? new Date(job.createdAt).toLocaleString() : 'Date not available'),
     applicationDeadline: job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : null,
     applications: (job.applicationsCount ?? applications.length) || applications.length || 0,
     views: job.views || 0,
@@ -277,6 +278,10 @@ export default function JobDetailPage() {
                         {transformedJob.title}
                       </h1>
                       <div className="flex items-center gap-2 mb-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={transformedJob.companyLogo} alt={transformedJob.company} />
+                          <AvatarFallback className="text-sm font-bold">{transformedJob.company[0]}</AvatarFallback>
+                        </Avatar>
                         <p className="text-lg text-gray-700 dark:text-gray-300">
                         {transformedJob.company}
                       </p>

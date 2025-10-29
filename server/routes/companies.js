@@ -370,7 +370,7 @@ router.get('/', async (req, res) => {
       attributes: [
         'id', 'name', 'slug', 'logo', 'industries', 'companySize', 'website', 
         'city', 'state', 'country', 'region', 'description', 'foundedYear', 
-        'revenue', 'companyType', 'isFeatured', 'isVerified', 'isActive', 'verificationStatus', 'created_at', 'updated_at',
+        'revenue', 'companyType', 'natureOfBusiness', 'companyTypes', 'isFeatured', 'isVerified', 'isActive', 'verificationStatus', 'created_at', 'updated_at',
         // Add claiming fields for registration flow
         'isClaimed', 'createdByAgencyId', 'claimedAt'
       ],

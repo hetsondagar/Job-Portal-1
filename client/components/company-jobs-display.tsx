@@ -192,7 +192,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                       <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
                         <IndianRupee className="w-4 h-4" />
                         <span>
-                          {job.salary ? job.salary : job.salaryMin && job.salaryMax 
+                          {job.salary ? (job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`) : job.salaryMin && job.salaryMax 
                             ? `${(job.salaryMin / 100000).toFixed(0)}-${(job.salaryMax / 100000).toFixed(0)} LPA` 
                             : 'Not specified'}
                         </span>

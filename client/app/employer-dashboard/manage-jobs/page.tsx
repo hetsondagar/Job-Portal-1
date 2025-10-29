@@ -477,7 +477,7 @@ export default function ManageJobsPage() {
                               </div>
                               <div className="flex items-center space-x-2 text-sm text-slate-600">
                                 <Calendar className="w-4 h-4" />
-                                <span>{formatDate(job.createdAt)}</span>
+                                <span>{job.applicationDeadline ? `Deadline: ${formatDate(job.applicationDeadline)}` : `Posted: ${formatDate(job.createdAt)}`}</span>
                               </div>
                             </div>
 
@@ -491,7 +491,7 @@ export default function ManageJobsPage() {
                                 <span>{job.views || 0} views</span>
                               </div>
                               <span>•</span>
-                              <span>{job.salary || (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Not specified')}</span>
+                              <span>{job.salary ? (job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`) : (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Not specified')}</span>
                               <span>•</span>
                               <span className={getExpiryDate(job.createdAt, job.validTill) === 'Expired' ? "text-red-600" : "text-green-600"}>
                                 {getExpiryDate(job.createdAt, job.validTill)}

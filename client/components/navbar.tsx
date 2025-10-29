@@ -343,19 +343,6 @@ export function Navbar() {
                     </div>
             </div>
 
-            {/* Job at Pace - Premium Link */}
-            <Link href="/job-at-pace">
-              <Button variant="ghost" className="text-slate-700 dark:text-slate-300 relative group">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4" />
-                  <span>Job at Pace</span>
-                  <div className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full">
-                    Premium
-                  </div>
-                </div>
-              </Button>
-            </Link>
-
             {/* Tools Dropdown */}
             <div className="relative group">
               <Button variant="ghost" className="text-slate-700 dark:text-slate-300">
@@ -370,6 +357,28 @@ export function Navbar() {
                   >
                     Salary Calculator
                   </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+              <div className="flex items-center space-x-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-600 dark:text-blue-400 w-4 h-4 font-bold drop-shadow-sm" />
+                  <input
+                    type="text"
+                    placeholder="Search jobs..."
+                    className="w-64 pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        const searchTerm = (e.target as HTMLInputElement).value.trim()
+                        if (searchTerm) {
+                          router.push(`/jobs?search=${encodeURIComponent(searchTerm)}`)
+                        }
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -454,25 +463,29 @@ export function Navbar() {
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 sm:w-96">
+            <SheetContent side="right" className="w-80 sm:w-96 max-h-screen overflow-y-auto">
               <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
-              <div className="flex flex-col space-y-6 mt-6">
-                <Link href="/jobs" className="text-2xl serif-heading text-slate-900 dark:text-white">
-                  Jobs
-                </Link>
-                <Link href="/companies" className="text-2xl serif-heading text-slate-900 dark:text-white">
-                  Companies
-                </Link>
-                <Link href="/job-at-pace" className="flex items-center space-x-2 text-lg font-medium text-slate-900 dark:text-white">
-                  <Zap className="w-5 h-5" />
-                  <span>Job at Pace</span>
-                  <div className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full">
-                    Premium
-                  </div>
-                </Link>
-                <Link href="/salary-calculator" className="text-lg font-medium text-slate-900 dark:text-white">
-                  Salary Calculator
-                </Link>
+              <div className="flex flex-col space-y-6 mt-6 pb-6">
+                {/* Mobile Jobs Button */}
+                <div>
+                  <Link href="/jobs" className="text-2xl serif-heading text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 block">
+                    Jobs
+                  </Link>
+                </div>
+
+                {/* Mobile Companies Button */}
+                <div>
+                  <Link href="/companies" className="text-2xl serif-heading text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 block">
+                    Companies
+                  </Link>
+                </div>
+
+                {/* Mobile Tools - Salary Calculator */}
+                <div>
+                  <Link href="/salary-calculator" className="text-2xl serif-heading text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
+                    Salary Calculator
+                  </Link>
+                </div>
                 
                 {/* Mobile User Menu */}
                 {user ? (

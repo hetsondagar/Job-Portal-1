@@ -498,8 +498,16 @@ export default function JobDetailPage() {
 
   const isExpired = (() => {
     const vt = (job as any)?.validTill
-    if (!vt) return false
-    return new Date() > new Date(vt)
+    const deadline = (job as any)?.applicationDeadline
+    const now = new Date()
+    
+    // Check validTill first (existing logic)
+    if (vt && now > new Date(vt)) return true
+    
+    // Check applicationDeadline
+    if (deadline && now > new Date(deadline)) return true
+    
+    return false
   })()
 
   const handleShare = (platform: string) => {
@@ -795,7 +803,21 @@ export default function JobDetailPage() {
                     )}
 
                     {isExpired && (
-                      <div className="w-full mb-3 text-center text-red-600 font-medium">Applications closed</div>
+                      <div className="w-full mb-3 text-center text-red-600 font-medium">
+                        {(() => {
+                          const vt = (job as any)?.validTill
+                          const deadline = (job as any)?.applicationDeadline
+                          const now = new Date()
+                          
+                          if (deadline && now > new Date(deadline)) {
+                            return `Application deadline passed (${new Date(deadline).toLocaleDateString()})`
+                          }
+                          if (vt && now > new Date(vt)) {
+                            return `Job expired (${new Date(vt).toLocaleDateString()})`
+                          }
+                          return 'Applications closed'
+                        })()}
+                      </div>
                     )}
                     <Button
                       onClick={job?.externalApplyUrl ? () => {
@@ -826,6 +848,8 @@ export default function JobDetailPage() {
                           🔥 Apply on Company Website
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </>
+                      ) : isExpired ? (
+                        'Application Closed'
                       ) : (
                         job?.isHotVacancy ? '🔥 Apply to Hot Vacancy' : 'Apply Now'
                       )}
@@ -1005,11 +1029,6 @@ export default function JobDetailPage() {
                             <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
                           </div>
                           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Key Skills</h3>
-                        </div>
-                        <div className="mb-3">
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Skills highlighted with <span className="font-medium text-blue-600">''</span> are preferred key skills
-                          </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {job.skills.map((skill: string, index: number) => (

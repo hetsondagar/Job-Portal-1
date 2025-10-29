@@ -1265,6 +1265,8 @@ export default function JobsPage() {
             logo: job.company?.logo || '/placeholder-logo.png',
 
             posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+            
+            applicationDeadline: job.applicationDeadline || job.validTill || null,
 
             applicants: job.applications || job.application_count || 0,
 
@@ -1533,6 +1535,8 @@ export default function JobsPage() {
             logo: job.company?.logo || '/placeholder-logo.png',
 
             posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+            
+            applicationDeadline: job.applicationDeadline || job.validTill || null,
 
             applicants: job.applications || job.application_count || 0,
 
@@ -1704,7 +1708,13 @@ export default function JobsPage() {
 
   const [withdrawingJobs, setWithdrawingJobs] = useState<Set<string>>(new Set())
 
-
+  // Function to check if application deadline has passed
+  const isApplicationDeadlinePassed = (deadline: string | null) => {
+    if (!deadline) return false;
+    const deadlineDate = new Date(deadline);
+    const now = new Date();
+    return deadlineDate < now;
+  }
 
   const handleUndoApply = async (jobId: string) => {
 
@@ -1902,25 +1912,6 @@ export default function JobsPage() {
 
 
 
-  // Scroll event listener for sticky search bar
-
-  useEffect(() => {
-
-    const handleScroll = () => {
-
-      const scrollY = window.scrollY
-
-      setIsStickyVisible(scrollY > 200)
-
-    }
-
-
-
-    window.addEventListener('scroll', handleScroll)
-
-    return () => window.removeEventListener('scroll', handleScroll)
-
-  }, [])
 
 
 
@@ -5224,6 +5215,18 @@ export default function JobsPage() {
 
                                 </div>
 
+                                {job.applicationDeadline && (
+                                  <div className="flex items-center space-x-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span className={isApplicationDeadlinePassed(job.applicationDeadline) ? 'text-red-600 font-medium' : 'text-slate-600 dark:text-slate-400'}>
+                                      {isApplicationDeadlinePassed(job.applicationDeadline) 
+                                        ? 'Deadline Passed' 
+                                        : `Deadline: ${new Date(job.applicationDeadline).toLocaleDateString()}`
+                                      }
+                                    </span>
+                                  </div>
+                                )}
+
                               </div>
 
 
@@ -5299,14 +5302,6 @@ export default function JobsPage() {
                                 )}
 
                               </div>
-
-
-
-                              <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2 mb-4">
-
-                                {job.description}
-
-                              </p>
 
 
 
@@ -5434,11 +5429,13 @@ export default function JobsPage() {
 
                                   ? 'bg-green-600 hover:bg-green-700 cursor-default' 
 
-                                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                  : isApplicationDeadlinePassed(job.applicationDeadline)
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
 
                               }`}
 
-                              disabled={appliedJobs.has(job.id)}
+                              disabled={appliedJobs.has(job.id) || isApplicationDeadlinePassed(job.applicationDeadline)}
 
                             >
 
@@ -5449,6 +5446,16 @@ export default function JobsPage() {
                                   <CheckCircle className="w-4 h-4 mr-1" />
 
                                   Applied
+
+                                </>
+
+                              ) : isApplicationDeadlinePassed(job.applicationDeadline) ? (
+
+                                <>
+
+                                  <AlertCircle className="w-4 h-4 mr-1" />
+
+                                  Application Closed
 
                                 </>
 

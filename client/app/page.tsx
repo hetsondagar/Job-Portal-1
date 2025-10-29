@@ -767,15 +767,18 @@ export default function HomePage() {
           const baseMapped = verifiedActiveCompanies.map((c: any) => ({
             id: c.id,
             name: c.name,
-            industry: c.industry || 'General',
+            industry: c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : (c.industry || 'General'),
+            industries: c.industries && Array.isArray(c.industries) ? c.industries : [],
             openings: 0,
             rating: 0,
             icon: '🏢',
-            color: getSectorColor(((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')),
+            color: getSectorColor(((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry||'').toLowerCase().includes('tech')?'technology':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('fin')?'finance':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('health')?'healthcare':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('auto')?'automotive':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('e-com')?'ecommerce':'technology')),
             location: [c.city, c.state, c.country].filter(Boolean).join(', '),
             employees: c.companySize || '',
             logo: c.logo || '/placeholder.svg?height=40&width=40',
-            sector: ((c.industry||'').toLowerCase().includes('tech')?'technology':(c.industry||'').toLowerCase().includes('fin')?'finance':(c.industry||'').toLowerCase().includes('health')?'healthcare':(c.industry||'').toLowerCase().includes('auto')?'automotive':(c.industry||'').toLowerCase().includes('e-com')?'ecommerce':'technology')
+            sector: (((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('tech')?'technology':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('fin')?'finance':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('health')?'healthcare':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('auto')?'automotive':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('e-com')?'ecommerce':'technology'),
+            natureOfBusiness: c.natureOfBusiness || [],
+            companyTypes: c.companyTypes || []
           }))
           // Fetch openings count per company using public jobs-by-company endpoint
           const withCounts = await Promise.all(baseMapped.map(async (co: any) => {
@@ -821,9 +824,11 @@ export default function HomePage() {
           location: j.location || j.city || j.state || j.country || '—',
           experience: j.experienceLevel || [j.experienceMin, j.experienceMax].filter(Boolean).join('-'),
           salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax}` : ''),
+          type: j.jobType || j.type || 'Full-time',
           skills: Array.isArray(j.skills) ? j.skills : [],
-          logo: '/placeholder.svg?height=40&width=40',
+          logo: j.company?.logo || j.companyLogo || '/placeholder.svg?height=40&width=40',
           posted: j.createdAt || '',
+          applicationDeadline: j.applicationDeadline || j.validTill || j.createdAt || '',
           applicants: j.applications || 0,
           urgent: j.isUrgent || j.is_urgent || false,
           sector: 'technology',
@@ -1058,9 +1063,9 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          {/* Companies Grid (2 per row) - Show only 4 */}
-          <div className="grid grid-cols-2 gap-8">
-            {(topCompanies && topCompanies.length > 0 ? topCompanies.slice(0, 4) : Array(4).fill(null)).map((company, index) => (
+          {/* Companies Grid (3 per row) - Show only 6 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(topCompanies && topCompanies.length > 0 ? topCompanies.slice(0, 6) : Array(6).fill(null)).map((company, index) => (
                 <motion.div
                 key={company ? company.id : `top-skel-${index}`}
                 initial={{ opacity: 0, y: 30 }}
@@ -1094,11 +1099,60 @@ export default function HomePage() {
                               {company.name ? company.name.substring(0, 2).toUpperCase() : '??'}
                             </AvatarFallback>
                           </Avatar>
-                            <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0">
-                            {company.industry}
-                          </Badge>
+                            <div className="flex items-center space-x-1">
+                              {company.industries && company.industries.length > 0 ? (
+                                company.industries.length > 3 ? (
+                                  <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0 font-medium">
+                                    Multi Industry
+                                  </Badge>
+                                ) : company.industries.length === 3 ? (
+                                  <>
+                                    <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0">
+                                      {company.industries[0]}
+                                    </Badge>
+                                    <Badge className="bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300 border-0 text-xs">
+                                      +2 more
+                                    </Badge>
+                                  </>
+                                ) : company.industries.length === 2 ? (
+                                  <>
+                                    <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0">
+                                      {company.industries[0]}
+                                    </Badge>
+                                    <Badge className="bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300 border-0 text-xs">
+                                      +1 more
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0">
+                                    {company.industries[0]}
+                                  </Badge>
+                                )
+                              ) : (
+                                <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-white border-0">
+                                  {company.industry}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">{company.name}</h3>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{company.name}</h3>
+                          <div className="flex items-center justify-center mb-4">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < Math.floor(company.rating || 0)
+                                      ? "text-yellow-400 fill-current"
+                                      : "text-slate-300 dark:text-slate-600"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-slate-600 dark:text-slate-400 ml-2">
+                              {company.rating || 0}
+                            </span>
+                          </div>
                           <div className="flex items-center justify-between">
                             <Button className="rounded-full bg-slate-900/80 dark:bg-white/10 text-white hover:bg-slate-900 transition-colors px-5">View Jobs</Button>
                             <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
@@ -1204,20 +1258,46 @@ export default function HomePage() {
                           <h3 className="font-bold text-slate-900 dark:text-white mb-1 text-base group-hover:text-blue-600 transition-colors line-clamp-2">
                             {job.title}
                         </h3>
-                          <p className="text-xs text-slate-700 dark:text-slate-400 mb-2">{job.company}</p>
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-400 mb-2">{job.company}</p>
 
-                          <div className="space-y-1 mb-3">
-                            <div className="flex items-center text-xs text-slate-700 dark:text-slate-400">
-                              <MapPin className="w-3 h-3 mr-1" />
-                              {job.location}
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-400">
+                              <div className="flex items-center">
+                                <MapPin className="w-3 h-3 mr-2" />
+                                <span className="truncate">{job.location}</span>
                           </div>
-                            <div className="flex items-center text-xs text-slate-700 dark:text-slate-400">
-                              <Briefcase className="w-3 h-3 mr-1" />
-                              {job.experience}
+                              <div className="flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                <span className="truncate">
+                                  {job.applicationDeadline 
+                                    ? new Date(job.applicationDeadline).toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric' 
+                                      })
+                                    : new Date(job.posted).toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric' 
+                                      })
+                                  }
+                                </span>
                         </div>
-                            <div className="flex items-center text-xs text-slate-700 dark:text-slate-400">
-                              <IndianRupee className="w-3 h-3 mr-1" />
-                              {job.salary}
+                            </div>
+                            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-400">
+                              <div className="flex items-center">
+                                <Briefcase className="w-3 h-3 mr-2" />
+                                <span className="truncate">{job.experience || 'Experience not specified'}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Users className="w-3 h-3 mr-1" />
+                                <span className="truncate">{job.applicants}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center text-xs font-bold text-slate-700 dark:text-slate-400">
+                              <span className="truncate capitalize">{job.type ? job.type.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Full-time'}</span>
+                            </div>
+                            <div className="flex items-center text-xs font-bold text-slate-700 dark:text-slate-400">
+                              <IndianRupee className="w-3 h-3 mr-2" />
+                              <span className="truncate">{job.salary ? (job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`) : 'Salary not specified'}</span>
                             </div>
                         </div>
                         
@@ -1240,16 +1320,6 @@ export default function HomePage() {
                         </div>
                         
                       <div>
-                        <div className="flex items-center justify-between text-xs mb-3">
-                          <span className="text-slate-600 dark:text-slate-500">
-                            <Clock className="w-3 h-3 inline mr-1" />
-                            {job.posted}
-                          </span>
-                          <span className="text-slate-700 dark:text-slate-400">
-                            <Users className="w-3 h-3 inline mr-1" />
-                            {job.applicants}
-                          </span>
-                        </div>
                           <Button
                           className={`w-full bg-gradient-to-r ${getSectorColor(job.sector)} hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-md transition-colors duration-300 text-sm py-2`}
                           >
@@ -1305,7 +1375,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
             {(featuredCompanies && featuredCompanies.length > 0 ? featuredCompanies.slice(0, 4) : Array(4).fill(null)).map((company, index) => (
               <div
                 key={company ? company.id : `feat-skel-${index}`}
@@ -1318,35 +1388,75 @@ export default function HomePage() {
                         <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
 
                       <div>
-                          <Avatar className="w-16 h-16 mx-auto mb-4 ring-2 ring-white/50 group-hover:ring-[3px] transition-all duration-300 shadow">
+                          <Avatar className="w-16 h-16 mx-auto mb-4 ring-2 ring-white/50 group-hover:ring-[3px] group-hover:scale-110 transition-all duration-300 shadow">
                           <AvatarImage src={company.logo} alt={company.name} />
                           <AvatarFallback className="text-lg font-bold">{company.name[0]}</AvatarFallback>
                         </Avatar>
                         <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg group-hover:text-blue-600 transition-colors duration-300">
                           {company.name}
                         </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{company.industry}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-500 mb-4">{company.location}</p>
+                        <div className="flex items-center flex-wrap gap-1 mb-2">
+                          {company.industries && company.industries.length > 0 ? (
+                            company.industries.length > 3 ? (
+                              <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full font-medium">
+                                Multi Industry
+                              </span>
+                            ) : company.industries.length === 3 ? (
+                              <>
+                                <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                  {company.industries[0]}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-500 bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded-full">
+                                  +2 more
+                                </span>
+                              </>
+                            ) : company.industries.length === 2 ? (
+                              <>
+                                <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                  {company.industries[0]}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-500 bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded-full">
+                                  +1 more
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                {company.industries[0]}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {company.industry}
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-1 mb-4">
+                          <div className="flex items-center flex-wrap gap-1">
+                            {Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 ? (
+                              company.natureOfBusiness.map((nature: string, index: number) => (
+                                <span key={index} className="text-xs text-slate-500 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                  {nature.replace(/\([^)]*\)/g, '').trim()}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-slate-500 dark:text-slate-500">Not specified</span>
+                            )}
+                        </div>
+                          <div className="flex items-center flex-wrap gap-1">
+                            {Array.isArray(company.companyTypes) && company.companyTypes.length > 0 ? (
+                              company.companyTypes.map((type: string, index: number) => (
+                                <span key={index} className="text-xs text-slate-500 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                  {type.replace('Software as a Service', 'SaaS').replace('Software as Service', 'SaaS')}
+                          </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-slate-500 dark:text-slate-500">Not specified</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div>
-                        <div className="flex items-center justify-center mb-3">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 ${
-                                  i < Math.floor(company.rating)
-                                    ? "text-yellow-400 fill-current"
-                                    : "text-slate-300 dark:text-slate-600"
-                                }`}
-                              />
-                            ))}
-                        </div>
-                          <span className="text-sm text-slate-600 dark:text-slate-400 ml-2">
-                            {company.rating} ({company.reviews} reviews)
-                          </span>
-                          </div>
                         <div className="flex items-center justify-center text-sm mb-4">
                           <span className="font-semibold text-slate-900 dark:text-white">{company.activeJobsCount || company.openings || 0} openings</span>
                           </div>

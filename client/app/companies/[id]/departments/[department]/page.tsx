@@ -326,15 +326,28 @@ function DepartmentJobsPage() {
                                 <div className="flex items-center text-slate-600 dark:text-slate-300">
                                   <Briefcase className="w-5 h-5 mr-2 text-slate-400" />
                                   <div>
-                                    <div className="font-medium">{job.experience}</div>
-                                    <div className="text-sm text-slate-500">Experience</div>
+                                    <div className="font-medium">
+                                      {(() => {
+                                        const exp = job.experience || 'Not specified';
+                                        if (exp === 'fresher' || exp === 'entry') return 'Fresher (0-1 years)';
+                                        if (exp === 'junior') return 'Junior (1-3 years)';
+                                        if (exp === 'mid') return 'Mid-level (3-5 years)';
+                                        if (exp === 'senior') return 'Senior (5+ years)';
+                                        if (exp === 'lead') return 'Lead (7+ years)';
+                                        if (exp === 'executive') return 'Executive (10+ years)';
+                                        return exp;
+                                      })()}
+                                    </div>
+                                    <div className="text-sm text-slate-500">Experience Level</div>
                                   </div>
                                 </div>
                                 <div className="flex items-center text-slate-600 dark:text-slate-300">
                                   <IndianRupee className="w-5 h-5 mr-2 text-slate-400" />
                                   <div>
-                                    <div className="font-medium">{job.salary}</div>
-                                    <div className="text-sm text-slate-500">Per Annum</div>
+                                    <div className="font-medium">
+                                      {job.salary ? (job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`) : 'Salary not specified'}
+                                    </div>
+                                    <div className="text-sm text-slate-500">Salary</div>
                                   </div>
                                 </div>
                               </div>

@@ -1084,49 +1084,56 @@ function CompanyDetailPage() {
       <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative">
       <Navbar />
 
-      {/* Company Header */}
-      <div className="pt-20 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Back Button */}
-          <div className="mb-6">
-            <Button
-              variant="outline"
-              onClick={() => router.back()}
-              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Companies
-            </Button>
-          </div>
-          
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <Card className="border-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl shadow-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
-              {/* Company Banner */}
-              {company.banner ? (
-                <div className="h-48 relative overflow-hidden">
-                  <img 
-                    src={company.banner.startsWith('http') ? company.banner : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.banner}`} 
-                    alt={`${company.name} banner`}
-                          className="w-full h-full object-cover"
-                    onLoad={() => {
-                      console.log('✅ Company banner loaded:', company.banner);
-                    }}
-                    onError={(e) => {
-                      console.error('❌ Company banner failed:', company.banner);
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/20" />
-                </div>
-              ) : (
-                <div className={`h-32 bg-gradient-to-r ${sectorColors.bg} relative`}>
-                  <div className="absolute inset-0 bg-black/10" />
-                      </div>
-                    )}
+      {/* Company Header - Full Width Banner */}
+      <div className="relative w-full">
+        {/* Back Button - Positioned absolutely */}
+        <div className="absolute top-6 left-4 sm:left-6 z-10">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 shadow-lg"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Companies
+          </Button>
+        </div>
 
-              <CardContent className={`p-8 ${company.banner ? '-mt-20' : '-mt-16'} relative`}>
-                <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-6">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="w-24 h-24 ring-4 ring-white dark:ring-slate-800 shadow-xl">
+        {/* Full Width Banner */}
+        <div className="relative w-full h-[35vh] min-h-[400px] overflow-hidden">
+          {company.banner ? (
+            <img 
+              src={company.banner.startsWith('http') ? company.banner : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.banner}`} 
+              alt={`${company.name} banner`}
+              className="w-full h-full object-cover"
+              onLoad={() => {
+                console.log('✅ Company banner loaded:', company.banner);
+              }}
+              onError={(e) => {
+                console.error('❌ Company banner failed:', company.banner);
+              }}
+            />
+          ) : (
+            <div className={`w-full h-full bg-gradient-to-r ${sectorColors.bg} relative`}>
+              <div className="absolute inset-0 bg-black/10" />
+            </div>
+          )}
+          
+          {/* Overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent" />
+          
+          {/* Company Info Overlay */}
+          <div className="absolute inset-0 flex items-center">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.8 }}
+                className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8"
+              >
+                {/* Left Side - Company Info */}
+                <div className="flex-1 text-white">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <Avatar className="w-20 h-20 ring-4 ring-white/30 shadow-xl">
                       <AvatarImage 
                         src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder.svg"} 
                         alt={`${company.name} logo`}
@@ -1135,151 +1142,102 @@ function CompanyDetailPage() {
                         }}
                         onError={(e) => {
                           console.error('❌ Company logo failed to load:', company.logo);
-                          console.log('🔍 Full company data:', company);
-                          // Try to reload with different URL format
                           const img = e.target as HTMLImageElement;
                           if (company.logo && !company.logo.startsWith('http')) {
                             img.src = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${company.logo}`;
                           }
                         }}
                       />
-                      <AvatarFallback className={`text-3xl font-bold ${sectorColors.text}`}>
+                      <AvatarFallback className="text-2xl font-bold bg-white/20 text-white">
                         {(company.name||'')[0]?.toUpperCase() || 'C'}
                       </AvatarFallback>
                     </Avatar>
                     
-                     <div className="flex flex-col justify-end mt-16">
-                       <div className="flex items-center gap-2 mb-1">
-                         <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">{toDisplayText(company.name) || 'Company'}</h1>
-                         <div className="flex items-center bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 px-2 py-1 rounded-md border border-yellow-200/50 dark:border-yellow-700/30 shadow-sm">
-                           <Star className="w-3 h-3 text-yellow-500 fill-current mr-1" />
-                           <span className="font-bold text-sm text-slate-900 dark:text-white">{company.rating || 0}</span>
-                           {(company.reviews && company.reviews > 0) && (
-                             <span className="ml-1 text-xs text-slate-600 dark:text-slate-400 font-medium">({company.reviews})</span>
-                           )}
-                         </div>
-                  </div>
-
-                      <div className="flex items-center flex-wrap gap-1 mb-1">
-                          {/* Company Types */}
-                          {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
-                            <>
-                              {(showAllCompanyTypes ? company.companyTypes : company.companyTypes.slice(0, 2)).map((type: string, index: number) => (
-                              <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 text-xs px-2 py-0.5">
-                                  {type}
-                                </Badge>
-                              ))}
-                              {company.companyTypes.length > 2 && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs px-2 py-0.5 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                                onClick={() => setShowAllCompanyTypes(!showAllCompanyTypes)}
-                              >
-                                  {showAllCompanyTypes ? 'Show Less' : `+${company.companyTypes.length - 2} more`}
-                                </Badge>
-                              )}
-                            </>
-                          )}
-                          
-                          {/* Nature of Business */}
-                          {company.natureOfBusiness && Array.isArray(company.natureOfBusiness) && company.natureOfBusiness.length > 0 && (
-                            <>
-                              {(showAllNatureOfBusiness ? company.natureOfBusiness : company.natureOfBusiness.slice(0, 1)).map((nature: string, index: number) => (
-                              <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-2 py-0.5">
-                                  {nature}
-                                </Badge>
-                              ))}
-                              {company.natureOfBusiness.length > 1 && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs px-2 py-0.5 cursor-pointer hover:bg-purple-50 hover:border-purple-300 transition-colors"
-                                onClick={() => setShowAllNatureOfBusiness(!showAllNatureOfBusiness)}
-                              >
-                                  {showAllNatureOfBusiness ? 'Show Less' : `+${company.natureOfBusiness.length - 1} more`}
-                                </Badge>
-                              )}
-                            </>
+                    <div>
+                      <h1 className="text-3xl lg:text-4xl font-bold mb-2">{toDisplayText(company.name) || 'Company'}</h1>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                          <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                          <span className="font-bold text-sm">{company.rating || 0}</span>
+                          {(company.reviews && company.reviews > 0) && (
+                            <span className="ml-1 text-xs opacity-80">({company.reviews})</span>
                           )}
                         </div>
-                      
-                      <div className="text-xs text-slate-600 dark:text-slate-400">
-                            {locationDisplay}
-                          </div>
+                        <div className="text-sm opacity-90">
+                          {company.followers || '0'} followers
                         </div>
-                      </div>
-
-                  <div className="flex-1">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end mb-4">
-
-                      <div className="flex items-center space-x-3 mt-4 lg:mt-0">
-                        <Button
-                          variant="outline"
-                          onClick={toggleFollow}
-                          className={`${isFollowing ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-600 hover:from-blue-100 hover:to-indigo-100" : "bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700"} backdrop-blur-sm shadow-sm transition-all duration-200`}
-                        >
-                          <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
-                          {isFollowing ? "Following" : "Follow"}
-                        </Button>
-                        {(!user || user.userType === 'jobseeker') && (
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowRatingDialog(true)}
-                            className={`${userRating ? "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200 text-yellow-700 hover:from-yellow-100 hover:to-amber-100" : "bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700"} backdrop-blur-sm shadow-sm transition-all duration-200`}
-                          >
-                            <Star className={`w-4 h-4 mr-2 ${userRating ? "fill-current" : ""}`} />
-                            {userRating ? `Rated ${userRating}★` : "Rate"}
-                          </Button>
-                        )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm shadow-sm transition-all duration-200">
-                              <Share2 className="w-4 h-4 mr-2" />
-                              Share
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleShare("link")}>
-                              <LinkIcon className="w-4 h-4 mr-2" />
-                              Copy Link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare("whatsapp")}>
-                              <MessageCircle className="w-4 h-4 mr-2" />
-                              WhatsApp
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare("email")}>
-                              <Mail className="w-4 h-4 mr-2" />
-                              Email
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Company Description */}
+                  <p className="text-lg opacity-90 mb-4 max-w-2xl">
+                    {company.description || 'Leading company in innovation and technology solutions.'}
+                  </p>
+                  
+                  {/* Company Types */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
+                      <>
+                        {(showAllCompanyTypes ? company.companyTypes : company.companyTypes.slice(0, 3)).map((type: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="bg-white/20 text-white border-white/30 text-sm px-3 py-1">
+                            {type}
+                          </Badge>
+                        ))}
+                        {company.companyTypes.length > 3 && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-sm px-3 py-1 cursor-pointer hover:bg-white/20 hover:border-white/50 transition-colors text-white border-white/30"
+                            onClick={() => setShowAllCompanyTypes(!showAllCompanyTypes)}
+                          >
+                            {showAllCompanyTypes ? 'Show Less' : `+${company.companyTypes.length - 3} more`}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Follow Button */}
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full">
+                    + Follow
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                
+                {/* Right Side - Company Image/Visual */}
+                <div className="hidden lg:block flex-shrink-0">
+                  <div className="w-64 h-48 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                    <div className="text-center text-white/80">
+                      <Building2 className="w-16 h-16 mx-auto mb-2 opacity-60" />
+                      <p className="text-sm">Company Visual</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Company Details Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className={`grid w-full ${company?.whyJoinUs || company?.why_join_us ? 'grid-cols-3' : 'grid-cols-2'} bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl`}>
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              Overview
-            </TabsTrigger>
-            {(company?.whyJoinUs || company?.why_join_us) && (
-            <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              Why Join Us
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              Jobs ({companyJobs.length})
-            </TabsTrigger>
-          </TabsList>
+      <div className="bg-white dark:bg-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+              <TabsList className={`grid w-full ${company?.whyJoinUs || company?.why_join_us ? 'grid-cols-3' : 'grid-cols-2'} bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl`}>
+                <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  Overview
+                </TabsTrigger>
+                {(company?.whyJoinUs || company?.why_join_us) && (
+                <TabsTrigger value="why" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  Why Join Us
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="jobs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  Jobs ({companyJobs.length})
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="overview" className="space-y-8">
+              <TabsContent value="overview" className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* About Company */}
               <div className="lg:col-span-2 space-y-8">
@@ -1973,7 +1931,9 @@ function CompanyDetailPage() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+            </Tabs>
+          </motion.div>
+        </div>
       </div>
 
       {/* Authentication Dialog */}

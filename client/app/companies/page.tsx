@@ -1125,25 +1125,6 @@ export default function CompaniesPage() {
 
 
 
-  // Scroll event listener for sticky search bar
-
-  useEffect(() => {
-
-    const handleScroll = () => {
-
-      const scrollY = window.scrollY
-
-      setIsStickyVisible(scrollY > 200)
-
-    }
-
-
-
-    window.addEventListener('scroll', handleScroll)
-
-    return () => window.removeEventListener('scroll', handleScroll)
-
-  }, [])
 
 
 
@@ -1817,7 +1798,7 @@ export default function CompaniesPage() {
 
     }
 
-    const industry = c.industry || 'General'
+    const industry = c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : (c.industry || 'General')
 
     const sector = (industry || '').toLowerCase().includes('tech') ? 'technology'
 
@@ -1846,6 +1827,8 @@ export default function CompaniesPage() {
       logo: c.logo || "/placeholder.svg?height=80&width=80",
 
       industry,
+
+      industries: c.industries && Array.isArray(c.industries) ? c.industries : [industry],
 
       sector,
 
@@ -2843,101 +2826,6 @@ export default function CompaniesPage() {
 
 
 
-      {/* Sticky Search Bar - Appears on scroll */}
-
-      <motion.div
-
-        initial={{ opacity: 0, y: -100 }}
-
-        animate={{ 
-
-          opacity: isStickyVisible ? 1 : 0, 
-
-          y: isStickyVisible ? 0 : -100 
-
-        }}
-
-        transition={{ duration: 0.3 }}
-
-        className={`fixed top-0 left-0 right-0 z-50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-lg transform transition-all duration-300 ${
-
-          isStickyVisible ? 'pointer-events-auto' : 'pointer-events-none'
-
-        }`}
-
-      >
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-
-          <div className="flex flex-col lg:flex-row gap-3">
-
-            <div className="relative flex-1">
-
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-
-              <Input
-
-                placeholder="Search companies..."
-
-                value={filters.search}
-
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-
-                onKeyDown={(e) => {
-
-                  if (e.key === 'Enter') {
-
-                    // Scroll to companies section when search is performed
-
-                    const companiesSection = document.getElementById('companies-section')
-
-                    if (companiesSection) {
-
-                      companiesSection.scrollIntoView({ behavior: 'smooth' })
-
-                    }
-
-                  }
-
-                }}
-
-                className="pl-10 pr-4 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
-
-              />
-
-            </div>
-
-            <div className="relative flex-1">
-
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-
-              <Input
-
-                placeholder="Location"
-
-                value={filters.location}
-
-                onChange={(e) => handleFilterChange("location", e.target.value)}
-
-                className="pl-10 h-12 border-slate-200 dark:border-slate-600 focus:border-blue-500 bg-white dark:bg-slate-700 rounded-xl text-sm font-medium"
-
-              />
-
-            </div>
-
-            <Button className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 rounded-xl text-sm shadow-lg">
-
-              <Search className="w-4 h-4 mr-2" />
-
-              Search Companies
-
-            </Button>
-
-          </div>
-
-        </div>
-
-      </motion.div>
 
 
 
@@ -2994,12 +2882,6 @@ export default function CompaniesPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
 
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{getHeaderText()}</h2>
-
-            <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-
-              Showing {startIndex + 1}-{Math.min(endIndex, totalCompanies)} of {totalCompanies} companies
-
-            </span>
 
           </div>
 
@@ -4039,23 +3921,31 @@ export default function CompaniesPage() {
 
                                 <div className="flex-1 min-w-0">
 
-                                  <h3
+                                  <div className="flex items-center justify-between mb-1">
+                                    <h3
 
-                                    className={`text-lg sm:text-xl font-bold mb-1 transition-colors duration-300 ${
+                                      className={`text-lg sm:text-xl font-bold transition-colors duration-300 ${
 
-                                      company.urgent
+                                        company.urgent
 
-                                        ? "text-red-700 dark:text-red-400"
+                                          ? "text-red-700 dark:text-red-400"
 
-                                        : "text-slate-900 dark:text-white group-hover:text-blue-600"
+                                          : "text-slate-900 dark:text-white group-hover:text-blue-600"
 
-                                    } line-clamp-2`}
+                                      } line-clamp-2 flex-1`}
 
-                                  >
+                                    >
 
-                                    {company.name}
+                                      {company.name}
 
-                                  </h3>
+                                    </h3>
+                                    <div className="flex items-center ml-2">
+                                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
+                                        {company.rating || 0}
+                                      </span>
+                                    </div>
+                                  </div>
 
                                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 h-8 overflow-hidden">
 
@@ -4077,7 +3967,7 @@ export default function CompaniesPage() {
                                       <Badge
                                         className={`${industryColors.badge} text-xs sm:text-sm`}
                                       >
-                                        {company.industry && company.industry !== 'General' ? company.industry : 'Other'}
+                                        {company.industry || 'Not specified'}
                                       </Badge>
                                     )}
 
@@ -4099,13 +3989,6 @@ export default function CompaniesPage() {
 
                                   </div>
 
-                                  <div className="flex items-center mb-2">
-
-                                    <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-
-                                    <span className="font-semibold text-sm sm:text-base">{company.rating}</span>
-
-                                  </div>
 
                                 </div>
 
@@ -4184,38 +4067,19 @@ export default function CompaniesPage() {
 
 
 
-                              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
-
+                              <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
                                 <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-
-                                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-
+                                  <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
                                   <span className="truncate">
-                                    {company.location && company.location !== 'India' 
-                                      ? company.location 
-                                      : company.city || company.address || 'India'
-                                    }
+                                    {company.activeJobsCount || company.openings || 0} open positions
                                   </span>
-
                                 </div>
-
                                 <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-
-                                  <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-
-                                  <span className="truncate">{company.employees} employees</span>
-
+                                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {company.region || 'India'}
+                                  </span>
                                 </div>
-
-
-                                <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-
-                                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-
-                                  <span className="truncate">{company.salaryRange}</span>
-
-                                </div>
-
                               </div>
 
 
@@ -4254,29 +4118,6 @@ export default function CompaniesPage() {
 
 
 
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700 gap-2">
-
-                                <div className="flex items-center space-x-4">
-
-                                  <span className="text-xs sm:text-sm text-slate-500">
-
-                                    Work Culture: {company.workCulture}
-
-                                  </span>
-
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-
-                                  <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-
-                                    {company.activeJobsCount || company.openings || 0} open positions
-
-                                  </span>
-
-                                </div>
-
-                              </div>
 
                             </div>
 
@@ -4300,16 +4141,7 @@ export default function CompaniesPage() {
 
             {/* Pagination */}
 
-            <div className="flex flex-col sm:flex-row justify-between items-center mt-8 sm:mt-12 gap-4">
-
-              <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-
-                Showing {startIndex + 1} to {Math.min(endIndex, totalCompanies)} of {totalCompanies} companies
-
-              </div>
-
-
-
+            <div className="flex flex-col sm:flex-row justify-center items-center mt-8 sm:mt-12 gap-4">
               <div className="flex items-center space-x-2">
 
                 <Button

@@ -707,8 +707,18 @@ export default function PostJobPage() {
         description: formData.description || '',
         requirements: formData.requirements || '',
         location: formData.location || '',
-        type: formData.type || 'full-time',
-        experience: formData.experience || 'fresher',
+        type: (() => {
+          const employmentType = formData.employmentType || '';
+          if (employmentType.includes('Full Time') && employmentType.includes('Permanent')) return 'full-time';
+          if (employmentType.includes('Part Time') && employmentType.includes('Permanent')) return 'part-time';
+          if (employmentType.includes('Full Time') && employmentType.includes('Contract')) return 'contract';
+          if (employmentType.includes('Part Time') && employmentType.includes('Contract')) return 'contract';
+          if (employmentType.includes('Freelance')) return 'freelance';
+          if (employmentType.includes('Temporary')) return 'contract';
+          return formData.type || 'full-time';
+        })(),
+        experience: formData.experience === 'fresher' ? 'entry' : formData.experience || 'entry',
+        experienceLevel: formData.experience === 'fresher' ? 'entry' : formData.experience || 'entry',
         salary: formData.salary || '',
         benefits: (() => {
           const writtenBenefits = formData.benefits || '';
@@ -925,8 +935,18 @@ export default function PostJobPage() {
         description: formData.description,
         requirements: formData.requirements,
         location: formData.location,
-        type: formData.type || 'full-time',
-        experience: formData.experience || 'fresher',
+        type: (() => {
+          const employmentType = formData.employmentType || '';
+          if (employmentType.includes('Full Time') && employmentType.includes('Permanent')) return 'full-time';
+          if (employmentType.includes('Part Time') && employmentType.includes('Permanent')) return 'part-time';
+          if (employmentType.includes('Full Time') && employmentType.includes('Contract')) return 'contract';
+          if (employmentType.includes('Part Time') && employmentType.includes('Contract')) return 'contract';
+          if (employmentType.includes('Freelance')) return 'freelance';
+          if (employmentType.includes('Temporary')) return 'contract';
+          return formData.type || 'full-time';
+        })(),
+        experience: formData.experience === 'fresher' ? 'entry' : formData.experience || 'entry',
+        experienceLevel: formData.experience === 'fresher' ? 'entry' : formData.experience || 'entry',
         salary: formData.salary,
         benefits: (() => {
           const writtenBenefits = formData.benefits || '';
@@ -1734,9 +1754,20 @@ export default function PostJobPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Salary Range*</label>
                 <Input
-                  placeholder="e.g. ₹8-15 LPA"
+                  placeholder="e.g. 8-15"
                   value={formData.salary}
-                  onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    // Remove any existing LPA text
+                    value = value.replace(/\s*LPA\s*/gi, '');
+                    setFormData({ ...formData, salary: value });
+                  }}
+                  onBlur={(e) => {
+                    let value = e.target.value.trim();
+                    if (value && !value.includes('LPA')) {
+                      setFormData({ ...formData, salary: `${value} LPA` });
+                    }
+                  }}
                 />
               </div>
             </div>
