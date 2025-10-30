@@ -1,25 +1,13 @@
 "use client"
-
-
-
 import { useState, useRef, useMemo, useCallback, useEffect } from "react"
-
 import {
-
   Search,
-
   MapPin,
-
   Users,
-
   Star,
-
   Building2,
-
   TrendingUp,
-
   Filter,
-
   SlidersHorizontal,
 
   ChevronRight,
@@ -55,13 +43,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Checkbox } from "@/components/ui/checkbox"
-
 import { Separator } from "@/components/ui/separator"
-
 import { ScrollArea } from "@/components/ui/scroll-area"
-
 import { motion } from "framer-motion"
-
 import { Navbar } from "@/components/navbar"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
 
@@ -74,8 +58,6 @@ import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 
 import { toast } from "sonner"
-
-
 
 // Types for state management
 
@@ -98,8 +80,6 @@ interface FilterState {
   salaryRange: string
 
 }
-
-
 
 interface Company {
 
@@ -148,23 +128,18 @@ interface Company {
   workCulture: string
 
   companyType: string
+  companyTypes?: string[]
 
   urgent: boolean
-
   isActive?: boolean
 
   isVerified?: boolean
-
   verificationStatus?: string
 
   placeholderImage?: string
-
   region?: string
 
 }
-
-
-
 // Industry-specific color schemes for professional hover effects
 const getIndustryColors = (industry: string) => {
   const industryLower = industry.toLowerCase()
@@ -1807,6 +1782,11 @@ export default function CompaniesPage() {
 
     const locationParts = [c.city, c.state, c.country].filter(Boolean)
 
+    // Get company type - prioritize companyTypes array, fallback to companyType enum
+    const companyTypeArray = c.companyTypes && Array.isArray(c.companyTypes) && c.companyTypes.length > 0 ? c.companyTypes : []
+    const companyTypeEnum = c.companyType || ''
+    const displayCompanyType = companyTypeArray.length > 0 ? companyTypeArray[0] : companyTypeEnum
+
     return {
 
       id: String(c.id),
@@ -1845,7 +1825,8 @@ export default function CompaniesPage() {
 
       workCulture: '',
 
-      companyType: '',
+      companyType: displayCompanyType || 'Not specified',
+      companyTypes: c.companyTypes && Array.isArray(c.companyTypes) ? c.companyTypes : [],
 
       urgent: false,
 
@@ -2081,9 +2062,35 @@ export default function CompaniesPage() {
 
         const match = filters.industries.some(industry => {
 
-          const industryLower = industry.toLowerCase()
+          const industryLower = industry.toLowerCase().trim()
 
-          const companyIndustryLower = company.industry.toLowerCase()
+          
+
+          // Get all possible industry values from the company
+
+          const companyIndustries = company.industries && Array.isArray(company.industries) ? company.industries : []
+
+          const companyIndustry = company.industry || ''
+
+          
+
+          // Check if any of the company's industries match
+
+          const industryMatch = companyIndustries.some((compIndustry: string) => {
+
+            const compIndustryLower = compIndustry.toLowerCase().trim()
+
+            return compIndustryLower === industryLower ||
+
+                   compIndustryLower.includes(industryLower) ||
+
+                   industryLower.includes(compIndustryLower)
+
+          })
+
+          
+
+          const companyIndustryLower = companyIndustry.toLowerCase().trim()
 
           
 
@@ -2143,7 +2150,7 @@ export default function CompaniesPage() {
 
           
 
-          const result = exactMatch || containsMatch || fuzzyMatch || abbreviationMatch
+          const result = industryMatch || exactMatch || containsMatch || fuzzyMatch || abbreviationMatch
 
           
 
@@ -2153,9 +2160,13 @@ export default function CompaniesPage() {
 
               companyName: company.name, 
 
-              companyIndustry: company.industry, 
+              companyIndustry: company.industry,
+
+              companyIndustries: companyIndustries,
 
               selectedIndustry: industry,
+
+              industryMatch,
 
               exactMatch,
 
@@ -2199,9 +2210,56 @@ export default function CompaniesPage() {
 
           const typeLower = type.toLowerCase()
 
-          const companyTypeLower = company.companyType.toLowerCase()
+          // Get all company type values to check against
+          const companyTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const companyTypeString = company.companyType || ''
+
+          // Special handling for Unicorn - check in company name, description, or other fields if companyTypes is empty
+          if (typeLower === 'unicorn' && companyTypeArray.length === 0 && !companyTypeString) {
+            // Check if company name suggests unicorn status
+            const nameLower = company.name.toLowerCase()
+            const descLower = company.description.toLowerCase()
+            const isUnicorn = nameLower.includes('unicorn') || descLower.includes('unicorn') || 
+                             nameLower.includes('billion') || descLower.includes('valuation')
+            if (isUnicorn) return true
+          }
+
+          // Check if type matches any value in the array
+          const arrayMatch = companyTypeArray.some((compType: string) => {
+            const compTypeLower = compType.toLowerCase().trim()
+            return compTypeLower === typeLower || compTypeLower.includes(typeLower) || typeLower.includes(compTypeLower)
+          })
+
+          const companyTypeLower = companyTypeString.toLowerCase()
 
           
+          // Define keyword mappings for each company type
+          const typeKeywords: { [key: string]: string[] } = {
+            'startup': ['startup', 'emerging', 'early stage', 'seed', 'early', 'early-stage', 'start up'],
+            'unicorn': ['unicorn', 'billion', 'valuation', 'valuated', 'valued at', 'billion dollar', 'billion+', '$1b', 'decacorn'],
+            'mnc': ['mnc', 'multinational', 'global', 'international', 'corporate', 'enterprise', 'm&a'],
+            'indian mnc': ['indian mnc', 'indian multinational', 'indian corporate', 'indian enterprise', 'indian public'],
+            'product based': ['product based', 'product', 'saas', 'software product', 'platform', 'product-based', 'software company'],
+            'fortune 500': ['fortune 500', 'fortune500', 'fortune', '500', 'fortune 5000', 'fortune 1000', 'fortune list'],
+            'government': ['government', 'public', 'state', 'psu', 'public sector', 'sarkari', 'govt'],
+            'non-profit': ['non-profit', 'nonprofit', 'ngo', 'charitable', 'non profit', 'charity', 'foundation'],
+            'consulting': ['consulting', 'consultant', 'advisory', 'services', 'advisory firm', 'management consulting'],
+            'sponsored': ['sponsored', 'featured', 'premium', 'verified', 'paid']
+          }
+
+          // Get keywords for the selected type
+          const keywords = typeKeywords[typeLower] || [typeLower]
+
+          // Check if any keyword matches in the string
+          const keywordMatch = keywords.some(keyword => 
+            companyTypeLower.includes(keyword)
+          )
+
+          // Check if any keyword matches in the array
+          const arrayKeywordMatch = companyTypeArray.some((compType: string) => {
+            const compTypeLower = compType.toLowerCase()
+            return keywords.some(keyword => compTypeLower.includes(keyword))
+          })
 
           // Exact case-insensitive match
 
@@ -2223,33 +2281,7 @@ export default function CompaniesPage() {
 
           
 
-          // Handle common variations and abbreviations
-
-          const variationMatch = 
-
-            (typeLower === 'unicorn' && (companyTypeLower.includes('unicorn') || companyTypeLower.includes('billion') || companyTypeLower.includes('valuation'))) ||
-
-            (typeLower === 'mnc' && (companyTypeLower.includes('multinational') || companyTypeLower.includes('global') || companyTypeLower.includes('international'))) ||
-
-            (typeLower === 'indian mnc' && (companyTypeLower.includes('indian') && companyTypeLower.includes('mnc'))) ||
-
-            (typeLower === 'startup' && (companyTypeLower.includes('startup') || companyTypeLower.includes('emerging') || companyTypeLower.includes('early stage'))) ||
-
-            (typeLower === 'product based' && (companyTypeLower.includes('product') || companyTypeLower.includes('software') || companyTypeLower.includes('saas'))) ||
-
-            (typeLower === 'fortune 500' && (companyTypeLower.includes('fortune') || companyTypeLower.includes('500') || companyTypeLower.includes('fortune500'))) ||
-
-            (typeLower === 'government' && (companyTypeLower.includes('government') || companyTypeLower.includes('public') || companyTypeLower.includes('state'))) ||
-
-            (typeLower === 'non-profit' && (companyTypeLower.includes('non-profit') || companyTypeLower.includes('nonprofit') || companyTypeLower.includes('ngo'))) ||
-
-            (typeLower === 'consulting' && (companyTypeLower.includes('consulting') || companyTypeLower.includes('consultant') || companyTypeLower.includes('advisory'))) ||
-
-            (typeLower === 'sponsored' && company.featured)
-
-          
-
-          const result = exactMatch || containsMatch || fuzzyMatch || variationMatch
+          const result = arrayMatch || exactMatch || containsMatch || fuzzyMatch || keywordMatch || arrayKeywordMatch
 
           
 
@@ -2259,9 +2291,12 @@ export default function CompaniesPage() {
 
               companyName: company.name, 
 
-              companyType: company.companyType, 
+              companyType: company.companyType,
+              companyTypes: company.companyTypes,
 
               selectedType: type,
+
+              arrayMatch,
 
               exactMatch,
 
@@ -2269,7 +2304,9 @@ export default function CompaniesPage() {
 
               fuzzyMatch,
 
-              variationMatch
+              keywordMatch,
+
+              arrayKeywordMatch
 
             })
 
@@ -2375,39 +2412,231 @@ export default function CompaniesPage() {
 
     if (selectedIndustry) {
 
+      const beforeCount = filtered.length
+
       filtered = filtered.filter(company => {
 
-        if (selectedIndustry === "Internet") return company.industry === "Technology" && company.companyType === "Product"
+        // Get all possible industry values from the company
 
-        if (selectedIndustry === "Startup") return company.companyType === "Startup"
+        const companyIndustries = company.industries && Array.isArray(company.industries) ? company.industries : []
 
-        if (selectedIndustry === "MNCs") return company.companyType === "MNC"
+        const companyIndustry = company.industry || ''
 
-        if (selectedIndustry === "Fortune 500") return company.companyType === "Fortune 500"
+        
 
-        if (selectedIndustry === "Fintech") return company.industry === "Financial Technology"
+        // Check industry matches
 
-        if (selectedIndustry === "EdTech") return company.industry === "Education Technology"
+        if (selectedIndustry === "Internet") {
+          // Internet-related industries: Software Product, Internet, Electronics Manufacturing, Electronic Components, Hardware & Networking, Emerging Technology, IT Services & Consulting
+          const internetKeywords = [
+            'internet', 'technology', 'software product', 'saas', 'online services', 'web', 'digital', 'tech', 
+            'information technology', 'it services', 'consulting', 'electronics manufacturing', 'electronic components',
+            'hardware', 'networking', 'emerging technology', 'software', 'platform', 'cloud', 'digital services',
+            'web services', 'online marketplace', 'e-commerce', 'ecommerce'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return internetKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('internet')
 
-        if (selectedIndustry === "Healthcare") return company.industry === "Healthcare"
+        }
 
-        if (selectedIndustry === "Manufacturing") return company.industry === "Manufacturing"
+        if (selectedIndustry === "Startup") {
+          const startupTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const startupTypeString = company.companyType || ''
+          
+          return startupTypeString.toLowerCase().includes('startup') || 
+                 startupTypeArray.some((type: string) => type.toLowerCase().includes('startup')) ||
+                 companyIndustries.some((ind: string) => ind.toLowerCase().includes('startup'))
+        }
 
-        if (selectedIndustry === "Automobile") return company.industry === "Automotive"
+        if (selectedIndustry === "MNCs") {
+          const mncTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const mncTypeString = company.companyType || ''
+          
+          return mncTypeString.toLowerCase().includes('mnc') || 
+                 mncTypeArray.some((type: string) => type.toLowerCase().includes('mnc')) ||
+                 companyIndustries.some((ind: string) => ind.toLowerCase().includes('multinational'))
+        }
 
-        if (selectedIndustry === "Government") return company.companyType === "Government"
+        if (selectedIndustry === "Fortune 500") {
+          const fortuneTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const fortuneTypeString = company.companyType || ''
+          
+          return fortuneTypeString.toLowerCase().includes('fortune') || 
+                 fortuneTypeArray.some((type: string) => type.toLowerCase().includes('fortune')) ||
+                 companyIndustries.some((ind: string) => ind.toLowerCase().includes('fortune'))
+        }
 
-        if (selectedIndustry === "Unicorn") return company.companyType === "Unicorn"
+        if (selectedIndustry === "Fintech") {
+          // Fintech-related industries: Banking/Lending, Insurance, Investment Banking/VC/PE, FinTech, Stock Broking/Trading, Mutual Funds/Asset Management, NBFC, Accounting/Audit, Wealth Management
+          const fintechKeywords = [
+            'fintech', 'financial', 'banking', 'finance', 'investment', 'lending', 'payment', 'wallet', 
+            'cryptocurrency', 'blockchain', 'insurance', 'wealth', 'credit', 'debit', 'banking / lending',
+            'investment banking', 'vc', 'pe', 'stock broking', 'trading', 'mutual funds', 'asset management',
+            'nbfc', 'accounting', 'audit', 'wealth management', 'financial services', 'digital banking',
+            'payments', 'digital payment'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return fintechKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('fintech')
 
-        if (selectedIndustry === "Consulting") return company.industry === "Consulting"
+        }
 
-        if (selectedIndustry === "E-commerce") return company.industry === "E-commerce"
+        if (selectedIndustry === "EdTech") {
+          // EdTech-related industries: Education/Training, E-Learning/EdTech
+          const eduKeywords = [
+            'edtech', 'education', 'learning', 'elearning', 'e-learning', 'training', 'tutoring', 'academic', 
+            'school', 'university', 'college', 'curriculum', 'educational', 'educational services',
+            'online learning', 'learning platform', 'educational technology', 'e-learning platform'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return eduKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('education')
 
-        if (selectedIndustry === "Energy") return company.industry === "Energy"
+        }
 
-        return company.industry === selectedIndustry
+        if (selectedIndustry === "Healthcare") {
+          // Healthcare-related industries: Medical Services, Pharmaceutical & Life Sciences, Medical Devices, Biotechnology, Clinical Research
+          const healthcareKeywords = [
+            'healthcare', 'medical', 'pharma', 'health', 'hospital', 'clinic', 'diagnostic', 'therapy', 'wellness', 
+            'biotechnology', 'pharmaceutical', 'life sciences', 'clinical', 'nursing', 'patient care', 'medical services',
+            'medical devices', 'clinical research', 'healthtech', 'health tech', 'telemedicine', 'medical devices',
+            'pharmaceutical', 'biotech', 'clinical research', 'health services', 'medical equipment'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return healthcareKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('health')
+
+        }
+
+        if (selectedIndustry === "Manufacturing") {
+          // Manufacturing-related industries: Industrial Equipment, Auto Components, Chemicals, Building Material, Automobile, Electrical Equipment, Industrial Automation, Iron & Steel, Packaging & Containers, Metals & Mining, Petrochemical
+          const manufacturingKeywords = [
+            'manufacturing', 'production', 'industrial', 'factory', 'assembly', 'fabrication', 'processing', 
+            'plant', 'machinery', 'equipment', 'industrial automation', 'industrial equipment', 'chemicals',
+            'building material', 'auto component', 'electrical equipment', 'iron', 'steel', 'packaging',
+            'containers', 'metals', 'mining', 'petrochemical', 'plastics', 'automobile', 'electronics manufacturing',
+            'metal', 'smelting', 'refining'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return manufacturingKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('manufacturing')
+
+        }
+
+        if (selectedIndustry === "Automobile") {
+          // Automobile-related industries: Automobile, Auto Components, Logistics & Supply Chain, Manufacturing
+          const automobileKeywords = [
+            'automobile', 'automotive', 'auto', 'vehicle', 'car', 'truck', 'motor', 'transportation', 
+            'auto component', 'vehicles', 'auto parts', 'manufacturing', 'industrial equipment', 
+            'electronics manufacturing', 'electrical equipment', 'industrial automation', 'packaging',
+            'building material', 'metals', 'mining', 'chemicals'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return automobileKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('auto')
+
+        }
+
+        if (selectedIndustry === "Government") {
+          const govtTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const govtTypeString = company.companyType || ''
+          
+          return govtTypeString.toLowerCase().includes('government') || 
+                 govtTypeArray.some((type: string) => type.toLowerCase().includes('government')) ||
+                 companyIndustries.some((ind: string) => ind.toLowerCase().includes('government'))
+        }
+
+        if (selectedIndustry === "Unicorn") {
+          const unicornTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const unicornTypeString = company.companyType || ''
+          
+          return unicornTypeString.toLowerCase().includes('unicorn') || 
+                 unicornTypeArray.some((type: string) => type.toLowerCase().includes('unicorn')) ||
+                 companyIndustries.some((ind: string) => ind.toLowerCase().includes('unicorn'))
+        }
+
+        if (selectedIndustry === "Consulting") {
+          // Consulting-related industries: Consulting, IT Services & Consulting, Management Consulting, Business Consulting, Legal Services, Recruitment/Staffing, Market Research
+          const consultingKeywords = [
+            'consulting', 'consult', 'advisory', 'consultant', 'it services & consulting', 'management consulting', 
+            'business consulting', 'legal services', 'recruitment', 'staffing', 'market research',
+            'business intelligence', 'advisory services', 'strategy consulting', 'technology consulting',
+            'it consulting', 'management consultancy'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return consultingKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('consult')
+
+        }
+
+        if (selectedIndustry === "E-commerce") {
+          // E-commerce-related industries: E-commerce/Internet, Online Services, Marketplace, Food Tech, PropTech
+          const ecommerceKeywords = [
+            'e-commerce', 'ecommerce', 'e-commerce / internet', 'online retail', 'internet', 'marketplace', 
+            'shopping', 'retail', 'online marketplace', 'digital commerce', 'online services', 'food tech',
+            'proptech', 'online grocery', 'e-retail', 'digital marketplace', 'online shopping', 'e-tail'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return ecommerceKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('commerce')
+
+        }
+
+        if (selectedIndustry === "Energy") {
+          // Energy-related industries: Power/Energy, Oil & Gas, Renewable Energy, Water Treatment/Waste Management
+          const energyKeywords = [
+            'energy', 'power', 'renewable', 'solar', 'wind', 'oil', 'gas', 'petroleum', 'electrical', 'utilities', 
+            'electricity', 'generation', 'petrochemical', 'power / energy', 'oil & gas', 'renewable energy',
+            'water treatment', 'waste management', 'petroleum', 'power generation', 'electrical equipment',
+            'electrical power', 'energy sector', 'renewables', 'clean energy'
+          ]
+          
+          return companyIndustries.some((ind: string) => {
+            const indLower = ind.toLowerCase()
+            return energyKeywords.some(keyword => indLower.includes(keyword))
+          }) || companyIndustry.toLowerCase().includes('energy')
+
+        }
+
+        if (selectedIndustry === "Product") {
+          const productTypeArray = company.companyTypes && Array.isArray(company.companyTypes) ? company.companyTypes : []
+          const productTypeString = company.companyType || ''
+          
+          return productTypeString.toLowerCase().includes('product based') || 
+                 productTypeString.toLowerCase().includes('product') ||
+                 productTypeArray.some((type: string) => type.toLowerCase().includes('product'))
+        }
+
+        
+
+        // Fallback: check if selectedIndustry matches any company industry
+
+        const lowerSelected = selectedIndustry.toLowerCase()
+
+        return companyIndustry.toLowerCase().includes(lowerSelected) || 
+
+               companyIndustries.some((ind: string) => ind.toLowerCase().includes(lowerSelected))
 
       })
+
+      console.log('🎯 Selected industry filter applied:', beforeCount, '→', filtered.length, 'companies')
 
     }
 
@@ -4389,7 +4618,14 @@ export default function CompaniesPage() {
       {showIndustryDropdown && (
         <IndustryDropdown
           selectedIndustries={filters.industries}
-          onIndustryChange={(inds: string[]) => setFilters(prev => ({ ...prev, industries: inds }))}
+          onIndustryChange={(inds: string[]) => {
+            setFilters(prev => ({ ...prev, industries: inds }))
+            // Clear top industry selection when manually changing filters from IndustryDropdown
+            if (selectedIndustry) {
+              setSelectedIndustry(null)
+            }
+            setCurrentPage(1)
+          }}
           onClose={() => setShowIndustryDropdown(false)}
         />
       )}
