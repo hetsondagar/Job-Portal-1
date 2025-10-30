@@ -2160,7 +2160,7 @@ export default function CompaniesPage() {
 
               companyName: company.name, 
 
-              companyIndustry: company.industry,
+              companyIndustry: company.industry, 
 
               companyIndustries: companyIndustries,
 
@@ -2291,7 +2291,7 @@ export default function CompaniesPage() {
 
               companyName: company.name, 
 
-              companyType: company.companyType,
+              companyType: company.companyType, 
               companyTypes: company.companyTypes,
 
               selectedType: type,

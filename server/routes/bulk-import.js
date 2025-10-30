@@ -529,9 +529,17 @@ async function processBulkImport(importId) {
           continue;
         }
 
+        // Generate slug from title
+        const slug = record.title.toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '') + '-' + Date.now();
+        
         // Create job
         const jobData = {
           ...record,
+          slug: slug,
           companyId: importRecord.companyId,
           employerId: importRecord.createdBy,
           status: 'draft',
