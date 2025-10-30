@@ -22,6 +22,7 @@ const {
   getJobsByCompany,
   getJobsByEmployer
 } = require('../controller/JobController');
+const { isApplicationsClosed } = require('../utils/applicationDeadline');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -401,11 +402,12 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       });
     }
     
-    // Block application if job is expired
-    if (job.validTill && new Date() > new Date(job.validTill)) {
+    // Block application if job is expired or application deadline passed
+    const now = new Date();
+    if (isApplicationsClosed(job, now)) {
       return res.status(400).json({
         success: false,
-        message: 'Applications are closed for this job (expired)'
+        message: 'Applications are closed for this job (deadline passed)'
       });
     }
     

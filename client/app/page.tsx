@@ -1632,6 +1632,12 @@ export default function HomePage() {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/gulf-opportunities" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
+                    <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    Gulf Opportunities
+                  </Link>
+                </li>
+                <li>
                   <Link href="/job-at-pace" className="text-slate-300 hover:text-white transition-colors duration-200 flex items-center group">
                     <span className="w-1 h-1 bg-blue-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent font-medium">Job at Pace Premium</span>

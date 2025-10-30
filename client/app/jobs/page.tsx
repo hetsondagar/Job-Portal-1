@@ -5613,6 +5613,8 @@ export default function JobsPage() {
 
                 <li><Link href="/companies" className="hover:text-white transition-colors">Companies</Link></li>
 
+                <li><Link href="/gulf-opportunities" className="hover:text-white transition-colors">Gulf Opportunities</Link></li>
+
                 <li><Link href="/salary-guide" className="hover:text-white transition-colors">Salary Guide</Link></li>
 
                 <li><Link href="/career-advice" className="hover:text-white transition-colors">Career Advice</Link></li>

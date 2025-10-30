@@ -442,11 +442,39 @@ export function Navbar() {
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/employer-login">
-                  <Button variant="ghost" size="sm" className="text-gray-700 dark:text-slate-300 tracking-wider uppercase text-[12px]">
-                    Employer Login
+                {/* For Employers dropdown */}
+                <div className="relative group">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-2 after:right-2 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
+                  >
+                    For Employers
+                    <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
-                </Link>
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="py-2">
+                      <Link
+                        href="/pricing"
+                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        Pricing
+                      </Link>
+                      <Link
+                        href="/hyrebridge-solutions"
+                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        HyreBridge Solutions
+                      </Link>
+                      <Link
+                        href="/employer-login"
+                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        Employer Login
+                      </Link>
+                    </div>
+                  </div>
+                </div>
                 <Link href="/register">
                   <Button size="sm" className="rounded-full px-5 py-2.5 bg-gradient-to-r from-[#5A00F2] to-[#4F9BFF] text-white font-semibold tracking-widest uppercase text-[11px] shadow-[0_0_15px_rgba(79,155,255,0.4)] hover:scale-[1.05] transition-transform">
                     Sign Up
@@ -530,7 +558,7 @@ export function Navbar() {
                     </Link>
                     <Link href="/employer-login">
                       <Button variant="outline" className="w-full">
-                        Employer Login
+                        For Employers
                       </Button>
                     </Link>
                     <Link href="/register">

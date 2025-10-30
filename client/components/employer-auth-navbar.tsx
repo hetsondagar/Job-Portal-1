@@ -59,7 +59,7 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
                   <NavigationMenuContent>
                     <div className="w-[500px] p-4">
                       <div className="grid grid-cols-2 gap-3">
-                        <Link href="/pricing">
+                        <Link href="/job-posting">
                           <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
                             <div className="flex items-start space-x-3">
                               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -262,7 +262,7 @@ export default function EmployerAuthNavbar({ variant = "login" }: { variant?: "l
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-slate-200 dark:border-slate-700">
             <div className="space-y-2">
-              <Link href="/pricing" className="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+              <Link href="/job-posting" className="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
                 Job Posting Plans
               </Link>
               <Link href="/database-pricing" className="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">

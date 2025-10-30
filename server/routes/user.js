@@ -1700,7 +1700,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check if job exists and get employer info
+  // Check if job exists and get employer info
     const job = await Job.findByPk(jobId, {
       include: [
         {
@@ -1711,12 +1711,22 @@ router.post('/applications', authenticateToken, async (req, res) => {
       ]
     });
 
-    if (!job) {
+  if (!job) {
       return res.status(404).json({
         success: false,
         message: 'Job not found'
       });
     }
+
+  // Prevent applying after deadline or expiry
+  const { isApplicationsClosed } = require('../utils/applicationDeadline');
+  const now = new Date();
+  if (isApplicationsClosed(job, now)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Applications are closed for this job (deadline passed)'
+    });
+  }
 
     // Check if user already applied for this job
     const existingApplication = await JobApplication.findOne({

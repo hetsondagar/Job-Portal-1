@@ -63,6 +63,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 
 import { Navbar } from "@/components/navbar"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
 
 import Link from "next/link"
 
@@ -716,6 +717,8 @@ export default function CompaniesPage() {
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null)
 
   const [companiesPerPage, setCompaniesPerPage] = useState(20)
+  // Companies page industry dropdown state
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
 
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -1688,38 +1691,22 @@ export default function CompaniesPage() {
 
     // Map industry card selections to filter states
 
-    const filterMapping: { [key: string]: { industries: string[], companyTypes: string[] } } = {
-
-      "Internet": { industries: ["Technology"], companyTypes: ["Product"] },
-
-      "Startup": { industries: [], companyTypes: ["Startup"] },
-
-      "MNCs": { industries: [], companyTypes: ["MNC"] },
-
+    const filterMapping: { [key: string]: { industries: string[]; companyTypes: string[] } } = {
+      Internet: { industries: ["Internet"], companyTypes: [] },
+      Startup: { industries: [], companyTypes: ["Startup"] },
+      MNCs: { industries: [], companyTypes: ["MNC"] },
       "Fortune 500": { industries: [], companyTypes: ["Fortune 500"] },
-
-      "Fintech": { industries: ["Financial Technology"], companyTypes: [] },
-
-      "EdTech": { industries: ["Education Technology"], companyTypes: [] },
-
-      "Healthcare": { industries: ["Healthcare"], companyTypes: [] },
-
-      "Manufacturing": { industries: ["Manufacturing"], companyTypes: [] },
-
-      "Automobile": { industries: ["Automotive"], companyTypes: [] },
-
-      "Government": { industries: [], companyTypes: ["Government"] },
-
-      "Unicorn": { industries: [], companyTypes: ["Unicorn"] },
-
-      "Consulting": { industries: ["Consulting"], companyTypes: [] },
-
+      Fintech: { industries: ["Fintech"], companyTypes: [] },
+      EdTech: { industries: ["EdTech"], companyTypes: [] },
+      Healthcare: { industries: ["Healthcare"], companyTypes: [] },
+      Manufacturing: { industries: ["Manufacturing"], companyTypes: [] },
+      Automobile: { industries: ["Automotive"], companyTypes: [] },
+      Government: { industries: [], companyTypes: ["Government"] },
+      Unicorn: { industries: [], companyTypes: ["Unicorn"] },
+      Consulting: { industries: ["Consulting"], companyTypes: [] },
       "E-commerce": { industries: ["E-commerce"], companyTypes: [] },
-
-      "Energy": { industries: ["Energy"], companyTypes: [] },
-
-      "Product": { industries: ["Technology"], companyTypes: ["Product"] }
-
+      Energy: { industries: ["Energy"], companyTypes: [] },
+      Product: { industries: [], companyTypes: ["Product Based"] }
     }
 
 
@@ -3132,7 +3119,7 @@ export default function CompaniesPage() {
 
                         <div className="space-y-2">
 
-                            {industries.map((industry) => {
+                            {industries.slice(0, 8).map((industry) => {
 
                               const isAutoSelected = selectedIndustry && filters.industries.includes(industry)
 
@@ -3181,6 +3168,15 @@ export default function CompaniesPage() {
                               )
 
                             })}
+                            {industries.length > 8 && (
+                              <button
+                                type="button"
+                                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 underline"
+                                onClick={() => setShowIndustryDropdown(true)}
+                              >
+                                Show more industries
+                              </button>
+                            )}
 
                           </div>
 
@@ -4337,108 +4333,67 @@ export default function CompaniesPage() {
                 links: [
 
                   { name: "Browse Jobs", href: "/jobs" },
-
+                  { name: "Gulf Opportunities", href: "/gulf-opportunities" },
                   { name: "Career Advice", href: "/career-advice" },
-
                   { name: "Resume Builder", href: "/resume-builder" },
-
                   { name: "Salary Guide", href: "/salary-guide" },
-
                   { name: "Job at Pace Premium", href: "/job-at-pace" },
-
                 ],
-
               },
-
               {
-
                 title: "For Employers",
-
                 links: [
-
                   { name: "Post Jobs", href: "/employer-dashboard/post-job" },
-
                   { name: "Search Resumes", href: "/employer-dashboard/requirements" },
-
                   { name: "Recruitment Solutions", href: "/naukri-talent-cloud" },
-
                   { name: "Pricing", href: "/pricing" },
-
-                  { name: "TalentPulse", href: "/naukri-talent-cloud" },
-
                 ],
-
               },
-
               {
-
                 title: "Company",
-
                 links: [
-
                   { name: "About Us", href: "/about" },
-
                   { name: "Contact", href: "/contact" },
-
                   { name: "Privacy Policy", href: "/privacy" },
-
                   { name: "Terms of Service", href: "/terms" },
-
                 ],
-
               },
-
             ].map((section, index) => (
-
               <div key={index}>
-
                 <h3 className="font-semibold mb-4 sm:mb-6 text-base sm:text-lg">{section.title}</h3>
-
                 <ul className="space-y-2 sm:space-y-3">
-
                   {section.links.map((link, linkIndex) => (
-
                     <li key={linkIndex}>
-
                       <Link
-
                         href={link.href}
-
                         className="text-slate-400 hover:text-white transition-colors hover:underline text-sm sm:text-base"
-
                       >
-
                         {link.name}
-
                       </Link>
-
                     </li>
-
                   ))}
-
                 </ul>
-
               </div>
-
             ))}
 
           </div>
 
-
-
           <div className="border-t border-slate-800 mt-8 sm:mt-12 pt-6 sm:pt-8 text-center text-slate-400">
-
             <p className="text-sm sm:text-base">&copy; 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
-
           </div>
 
         </div>
 
       </footer>
 
+      {showIndustryDropdown && (
+        <IndustryDropdown
+          selectedIndustries={filters.industries}
+          onIndustryChange={(inds: string[]) => setFilters(prev => ({ ...prev, industries: inds }))}
+          onClose={() => setShowIndustryDropdown(false)}
+        />
+      )}
+
     </div>
-
   )
-
 }
-

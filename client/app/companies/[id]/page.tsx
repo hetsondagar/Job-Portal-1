@@ -1084,8 +1084,8 @@ function CompanyDetailPage() {
       <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative">
       <Navbar />
 
-      {/* Company Header - Full Width Banner */}
-      <div className="relative w-full">
+      {/* Company Header - Full Width Banner (padded to avoid navbar overlap) */}
+      <div className="relative w-full pt-16">
         {/* Back Button - Positioned absolutely */}
         <div className="absolute top-6 left-4 sm:left-6 z-10">
           <Button
@@ -1156,62 +1156,65 @@ function CompanyDetailPage() {
                     <div>
                       <h1 className="text-3xl lg:text-4xl font-bold mb-2">{toDisplayText(company.name) || 'Company'}</h1>
                       <div className="flex items-center space-x-4">
-                        <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                        {/* Rating + allow user rating */}
+                        <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full cursor-pointer" onClick={() => setShowRatingDialog(true)}>
                           <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                          <span className="font-bold text-sm">{company.rating || 0}</span>
-                          {(company.reviews && company.reviews > 0) && (
-                            <span className="ml-1 text-xs opacity-80">({company.reviews})</span>
-                          )}
+                          <span className="font-bold text-sm">{company.averageRating || company.rating || 0}</span>
+                          {(company.totalReviews || company.reviews) ? (
+                            <span className="ml-1 text-xs opacity-80">({company.totalReviews || company.reviews})</span>
+                          ) : null}
                         </div>
-                        <div className="text-sm opacity-90">
-                          {company.followers || '0'} followers
-                        </div>
+                        {/* Followers (hide when 0 or undefined) */}
+                        {(company.followers && Number(company.followers) > 0) && (
+                          <div className="text-sm opacity-90">
+                            {company.followers} followers
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  {/* Company Description */}
-                  <p className="text-lg opacity-90 mb-4 max-w-2xl">
-                    {company.description || 'Leading company in innovation and technology solutions.'}
-                  </p>
-                  
-                  {/* Company Types */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {company.companyTypes && Array.isArray(company.companyTypes) && company.companyTypes.length > 0 && (
-                      <>
-                        {(showAllCompanyTypes ? company.companyTypes : company.companyTypes.slice(0, 3)).map((type: string, index: number) => (
-                          <Badge key={index} variant="secondary" className="bg-white/20 text-white border-white/30 text-sm px-3 py-1">
-                            {type}
-                          </Badge>
-                        ))}
-                        {company.companyTypes.length > 3 && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-sm px-3 py-1 cursor-pointer hover:bg-white/20 hover:border-white/50 transition-colors text-white border-white/30"
-                            onClick={() => setShowAllCompanyTypes(!showAllCompanyTypes)}
-                          >
-                            {showAllCompanyTypes ? 'Show Less' : `+${company.companyTypes.length - 3} more`}
-                          </Badge>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  {/* Remove description and company types from banner per requirements */}
                   
                   {/* Follow Button */}
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full">
-                    + Follow
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        setShowAuthDialog(true)
+                        return
+                      }
+                      // toggle follow
+                      (async () => {
+                        try {
+                          if (isFollowing) {
+                            const res = await apiService.unfollowCompany(companyId)
+                            if (res.success) {
+                              setIsFollowing(false)
+                              toast.success('Unfollowed company')
+                            } else {
+                              toast.error('Failed to unfollow')
+                            }
+                          } else {
+                            const res = await apiService.followCompany(companyId)
+                            if (res.success) {
+                              setIsFollowing(true)
+                              toast.success('Following company')
+                            } else {
+                              toast.error('Failed to follow')
+                            }
+                          }
+                        } catch (e) {
+                          toast.error('Action failed')
+                        }
+                      })()
+                    }}
+                  >
+                    {isFollowing ? 'Following' : '+ Follow'}
                   </Button>
                 </div>
                 
-                {/* Right Side - Company Image/Visual */}
-                <div className="hidden lg:block flex-shrink-0">
-                  <div className="w-64 h-48 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                    <div className="text-center text-white/80">
-                      <Building2 className="w-16 h-16 mx-auto mb-2 opacity-60" />
-                      <p className="text-sm">Company Visual</p>
-                    </div>
-                  </div>
-                </div>
+                {/* Right side visual removed as requested */}
               </motion.div>
             </div>
           </div>
@@ -1601,7 +1604,7 @@ function CompanyDetailPage() {
                                   </div>
                                   <div className="flex items-center">
                                     <IndianRupee className="w-4 h-4 mr-1" />
-                                    {job.salary || (job.salaryMin && job.salaryMax ? `${job.salaryMin}-${job.salaryMax}` : '—')}
+                                    {(job.salary || (job.salaryMin && job.salaryMax ? `${job.salaryMin}-${job.salaryMax}` : '—'))}{job.salary || job.salaryMin || job.salaryMax ? ' LPA' : ''}
                                   </div>
                                   <div className="flex items-center">
                                     <Clock className="w-4 h-4 mr-1" />
