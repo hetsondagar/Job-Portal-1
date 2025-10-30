@@ -42,11 +42,11 @@ const validateSignup = [
     .isLength({ min: 2, max: 100 })
     .withMessage('Full name must be between 2 and 100 characters'),
   body('phone')
-    .optional()
+    .optional({ checkFalsy: true })
     .isMobilePhone()
     .withMessage('Please enter a valid phone number'),
   body('experience')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['fresher', 'junior', 'mid', 'senior', 'lead'])
     .withMessage('Experience level must be fresher, junior, mid, senior, or lead')
 ];
@@ -206,7 +206,7 @@ router.post('/signup', validateSignup, async (req, res) => {
       });
     }
 
-    const { email, password, fullName, phone, experience } = req.body;
+    const { email, password, fullName, phone, experience, region } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -222,6 +222,9 @@ router.post('/signup', validateSignup, async (req, res) => {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
+    // Determine region - default to 'india' if not specified
+    const userRegion = region || 'india';
+    
     // Create new user
     console.log('📝 Creating user with data:', {
       email,
@@ -229,7 +232,8 @@ router.post('/signup', validateSignup, async (req, res) => {
       last_name: lastName,
       phone,
       user_type: 'jobseeker',
-      account_status: 'active'
+      account_status: 'active',
+      region: userRegion
     });
     
     const user = await User.create({
@@ -238,13 +242,15 @@ router.post('/signup', validateSignup, async (req, res) => {
       first_name: firstName,
       last_name: lastName,
       phone,
+      region: userRegion,
       user_type: 'jobseeker', // Default to jobseeker
       account_status: 'active',
       is_email_verified: false,
       oauth_provider: 'local', // Ensure this is set for regular registrations
-      // Store experience level in preferences
+      // Store experience level in preferences and regions array
       preferences: {
         experience: experience || 'fresher',
+        regions: [userRegion], // Store regions as array in preferences
         ...req.body.preferences
       }
     });
@@ -835,6 +841,7 @@ router.post('/login', validateLogin, async (req, res) => {
     const token = generateToken(user);
 
     // Prepare response data
+    const userRegions = user.preferences?.regions || [user.region].filter(Boolean);
     const responseData = {
       user: {
         id: user.id,
@@ -847,6 +854,7 @@ router.post('/login', validateLogin, async (req, res) => {
         lastLoginAt: user.last_login_at,
         companyId: user.company_id,
         region: user.region,
+        regions: userRegions, // Include regions array for multi-portal access
         currentLocation: user.current_location,
         profileCompletion: user.profile_completion
       },
@@ -974,6 +982,7 @@ router.get('/me', async (req, res) => {
     }
 
     // Map user data to frontend format (camelCase)
+    const userRegions = user.preferences?.regions || [user.region].filter(Boolean);
     const userData = {
       id: user.id,
       email: user.email,
@@ -991,7 +1000,8 @@ router.get('/me', async (req, res) => {
       summary: user.summary,
       profileCompletion: user.profile_completion,
       designation: user.designation,
-      region: user.region
+      region: user.region,
+      regions: userRegions // Include regions array for multi-portal access
     };
 
     res.status(200).json({
@@ -1270,6 +1280,215 @@ router.post('/test-email', async (req, res) => {
       success: false, 
       message: 'Test email failed', 
       error: error.message 
+    });
+  }
+});
+
+// Cross-portal signup endpoint - Check if user exists for different region
+router.post('/check-existing-user', async (req, res) => {
+  try {
+    const { email, password, requestingRegion } = req.body;
+    
+    console.log('🔍 Checking existing user for cross-portal signup:', { email, requestingRegion });
+    
+    if (!email || !password || !requestingRegion) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, password, and requesting region are required'
+      });
+    }
+    
+    const existingUser = await User.findOne({ where: { email } });
+    
+    if (!existingUser) {
+      // User doesn't exist, proceed with normal registration
+      return res.status(200).json({
+        success: true,
+        userExists: false,
+        message: 'User does not exist. Proceed with normal registration.'
+      });
+    }
+    
+    // User exists, check if password is correct
+    const isValidPassword = await existingUser.comparePassword(password);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid password. Please enter the correct password.'
+      });
+    }
+    
+    // Check if user already has access to the requesting region
+    const userRegions = existingUser.preferences?.regions || [];
+    if (userRegions.includes(requestingRegion)) {
+      return res.status(409).json({
+        success: false,
+        message: `You already have access to ${requestingRegion === 'gulf' ? 'Gulf' : 'India'} portal.`
+      });
+    }
+    
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    
+    // Store OTP in user preferences temporarily
+    if (!existingUser.preferences) {
+      existingUser.preferences = {};
+    }
+    existingUser.preferences.crossPortalOTP = {
+      code: otp,
+      expires: otpExpires.toISOString(),
+      region: requestingRegion
+    };
+    await existingUser.save();
+    
+    // Send OTP email
+    try {
+      await emailService.sendOTPEmail(existingUser.email, otp);
+      console.log('✅ OTP sent to:', existingUser.email);
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', emailError);
+      // Don't fail the request, just log the error
+    }
+    
+    return res.status(200).json({
+      success: true,
+      userExists: true,
+      message: 'Password verified. OTP sent to your email.',
+      data: {
+        userId: existingUser.id,
+        email: existingUser.email,
+        firstName: existingUser.first_name
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Check existing user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Verify OTP and grant access to new region
+router.post('/verify-otp-and-register', async (req, res) => {
+  try {
+    const { userId, otp, requestingRegion } = req.body;
+    
+    console.log('🔍 Verifying OTP for cross-portal registration:', { userId, requestingRegion });
+    
+    if (!userId || !otp || !requestingRegion) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID, OTP, and requesting region are required'
+      });
+    }
+    
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Check OTP
+    const storedOTP = user.preferences?.crossPortalOTP;
+    
+    if (!storedOTP) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP not found. Please request a new OTP.'
+      });
+    }
+    
+    if (storedOTP.code !== otp) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid OTP. Please try again.'
+      });
+    }
+    
+    // Check if OTP has expired
+    if (new Date(storedOTP.expires) < new Date()) {
+      return res.status(401).json({
+        success: false,
+        message: 'OTP has expired. Please request a new OTP.'
+      });
+    }
+    
+    // Check if OTP is for the correct region
+    if (storedOTP.region !== requestingRegion) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid region for this OTP.'
+      });
+    }
+    
+    // Grant access to the new region
+    const userRegions = user.preferences?.regions || [];
+    if (!userRegions.includes(requestingRegion)) {
+      userRegions.push(requestingRegion);
+    }
+    
+    // Update user preferences using raw SQL for proper JSONB handling
+    const updatedPreferences = {
+      ...user.preferences,
+      regions: userRegions
+    };
+    // Remove crossPortalOTP from the object
+    delete updatedPreferences.crossPortalOTP;
+    
+    await sequelize.query(
+      `UPDATE users SET preferences = :prefs::jsonb WHERE id = :userId`,
+      {
+        replacements: { 
+          prefs: JSON.stringify(updatedPreferences),
+          userId: user.id
+        },
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+    
+    // Refresh user to get updated preferences
+    user = await User.findByPk(userId);
+    
+    console.log('✅ User preferences updated:', user.preferences);
+    
+    console.log('✅ User registered for cross-portal access:', { userId, region: requestingRegion });
+    
+    // Generate JWT token
+    const token = generateToken(user);
+    
+    return res.status(200).json({
+      success: true,
+      message: `Successfully registered for ${requestingRegion === 'gulf' ? 'Gulf' : 'India'} portal!`,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          userType: user.user_type,
+          region: user.region,
+          regions: userRegions,
+          isEmailVerified: user.is_email_verified,
+          accountStatus: user.account_status
+        },
+        token
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Verify OTP and register error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

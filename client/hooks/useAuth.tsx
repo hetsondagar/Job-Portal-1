@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     lastName: u.last_name ?? u.lastName,
     userType: (u.user_type ?? u.userType) as User['userType'],
     region: u.region ?? u.user_region ?? (u.preferences?.region),
+    regions: u.regions ?? u.preferences?.regions ?? [u.region ?? u.user_region ?? (u.preferences?.region)].filter(Boolean),
     isEmailVerified: u.is_email_verified ?? u.isEmailVerified,
     accountStatus: u.account_status ?? u.accountStatus,
     avatar: u.avatar,

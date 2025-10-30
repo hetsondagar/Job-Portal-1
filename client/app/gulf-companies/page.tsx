@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Building2, MapPin, Briefcase, Search, Loader2, Globe } from "lucide-react"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import GulfNavbar from "@/components/gulf-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -28,10 +28,11 @@ export default function GulfCompaniesPage() {
   const [accessDenied, setAccessDenied] = useState(false)
   
   useEffect(() => {
-    if (!authLoading && user && user.region !== 'gulf') {
+    if (!authLoading && user && !user.regions?.includes('gulf') && user.region !== 'gulf') {
       setAccessDenied(true)
       return
     }
+    setAccessDenied(false)
   }, [user, authLoading])
 
   const debouncedSearch = useMemo(() => {
@@ -73,7 +74,7 @@ export default function GulfCompaniesPage() {
   if (accessDenied) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <EmployerNavbar />
+        <GulfNavbar />
         <div className="flex items-center justify-center min-h-screen pt-20">
           <div className="text-center max-w-md mx-auto p-8">
             <div className="mb-6">
@@ -110,7 +111,7 @@ export default function GulfCompaniesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-green-100 to-yellow-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <EmployerNavbar />
+      <GulfNavbar />
 
       {/* Hero Section */}
       <div className="relative pt-20 pb-12">

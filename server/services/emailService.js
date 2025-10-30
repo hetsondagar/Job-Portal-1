@@ -535,6 +535,229 @@ The Job Portal Team
     `;
   }
 
+  async sendOTPEmail(toEmail, otp) {
+    // Wait for initialization if not ready
+    if (!this.initialized) {
+      console.log('⏳ Waiting for email service initialization...');
+      let attempts = 0;
+      while (!this.initialized && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+    }
+
+    const subject = 'Cross-Portal Registration OTP - Job Portal';
+    const htmlContent = this.getOTPEmailTemplate(otp);
+    const textContent = this.getOTPEmailText(otp);
+
+    const mailOptions = {
+      from: `"${this.fromName}" <${this.fromEmail}>`,
+      to: toEmail,
+      subject: subject,
+      text: textContent,
+      html: htmlContent
+    };
+
+    if (!this.transporter) {
+      throw new Error('No email service configured');
+    }
+
+    try {
+      if (this.transporter.type === 'mock') {
+        return await this.transporter.sendMail(mailOptions);
+      } else {
+        // Standard SMTP transporter
+        console.log('📧 Sending OTP email via SMTP...');
+        console.log('📧 Email details:', {
+          to: mailOptions.to,
+          from: mailOptions.from,
+          subject: mailOptions.subject
+        });
+        
+        const info = await this.transporter.sendMail(mailOptions);
+        console.log('✅ OTP email sent via SMTP');
+        console.log('📧 Message ID:', info.messageId);
+        console.log('📧 Response:', info.response);
+        return { success: true, method: 'smtp', messageId: info.messageId };
+      }
+    } catch (error) {
+      console.error('❌ OTP email send failed:', error?.message || error);
+      console.error('❌ Error details:', {
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode
+      });
+      
+      // Handle SMTP connection issues with retry
+      if (error?.code === 'ETIMEDOUT' || error?.code === 'ECONNRESET') {
+        console.log('🔄 SMTP connection issue detected, attempting to reinitialize...');
+        try {
+          await this.initializeTransporter(true); // Force reinitialize
+          if (this.transporter && this.transporter.type !== 'mock') {
+            console.log('🔄 Retrying OTP email send with reinitialized SMTP provider...');
+            const retryResult = await this.transporter.sendMail(mailOptions);
+            console.log('✅ OTP email sent successfully via SMTP retry');
+            return { success: true, method: 'smtp-retry', messageId: retryResult.messageId };
+          }
+        } catch (retryError) {
+          console.error('❌ SMTP retry also failed:', retryError.message);
+        }
+      }
+      
+      throw new Error(`OTP email send failed: ${error?.message || error}`);
+    }
+  }
+
+  getOTPEmailTemplate(otp) {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cross-Portal Registration OTP - Job Portal</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+          }
+          .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+          }
+          .title {
+            color: #1f2937;
+            font-size: 20px;
+            margin-bottom: 20px;
+          }
+          .content {
+            margin-bottom: 30px;
+          }
+          .otp-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+          }
+          .otp-code {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+          }
+          .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Job Portal</div>
+            <h1 class="title">Cross-Portal Registration OTP</h1>
+          </div>
+          
+          <div class="content">
+            <p>Hello there!</p>
+            
+            <p>We received a request to register your existing account for an additional portal access. If you didn't make this request, you can safely ignore this email.</p>
+            
+            <div class="otp-box">
+              <p style="margin: 0; opacity: 0.9; font-size: 14px;">Your verification code is:</p>
+              <div class="otp-code">${otp}</div>
+              <p style="margin: 0; opacity: 0.9; font-size: 14px;">This code expires in 10 minutes</p>
+            </div>
+            
+            <p><strong>Please enter this code in the verification dialog to complete your registration.</strong></p>
+            
+            <div class="warning">
+              <strong>⚠️ Important:</strong>
+              <ul>
+                <li>This OTP will expire in 10 minutes</li>
+                <li>If you didn't request this registration, please ignore this email</li>
+                <li>Never share your OTP with anyone</li>
+                <li>Our team will never ask for your OTP via phone or email</li>
+              </ul>
+            </div>
+            
+            <p>If you have any questions, please contact our support team.</p>
+            
+            <p>Best regards,<br>The Job Portal Team</p>
+          </div>
+          
+          <div class="footer">
+            <p>© 2024 Job Portal. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  getOTPEmailText(otp) {
+    return `
+Cross-Portal Registration OTP - Job Portal
+
+Hello there!
+
+We received a request to register your existing account for an additional portal access. If you didn't make this request, you can safely ignore this email.
+
+Your verification code is:
+
+${otp}
+
+This code expires in 10 minutes
+
+Please enter this code in the verification dialog to complete your registration.
+
+Important:
+- This OTP will expire in 10 minutes
+- If you didn't request this registration, please ignore this email
+- Never share your OTP with anyone
+- Our team will never ask for your OTP via phone or email
+
+If you have any questions, please contact our support team.
+
+Best regards,
+The Job Portal Team
+
+© 2024 Job Portal. All rights reserved.
+    `;
+  }
+
   async sendMail(mailOptions) {
     // Wait for initialization if not ready
     if (!this.initialized) {

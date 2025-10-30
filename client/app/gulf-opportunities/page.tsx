@@ -37,6 +37,7 @@ export default function GulfOpportunitiesPage() {
   const { user, loading, login, signup } = useAuth()
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [showRegisterDialog, setShowRegisterDialog] = useState(false)
+  const [showExistingUserDialog, setShowExistingUserDialog] = useState(false)
   const [loginData, setLoginData] = useState({ email: '', password: '' })
   const [registerData, setRegisterData] = useState({ 
     fullName: '', 
@@ -48,8 +49,17 @@ export default function GulfOpportunitiesPage() {
     agreeToTerms: false,
     subscribeNewsletter: false
   })
+  const [existingUserData, setExistingUserData] = useState({ 
+    userId: '', 
+    firstName: '', 
+    email: '', 
+    confirmPassword: '', 
+    otp: '' 
+  })
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
+  const [isVerifyingOTP, setIsVerifyingOTP] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [registerError, setRegisterError] = useState('')
 
@@ -187,6 +197,7 @@ export default function GulfOpportunitiesPage() {
       setAppliedJobs(new Set())
     }
   }, [user])
+  
 
   const benefits = [
     {
@@ -235,6 +246,19 @@ export default function GulfOpportunitiesPage() {
           window.location.href = '/employer-login'
         }, 2000)
       } else {
+        // Check if user has Gulf portal access
+        const hasGulfAccess = result?.user?.regions?.includes('gulf') || result?.user?.region === 'gulf'
+        
+        if (!hasGulfAccess) {
+          console.log('❌ User does not have Gulf portal access')
+          toast.error('You do not have access to the Gulf portal yet. Please register for Gulf access.')
+          // Don't redirect, close login dialog and show register dialog
+          setShowLoginDialog(false)
+          setShowRegisterDialog(true)
+          setIsLoggingIn(false)
+          return
+        }
+        
         console.log('✅ Gulf jobseeker login successful, using redirectTo from server')
         
         // Use the redirectTo URL from the server response
@@ -291,6 +315,7 @@ export default function GulfOpportunitiesPage() {
         experience: registerData.experience || undefined,
         agreeToTerms: registerData.agreeToTerms,
         subscribeNewsletter: registerData.subscribeNewsletter,
+        region: 'gulf' // Set region for Gulf registration
       })
       
       console.log('✅ Gulf registration successful')
@@ -305,18 +330,99 @@ export default function GulfOpportunitiesPage() {
       
     } catch (error: any) {
       console.error('❌ Gulf registration error:', error)
-      setRegisterError(error.message || 'Registration failed. Please try again.')
       
       // Handle specific validation errors from backend
       if (error.message && error.message.includes('Validation failed')) {
         toast.error("Please check your input and try again")
+        setRegisterError("Please check your input and try again")
       } else if (error.message && error.message.includes('already exists')) {
+        // User exists in another portal - show cross-portal registration dialog
+        console.log('🔍 User exists, checking for cross-portal registration...')
+        
+        // First, check if user exists with password verification
+        try {
+          const checkResponse = await apiService.checkExistingUser(
+            registerData.email,
+            registerData.password,
+            'gulf'
+          )
+          
+          console.log('🔍 checkResponse structure:', {
+            success: checkResponse.success,
+            userExists: checkResponse.userExists,
+            data: checkResponse.data
+          })
+          
+          if (checkResponse.success && checkResponse.userExists) {
+            // Show dialog to verify OTP
+            const userData = checkResponse.data?.data || checkResponse.data
+            console.log('🔍 Setting up existing user data:', userData)
+            setExistingUserData({
+              userId: userData.userId,
+              firstName: userData.firstName,
+              email: userData.email,
+              confirmPassword: '',
+              otp: ''
+            })
+            console.log('🔍 Closing register dialog and opening existing user dialog')
+            setShowRegisterDialog(false)
+            setShowExistingUserDialog(true)
+            console.log('🔍 Dialog state updated, sending toast')
+            toast.success("Password verified! OTP sent to your email.")
+            return
+          } else if (!checkResponse.success) {
+            // Invalid password or other error
+            setRegisterError(checkResponse.message || 'Invalid password or error occurred')
+            toast.error(checkResponse.message || 'Invalid password or error occurred')
+            return
+          }
+        } catch (checkError: any) {
+          console.error('❌ Check existing user error:', checkError)
+          setRegisterError(checkError.message || 'Failed to verify user. Please try again.')
+          toast.error(checkError.message || 'Failed to verify user. Please try again.')
+          return
+        }
+        
+        setRegisterError("An account with this email already exists")
         toast.error("An account with this email already exists")
       } else {
+        setRegisterError(error.message || "Registration failed")
         toast.error(error.message || "Registration failed")
       }
     } finally {
       setIsRegistering(false)
+    }
+  }
+  
+  // Handle OTP verification for existing users
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsVerifyingOTP(true)
+    
+    try {
+      const response = await apiService.verifyOTPAndRegister(
+        existingUserData.userId,
+        existingUserData.otp,
+        'gulf'
+      )
+      
+      if (response.success) {
+        console.log('✅ Cross-portal registration successful')
+        toast.success("Successfully registered for Gulf portal! Logging you in...")
+        
+        // Close dialog
+        setShowExistingUserDialog(false)
+        
+        // Refresh user data
+        window.location.reload()
+      } else {
+        toast.error(response.message || 'OTP verification failed')
+      }
+    } catch (error: any) {
+      console.error('❌ OTP verification error:', error)
+      toast.error(error.message || 'OTP verification failed')
+    } finally {
+      setIsVerifyingOTP(false)
     }
   }
 
@@ -450,7 +556,7 @@ export default function GulfOpportunitiesPage() {
               </Button>
               
               {/* Only show Create Gulf Account button for non-Gulf users */}
-              {(!user || user.region !== 'gulf') && (
+              {(!user || (!user.regions?.includes('gulf') && user.region !== 'gulf')) && (
                 <Button 
                   size="lg" 
                   variant="outline" 
@@ -662,7 +768,7 @@ export default function GulfOpportunitiesPage() {
           </div>
 
           {/* CTA Section - Only show for non-Gulf users */}
-          {(!user || user.region !== 'gulf') && (
+          {(!user || (!user.regions?.includes('gulf') && user.region !== 'gulf')) && (
             <Card className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
               <CardContent className="p-12 text-center">
                 <h2 className="text-3xl font-bold mb-4">
@@ -964,6 +1070,70 @@ export default function GulfOpportunitiesPage() {
                 Sign in here
               </button>
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Existing User Verification Dialog */}
+      <Dialog open={showExistingUserDialog} onOpenChange={setShowExistingUserDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold text-green-600">
+              Welcome Back, {existingUserData.firstName}!
+            </DialogTitle>
+            <DialogDescription className="text-center text-slate-600 dark:text-slate-300 mt-2">
+              You're already a member of CampusZone! Verify your OTP to get access to the Gulf portal as well.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleVerifyOTP} className="space-y-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                <strong>Email:</strong> {existingUserData.email}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                We've sent a 6-digit OTP to your email address. Please check your inbox.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="otp">Enter OTP</Label>
+              <Input
+                id="otp"
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                value={existingUserData.otp}
+                onChange={(e) => setExistingUserData({ ...existingUserData, otp: e.target.value })}
+                maxLength={6}
+                pattern="[0-9]{6}"
+                required
+                className="text-center text-2xl tracking-widest"
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                OTP is valid for 10 minutes
+              </p>
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              disabled={isVerifyingOTP || existingUserData.otp.length !== 6}
+            >
+              {isVerifyingOTP ? "Verifying..." : "Verify & Access Gulf Portal"}
+            </Button>
+          </form>
+          
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-sm text-green-600 hover:text-green-700 font-medium"
+              onClick={() => {
+                setShowExistingUserDialog(false)
+                setShowRegisterDialog(true)
+              }}
+            >
+              Back to registration
+            </button>
           </div>
         </DialogContent>
       </Dialog>

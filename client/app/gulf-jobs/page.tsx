@@ -34,7 +34,7 @@ import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
-import { Navbar } from "@/components/navbar"
+import GulfNavbar from "@/components/gulf-navbar"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
@@ -111,10 +111,11 @@ export default function GulfJobsPage() {
   const [accessDenied, setAccessDenied] = useState(false)
   
   useEffect(() => {
-    if (!loading && user && user.region !== 'gulf') {
+    if (!loading && user && !user.regions?.includes('gulf') && user.region !== 'gulf') {
       setAccessDenied(true)
       return
     }
+    setAccessDenied(false)
   }, [user, loading])
 
   // Filter state
@@ -757,7 +758,7 @@ export default function GulfJobsPage() {
   if (accessDenied) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <Navbar />
+        <GulfNavbar />
         <div className="flex items-center justify-center min-h-screen pt-20">
           <div className="text-center max-w-md mx-auto p-8">
             <div className="mb-6">
@@ -794,7 +795,7 @@ export default function GulfJobsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-green-100 to-yellow-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Navbar />
+      <GulfNavbar />
       
       {/* Hero Section */}
       <div className="relative pt-20 pb-12">

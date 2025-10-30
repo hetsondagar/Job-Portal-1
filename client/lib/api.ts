@@ -28,6 +28,7 @@ export interface User {
   lastName: string;
   userType: 'jobseeker' | 'employer' | 'admin' | 'superadmin';
   region?: 'india' | 'gulf' | 'other';
+  regions?: string[]; // Array of regions for multi-portal access
   isEmailVerified: boolean;
   accountStatus: string;
   avatar?: string;
@@ -97,6 +98,7 @@ export interface SignupData {
   password: string;
   phone?: string;
   experience?: string;
+  region?: 'india' | 'gulf' | 'other';
   agreeToTerms: boolean;
   subscribeNewsletter?: boolean;
 }
@@ -994,6 +996,38 @@ class ApiService {
     });
 
     return this.handleResponse(response);
+  }
+
+  // Cross-portal signup methods
+  async checkExistingUser(email: string, password: string, requestingRegion: 'gulf' | 'india'): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/auth/check-existing-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password, requestingRegion }),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async verifyOTPAndRegister(userId: string, otp: string, requestingRegion: 'gulf' | 'india'): Promise<ApiResponse<AuthResponse>> {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp-and-register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, otp, requestingRegion }),
+    });
+
+    const result = await this.handleResponse<AuthResponse>(response);
+    
+    if (result.success && result.data?.token) {
+      localStorage.setItem('token', result.data.token);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
+    }
+
+    return result;
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
