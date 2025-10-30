@@ -2724,13 +2724,30 @@ export default function CompaniesPage() {
 
   const handlePageChange = (page: number) => {
 
-    setCurrentPage(page)
+    // Ensure page is within valid range
+    const validPage = Math.min(Math.max(1, page), totalPages || 1)
+    
+    setCurrentPage(validPage)
 
     // Scroll to top of company list
 
     window.scrollTo({ top: 0, behavior: "smooth" })
 
   }
+
+
+
+  // Reset page to 1 when totalPages changes or becomes invalid
+
+  useEffect(() => {
+
+    if (totalPages > 0 && currentPage > totalPages) {
+
+      setCurrentPage(1)
+
+    }
+
+  }, [totalPages, currentPage])
 
 
 
@@ -3262,13 +3279,13 @@ export default function CompaniesPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-200/40 via-purple-200/30 to-indigo-200/40 dark:from-slate-900/50 dark:via-slate-800/30 dark:to-slate-900/50"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
-        <div className="flex gap-6 sm:gap-8">
+        <div className="flex gap-6 sm:gap-8 items-start">
 
           {/* Sticky Filters Sidebar */}
 
           <div className={`w-full lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}>
 
-            <div className="sticky top-32 z-10 h-fit">
+            <div className="sticky top-6 z-10 h-fit max-h-[calc(100vh-3rem)] overflow-y-auto">
 
               <Card className="border-white/30 dark:border-white/10 bg-white/50 dark:bg-white/10 backdrop-blur-xl shadow-xl">
 
@@ -3679,7 +3696,7 @@ export default function CompaniesPage() {
 
           {/* Company Listings */}
 
-          <div className="flex-1 min-w-0 min-h-screen">
+          <div className="flex-1 min-w-0">
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
 
