@@ -2087,11 +2087,13 @@ exports.getJobsByEmployer = async (req, res, next) => {
     const offset = (page - 1) * limit;
     
     // Filter by companyId if user has one (employers/admins), otherwise by employerId
+    // CRITICAL: Prioritize company_id (database field) over companyId (model property)
+    const userCompanyId = req.user.company_id || req.user.companyId;
     const whereClause = {};
-    if (req.user.companyId) {
+    if (userCompanyId) {
       // Employers and admins see all jobs from their company
-      whereClause.companyId = req.user.companyId;
-      console.log('🔍 Filtering by companyId:', req.user.companyId);
+      whereClause.companyId = userCompanyId;
+      console.log('🔍 Filtering by companyId:', userCompanyId);
     } else {
       // Fallback to employerId for users without companyId
       whereClause.employerId = req.user.id;
@@ -2637,11 +2639,13 @@ exports.getJobsByEmployer = async (req, res, next) => {
     
 
     // Filter by companyId if user has one (employers/admins), otherwise by employerId
+    // CRITICAL: Prioritize company_id (database field) over companyId (model property)
+    const userCompanyId = req.user.company_id || req.user.companyId;
     const whereClause = {};
-    if (req.user.companyId) {
+    if (userCompanyId) {
       // Employers and admins see all jobs from their company
-      whereClause.companyId = req.user.companyId;
-      console.log('🔍 Filtering by companyId:', req.user.companyId);
+      whereClause.companyId = userCompanyId;
+      console.log('🔍 Filtering by companyId:', userCompanyId);
     } else {
       // Fallback to employerId for users without companyId
       whereClause.employerId = req.user.id;

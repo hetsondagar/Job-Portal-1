@@ -265,6 +265,10 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       parsedValidationRules = {};
     }
 
+    // CRITICAL: Prioritize user's company_id first (most reliable source)
+    // This ensures bulk imports use the user's actual company association
+    const userCompanyId = req.user.company_id || req.user.companyId;
+    
     // Create bulk import record
     const bulkImport = await BulkJobImport.create({
       importName,
@@ -279,7 +283,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       scheduledAt: isScheduled === 'true' ? new Date(scheduledAt) : null,
       notificationEmail,
       createdBy: req.user.id,
-      companyId: req.user.companyId || req.user.company_id || null
+      companyId: userCompanyId || null
     });
 
     // If not scheduled, start processing immediately
@@ -328,10 +332,13 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Prioritize user's company_id first
+    const userCompanyId = req.user.company_id || req.user.companyId;
+    
     const importRecord = await BulkJobImport.findOne({
       where: {
         id: id,
-        companyId: req.user.companyId || req.user.company_id
+        companyId: userCompanyId || null
       }
     });
 
@@ -373,10 +380,13 @@ router.post('/:id/retry', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Prioritize user's company_id first
+    const userCompanyId = req.user.company_id || req.user.companyId;
+    
     const importRecord = await BulkJobImport.findOne({
       where: {
         id: id,
-        companyId: req.user.companyId || req.user.company_id
+        companyId: userCompanyId || null
       }
     });
 
@@ -427,6 +437,153 @@ router.post('/:id/retry', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete single bulk import (and associated jobs if requested)
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deleteJobs = false } = req.query; // Optional: delete associated jobs
+
+    // Prioritize user's company_id first
+    const userCompanyId = req.user.company_id || req.user.companyId;
+    
+    const importRecord = await BulkJobImport.findOne({
+      where: {
+        id: id,
+        companyId: userCompanyId || null
+      }
+    });
+
+    if (!importRecord) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bulk import not found'
+      });
+    }
+
+    // If deleteJobs is true, delete all jobs created by this import
+    if (deleteJobs === 'true' || deleteJobs === true) {
+      // Find jobs created by this import (we'll need to track this via successLog or metadata)
+      const jobsToDelete = await Job.findAll({
+        where: {
+          employerId: importRecord.createdBy,
+          companyId: userCompanyId || null,
+          // Find jobs created around the import time window
+          createdAt: {
+            [require('sequelize').Op.gte]: importRecord.createdAt || new Date(Date.now() - 24 * 60 * 60 * 1000)
+          }
+        },
+        limit: 1000 // Safety limit
+      });
+      
+      if (jobsToDelete.length > 0) {
+        console.log(`🗑️ Deleting ${jobsToDelete.length} jobs associated with bulk import ${id}`);
+        for (const job of jobsToDelete) {
+          await job.destroy(); // This will cascade delete related records
+        }
+      }
+    }
+
+    // Delete the uploaded file if it exists
+    if (importRecord.fileUrl) {
+      const filePath = path.join(__dirname, '../uploads/bulk-imports', path.basename(importRecord.fileUrl));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️ Deleted file: ${filePath}`);
+      }
+    }
+
+    // Delete the bulk import record
+    await importRecord.destroy();
+
+    res.json({
+      success: true,
+      message: deleteJobs ? 'Bulk import and associated jobs deleted successfully' : 'Bulk import deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete bulk import error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete bulk import',
+      error: error.message
+    });
+  }
+});
+
+// Delete all bulk imports for the user's company
+router.delete('/', authenticateToken, async (req, res) => {
+  try {
+    // Prioritize user's company_id first
+    const userCompanyId = req.user.company_id || req.user.companyId;
+    const { deleteJobs = false } = req.query;
+
+    // Find all bulk imports for this company
+    const imports = await BulkJobImport.findAll({
+      where: {
+        companyId: userCompanyId || null
+      }
+    });
+
+    if (imports.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No bulk imports found to delete',
+        deletedCount: 0
+      });
+    }
+
+    let deletedJobsCount = 0;
+    let deletedFilesCount = 0;
+
+    // Delete associated jobs if requested
+    if (deleteJobs === 'true' || deleteJobs === true) {
+      for (const importRecord of imports) {
+        const jobsToDelete = await Job.findAll({
+          where: {
+            employerId: importRecord.createdBy,
+            companyId: userCompanyId || null,
+            createdAt: {
+              [require('sequelize').Op.gte]: importRecord.createdAt || new Date(Date.now() - 24 * 60 * 60 * 1000)
+            }
+          },
+          limit: 1000
+        });
+        
+        for (const job of jobsToDelete) {
+          await job.destroy();
+          deletedJobsCount++;
+        }
+      }
+    }
+
+    // Delete files and records
+    for (const importRecord of imports) {
+      if (importRecord.fileUrl) {
+        const filePath = path.join(__dirname, '../uploads/bulk-imports', path.basename(importRecord.fileUrl));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          deletedFilesCount++;
+        }
+      }
+      await importRecord.destroy();
+    }
+
+    res.json({
+      success: true,
+      message: `Deleted ${imports.length} bulk import(s)${deleteJobs ? ` and ${deletedJobsCount} job(s)` : ''}`,
+      deletedCount: imports.length,
+      deletedJobsCount: deleteJobs ? deletedJobsCount : 0,
+      deletedFilesCount
+    });
+  } catch (error) {
+    console.error('Delete all bulk imports error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete bulk imports',
+      error: error.message
+    });
+  }
+});
+
 // Download template
 router.get('/template/:type', authenticateToken, async (req, res) => {
   try {
@@ -435,13 +592,16 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
     // Create template based on type
     const template = createJobTemplate(type);
     
+    // CRITICAL: Double-check that no hot vacancy fields are present before generating template
+    const finalTemplate = filterHotVacancyFields(template);
+    
     if (type === 'csv') {
       // Generate CSV file
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="job-import-template.csv"`);
       
       // Convert template to CSV
-      const csvContent = convertToCSV(template);
+      const csvContent = convertToCSV(finalTemplate);
       res.send(csvContent);
     } else {
       // Generate Excel file
@@ -449,7 +609,7 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
       res.setHeader('Content-Disposition', `attachment; filename="job-import-template-${type}.xlsx"`);
       
       const workbook = xlsx.utils.book_new();
-      const worksheet = xlsx.utils.json_to_sheet(template);
+      const worksheet = xlsx.utils.json_to_sheet(finalTemplate);
       xlsx.utils.book_append_sheet(workbook, worksheet, 'Jobs');
       const buffer = xlsx.write(workbook, { type: 'buffer' });
       res.send(buffer);
@@ -514,11 +674,34 @@ async function processBulkImport(importId) {
           continue;
         }
 
+        // Get user for region and companyId
+        const user = await User.findByPk(importRecord.createdBy);
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        // CRITICAL: companyId is REQUIRED for Job model - prioritize user's company_id FIRST
+        // Priority: user.company_id > importRecord.companyId > user.companyId
+        // User's company_id is the most reliable source as it represents their actual company association
+        let companyId = user.company_id || user.companyId || importRecord.companyId;
+        if (!companyId) {
+          throw new Error('Company ID is required. User must be associated with a company. Please ensure your account is linked to a company before importing jobs.');
+        }
+
+        // Get company for region if user doesn't have one
+        let region = user.region || 'india';
+        if (!region && companyId) {
+          const company = await Company.findByPk(companyId);
+          if (company && company.region) {
+            region = company.region;
+          }
+        }
+
         // Check for duplicates
         const existingJob = await Job.findOne({
           where: {
             title: record.title,
-            companyId: importRecord.companyId,
+            companyId: companyId,
             location: record.location
           }
         });
@@ -536,13 +719,136 @@ async function processBulkImport(importId) {
           .replace(/-+/g, '-')
           .replace(/^-+|-+$/g, '') + '-' + Date.now();
         
-        // Create job
+        // Map CSV/Excel fields to Job model fields properly
+        // Handle type vs jobType mapping
+        const jobType = record.type || record.jobType || 'full-time';
+        
+        // Map experience to experienceLevel
+        const experienceLevelMap = {
+          'fresher': 'entry',
+          'entry': 'entry',
+          'junior': 'junior',
+          'mid': 'mid',
+          'senior': 'senior'
+        };
+        const experienceLevel = record.experienceLevel || 
+          (record.experience ? experienceLevelMap[record.experience] : 'entry');
+        
+        // Handle employmentType mapping (if provided, otherwise derive from jobType)
+        let employmentType = record.employmentType || record.employment_type || '';
+        if (!employmentType && jobType) {
+          // Derive employmentType from jobType if not provided
+          if (jobType === 'full-time') employmentType = 'Full Time, Permanent';
+          else if (jobType === 'part-time') employmentType = 'Part Time, Permanent';
+          else if (jobType === 'contract') employmentType = 'Full Time, Contract';
+        }
+
+        // Process skills - ensure it's an array or string
+        let skillsArray = [];
+        if (record.skills) {
+          if (typeof record.skills === 'string') {
+            skillsArray = record.skills.split(',').map(s => s.trim()).filter(s => s);
+          } else if (Array.isArray(record.skills)) {
+            skillsArray = record.skills;
+          }
+        }
+
+        // Process benefits - ensure it's JSONB compatible
+        let benefitsData = null;
+        if (record.benefits) {
+          if (typeof record.benefits === 'string') {
+            benefitsData = record.benefits.split(',').map(b => b.trim()).filter(b => b);
+          } else if (Array.isArray(record.benefits)) {
+            benefitsData = record.benefits;
+          }
+        }
+
+        // Process education - ensure it's a string (not array)
+        let educationStr = '';
+        if (record.education) {
+          if (Array.isArray(record.education)) {
+            educationStr = record.education.join(', ');
+          } else {
+            educationStr = String(record.education);
+          }
+        }
+
+        // Process tags - ensure it's an array
+        let tagsArray = [];
+        if (record.tags) {
+          if (typeof record.tags === 'string') {
+            tagsArray = record.tags.split(',').map(t => t.trim()).filter(t => t);
+          } else if (Array.isArray(record.tags)) {
+            tagsArray = record.tags;
+          }
+        }
+        
+        // Handle consultancy posting fields
+        const postingType = record.postingType || record.posting_type || 'company';
+        const metadata = {
+          postingType: postingType,
+          companyName: record.companyName || record.company_name || null,
+          ...(postingType === 'consultancy' && {
+            consultancyName: record.consultancyName || record.consultancy_name || null,
+            hiringCompany: {
+              name: record.hiringCompanyName || record.hiring_company_name || null,
+              industry: record.hiringCompanyIndustry || record.hiring_company_industry || null,
+              description: record.hiringCompanyDescription || record.hiring_company_description || null
+            },
+            showHiringCompanyDetails: record.showHiringCompanyDetails === 'true' || record.showHiringCompanyDetails === true || false
+          })
+        };
+        
+        // Create job with proper field mapping
         const jobData = {
-          ...record,
-          slug: slug,
-          companyId: importRecord.companyId,
+          title: record.title || '',
+          description: record.description || '',
+          location: record.location || '',
+          city: record.city || '',
+          state: record.state || '',
+          country: record.country || 'India',
+          region: record.region || region || 'india', // CRITICAL: Must set region
+          requirements: record.requirements || '',
+          responsibilities: record.responsibilities || '',
+          type: jobType,
+          jobType: jobType, // Set both for compatibility
+          experienceLevel: experienceLevel,
+          experience: record.experience || 'fresher',
+          experienceMin: record.experienceMin || null,
+          experienceMax: record.experienceMax || null,
+          salary: record.salary || record.salaryMin && record.salaryMax ? `${record.salaryMin}-${record.salaryMax}` : '',
+          salaryMin: record.salaryMin || null,
+          salaryMax: record.salaryMax || null,
+          salaryCurrency: record.salaryCurrency || 'INR',
+          salaryPeriod: record.salaryPeriod || 'yearly',
+          department: record.department || '',
+          category: record.category || '',
+          industryType: record.industryType || record.industry_type || '',
+          roleCategory: record.roleCategory || record.role_category || '',
+          role: record.role || '', // CRITICAL: Role field from Step 2
+          employmentType: employmentType, // CRITICAL: Employment Type from Step 2
+          skills: skillsArray,
+          education: educationStr,
+          benefits: benefitsData,
+          remoteWork: record.remoteWork || 'on-site',
+          shiftTiming: record.shiftTiming || 'day',
+          tags: tagsArray,
+          isUrgent: record.isUrgent === 'true' || record.isUrgent === true || false,
+          isFeatured: record.isFeatured === 'true' || record.isFeatured === true || false,
+          isPremium: record.isPremium === 'true' || record.isPremium === true || false,
+          applicationDeadline: record.applicationDeadline ? new Date(record.applicationDeadline) : null,
+          // Company associations - CRITICAL
+          companyId: companyId, // Use validated companyId
           employerId: importRecord.createdBy,
-          status: 'draft',
+          // CRITICAL: Status must be 'active' for jobs to appear in listings
+          status: 'active',
+          slug: slug,
+          publishedAt: new Date(), // CRITICAL: Set publishedAt for active jobs
+          // CRITICAL: Set validTill for public visibility (default 21 days from now if not provided)
+          validTill: record.validTill ? new Date(record.validTill) : new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+          // CONSULTANCY METADATA - Store consultancy posting fields in metadata
+          metadata: metadata,
+          // Merge any default values from import
           ...importRecord.defaultValues
         };
 
@@ -693,41 +999,145 @@ function convertToCSV(data) {
   return [csvHeader, ...csvRows].join('\n');
 }
 
-// Create job template
+// List of hot vacancy fields that should NEVER appear in bulk import template
+const HOT_VACANCY_FIELDS = [
+  'isHotVacancy',
+  'urgentHiring',
+  'multipleEmailIds',
+  'boostedSearch',
+  'searchBoostLevel',
+  'citySpecificBoost',
+  'videoBanner',
+  'whyWorkWithUs',
+  'companyReviews',
+  'autoRefresh',
+  'refreshDiscount',
+  'attachmentFiles',
+  'officeImages',
+  'companyProfile',
+  'proactiveAlerts',
+  'alertRadius',
+  'alertFrequency',
+  'featuredKeywords',
+  'customBranding',
+  'superFeatured',
+  'tierLevel',
+  'externalApplyUrl',
+  'hotVacancyPrice',
+  'hotVacancyCurrency',
+  'hotVacancyPaymentStatus',
+  'urgencyLevel',
+  'hiringTimeline',
+  'maxApplications',
+  'pricingTier',
+  'price',
+  'currency',
+  'paymentId',
+  'paymentDate',
+  'priorityListing',
+  'featuredBadge',
+  'unlimitedApplications',
+  'advancedAnalytics',
+  'candidateMatching',
+  'directContact',
+  'seoTitle',
+  'seoDescription',
+  'keywords',
+  'impressions',
+  'clicks'
+];
+
+// Filter out hot vacancy fields from template data
+function filterHotVacancyFields(templateArray) {
+  return templateArray.map(record => {
+    const filtered = {};
+    Object.keys(record).forEach(key => {
+      // Exclude any hot vacancy fields
+      if (!HOT_VACANCY_FIELDS.includes(key)) {
+        filtered[key] = record[key];
+      }
+    });
+    return filtered;
+  });
+}
+
+// Create job template matching Job model structure
+// This template includes ALL fields from /post-job page (excluding hot-vacancy specific fields)
+// Supports both company posting and consultancy posting
+// CRITICAL: NO hot vacancy fields are included in this template
 function createJobTemplate(type) {
   const baseTemplate = [
     {
+      // ========== STEP 1: BASIC INFO ==========
+      // Required fields
       title: 'Senior Software Engineer',
       description: 'We are looking for a highly skilled Senior Software Engineer to lead our development team. The ideal candidate will have extensive experience in full-stack development and a strong understanding of scalable architectures.',
       location: 'Mumbai, Maharashtra',
+      
+      // Location details
       city: 'Mumbai',
       state: 'Maharashtra',
       country: 'India',
-      jobType: 'full-time',
-      experienceLevel: 'senior',
+      region: 'india', // Options: 'india', 'gulf', 'other'
+      
+      // Job type and experience
+      jobType: 'full-time', // Options: 'full-time', 'part-time', 'contract'
+      type: 'full-time', // Alias for jobType
+      experienceLevel: 'senior', // Options: 'entry', 'junior', 'mid', 'senior'
+      experience: 'senior', // Alias: 'fresher', 'junior', 'mid', 'senior'
       experienceMin: 5,
       experienceMax: 10,
-      salaryMin: 120000,
-      salaryMax: 180000,
-      salaryCurrency: 'INR',
-      salaryPeriod: 'yearly',
-      department: 'Engineering',
+      
+      // Salary details
+      salary: '12-18 LPA', // Or leave empty and use salaryMin/salaryMax
+      salaryMin: 1200000,
+      salaryMax: 1800000,
+      salaryCurrency: 'INR', // Options: 'INR', 'USD', 'EUR', etc.
+      salaryPeriod: 'yearly', // Options: 'yearly', 'monthly', 'hourly'
+      
+      // Department, category, industry, and role category
+      department: 'Engineering - Software & QA',
       category: 'Technology',
-      skills: 'JavaScript,React,Node.js,TypeScript,PostgreSQL,AWS,Docker,Kubernetes',
+      industryType: 'Software Product (532)', // Industry type from Step 1 dropdown (include number for matching)
+      roleCategory: 'Software Development', // Role category from Step 2 dropdown
+      
+      // Role and Employment Type (Step 2 - CRITICAL FIELDS)
+      role: 'Senior Software Engineer', // CRITICAL: Specific role title (e.g., Security Administrator, Software Engineer, Data Analyst)
+      employmentType: 'Full Time, Permanent', // CRITICAL: Options: 'Full Time, Permanent', 'Part Time, Permanent', 'Full Time, Contract', 'Part Time, Contract', 'Freelance', 'Temporary'
+      
+      // Skills and requirements
+      skills: 'JavaScript,React,Node.js,TypeScript,PostgreSQL,AWS,Docker,Kubernetes', // Comma-separated
       requirements: "Bachelor's or Master's degree in Computer Science or related field, 5+ years of experience in software development, Proven leadership skills",
       responsibilities: 'Lead a team of software engineers,Design and implement scalable software solutions,Mentor junior developers,Collaborate with product and design teams',
-      remoteWork: 'hybrid',
-      shiftTiming: 'day',
-      education: "Bachelor's Degree",
-      isUrgent: false,
-      isFeatured: true,
-      isPremium: false,
-      validTill: '2024-12-31',
-      tags: 'javascript,react,fullstack,senior,leadership',
-      benefits: 'Health Insurance,401k,Remote Work,Paid Time Off,Performance Bonus,Learning Budget',
-      companyName: 'Tech Solutions Inc.',
-      applicationDeadline: '2024-12-31',
-      isActive: true
+      
+      // Work details
+      remoteWork: 'hybrid', // Options: 'on-site', 'remote', 'hybrid'
+      shiftTiming: 'day', // Options: 'day', 'night', 'rotating'
+      
+      // Education and benefits
+      education: "Bachelor's Degree", // String (not array in database)
+      benefits: 'Health Insurance,401k,Remote Work,Paid Time Off,Performance Bonus,Learning Budget', // Comma-separated
+      
+      // Tags and metadata
+      tags: 'javascript,react,fullstack,senior,leadership', // Comma-separated
+      isUrgent: false, // true/false
+      isFeatured: true, // true/false
+      isPremium: false, // true/false
+      
+      // Dates
+      validTill: '2024-12-31', // Format: YYYY-MM-DD
+      applicationDeadline: '2024-12-31', // Format: YYYY-MM-DD
+      
+      // ========== POSTING TYPE: Company or Consultancy ==========
+      postingType: 'company', // CRITICAL: Options: 'company' or 'consultancy'
+      companyName: 'Tech Solutions Inc.', // REQUIRED if postingType='company'
+      
+      // Consultancy Fields (ONLY required if postingType='consultancy')
+      consultancyName: '', // Name of consultancy (REQUIRED if postingType='consultancy')
+      hiringCompanyName: '', // Company the consultancy is hiring for (REQUIRED if postingType='consultancy')
+      hiringCompanyIndustry: 'Software Product (532)', // Industry of hiring company - use dropdown format with number (REQUIRED if postingType='consultancy')
+      hiringCompanyDescription: '', // Description of hiring company (REQUIRED if postingType='consultancy')
+      showHiringCompanyDetails: 'false' // "true" or "false" - whether to show hiring company details to candidates
     },
     {
       title: 'Marketing Manager',
@@ -736,35 +1146,104 @@ function createJobTemplate(type) {
       city: 'Delhi',
       state: 'Delhi',
       country: 'India',
+      region: 'india',
       jobType: 'full-time',
+      type: 'full-time',
       experienceLevel: 'mid',
+      experience: 'mid',
       experienceMin: 3,
       experienceMax: 7,
-      salaryMin: 80000,
-      salaryMax: 120000,
+      salary: '8-12 LPA',
+      salaryMin: 800000,
+      salaryMax: 1200000,
       salaryCurrency: 'INR',
       salaryPeriod: 'yearly',
-      department: 'Marketing',
+      department: 'Marketing & Communication', // Must match dropdown option
       category: 'Marketing',
+      industryType: 'Internet (246)', // Industry type with number format
+      roleCategory: 'Marketing',
+      role: 'Marketing Manager', // CRITICAL: Role field
+      employmentType: 'Full Time, Permanent', // CRITICAL: Employment Type
       skills: 'Digital Marketing,SEO,SEM,Content Marketing,Social Media,Analytics,Team Management',
       requirements: "Bachelor's degree in Marketing or Business, 3+ years of experience in marketing management, Strong communication and leadership skills",
       responsibilities: 'Develop and implement marketing campaigns,Manage digital marketing channels,Analyze market trends and competitor activities,Oversee content creation',
       remoteWork: 'remote',
       shiftTiming: 'day',
       education: "Bachelor's Degree",
+      benefits: 'Health Insurance,Performance Bonus,Professional Development,Paid Time Off,Work from Home',
+      tags: 'marketing,digital,seo,content,strategy',
       isUrgent: false,
       isFeatured: false,
       isPremium: false,
       validTill: '2024-12-31',
-      tags: 'marketing,digital,seo,content,strategy',
-      benefits: 'Health Insurance,Performance Bonus,Professional Development,Paid Time Off,Work from Home',
-      companyName: 'Global Marketing Agency',
       applicationDeadline: '2024-12-31',
-      isActive: true
+      
+      // Company/Consultancy Posting Type
+      postingType: 'company',
+      companyName: 'Global Marketing Agency',
+      
+      // Consultancy Fields (ONLY required if postingType=consultancy)
+      consultancyName: '',
+      hiringCompanyName: '',
+      hiringCompanyIndustry: '',
+      hiringCompanyDescription: '',
+      showHiringCompanyDetails: 'false'
+    },
+    {
+      // EXAMPLE: Consultancy Job
+      title: 'Senior Developer (via Consultancy)',
+      description: 'A leading consultancy is seeking a Senior Developer for one of our premium clients. This is an excellent opportunity to work with cutting-edge technology in a dynamic environment.',
+      location: 'Bangalore, Karnataka',
+      city: 'Bangalore',
+      state: 'Karnataka',
+      country: 'India',
+      region: 'india',
+      jobType: 'full-time',
+      type: 'full-time',
+      experienceLevel: 'senior',
+      experience: 'senior',
+      experienceMin: 5,
+      experienceMax: 10,
+      salary: '15-25 LPA',
+      salaryMin: 1500000,
+      salaryMax: 2500000,
+      salaryCurrency: 'INR',
+      salaryPeriod: 'yearly',
+      department: 'Engineering - Software & QA',
+      category: 'Technology',
+      industryType: 'Software Product (532)', // Industry type (required even for consultancy)
+      roleCategory: 'Software Development', // Role category
+      role: 'Senior Developer', // CRITICAL: Role field
+      employmentType: 'Full Time, Permanent', // CRITICAL: Employment Type
+      skills: 'Java,Spring Boot,Microservices,AWS,React,TypeScript',
+      requirements: "Bachelor's degree in Computer Science, 5+ years of experience in software development",
+      responsibilities: 'Develop and maintain enterprise applications,Lead technical initiatives,Collaborate with cross-functional teams',
+      remoteWork: 'hybrid',
+      shiftTiming: 'day',
+      education: "Bachelor's Degree",
+      benefits: 'Health Insurance,Performance Bonus,Learning Budget',
+      tags: 'java,spring,microservices,consultancy',
+      isUrgent: false,
+      isFeatured: false,
+      isPremium: false,
+      validTill: '2024-12-31',
+      applicationDeadline: '2024-12-31',
+      
+      // ========== POSTING TYPE: Consultancy ==========
+      postingType: 'consultancy', // CRITICAL: Set to 'consultancy' for consultancy postings
+      companyName: '', // Leave empty for consultancy (only used for company postings)
+      consultancyName: 'Tech Recruiters India', // REQUIRED: Name of consultancy posting the job
+      hiringCompanyName: 'Fortune 500 Tech Corp', // REQUIRED: Company the consultancy is hiring for
+      hiringCompanyIndustry: 'Software Product (532)', // REQUIRED: Industry of hiring company - use dropdown format with number
+      hiringCompanyDescription: 'A leading software product company with global presence', // REQUIRED: Description of the hiring company
+      showHiringCompanyDetails: 'true' // "true" or "false" - whether to show hiring company details to candidates
     }
   ];
 
-  return baseTemplate;
+  // CRITICAL: Filter out any hot vacancy fields to ensure they never appear in the template
+  const filteredTemplate = filterHotVacancyFields(baseTemplate);
+  
+  return filteredTemplate;
 }
 
 module.exports = router;
