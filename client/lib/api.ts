@@ -4254,6 +4254,30 @@ class ApiService {
     return response.blob();
   }
 
+  async deleteBulkImport(importId: string, deleteJobs: boolean = false): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (deleteJobs) queryParams.append('deleteJobs', 'true');
+    
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/bulk-import/${importId}${query}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async deleteAllBulkImports(deleteJobs: boolean = false): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (deleteJobs) queryParams.append('deleteJobs', 'true');
+    
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/bulk-import${query}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
   // ============================================================================
   // ADMIN METHODS
 

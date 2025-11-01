@@ -132,10 +132,10 @@ export default function BulkImportPage() {
                   Upload File
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl mx-4">
+              <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
                 <DialogHeader>
-                  <DialogTitle>Upload Job Import File</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-lg sm:text-xl">Upload Job Import File</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm">
                     Upload a CSV, Excel, or JSON file with job data
                   </DialogDescription>
                 </DialogHeader>

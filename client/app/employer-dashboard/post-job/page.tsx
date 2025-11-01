@@ -256,31 +256,260 @@ export default function PostJobPage() {
             const educationArray = Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : [])
             setSelectedEducation(educationArray)
             
-            // Sync selectedIndustries state - clean industry names (remove numbers)
+            // Sync selectedIndustries state - fuzzy match against dropdown options
+            // Industry dropdown has formats like "Software Product (532)" - we need to match against these
+            const allIndustryOptions: string[] = [];
+            // Extract all industry options from the dropdown structure
+            const industryCategories = [
+              { category: "IT Services", industries: ["IT Services & Consulting (2378)"] },
+              { category: "Technology", industries: ["Software Product (532)", "Internet (246)", "Electronics Manufacturing (74)", "Electronic Components (61)", "Hardware & Networking (54)", "Emerging Technology (44)"] },
+              { category: "Education", industries: ["Education / Training (297)", "E-Learning / EdTech (165)"] },
+              { category: "Manufacturing & Production", industries: ["Industrial Equipment (270)", "Auto Components (155)", "Chemicals (112)", "Building Material (74)", "Automobile (72)", "Electrical Equipment (70)", "Industrial Automation (52)", "Iron & Steel (38)", "Packaging & Containers (37)", "Metals & Mining (32)", "Petrochemical / Plastics (25)"] },
+              { category: "Healthcare & Life Sciences", industries: ["Defence & Aerospace (22)", "Fertilizers / Pesticides (18)", "Pulp & Paper (7)", "Medical Services (264)", "Pharmaceutical & Life Sciences (252)", "Medical Devices (58)", "Biotechnology (40)", "Clinical Research (33)"] },
+              { category: "Infrastructure, Transport & Real Estate", industries: ["Construction / Infrastructure (258)", "Real Estate (182)", "Logistics & Supply Chain (145)", "Shipping & Maritime (31)", "Aviation & Aerospace (22)", "Railways (17)"] },
+              { category: "Financial Services", industries: ["Banking / Lending (219)", "Insurance (156)", "Investment Banking / VC / PE (89)", "FinTech (76)", "Stock Broking / Trading (45)", "Mutual Funds / Asset Management (42)", "NBFC (35)", "Accounting / Audit (32)", "Wealth Management (28)"] },
+              { category: "Consumer & Retail", industries: ["FMCG / Foods / Beverage (204)", "Retail (142)", "Textiles / Garments / Accessories (89)", "Consumer Electronics (67)", "Jewellery / Gems / Watches (45)"] },
+              { category: "Media & Entertainment", industries: ["Media & Entertainment (89)", "Advertising & Marketing (67)", "Publishing (34)"] },
+              { category: "Consulting & Professional Services", industries: ["Management Consulting (145)", "Legal Services (78)", "Accounting / Audit (32)"] },
+              { category: "Energy & Utilities", industries: ["Power / Energy (112)", "Oil & Gas (67)", "Water Treatment / Waste Management (34)"] },
+              { category: "Telecommunications", industries: ["Telecom / ISP (89)", "Telecom Equipment (45)"] },
+              { category: "Hospitality & Tourism", industries: ["Hotels / Restaurants (67)", "Travel & Tourism (45)"] },
+              { category: "Other", industries: ["Other (234)"] }
+            ];
+            industryCategories.forEach(cat => {
+              allIndustryOptions.push(...cat.industries);
+            });
+            
+            // Fuzzy match function for industries
+            const fuzzyMatchIndustry = (input: string): string | null => {
+              if (!input || !input.trim()) return null;
+              const normalized = input.toLowerCase().trim();
+              const cleanInput = normalized.replace(/\s*\(\d+\)\s*$/, ''); // Remove numbers from input
+              
+              // Exact match first (with or without numbers)
+              const exactMatch = allIndustryOptions.find(opt => {
+                const cleanOpt = opt.toLowerCase().replace(/\s*\(\d+\)\s*$/, '');
+                return cleanOpt === cleanInput || opt.toLowerCase() === normalized;
+              });
+              if (exactMatch) return exactMatch;
+              
+              // Partial match
+              const partialMatch = allIndustryOptions.find(opt => {
+                const cleanOpt = opt.toLowerCase().replace(/\s*\(\d+\)\s*$/, '');
+                return cleanOpt.includes(cleanInput) || cleanInput.includes(cleanOpt);
+              });
+              if (partialMatch) return partialMatch;
+              
+              // Word-based matching
+              const inputWords = cleanInput.split(/\s+/);
+              const wordMatch = allIndustryOptions.find(opt => {
+                const cleanOpt = opt.toLowerCase().replace(/\s*\(\d+\)\s*$/, '');
+                return inputWords.some(word => {
+                  if (word.length < 3) return false;
+                  return cleanOpt.includes(word);
+                });
+              });
+              if (wordMatch) return wordMatch;
+              
+              return null;
+            };
+            
             const industryArray = jobData.industryType ? 
               jobData.industryType.split(', ')
                 .filter((i: string) => i.trim())
-                .map((i: string) => i.replace(/\s*\(\d+\)\s*$/, '').trim()) : []
+                .map((i: string) => {
+                  const trimmed = i.trim();
+                  const matched = fuzzyMatchIndustry(trimmed);
+                  if (matched) {
+                    console.log(`✅ Auto-matched industry: "${trimmed}" -> "${matched}"`);
+                    return matched;
+                  }
+                  // If no match, try to add it as-is (it might already have the number format)
+                  return trimmed.includes('(') ? trimmed : trimmed;
+                }) : []
             setSelectedIndustries(industryArray)
             
-            // Sync selectedRoleCategories state
+            // Sync selectedRoleCategories state - fuzzy match against dropdown options
+            const allRoleCategoryOptions = [
+              "Engineering - Software & QA", "Sales & Business Development", "Customer Success, Service & Operations",
+              "Finance & Accounting", "Production, Manufacturing & Maintenance", "BFSI, Investments & Trading",
+              "Human Resources", "IT & Information Security", "Marketing & Communication", "Consulting",
+              "Data Science & Analytics", "Healthcare & Life Sciences", "Procurement & Supply Chain",
+              "Engineering - Hardware & Networks", "Other", "Project & Program Management",
+              "Construction & Site Engineering", "UX, Design & Architecture", "Teaching & Training",
+              "Administration & Facilities", "Quality Assurance", "Food, Beverage & Hospitality",
+              "Research & Development", "Content, Editorial & Journalism", "Product Management",
+              "Legal & Regulatory", "Merchandising, Retail & eCommerce", "Risk Management & Compliance",
+              "Strategic & Top Management", "Media Production & Entertainment", "Environment Health & Safety",
+              "Security Services", "Sports, Fitness & Personal Care", "Aviation & Aerospace",
+              "CSR & Social Service", "Energy & Mining", "Shipping & Maritime",
+              "Software Development", "Retail & B2C Sales", "BD / Pre Sales", "Enterprise & B2B Sales",
+              "Voice / Blended", "Quality Assurance and Testing", "Accounting & Taxation", "IT Consulting",
+              "Engineering", "DBA / Data warehousing", "Recruitment & Talent Acquisition", "Finance",
+              "Customer Success, Service", "Construction Engineering", "Business Intelligence & Analytics",
+              "Operations, Maintenance", "IT Network", "Operations", "Customer Success", "HR Operations",
+              "DevOps", "Marketing", "Doctor", "Administration", "Sales Support & Operations", "Digital Marketing",
+              "Data Science & Machine Learning", "Banking Operations", "Non Voice", "IT Support",
+              "IT Infrastructure Services", "IT Security", "Procurement & Purchase", "Life Insurance",
+              "Other Program / Project Management", "Finance & Accounting - Other", "Other Design",
+              "SCM & Logistics", "Production & Manufacturing", "Lending", "Content Management (Print)",
+              "Engineering & Manufacturing"
+            ];
+            
+            // Fuzzy match function for role categories
+            const fuzzyMatchRoleCategory = (input: string): string | null => {
+              if (!input || !input.trim()) return null;
+              const normalized = input.toLowerCase().trim();
+              
+              // Exact match first
+              const exactMatch = allRoleCategoryOptions.find(opt => opt.toLowerCase() === normalized);
+              if (exactMatch) return exactMatch;
+              
+              // Partial match
+              const partialMatch = allRoleCategoryOptions.find(opt => {
+                const optLower = opt.toLowerCase();
+                return optLower.includes(normalized) || normalized.includes(optLower.split(' ')[0]);
+              });
+              if (partialMatch) return partialMatch;
+              
+              // Word-based matching
+              const inputWords = normalized.split(/\s+/);
+              const wordMatch = allRoleCategoryOptions.find(opt => {
+                const optLower = opt.toLowerCase();
+                return inputWords.some(word => {
+                  if (word.length < 3) return false;
+                  return optLower.includes(word) || optLower.split(/[&,]/).some(part => part.trim().startsWith(word));
+                });
+              });
+              if (wordMatch) return wordMatch;
+              
+              return null;
+            };
+            
             const roleCategoryArray = jobData.roleCategory ? 
               jobData.roleCategory.split(', ')
-                .filter((r: string) => r.trim()) : []
+                .filter((r: string) => r.trim())
+                .map((r: string) => {
+                  const trimmed = r.trim();
+                  const matched = fuzzyMatchRoleCategory(trimmed);
+                  if (matched) {
+                    console.log(`✅ Auto-matched role category: "${trimmed}" -> "${matched}"`);
+                    return matched;
+                  }
+                  return trimmed;
+                }) : []
             setSelectedRoleCategories(roleCategoryArray)
+            
+            // FUZZY MATCH DEPARTMENT: Auto-select matching department from dropdown
+            // Department dropdown options
+            const departmentOptions = [
+              "Engineering - Software & QA",
+              "Sales & Business Development",
+              "Customer Success, Service & Operations",
+              "Finance & Accounting",
+              "Production, Manufacturing & Maintenance",
+              "BFSI, Investments & Trading",
+              "Human Resources",
+              "IT & Information Security",
+              "Marketing & Communication",
+              "Consulting",
+              "Data Science & Analytics",
+              "Healthcare & Life Sciences",
+              "Procurement & Supply Chain",
+              "Engineering - Hardware & Networks",
+              "Other",
+              "Project & Program Management",
+              "Construction & Site Engineering",
+              "UX, Design & Architecture",
+              "Teaching & Training",
+              "Administration & Facilities",
+              "Quality Assurance",
+              "Food, Beverage & Hospitality",
+              "Research & Development",
+              "Content, Editorial & Journalism",
+              "Product Management",
+              "Legal & Regulatory",
+              "Merchandising, Retail & eCommerce",
+              "Risk Management & Compliance",
+              "Strategic & Top Management",
+              "Media Production & Entertainment",
+              "Environment Health & Safety",
+              "Security Services",
+              "Sports, Fitness & Personal Care",
+              "Aviation & Aerospace",
+              "CSR & Social Service",
+              "Energy & Mining",
+              "Shipping & Maritime"
+            ];
+            
+            // Fuzzy match function - finds best matching department
+            const fuzzyMatchDepartment = (input: string): string | null => {
+              if (!input || !input.trim()) return null;
+              const normalized = input.toLowerCase().trim();
+              
+              // Exact match first
+              const exactMatch = departmentOptions.find(dept => 
+                dept.toLowerCase() === normalized
+              );
+              if (exactMatch) return exactMatch;
+              
+              // Partial match - check if input is contained in department name
+              const partialMatch = departmentOptions.find(dept => {
+                const deptLower = dept.toLowerCase();
+                return deptLower.includes(normalized) || normalized.includes(deptLower.split(' ')[0]);
+              });
+              if (partialMatch) return partialMatch;
+              
+              // Word-based matching (e.g., "marketing" -> "Marketing & Communication")
+              const inputWords = normalized.split(/\s+/);
+              const wordMatch = departmentOptions.find(dept => {
+                const deptLower = dept.toLowerCase();
+                return inputWords.some(word => {
+                  if (word.length < 3) return false; // Skip short words
+                  return deptLower.includes(word) || deptLower.split(/[&,]/).some(part => part.trim().startsWith(word));
+                });
+              });
+              if (wordMatch) return wordMatch;
+              
+              return null;
+            };
+            
+            // Auto-match department if it's not already a dropdown option
+            let finalDepartment = jobData.department || '';
+            if (finalDepartment && !departmentOptions.includes(finalDepartment)) {
+              const matched = fuzzyMatchDepartment(finalDepartment);
+              if (matched) {
+                console.log(`✅ Auto-matched department: "${finalDepartment}" -> "${matched}"`);
+                finalDepartment = matched;
+              }
+            }
             
             // Extract metadata for consultancy fields
             const metadata = jobData.metadata || {};
             
             // Parse benefits to separate written text and selected checkboxes
-            const benefitsStr = jobData.benefits || '';
+            // Handle benefits as string, array, or object (JSONB from database)
+            let benefitsStr: string = '';
+            if (jobData.benefits) {
+              if (typeof jobData.benefits === 'string') {
+                benefitsStr = jobData.benefits;
+              } else if (Array.isArray(jobData.benefits)) {
+                // If it's an array, join it (might be comma-separated or newline-separated)
+                benefitsStr = jobData.benefits.join('\n');
+              } else if (typeof jobData.benefits === 'object') {
+                // If it's an object, convert to string
+                benefitsStr = JSON.stringify(jobData.benefits);
+              }
+            }
+            
             let writtenBenefits = '';
             const commonBenefits = ["Health Insurance", "Dental Insurance", "Vision Insurance", "Life Insurance", "401(k) Plan", "Paid Time Off", "Flexible Hours", "Remote Work", "Professional Development", "Gym Membership", "Free Lunch", "Stock Options"];
             const selectedBenefitsFromData: string[] = [];
             
-            if (benefitsStr) {
-              // Split by newlines
-              const benefitLines = benefitsStr.split('\n').filter((b: string) => b.trim());
+            if (benefitsStr && typeof benefitsStr === 'string') {
+              // Split by newlines or commas
+              const separator = benefitsStr.includes('\n') ? '\n' : (benefitsStr.includes(',') ? ',' : '\n');
+              const benefitLines = benefitsStr.split(separator).filter((b: string) => b.trim());
               benefitLines.forEach((line: string) => {
                 const trimmed = line.trim();
                 // Check if it's a common benefit
@@ -309,20 +538,28 @@ export default function PostJobPage() {
               hiringCompanyIndustry: metadata.hiringCompany?.industry || '',
               hiringCompanyDescription: metadata.hiringCompany?.description || '',
               showHiringCompanyDetails: metadata.showHiringCompanyDetails || false,
-              department: jobData.department || '',
+              department: finalDepartment, // Use fuzzy-matched department
               location: jobData.location || '',
+              // Location details (CRITICAL: Include city, state, country from bulk-import)
+              // Note: city, state, country are separate fields in the database
               type: jobData.jobType || jobData.type || '',
               experience: jobData.experienceLevel || jobData.experience || '',
-              salary: jobData.salary || '',
+              // Salary handling - support both string and min/max values
+              salary: jobData.salary || (jobData.salaryMin && jobData.salaryMax ? `${jobData.salaryMin / 100000}-${jobData.salaryMax / 100000} LPA` : ''),
               description: jobData.description || '',
               requirements: jobData.requirements || '',
+              responsibilities: jobData.responsibilities || '',
               benefits: writtenBenefits, // Only store written text, checkboxes handled separately
-              skills: jobData.skills || [],
+              skills: Array.isArray(jobData.skills) ? jobData.skills : (typeof jobData.skills === 'string' ? jobData.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
               role: jobData.role || '',
               industryType: jobData.industryType || '',
               roleCategory: jobData.roleCategory || '',
-              education: Array.isArray(jobData.education) ? jobData.education : (jobData.education ? [jobData.education] : []),
+              education: Array.isArray(jobData.education) ? jobData.education : (jobData.education ? (typeof jobData.education === 'string' ? jobData.education.split(',').map((e: string) => e.trim()).filter(Boolean) : [jobData.education]) : []),
               employmentType: jobData.employmentType || '',
+              // Additional fields that might be missing
+              remoteWork: jobData.remoteWork || jobData.workMode || 'on-site',
+              shiftTiming: jobData.shiftTiming || 'day',
+              applicationDeadline: jobData.applicationDeadline ? (typeof jobData.applicationDeadline === 'string' ? jobData.applicationDeadline.split('T')[0] : new Date(jobData.applicationDeadline).toISOString().split('T')[0]) : '',
               // Hot Vacancy Premium Features
               isHotVacancy: jobData.isHotVacancy || false,
               urgentHiring: jobData.urgentHiring || false,
