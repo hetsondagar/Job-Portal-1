@@ -443,7 +443,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     console.log('📊 Request URL:', req.url);
 
     
-
+    
     // Safely extract form data with fallbacks
 
     const importName = req.body?.importName || '';
@@ -489,7 +489,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     let parsedValidationRules = {};
 
     
-
+    
     try {
 
       parsedDefaultValues = defaultValues ? JSON.parse(defaultValues) : {};
@@ -503,7 +503,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     }
 
     
-
+    
     try {
 
       parsedMappingConfig = mappingConfig ? JSON.parse(mappingConfig) : {};
@@ -517,7 +517,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     }
 
     
-
+    
     try {
 
       parsedValidationRules = validationRules ? JSON.parse(validationRules) : {};
@@ -535,7 +535,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     // CRITICAL: Prioritize user's company_id first (most reliable source)
     // This ensures bulk imports use the user's actual company association
     const userCompanyId = req.user.company_id || req.user.companyId;
-    
+
     // Create bulk import record
 
     const bulkImport = await BulkJobImport.create({
@@ -602,7 +602,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     console.error('Error stack:', error.stack);
 
     
-
+    
     // Determine appropriate status code
 
     let statusCode = 500;
@@ -610,7 +610,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     let errorMessage = 'Failed to create bulk import';
 
     
-
+    
     if (error.name === 'ValidationError') {
 
       statusCode = 400;
@@ -632,7 +632,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     }
 
     
-
+    
     res.status(statusCode).json({
 
       success: false,
@@ -1019,7 +1019,7 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
     const { type } = req.params;
 
     
-
+    
     // Create template based on type
 
     const template = createJobTemplate(type);
@@ -1028,7 +1028,7 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
     // CRITICAL: Double-check that no hot vacancy fields are present before generating template
     const finalTemplate = filterHotVacancyFields(template);
     
-
+    
     if (type === 'csv') {
 
       // Generate CSV file
@@ -1038,7 +1038,7 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
       res.setHeader('Content-Disposition', `attachment; filename="job-import-template.csv"`);
 
       
-
+      
       // Convert template to CSV
 
       const csvContent = convertToCSV(finalTemplate);
@@ -1053,7 +1053,7 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
       res.setHeader('Content-Disposition', `attachment; filename="job-import-template-${type}.xlsx"`);
 
       
-
+      
       const workbook = xlsx.utils.book_new();
 
       const worksheet = xlsx.utils.json_to_sheet(finalTemplate);
@@ -1209,7 +1209,7 @@ async function processBulkImport(importId) {
     const filePath = path.join(__dirname, '../uploads/bulk-imports', path.basename(importRecord.fileUrl));
 
     
-
+    
     if (!fs.existsSync(filePath)) {
 
       throw new Error('Import file not found');
@@ -1344,7 +1344,7 @@ async function processBulkImport(importId) {
           .replace(/-+/g, '-')
 
           .replace(/^-+|-+$/g, '') + '-' + Date.now();
-
+        
         
 
         // Map CSV/Excel fields to Job model fields properly
@@ -1508,7 +1508,7 @@ async function processBulkImport(importId) {
         const job = await Job.create(jobData);
 
         
-
+        
         successLog.push({
 
           jobId: job.id,
@@ -1606,7 +1606,7 @@ async function processBulkImport(importId) {
     console.error('Bulk import processing error:', error);
 
     
-
+    
     try {
 
       await BulkJobImport.update({
@@ -1710,7 +1710,7 @@ function validateJobRecord(record, validationRules) {
   const errors = [];
 
   
-
+  
   // Required fields
 
   const requiredFields = ['title', 'description', 'location'];
@@ -1756,19 +1756,19 @@ function convertToCSV(data) {
   if (!data || data.length === 0) return '';
 
   
-
+  
   // Get headers from the first object
 
   const headers = Object.keys(data[0]);
 
   
-
+  
   // Create CSV header row
 
   const csvHeader = headers.join(',');
 
   
-
+  
   // Create CSV data rows
 
   const csvRows = data.map(row => {
@@ -1792,7 +1792,7 @@ function convertToCSV(data) {
   });
 
   
-
+  
   return [csvHeader, ...csvRows].join('\n');
 
 }

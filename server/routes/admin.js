@@ -362,11 +362,20 @@ router.get('/users/:userId/details', async (req, res) => {
           as: 'company',
           attributes: ['id', 'name', 'email', 'industries', 'sector', 'companySize', 'companyAccountType', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'verificationStatus', 'verificationDocuments', 'isActive', 'description', 'created_at']
         },
-        // Temporarily disabled Job includes to avoid company_id column errors
         {
           model: JobApplication,
           as: 'jobApplications',
           attributes: ['id', 'status', 'created_at'],
+          include: [{
+            model: Job,
+            as: 'job',
+            attributes: ['id', 'title', 'location'],
+            include: [{
+              model: Company,
+              as: 'company',
+              attributes: ['id', 'name']
+            }]
+          }],
           limit: 10,
           order: [['created_at', 'DESC']]
         },
@@ -413,7 +422,7 @@ router.get('/users/:userId/details', async (req, res) => {
     if ((user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'recruiter') && user.company?.id) {
       postedJobs = await Job.findAll({
         where: { companyId: user.company.id },
-        attributes: ['id', 'title', 'location', 'status', 'created_at'],
+        attributes: ['id', 'title', 'location', 'status', 'created_at', 'validTill'],
         limit: 20,
         order: [['created_at', 'DESC']],
         include: [{
@@ -429,6 +438,7 @@ router.get('/users/:userId/details', async (req, res) => {
         return {
           ...jobData,
           applicationCount: jobData.jobApplications?.length || 0,
+          validTill: jobData.validTill || jobData.valid_till || null,
           jobApplications: undefined // Remove the full array, we only need the count
         };
       });
@@ -488,7 +498,24 @@ router.get('/users/:userId/details', async (req, res) => {
       subscription: subscription || null,
       payments: payments || [],
       activityLogs: activityLogs || [],
-      sessions: sessions || []
+      sessions: sessions || [],
+      resumes: (user.resumes || []).map((resume) => {
+        const resumeData = resume.toJSON();
+        return {
+          ...resumeData,
+          createdAt: resumeData.created_at || resumeData.createdAt,
+          lastUpdated: resumeData.lastUpdated || resumeData.last_updated || resumeData.updated_at || resumeData.createdAt || resumeData.created_at
+        };
+      }),
+      jobApplications: (user.jobApplications || []).map((app) => {
+        const appData = app.toJSON();
+        return {
+          ...appData,
+          createdAt: appData.created_at || appData.createdAt,
+          created_at: appData.created_at || appData.createdAt,
+          job: appData.job || null
+        };
+      })
     };
 
     res.json({
@@ -578,6 +605,187 @@ router.get('/verification-documents/:filename', authenticateToken, async (req, r
   }
 });
 
+// Get resume for admin viewing (super-admin can view any user's resume)
+router.get('/users/:userId/resumes/:resumeId/view', authenticateToken, async (req, res) => {
+  try {
+    const { userId, resumeId } = req.params;
+    const adminUser = req.user;
+
+    // Check if user is admin or superadmin
+    if (!['admin', 'superadmin'].includes(adminUser.user_type)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const resume = await Resume.findOne({
+      where: { 
+        id: resumeId,
+        userId: userId
+      }
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+
+    // Increment view count
+    await resume.update({
+      views: (resume.views || 0) + 1
+    });
+
+    const metadata = resume.metadata || {};
+    const filename = metadata.filename || resume.filePath;
+    
+    // Try local storage first
+    const fs = require('fs');
+    if (filename && metadata.hasLocalFile) {
+      // Find resume file using similar logic to user.js
+      const possiblePaths = [
+        metadata?.absolutePath,
+        path.join(__dirname, '../uploads/resumes', filename),
+        path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+        path.join(process.cwd(), 'uploads', 'resumes', filename),
+        metadata?.filePath ? metadata.filePath : null
+      ].filter(Boolean);
+      
+      const filePath = possiblePaths.find(p => fs.existsSync(p));
+      
+      if (filePath && fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        res.sendFile(filePath);
+        return;
+      }
+    }
+    
+    // Fallback to Cloudinary
+    if (metadata.cloudinaryUrl) {
+      const https = require('https');
+      
+      https.get(metadata.cloudinaryUrl, (response) => {
+        res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        response.pipe(res);
+      }).on('error', (err) => {
+        console.error('Cloudinary error:', err);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to fetch resume from storage'
+        });
+      });
+      return;
+    }
+
+    res.status(404).json({
+      success: false,
+      message: 'Resume file not found'
+    });
+  } catch (error) {
+    console.error('Error serving admin resume view:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve resume',
+      error: error.message
+    });
+  }
+});
+
+// Download resume for admin (super-admin can download any user's resume)
+router.get('/users/:userId/resumes/:resumeId/download', authenticateToken, async (req, res) => {
+  try {
+    const { userId, resumeId } = req.params;
+    const adminUser = req.user;
+
+    // Check if user is admin or superadmin
+    if (!['admin', 'superadmin'].includes(adminUser.user_type)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const resume = await Resume.findOne({
+      where: { 
+        id: resumeId,
+        userId: userId
+      }
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found'
+      });
+    }
+
+    // Increment download count
+    await resume.update({
+      downloads: (resume.downloads || 0) + 1
+    });
+
+    const metadata = resume.metadata || {};
+    const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
+    const filename = metadata.filename || resume.filePath;
+    
+    // Try local storage first
+    const fs = require('fs');
+    if (filename && metadata.hasLocalFile) {
+      // Find resume file using similar logic to user.js
+      const possiblePaths = [
+        metadata?.absolutePath,
+        path.join(__dirname, '../uploads/resumes', filename),
+        path.join(process.cwd(), 'server', 'uploads', 'resumes', filename),
+        path.join(process.cwd(), 'uploads', 'resumes', filename),
+        metadata?.filePath ? metadata.filePath : null
+      ].filter(Boolean);
+      
+      const filePath = possiblePaths.find(p => fs.existsSync(p));
+      
+      if (filePath && fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
+        res.sendFile(filePath);
+        return;
+      }
+    }
+    
+    // Fallback to Cloudinary
+    if (metadata.cloudinaryUrl) {
+      const https = require('https');
+      
+      https.get(metadata.cloudinaryUrl, (response) => {
+        res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
+        response.pipe(res);
+      }).on('error', (err) => {
+        console.error('Cloudinary error:', err);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to fetch resume from storage'
+        });
+      });
+      return;
+    }
+
+    res.status(404).json({
+      success: false,
+      message: 'Resume file not found'
+    });
+  } catch (error) {
+    console.error('Error serving admin resume download:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve resume',
+      error: error.message
+    });
+  }
+});
+
 // Get comprehensive company details for superadmin
 router.get('/companies/:companyId/details', async (req, res) => {
   try {
@@ -597,7 +805,12 @@ router.get('/companies/:companyId/details', async (req, res) => {
       'SELECT id, title, location, salary, job_type, status, created_at, valid_till FROM jobs WHERE company_id = :companyId ORDER BY created_at DESC',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
-    const companyJobs = companyJobsRows || [];
+    
+    // Ensure validTill is included in each job
+    const companyJobs = (companyJobsRows || []).map((job) => ({
+      ...job,
+      validTill: job.valid_till || job.validTill || null
+    }));
 
     // Get job applications separately for each job
     const jobIds = companyJobs.map(job => job.id);
@@ -637,10 +850,12 @@ router.get('/companies/:companyId/details', async (req, res) => {
     }, {});
 
     // Add applications to jobs
-    const companyJobsWithApplications = companyJobs.map(job => {
+    const companyJobsWithApplications = companyJobs.map((job) => {
       return {
         ...job,
-        jobApplications: applicationsByJob[job.id] || []
+        jobApplications: applicationsByJob[job.id] || [],
+        validTill: job.valid_till || job.validTill || null,
+        valid_till: job.valid_till || job.validTill || null
       };
     });
 
@@ -766,11 +981,12 @@ router.get('/jobs/:jobId/details', async (req, res) => {
     const { jobId } = req.params;
     
     const job = await Job.findByPk(jobId, {
+      attributes: ['id', 'title', 'description', 'location', 'salary', 'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod', 'jobType', 'status', 'validTill', 'requirements', 'responsibilities', 'industryType', 'department', 'role', 'roleCategory', 'employmentType', 'skills', 'education', 'companyId', 'created_at', 'updated_at'],
       include: [
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'email', 'industries', 'sector', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'created_at']
+          attributes: ['id', 'name', 'email', 'industries', 'companySize', 'website', 'phone', 'address', 'city', 'state', 'country', 'region', 'isVerified', 'isActive', 'created_at']
         },
         {
           model: User,
@@ -829,67 +1045,78 @@ router.get('/jobs/:jobId/details', async (req, res) => {
       raw: true
     });
 
-    // Get job analytics
+    // Get job analytics - use Sequelize Op.in for array query
     const jobAnalytics = await Analytics.findAll({
       where: { 
-        jobId,
-        eventType: ['job_view', 'job_apply', 'job_bookmark']
+        jobId: jobId,
+        eventType: { [Op.in]: ['job_view', 'job_apply', 'job_bookmark'] }
       },
-      attributes: ['id', 'eventType', 'metadata', 'created_at'],
+      attributes: ['id', 'eventType', 'metadata', [Sequelize.col('created_at'), 'createdAt']],
       order: [['created_at', 'DESC']],
       limit: 100
     });
 
-    // Get job performance metrics
+    // Get job performance metrics - use eventType (model attribute name)
     const viewCount = await Analytics.count({ 
-      where: { jobId, eventType: 'job_view' } 
+      where: { jobId: jobId, eventType: 'job_view' } 
     });
     const applyCount = await Analytics.count({ 
-      where: { jobId, eventType: 'job_apply' } 
+      where: { jobId: jobId, eventType: 'job_apply' } 
     });
     const bookmarkCount = await Analytics.count({ 
-      where: { jobId, eventType: 'job_bookmark' } 
+      where: { jobId: jobId, eventType: 'job_bookmark' } 
     });
 
     // Calculate conversion rates
     const conversionRate = viewCount > 0 ? ((applyCount / viewCount) * 100).toFixed(2) : 0;
     const bookmarkRate = viewCount > 0 ? ((bookmarkCount / viewCount) * 100).toFixed(2) : 0;
 
-    // Get similar jobs
-    const similarJobsQuery = {
-      id: { [Op.ne]: jobId },
-      [Op.or]: [
-        { companyId: job.companyId },
-        { location: { [Op.iLike]: `%${job.location?.split(',')[0]}%` } }
-      ]
-    };
-
-    // Add category filter only if job has a category
-    if (job.category) {
-      similarJobsQuery[Op.or].unshift({ category: job.category });
+    // Get similar jobs - only from the same company
+    let similarJobs = [];
+    const jobData = job.toJSON();
+    const companyId = jobData.companyId || jobData.company_id || job.companyId || job.company_id;
+    
+    console.log(`🔍 Fetching similar jobs for job ${jobId}, companyId: ${companyId}`);
+    
+    if (companyId) {
+      try {
+        similarJobs = await Job.findAll({
+          where: {
+            id: { [Op.ne]: jobId },
+            companyId: companyId // Only show jobs from the same company
+          },
+          attributes: ['id', 'title', 'location', 'salary', 'salary_min', 'salary_max', 'salary_currency', 'job_type', 'status', 'created_at', 'valid_till'],
+          include: [{
+            model: Company,
+            as: 'company',
+            attributes: ['id', 'name', 'industries', 'sector']
+          }],
+          limit: 5,
+          order: [['created_at', 'DESC']]
+        });
+        console.log(`✅ Found ${similarJobs.length} similar jobs for company ${companyId}`);
+      } catch (error) {
+        console.error('❌ Error fetching similar jobs:', error);
+        similarJobs = [];
+      }
+    } else {
+      console.log('⚠️ No companyId found for job, cannot fetch similar jobs');
     }
 
-    const similarJobs = await Job.findAll({
-      where: similarJobsQuery,
-      attributes: ['id', 'title', 'location', 'salary', 'job_type', 'status', 'created_at'],
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['id', 'name', 'industry']
-      }],
-      limit: 5,
-      order: [['created_at', 'DESC']]
-    });
-
-    // Get job requirements analysis
+    // Get job requirements analysis - parse requirements text if available
+    const requirementsText = job.requirements || '';
+    const requirementsLines = requirementsText ? requirementsText.split('\n').filter(line => line.trim()).length : 0;
     const requirementsAnalysis = {
-        totalRequirements: job.jobRequirements?.length || 0,
-        requiredRequirements: job.jobRequirements?.filter(req => req.isRequired).length || 0,
-        optionalRequirements: job.jobRequirements?.filter(req => !req.isRequired).length || 0
+        totalRequirements: requirementsLines,
+        requiredRequirements: requirementsLines, // For now, all are considered required
+        optionalRequirements: 0
     };
-
+    
+    // Ensure timestamps are properly mapped
     const jobDetails = {
-      ...job.toJSON(),
+      ...jobData,
+      createdAt: jobData.created_at || jobData.createdAt,
+      updatedAt: jobData.updated_at || jobData.updatedAt,
       statistics: {
         totalApplications,
         totalBookmarks,
@@ -904,8 +1131,35 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         }, {})
       },
       requirementsAnalysis,
-      analytics: jobAnalytics || [],
-      similarJobs: similarJobs || []
+      analytics: (jobAnalytics || []).map(analytic => {
+        const analyticData = analytic.toJSON();
+        return {
+          id: analyticData.id,
+          eventType: analyticData.eventType || analyticData.event_type,
+          metadata: analyticData.metadata || analyticData.custom_parameters || {},
+          createdAt: analyticData.createdAt || analyticData.created_at,
+          userId: analyticData.userId || analyticData.user_id,
+          jobId: analyticData.jobId || analyticData.job_id,
+          companyId: analyticData.companyId || analyticData.company_id
+        };
+      }),
+      similarJobs: (similarJobs || []).map(similarJob => {
+        const jobData = similarJob.toJSON();
+        return {
+          id: jobData.id,
+          title: jobData.title,
+          location: jobData.location,
+          salary: jobData.salary,
+          salaryMin: jobData.salary_min || jobData.salaryMin,
+          salaryMax: jobData.salary_max || jobData.salaryMax,
+          salaryCurrency: jobData.salary_currency || jobData.salaryCurrency,
+          jobType: jobData.job_type || jobData.jobType,
+          status: jobData.status,
+          createdAt: jobData.created_at || jobData.createdAt,
+          validTill: jobData.valid_till || jobData.validTill,
+          company: jobData.company || null
+        };
+      })
     };
 
     res.json({
@@ -1251,7 +1505,7 @@ router.get('/companies', async (req, res) => {
       whereClause[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
         { email: { [Op.iLike]: `%${search}%` } },
-        { industry: { [Op.iLike]: `%${search}%` } }
+        { sector: { [Op.iLike]: `%${search}%` } }
       ];
     }
 
@@ -1262,12 +1516,44 @@ router.get('/companies', async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    // Add statistics for each company
+    const companiesWithStats = await Promise.all(companies.map(async (company) => {
+      try {
+        // Get total jobs posted by this company
+        const [totalJobsResult] = await sequelize.query(
+          'SELECT COUNT(*) as count FROM jobs WHERE company_id = :companyId',
+          { replacements: { companyId: company.id }, type: sequelize.QueryTypes.SELECT }
+        );
+        const totalJobsPosted = totalJobsResult?.count || 0;
+        
+        // Get total applications for all jobs posted by this company
+        const [totalApplicationsResult] = await sequelize.query(
+          'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j.company_id = :companyId',
+          { replacements: { companyId: company.id }, type: sequelize.QueryTypes.SELECT }
+        );
+        const totalApplications = totalApplicationsResult?.count || 0;
+        
+        return {
+          ...company.toJSON(),
+          totalJobsPosted: parseInt(totalJobsPosted) || 0,
+          totalApplications: parseInt(totalApplications) || 0
+        };
+      } catch (error) {
+        console.error(`Error fetching stats for company ${company.id}:`, error);
+        return {
+          ...company.toJSON(),
+          totalJobsPosted: 0,
+          totalApplications: 0
+        };
+      }
+    }));
+
     const totalPages = Math.ceil(count / limit);
 
     res.json({
       success: true,
       data: {
-        companies,
+        companies: companiesWithStats,
         totalPages,
         currentPage: parseInt(page),
         totalCount: count
@@ -1320,7 +1606,7 @@ router.get('/companies/region/:region', async (req, res) => {
       whereClause[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
         { email: { [Op.iLike]: `%${search}%` } },
-        { industry: { [Op.iLike]: `%${search}%` } }
+        { sector: { [Op.iLike]: `%${search}%` } }
       ];
     }
 
@@ -1712,6 +1998,7 @@ router.get('/jobs', async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [['created_at', 'DESC']],
+      attributes: ['id', 'title', 'location', 'status', 'jobType', 'region', 'salary', 'experienceLevel', 'created_at', 'validTill'],
       include: [
         {
           model: Company,
@@ -1779,6 +2066,7 @@ router.get('/jobs/region/:region', async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [['created_at', 'DESC']],
+      attributes: ['id', 'title', 'location', 'status', 'jobType', 'region', 'salary', 'experienceLevel', 'created_at', 'validTill'],
       include: [
         {
           model: Company,

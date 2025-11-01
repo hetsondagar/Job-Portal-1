@@ -186,13 +186,14 @@ export default function JobManagementPage({ portal, title, description, icon }: 
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'active': return 'bg-green-600'
       case 'inactive': return 'bg-gray-600'
       case 'draft': return 'bg-yellow-600'
       case 'paused': return 'bg-orange-600'
       case 'closed': return 'bg-red-600'
       case 'expired': return 'bg-purple-600'
+      case 'deactivated': return 'bg-red-600'
       default: return 'bg-gray-600'
     }
   }
@@ -338,7 +339,15 @@ export default function JobManagementPage({ portal, title, description, icon }: 
               </div>
             ) : (
               <div className="space-y-4">
-                {jobs.map((job) => (
+                {jobs.map((job) => {
+                  // Calculate display status (consider expired jobs)
+                  const now = new Date();
+                  const validTill = job.validTill ? new Date(job.validTill) : null;
+                  const isActuallyExpired = validTill && validTill < now;
+                  // In admin, expired/deactivated are the same - show as "deactivated"
+                  const displayStatus = isActuallyExpired ? 'deactivated' : (job.status || 'inactive');
+                  
+                  return (
                   <div key={job.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center space-x-4">
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -348,8 +357,8 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                         <h3 className="font-semibold text-gray-900 text-lg">{job.title}</h3>
                         <p className="text-gray-600 text-sm">{job.company?.name || 'Unknown Company'}</p>
                         <div className="flex items-center space-x-2 mt-2">
-                          <Badge className={getStatusColor(job.status)}>
-                            {job.status}
+                          <Badge className={getStatusColor(displayStatus)}>
+                            {displayStatus}
                           </Badge>
                           <Badge className={getTypeColor(job.jobType)}>
                             {job.jobType}
@@ -459,7 +468,8 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                       </DropdownMenu>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -508,7 +518,14 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                 Complete information about the selected job
               </DialogDescription>
             </DialogHeader>
-            {selectedJob && (
+            {selectedJob && (() => {
+              // Calculate display status for selected job too
+              const now = new Date();
+              const validTill = selectedJob.validTill ? new Date(selectedJob.validTill) : null;
+              const isActuallyExpired = validTill && validTill < now;
+              const displayStatus = isActuallyExpired ? 'deactivated' : (selectedJob.status || 'inactive');
+              
+              return (
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
                   <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -518,8 +535,8 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                     <h2 className="text-2xl font-bold text-white">{selectedJob.title}</h2>
                     <p className="text-gray-400">{selectedJob.company?.name || 'Unknown Company'}</p>
                     <div className="flex items-center space-x-2 mt-2">
-                      <Badge className={getStatusColor(selectedJob.status)}>
-                        {selectedJob.status}
+                      <Badge className={getStatusColor(displayStatus)}>
+                        {displayStatus}
                       </Badge>
                       <Badge className={getTypeColor(selectedJob.jobType)}>
                         {selectedJob.jobType}
@@ -630,7 +647,8 @@ export default function JobManagementPage({ portal, title, description, icon }: 
                   </div>
                 </div>
               </div>
-            )}
+              );
+            })()}
           </DialogContent>
         </Dialog>
       </div>

@@ -32,6 +32,7 @@ import {
   Target,
   FileText,
   User,
+  GraduationCap,
   Mail,
   Phone,
   Bookmark,
@@ -58,12 +59,19 @@ interface JobDetail {
   description: string
   location: string
   salary?: string
+  salaryMin?: number
+  salaryMax?: number
   salaryCurrency?: string
+  salaryPeriod?: string
   jobType: string
   status: string
   validTill?: string
   requirements?: string
   responsibilities?: string
+  industryType?: string
+  department?: string
+  skills?: string[]
+  education?: string
   createdAt: string
   updatedAt: string
   statistics: {
@@ -85,8 +93,7 @@ interface JobDetail {
     id: string
     name: string
     email: string
-    industry: string
-    sector: string
+    industries?: string[] | string
     companySize: string
     website: string
     phone: string
@@ -151,7 +158,8 @@ interface JobDetail {
   analytics: Array<{
     id: string
     eventType: string
-    eventData: any
+    metadata?: any
+    eventData?: any
     createdAt: string
   }>
   similarJobs: Array<{
@@ -161,6 +169,7 @@ interface JobDetail {
     salary?: number
     jobType: string
     status: string
+    validTill?: string | null
     createdAt: string
     company: {
       id: string
@@ -350,10 +359,6 @@ export default function JobDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
         <div className="text-gray-900 text-center">
           <p className="text-red-600 mb-4">Error: {error || 'Job not found'}</p>
-          <Button onClick={() => router.back()} variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
         </div>
       </div>
     )
@@ -365,15 +370,6 @@ export default function JobDetailPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Button
-              onClick={() => router.back()}
-              variant="outline"
-              size="sm"
-              className="border-gray-300 text-gray-900 hover:bg-gray-100"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Job Details</h1>
               <p className="text-gray-600">Comprehensive job information and analytics</p>
@@ -400,20 +396,20 @@ export default function JobDetailPage() {
         </div>
 
         {/* Job Header */}
-        <Card className="bg-white/5 border-white/10 mb-6">
+        <Card className="bg-white border-gray-200 shadow-sm mb-6">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h2 className="text-3xl font-bold text-white">{job.title}</h2>
+                  <h2 className="text-3xl font-bold text-gray-900">{job.title}</h2>
                   <Badge className={getStatusColor(job.status)}>
                     {job.status}
                   </Badge>
                   <Badge className={getJobTypeColor(job.jobType)}>
-                    {job.jobType.replace('_', ' ')}
+                    {job.jobType ? job.jobType.replace('_', ' ') : 'N/A'}
                   </Badge>
                 </div>
-                <div className="flex items-center space-x-6 text-slate-300 mb-4">
+                <div className="flex items-center space-x-6 text-gray-600 mb-4">
                   <div className="flex items-center">
                     <Building2 className="w-4 h-4 mr-2" />
                     {job.company.name}
@@ -422,18 +418,37 @@ export default function JobDetailPage() {
                     <MapPin className="w-4 h-4 mr-2" />
                     {job.location}
                   </div>
-                  {job.salary && (
-                    <div className="flex items-center">
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      {job.salary} {job.salaryCurrency || 'INR'}
-                    </div>
-                  )}
+                  {(() => {
+                    if (job.salaryMin && job.salaryMax) {
+                      const minLPA = (job.salaryMin / 100000).toFixed(0);
+                      const maxLPA = (job.salaryMax / 100000).toFixed(0);
+                      const currency = job.salaryCurrency || 'INR';
+                      const symbol = currency === 'INR' ? '₹' : '';
+                      return (
+                        <div className="flex items-center">
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          {symbol}{minLPA}-{maxLPA} LPA
+                        </div>
+                      );
+                    } else if (job.salary) {
+                      const currency = job.salaryCurrency || 'INR';
+                      const symbol = currency === 'INR' ? '₹' : '';
+                      const salaryText = job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`;
+                      return (
+                        <div className="flex items-center">
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          {currency === 'INR' ? salaryText.replace(/^\d+/, (match) => `${symbol}${match}`) : salaryText}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-2" />
                     Posted {new Date(job.createdAt).toLocaleDateString()}
                   </div>
                 </div>
-                <p className="text-slate-300 leading-relaxed">{job.description}</p>
+                <p className="text-gray-700 leading-relaxed">{job.description}</p>
               </div>
             </div>
           </CardContent>
@@ -441,47 +456,47 @@ export default function JobDetailPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Applications</p>
-                  <p className="text-3xl font-bold text-white">{job.statistics.totalApplications}</p>
+                  <p className="text-sm text-gray-600">Applications</p>
+                  <p className="text-3xl font-bold text-gray-900">{job.statistics.totalApplications}</p>
                 </div>
-                <Users className="w-8 h-8 text-blue-400" />
+                <Users className="w-8 h-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Views</p>
-                  <p className="text-3xl font-bold text-white">{job.statistics.viewCount}</p>
+                  <p className="text-sm text-gray-600">Views</p>
+                  <p className="text-3xl font-bold text-gray-900">{job.statistics.viewCount}</p>
                 </div>
-                <Eye className="w-8 h-8 text-green-400" />
+                <Eye className="w-8 h-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Bookmarks</p>
-                  <p className="text-3xl font-bold text-white">{job.statistics.totalBookmarks}</p>
+                  <p className="text-sm text-gray-600">Bookmarks</p>
+                  <p className="text-3xl font-bold text-gray-900">{job.statistics.totalBookmarks}</p>
                 </div>
-                <Bookmark className="w-8 h-8 text-purple-400" />
+                <Bookmark className="w-8 h-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Conversion</p>
-                  <p className="text-3xl font-bold text-white">{job.statistics.conversionRate}</p>
+                  <p className="text-sm text-gray-600">Conversion</p>
+                  <p className="text-3xl font-bold text-gray-900">{job.statistics.conversionRate}</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-yellow-400" />
+                <TrendingUp className="w-8 h-8 text-yellow-600" />
               </div>
             </CardContent>
           </Card>
@@ -489,20 +504,20 @@ export default function JobDetailPage() {
 
         {/* Detailed Information Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-white/5 border-white/10">
-            <TabsTrigger value="overview" className="text-white data-[state=active]:bg-white/10">
+          <TabsList className="bg-white border-gray-200">
+            <TabsTrigger value="overview" className="text-gray-900 data-[state=active]:bg-gray-100">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="applications" className="text-white data-[state=active]:bg-white/10">
+            <TabsTrigger value="applications" className="text-gray-900 data-[state=active]:bg-gray-100">
               Applications
             </TabsTrigger>
-            <TabsTrigger value="requirements" className="text-white data-[state=active]:bg-white/10">
+            <TabsTrigger value="requirements" className="text-gray-900 data-[state=active]:bg-gray-100">
               Requirements
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="text-white data-[state=active]:bg-white/10">
+            <TabsTrigger value="analytics" className="text-gray-900 data-[state=active]:bg-gray-100">
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="similar" className="text-white data-[state=active]:bg-white/10">
+            <TabsTrigger value="similar" className="text-gray-900 data-[state=active]:bg-gray-100">
               Similar Jobs
             </TabsTrigger>
           </TabsList>
@@ -526,7 +541,7 @@ export default function JobDetailPage() {
                   <div>
                     <label className="text-sm text-gray-600">Job Type</label>
                     <Badge className={getJobTypeColor(job.jobType)}>
-                      {job.jobType.replace('_', ' ')}
+                      {job.jobType ? job.jobType.replace('_', ' ') : 'N/A'}
                     </Badge>
                   </div>
                   <div>
@@ -534,9 +549,36 @@ export default function JobDetailPage() {
                     <p className="text-gray-900">{job.location}</p>
                   </div>
                   <div>
+                    <label className="text-sm text-gray-600">Industry</label>
+                    <p className="text-gray-900">{job.industryType || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Department</label>
+                    <p className="text-gray-900">{job.department || 'Not specified'}</p>
+                  </div>
+                  <div>
                     <label className="text-sm text-gray-600">Salary</label>
                     <p className="text-gray-900">
-                      {job.salary ? `${job.salary} ${job.salaryCurrency || 'INR'}` : 'Not specified'}
+                      {(() => {
+                        if (job.salaryMin && job.salaryMax) {
+                          const minLPA = (job.salaryMin / 100000).toFixed(0);
+                          const maxLPA = (job.salaryMax / 100000).toFixed(0);
+                          const currency = job.salaryCurrency || 'INR';
+                          const symbol = currency === 'INR' ? '₹' : '';
+                          return `${symbol}${minLPA}-${maxLPA} LPA`;
+                        } else if (job.salary) {
+                          // If salary is already formatted as string (like "30-40 LPA")
+                          if (job.salary.includes('LPA')) {
+                            const currency = job.salaryCurrency || 'INR';
+                            const symbol = currency === 'INR' ? '₹' : '';
+                            return job.salary.replace(/^\d+/, (match) => `${symbol}${match}`);
+                          }
+                          const currency = job.salaryCurrency || 'INR';
+                          const symbol = currency === 'INR' ? '₹' : '';
+                          return `${symbol}${job.salary} LPA`;
+                        }
+                        return 'Not specified';
+                      })()}
                     </p>
                   </div>
                   <div>
@@ -553,11 +595,11 @@ export default function JobDetailPage() {
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Created At</label>
-                    <p className="text-gray-900">{new Date(job.createdAt).toLocaleString()}</p>
+                    <p className="text-gray-900">{job.createdAt ? new Date(job.createdAt).toLocaleString() : 'Not available'}</p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Last Updated</label>
-                    <p className="text-gray-900">{new Date(job.updatedAt).toLocaleString()}</p>
+                    <p className="text-gray-900">{job.updatedAt ? new Date(job.updatedAt).toLocaleString() : 'Not available'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -577,11 +619,16 @@ export default function JobDetailPage() {
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Industry</label>
-                    <p className="text-gray-900">{job.company.industry || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Sector</label>
-                    <p className="text-gray-900">{job.company.sector || 'Not specified'}</p>
+                    <p className="text-gray-900">
+                      {(() => {
+                        if (Array.isArray(job.company.industries) && job.company.industries.length > 0) {
+                          return job.company.industries.join(', ');
+                        } else if (typeof job.company.industries === 'string') {
+                          return job.company.industries;
+                        }
+                        return 'Not specified';
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Company Size</label>
@@ -610,12 +657,6 @@ export default function JobDetailPage() {
                     <p className="text-gray-900">
                       {job.company.address ? `${job.company.address}, ${job.company.city}, ${job.company.state}, ${job.company.country}` : 'Not provided'}
                     </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Verification Status</label>
-                    <Badge className={job.company.isVerified ? 'bg-green-600' : 'bg-yellow-600'}>
-                      {job.company.isVerified ? 'Verified' : 'Unverified'}
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -764,66 +805,58 @@ export default function JobDetailPage() {
               <CardHeader>
                 <CardTitle className="text-gray-900 flex items-center">
                   <Target className="w-5 h-5 mr-2" />
-                  Job Requirements ({job.jobRequirements?.length || 0})
+                  Job Requirements
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {job.jobRequirements && job.jobRequirements.length > 0 ? (
+                {job.requirements ? (
                   <div className="space-y-4">
-                    {job.jobRequirements.map((requirement) => (
-                      <div key={requirement.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            {requirement.isRequired ? (
-                              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h4 className="text-gray-900 font-medium">{requirement.type}</h4>
-                              <Badge variant={requirement.isRequired ? 'default' : 'secondary'} className={requirement.isRequired ? 'bg-red-600' : 'bg-yellow-600'}>
-                                {requirement.isRequired ? 'Required' : 'Optional'}
-                              </Badge>
-                            </div>
-                            <p className="text-gray-700">{requirement.description}</p>
-                          </div>
-                        </div>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="prose max-w-none">
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{job.requirements}</p>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No requirements found</p>
+                  <p className="text-gray-500 text-center py-8">No requirements specified</p>
                 )}
               </CardContent>
             </Card>
 
-            {/* Requirements Analysis */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-gray-900 flex items-center">
-                  <BarChart3 className="w-5 h-5 mr-2" />
-                  Requirements Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-gray-900">{job.requirementsAnalysis?.totalRequirements || 0}</p>
-                    <p className="text-sm text-gray-600">Total Requirements</p>
+            {/* Skills & Education Requirements */}
+            {job.skills && Array.isArray(job.skills) && job.skills.length > 0 && (
+              <Card className="bg-white border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center">
+                    <Award className="w-5 h-5 mr-2" />
+                    Required Skills
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.map((skill: string, index: number) => (
+                      <Badge key={index} className="bg-blue-600 text-white">
+                        {skill}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-green-600">{job.requirementsAnalysis?.requiredRequirements || 0}</p>
-                    <p className="text-sm text-gray-600">Required</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-yellow-600">{job.requirementsAnalysis?.optionalRequirements || 0}</p>
-                    <p className="text-sm text-gray-600">Optional</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
+
+            {job.education && (
+              <Card className="bg-white border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center">
+                    <GraduationCap className="w-5 h-5 mr-2" />
+                    Education Requirements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700">{job.education}</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Analytics Tab */}
@@ -905,9 +938,9 @@ export default function JobDetailPage() {
                       <div key={analytic.id} className="p-3 bg-gray-50 rounded border border-gray-200">
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="text-gray-900 font-medium">{analytic.eventType}</p>
+                            <p className="text-gray-900 font-medium capitalize">{analytic.eventType?.replace('_', ' ') || 'Unknown Event'}</p>
                             <p className="text-sm text-gray-600">
-                              {analytic.eventData ? JSON.stringify(analytic.eventData) : 'No data'}
+                              {analytic.metadata || analytic.eventData ? (typeof (analytic.metadata || analytic.eventData) === 'object' ? JSON.stringify(analytic.metadata || analytic.eventData, null, 2) : (analytic.metadata || analytic.eventData)) : 'No additional data'}
                             </p>
                           </div>
                           <p className="text-xs text-gray-500">
@@ -936,7 +969,14 @@ export default function JobDetailPage() {
               <CardContent>
                 {job.similarJobs && job.similarJobs.length > 0 ? (
                   <div className="space-y-4">
-                    {job.similarJobs.map((similarJob) => (
+                    {job.similarJobs.map((similarJob) => {
+                      // Calculate display status for similar jobs (consider expired)
+                      const now = new Date();
+                      const validTill = similarJob.validTill ? new Date(similarJob.validTill) : null;
+                      const isActuallyExpired = validTill && validTill < now;
+                      const displayStatus = isActuallyExpired ? 'deactivated' : (similarJob.status || 'inactive');
+                      
+                      return (
                       <div key={similarJob.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -944,13 +984,24 @@ export default function JobDetailPage() {
                             <p className="text-gray-600">{similarJob.company.name}</p>
                             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                               <span>{similarJob.location}</span>
-                              <span>{similarJob.jobType.replace('_', ' ')}</span>
-                              {similarJob.salary && <span>${similarJob.salary}</span>}
+                              <span>{similarJob.jobType ? similarJob.jobType.replace('_', ' ') : 'N/A'}</span>
+                              {similarJob.salary && (
+                                <span>
+                                  {(() => {
+                                    if (typeof similarJob.salary === 'number') {
+                                      const salaryLPA = (similarJob.salary / 100000).toFixed(0);
+                                      return `₹${salaryLPA} LPA`;
+                                    }
+                                    const salaryStr = String(similarJob.salary);
+                                    return salaryStr.includes('LPA') ? `₹${salaryStr}` : `₹${salaryStr} LPA`;
+                                  })()}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
-                            <Badge className={getStatusColor(similarJob.status)}>
-                              {similarJob.status}
+                            <Badge className={getStatusColor(displayStatus)}>
+                              {displayStatus}
                             </Badge>
                             <p className="text-sm text-gray-500 mt-1">
                               {new Date(similarJob.createdAt).toLocaleDateString()}
@@ -958,7 +1009,8 @@ export default function JobDetailPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No similar jobs found</p>

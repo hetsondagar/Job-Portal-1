@@ -103,6 +103,7 @@ interface UserDetail {
     title: string
     location: string
     status: string
+    validTill?: string | null
     applicationCount?: number
   }>
   payments: Array<{
@@ -367,28 +368,96 @@ export default function UserDetailPage() {
 
   const handleViewResume = async (resume: any) => {
     try {
-      // Open resume in new tab for viewing
-      const resumeUrl = `/api/resumes/${resume.id}/view`
-      window.open(resumeUrl, '_blank')
-      toast.success('Opening resume for viewing...')
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+      
+      // Fetch resume through admin endpoint (super-admin can view any user's resume)
+      const response = await fetch(`${baseUrl}/api/admin/users/${user.id}/resumes/${resume.id}/view`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch resume: ${response.status}`);
+      }
+      
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create a blob URL and open it
+      const blobUrl = URL.createObjectURL(blob);
+      const newWindow = window.open(blobUrl, '_blank');
+      
+      if (!newWindow) {
+        URL.revokeObjectURL(blobUrl);
+        toast.error('Please allow popups to view resumes');
+        return;
+      }
+      
+      // Clean up the blob URL after a delay
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+          // Ignore errors if URL already revoked
+        }
+      }, 600000); // 10 minutes
+      
+      toast.success('Resume opened in new tab');
     } catch (error: any) {
-      toast.error('Failed to view resume: ' + error.message)
+      console.error('Error viewing resume:', error);
+      toast.error(error.message || 'Failed to view resume');
     }
   }
 
   const handleDownloadResume = async (resume: any) => {
     try {
-      // Download resume file
-      const resumeUrl = `/api/resumes/${resume.id}/download`
-      const link = document.createElement('a')
-      link.href = resumeUrl
-      link.download = `${resume.title || 'resume'}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success('Resume download started...')
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+      
+      // Fetch resume through admin endpoint (super-admin can download any user's resume)
+      const response = await fetch(`${baseUrl}/api/admin/users/${user.id}/resumes/${resume.id}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch resume: ${response.status}`);
+      }
+      
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create a download link
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${resume.title || 'resume'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      
+      toast.success('Resume download started');
     } catch (error: any) {
-      toast.error('Failed to download resume: ' + error.message)
+      console.error('Error downloading resume:', error);
+      toast.error(error.message || 'Failed to download resume');
     }
   }
 
@@ -861,9 +930,9 @@ export default function UserDetailPage() {
                       <div key={application.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="text-gray-900 font-semibold">{application.job.title}</h4>
-                            <p className="text-gray-600">{application.job.company.name}</p>
-                            <p className="text-sm text-gray-500">{application.job.location}</p>
+                            <h4 className="text-gray-900 font-semibold">{application.job?.title || 'Job Title Not Available'}</h4>
+                            <p className="text-gray-600">{application.job?.company?.name || 'Company Not Available'}</p>
+                            <p className="text-sm text-gray-500">{application.job?.location || 'Location Not Available'}</p>
                             {application.coverLetter && (
                               <p className="text-sm text-gray-700 mt-2 line-clamp-2">
                                 {application.coverLetter}
@@ -882,7 +951,9 @@ export default function UserDetailPage() {
                               {application.status}
                             </Badge>
                             <p className="text-sm text-gray-500 mt-1">
-                              {new Date(application.createdAt).toLocaleDateString()}
+                              {application.createdAt || application.created_at ? 
+                                new Date(application.createdAt || application.created_at).toLocaleDateString() : 
+                                'Date not available'}
                             </p>
                           </div>
                         </div>
@@ -1110,26 +1181,53 @@ export default function UserDetailPage() {
               <CardHeader>
                 <CardTitle className="text-gray-900 flex items-center">
                   <Briefcase className="w-5 h-5 mr-2" />
-                  Posted Jobs ({user.postedJobs.length})
+                  Posted Jobs ({user.postedJobs?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {user.postedJobs.length > 0 ? (
+                {user.postedJobs && user.postedJobs.length > 0 ? (
                   <div className="space-y-4">
-                    {user.postedJobs.map((job: any) => (
-                      <div key={job.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="text-gray-900 font-semibold">{job.title}</h4>
-                            <p className="text-gray-600">{job.location}</p>
-                            <p className="text-sm text-gray-500">Applications: {job.applicationCount || 0}</p>
+                    {user.postedJobs
+                      .filter((job: any) => job && job.id && job.title) // Filter out null/undefined jobs
+                      .map((job: any) => {
+                        // Calculate display status (consider expired jobs)
+                        const now = new Date();
+                        const validTill = job.validTill ? new Date(job.validTill) : null;
+                        const isActuallyExpired = validTill && validTill < now;
+                        const displayStatus = isActuallyExpired ? 'expired' : (job.status || 'inactive');
+                        
+                        // Determine badge color based on display status
+                        const getStatusBadgeColor = (status: string) => {
+                          switch (status?.toLowerCase()) {
+                            case 'active': return 'bg-green-600';
+                            case 'expired': return 'bg-red-600';
+                            case 'paused': return 'bg-yellow-600';
+                            case 'closed': return 'bg-gray-600';
+                            case 'draft': return 'bg-gray-400';
+                            default: return 'bg-gray-600';
+                          }
+                        };
+                        
+                        return (
+                          <div key={job.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="text-gray-900 font-semibold">{job.title || 'Untitled Job'}</h4>
+                                <p className="text-gray-600">{job.location || 'Location not specified'}</p>
+                                <p className="text-sm text-gray-500">Applications: {job.applicationCount || 0}</p>
+                                {validTill && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Valid till: {new Date(validTill).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                              <Badge className={getStatusBadgeColor(displayStatus)}>
+                                {displayStatus}
+                              </Badge>
+                            </div>
                           </div>
-                          <Badge className={job.status === 'active' ? 'bg-green-600' : 'bg-gray-600'}>
-                            {job.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No jobs posted yet</p>
@@ -1224,7 +1322,14 @@ export default function UserDetailPage() {
                           {user.company.verificationDocuments.submittedBy && (
                             <div>
                               <span className="text-gray-600">Submitted By:</span>
-                              <span className="ml-2 text-gray-900">{user.company.verificationDocuments.submittedBy}</span>
+                              <span className="ml-2 text-gray-900">
+                                {typeof user.company.verificationDocuments.submittedBy === 'object' 
+                                  ? (user.company.verificationDocuments.submittedBy.userName || 
+                                     user.company.verificationDocuments.submittedBy.userEmail ||
+                                     user.company.verificationDocuments.submittedBy.userId ||
+                                     JSON.stringify(user.company.verificationDocuments.submittedBy))
+                                  : String(user.company.verificationDocuments.submittedBy)}
+                              </span>
                             </div>
                           )}
                         </div>

@@ -375,9 +375,75 @@ export function CompanyManagementDialog({
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
-                                      const documentUrl = doc.url || `/api/admin/verification-documents/${doc.filename}`;
-                                      window.open(documentUrl, '_blank');
+                                    onClick={async () => {
+                                      try {
+                                        // Extract filename from various possible formats
+                                        let filename = doc.filename;
+                                        if (!filename && doc.url) {
+                                          // Extract filename from URL (handle various formats)
+                                          const urlParts = doc.url.split('/');
+                                          filename = urlParts[urlParts.length - 1];
+                                          // Remove query parameters if any
+                                          filename = filename.split('?')[0];
+                                        }
+                                        
+                                        if (!filename) {
+                                          toast.error('Document filename not available');
+                                          return;
+                                        }
+                                        
+                                        // Clean filename - remove any path prefixes
+                                        filename = filename.replace(/^.*\//, '').trim();
+                                        
+                                        // Fetch document through API with authentication
+                                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                                        const token = localStorage.getItem('token');
+                                        
+                                        if (!token) {
+                                          toast.error('Authentication required');
+                                          return;
+                                        }
+                                        
+                                        const response = await fetch(
+                                          `${baseUrl}/api/admin/verification-documents/${encodeURIComponent(filename)}`,
+                                          {
+                                            method: 'GET',
+                                            headers: {
+                                              'Authorization': `Bearer ${token}`,
+                                            },
+                                          }
+                                        );
+                                        
+                                        if (!response.ok) {
+                                          throw new Error(`Failed to fetch document: ${response.status}`);
+                                        }
+                                        
+                                        // Get the blob from response
+                                        const blob = await response.blob();
+                                        
+                                        // Create a blob URL and open it
+                                        const blobUrl = URL.createObjectURL(blob);
+                                        const newWindow = window.open(blobUrl, '_blank');
+                                        
+                                        if (!newWindow) {
+                                          URL.revokeObjectURL(blobUrl);
+                                          toast.error('Please allow popups to view documents');
+                                          return;
+                                        }
+                                        
+                                        // Clean up the blob URL when the window is closed or after 10 minutes
+                                        // (long enough for viewing, but prevents memory leaks)
+                                        setTimeout(() => {
+                                          try {
+                                            URL.revokeObjectURL(blobUrl);
+                                          } catch (e) {
+                                            // Ignore errors if URL already revoked
+                                          }
+                                        }, 600000); // 10 minutes
+                                      } catch (error: any) {
+                                        console.error('Error viewing document:', error);
+                                        toast.error(error.message || 'Failed to open document');
+                                      }
                                     }}
                                     className="text-blue-600 border-blue-500 hover:bg-blue-50"
                                   >
@@ -387,12 +453,67 @@ export function CompanyManagementDialog({
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
-                                      const documentUrl = doc.url || `/api/admin/verification-documents/${doc.filename}`;
-                                      const link = document.createElement('a');
-                                      link.href = documentUrl;
-                                      link.download = doc.filename || `document-${index + 1}.pdf`;
-                                      link.click();
+                                    onClick={async () => {
+                                      try {
+                                        // Extract filename from various possible formats
+                                        let filename = doc.filename;
+                                        if (!filename && doc.url) {
+                                          const urlParts = doc.url.split('/');
+                                          filename = urlParts[urlParts.length - 1];
+                                          filename = filename.split('?')[0];
+                                        }
+                                        
+                                        if (!filename) {
+                                          toast.error('Document filename not available');
+                                          return;
+                                        }
+                                        
+                                        // Clean filename
+                                        filename = filename.replace(/^.*\//, '').trim();
+                                        
+                                        // Fetch document through API with authentication
+                                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                                        const token = localStorage.getItem('token');
+                                        
+                                        if (!token) {
+                                          toast.error('Authentication required');
+                                          return;
+                                        }
+                                        
+                                        const response = await fetch(
+                                          `${baseUrl}/api/admin/verification-documents/${encodeURIComponent(filename)}`,
+                                          {
+                                            method: 'GET',
+                                            headers: {
+                                              'Authorization': `Bearer ${token}`,
+                                            },
+                                          }
+                                        );
+                                        
+                                        if (!response.ok) {
+                                          throw new Error(`Failed to fetch document: ${response.status}`);
+                                        }
+                                        
+                                        // Get the blob from response
+                                        const blob = await response.blob();
+                                        
+                                        // Create a download link
+                                        const blobUrl = URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = blobUrl;
+                                        link.download = filename || `document-${index + 1}.pdf`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        
+                                        // Clean up the blob URL
+                                        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+                                        
+                                        toast.success('Document downloaded');
+                                      } catch (error: any) {
+                                        console.error('Error downloading document:', error);
+                                        toast.error(error.message || 'Failed to download document');
+                                      }
                                     }}
                                     className="text-green-600 border-green-500 hover:bg-green-50"
                                   >
@@ -615,12 +736,36 @@ export function CompanyManagementDialog({
                             </div>
                             <div>
                               <span className="text-gray-600">Status:</span>
-                              <Badge className={`ml-2 ${
-                                job.status === 'active' ? 'bg-green-600' : 
-                                job.status === 'inactive' ? 'bg-red-600' : 'bg-gray-600'
-                              }`}>
-                                {job.status || 'Unknown'}
-                              </Badge>
+                              {(() => {
+                                // Calculate display status considering expired jobs
+                                const now = new Date();
+                                const validTill = job.valid_till || job.validTill ? new Date(job.valid_till || job.validTill) : null;
+                                const isActuallyExpired = validTill && validTill < now;
+                                const displayStatus = isActuallyExpired ? 'deactivated' : (job.status || 'inactive');
+                                
+                                // Get status color
+                                let statusColor = 'bg-gray-600';
+                                let statusText = displayStatus;
+                                
+                                if (displayStatus === 'active') {
+                                  statusColor = 'bg-green-600';
+                                } else if (displayStatus === 'deactivated' || displayStatus === 'expired') {
+                                  statusColor = 'bg-red-600';
+                                  statusText = 'deactivated';
+                                } else if (displayStatus === 'paused') {
+                                  statusColor = 'bg-yellow-600';
+                                } else if (displayStatus === 'draft') {
+                                  statusColor = 'bg-gray-500';
+                                } else if (displayStatus === 'inactive' || displayStatus === 'closed') {
+                                  statusColor = 'bg-red-600';
+                                }
+                                
+                                return (
+                                  <Badge className={`ml-2 ${statusColor}`}>
+                                    {statusText}
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <div>
                               <span className="text-gray-600">Applications:</span>
