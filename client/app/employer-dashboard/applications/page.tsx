@@ -1050,7 +1050,7 @@ function ApplicationDetailView({ application, onDownloadCoverLetter }: { applica
             {application.expectedSalary && (
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Expected Salary</h4>
-                <p className="text-gray-600">₹{application.expectedSalary.toLocaleString()}</p>
+                <p className="text-gray-600">₹{application.expectedSalary.toLocaleString()} LPA</p>
               </div>
             )}
             {application.noticePeriod && (

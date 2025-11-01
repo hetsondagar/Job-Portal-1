@@ -216,7 +216,8 @@ const Job = sequelize.define('Job', {
   },
   publishedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'published_at' // Explicit mapping to database column
   },
   closedAt: {
     type: DataTypes.DATE,

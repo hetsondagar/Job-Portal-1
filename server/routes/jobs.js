@@ -506,6 +506,42 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       console.error('⚠️ Failed to log application_received activity:', e?.message || e);
     }
 
+    // Send in-app notification to employer - CRITICAL: Create notification when application is submitted
+    try {
+      const { Notification, User } = require('../config/index');
+      const employer = await User.findByPk(job.employerId);
+      const applicant = await User.findByPk(userId);
+      
+      if (employer && applicant) {
+        const applicantName = `${applicant.firstName || applicant.first_name || ''} ${applicant.lastName || applicant.last_name || ''}`.trim();
+        const displayName = applicantName || applicant.email || 'A candidate';
+        
+        await Notification.create({
+          userId: employer.id,
+          type: 'job_application',
+          title: `🎯 New Job Application Received!`,
+          message: `${displayName} has applied for "${job.title}" position.`,
+          shortMessage: `New application for ${job.title}`,
+          priority: 'high',
+          actionUrl: `/employer-dashboard/applications?jobId=${job.id}`,
+          actionText: 'View Application',
+          icon: 'user-plus',
+          metadata: {
+            applicationId: application.id,
+            jobId: job.id,
+            applicantId: applicant.id,
+            applicantName: displayName,
+            jobTitle: job.title,
+            companyId: job.companyId
+          }
+        });
+        console.log('✅ In-app notification sent to employer:', employer.id);
+      }
+    } catch (notificationError) {
+      console.error('❌ Failed to send in-app notification to employer:', notificationError);
+      // Don't fail the application if notification fails
+    }
+
     res.status(201).json({
       success: true,
       message: 'Application submitted successfully',

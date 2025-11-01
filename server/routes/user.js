@@ -1432,10 +1432,10 @@ router.get('/employer/notifications', authenticateToken, async (req, res) => {
       'application_shortlisted'
     ];
 
-    // Build where clause
+    // Build where clause - CRITICAL: Use Op.in for array filtering
     const whereClause = { 
       userId: req.user.id,
-      type: employerNotificationTypes
+      type: { [Op.in]: employerNotificationTypes }
     };
 
     // Filter by unread status if requested
@@ -2092,24 +2092,79 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     let experiencesByUser = new Map();
     let educationsByUser = new Map();
     if (applicantIds.length > 0) {
-      // Use raw queries to avoid column name casing issues
-      const [wxRows] = await sequelize.query(
-        'SELECT * FROM work_experiences WHERE "userId" IN (:ids)',
-        { replacements: { ids: applicantIds }, raw: true }
-      );
-      wxRows.forEach(row => {
-        const arr = experiencesByUser.get(row.userId) || [];
-        arr.push(WorkExperience.build(row, { isNewRecord: false }));
-        experiencesByUser.set(row.userId, arr);
+      // Use Sequelize queries with Op.in to properly handle array parameters
+      const { Op } = require('sequelize');
+      
+      // CRITICAL: Only select columns that actually exist in the work_experiences table
+      // Based on migration, the actual columns are:
+      // id, user_id, title (jobTitle), company (companyName), description, start_date (startDate),
+      // end_date (endDate), is_current (isCurrent), location, employment_type (employmentType),
+      // skills, achievements, salary, salary_currency (salaryCurrency), created_at (createdAt), updated_at (updatedAt)
+      const workExperiences = await WorkExperience.findAll({
+        where: {
+          userId: { [Op.in]: applicantIds }
+        },
+        attributes: [
+          'id',
+          'userId',
+          'companyName', // maps to 'company' column
+          'jobTitle',    // maps to 'title' column
+          'location',
+          'startDate',   // maps to 'start_date' column
+          'endDate',     // maps to 'end_date' column
+          'isCurrent',   // maps to 'is_current' column
+          'description',
+          'achievements',
+          'skills',
+          'salary',
+          'salaryCurrency', // maps to 'salary_currency' column
+          'employmentType' // maps to 'employment_type' column
+          // NOTE: The following fields are in the model but NOT in the database table:
+          // responsibilities, technologies, industry, companySize, isVerified, order, metadata, resumeId
+          // NOTE: createdAt/updatedAt are excluded to avoid column mapping issues - they're not needed for this query
+        ]
       });
-      const [edRows] = await sequelize.query(
-        'SELECT * FROM educations WHERE "userId" IN (:ids)',
-        { replacements: { ids: applicantIds }, raw: true }
-      );
-      edRows.forEach(row => {
-        const arr = educationsByUser.get(row.userId) || [];
-        arr.push(Education.build(row, { isNewRecord: false }));
-        educationsByUser.set(row.userId, arr);
+      workExperiences.forEach(exp => {
+        const userId = exp.userId;
+        const arr = experiencesByUser.get(userId) || [];
+        arr.push(exp);
+        experiencesByUser.set(userId, arr);
+      });
+      
+      // CRITICAL: Explicitly specify attributes to avoid selecting non-existent columns like 'scale', 'country', 'level', etc.
+      const educations = await Education.findAll({
+        where: {
+          userId: { [Op.in]: applicantIds }
+        },
+        attributes: [
+          'id',
+          'userId',        // maps to 'user_id' column
+          'institution',
+          'degree',
+          'fieldOfStudy',  // maps to 'field_of_study' column
+          'startDate',     // maps to 'start_date' column
+          'endDate',       // maps to 'end_date' column
+          'isCurrent',     // maps to 'is_current' column
+          'grade',
+          'percentage',
+          'cgpa',          // maps to 'gpa' column
+          'description',
+          'activities',    // maps to 'relevant_courses' column
+          'achievements',
+          'location',
+          'educationType', // maps to 'education_type' column
+          'isVerified',    // maps to 'is_verified' column
+          'verificationDate' // maps to 'verification_date' column
+          // NOTE: The following fields are in the model but NOT in the database table:
+          // scale, country, level, order, metadata, resumeId
+          // NOTE: createdAt/updatedAt are excluded to avoid column mapping issues - they're not needed for this query
+        ]
+      });
+      educations.forEach(edu => {
+        const userId = edu.userId;
+        const arr = educationsByUser.get(userId) || [];
+        arr.push(edu);
+        educationsByUser.set(userId, arr);
       });
     }
 
@@ -3209,8 +3264,14 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     const hotVacancies = jobs.filter(job => job.isHotVacancy === true).slice(0, 5);
     console.log('✅ Found hot vacancies:', hotVacancies.length);
     
-    // Calculate stats
-    const activeJobs = jobs.filter(job => job.status === 'active').length;
+    // Calculate stats - CRITICAL: Only count jobs that are active AND not expired
+    const now = new Date();
+    const activeJobs = jobs.filter(job => {
+      if (job.status !== 'active') return false;
+      // If validTill is set and has passed, job is expired (even if status is 'active')
+      if (job.validTill && new Date(job.validTill) < now) return false;
+      return true;
+    }).length;
     const totalApplications = applications.length;
     const hiredCandidates = applications.filter(app => app.status === 'hired').length;
     const reviewingApplications = applications.filter(app => app.status === 'reviewing').length;
@@ -4801,7 +4862,14 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
       order: [['appliedAt', 'DESC']]
     });
 
-    const activeJobs = jobs.filter(j => j.status === 'active' || !j.status).length;
+    // CRITICAL: Only count jobs that are active AND not expired
+    const now = new Date();
+    const activeJobs = jobs.filter(j => {
+      if (j.status !== 'active' && j.status) return false;
+      // If validTill is set and has passed, job is expired (even if status is 'active')
+      if (j.validTill && new Date(j.validTill) < now) return false;
+      return true;
+    }).length;
     const totalApplications = applications.length;
     const reviewingApplications = applications.filter(a => a.status === 'reviewing').length;
     const shortlistedApplications = applications.filter(a => a.status === 'shortlisted').length;
@@ -4901,7 +4969,7 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
 
     // Check if file is stored in Cloudinary first (permanent storage)
     if (metadata.cloudinaryUrl) {
-      console.log('☁️ Resume stored in Cloudinary, redirecting:', metadata.cloudinaryUrl);
+      console.log('☁️ Resume stored in Cloudinary, serving through proxy:', metadata.cloudinaryUrl);
       
       // Increment download count
       const currentDownloads = resume.downloads || 0;
@@ -4952,8 +5020,29 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
         console.error('Failed to log resume download activity:', activityError);
       }
       
-      // Redirect to Cloudinary URL
-      return res.redirect(metadata.cloudinaryUrl);
+      // Download file from Cloudinary and serve it (don't redirect - Cloudinary URLs may require auth)
+      try {
+        console.log('☁️ Downloading from Cloudinary and serving:', metadata.cloudinaryUrl);
+        
+        // Download file from Cloudinary and serve it
+        const cloudinaryResponse = await axios.get(metadata.cloudinaryUrl, {
+          responseType: 'stream'
+        });
+        
+        // Set headers for file download
+        res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
+        if (cloudinaryResponse.headers['content-length']) {
+          res.setHeader('Content-Length', cloudinaryResponse.headers['content-length']);
+        }
+        
+        // Pipe the file to response
+        cloudinaryResponse.data.pipe(res);
+        return;
+      } catch (cloudinaryError) {
+        console.error('❌ Failed to fetch from Cloudinary:', cloudinaryError.message);
+        // Fall through to try local file
+      }
     }
     
     // Fallback to local file storage (ephemeral on Render)

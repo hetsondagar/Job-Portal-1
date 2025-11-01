@@ -344,6 +344,22 @@ exports.createJob = async (req, res, next) => {
       console.error('❌ Error fetching user company:', companyError);
     }
 
+    // CRITICAL: For consultancy postings, consultancy name MUST be the employer's company name
+    // Override any provided consultancyName to ensure it matches the posting company
+    if (postingType === 'consultancy') {
+      if (userCompany && userCompany.name) {
+        consultancyName = userCompany.name;
+        console.log('✅ Auto-setting consultancy name to employer company:', consultancyName);
+      } else {
+        console.error('❌ Cannot set consultancy posting: User company not found');
+        return res.status(400).json({
+          success: false,
+          message: 'Consultancy posting requires company association. Please ensure your account is linked to a company.',
+          error: 'MISSING_COMPANY_ASSOCIATION'
+        });
+      }
+    }
+
     // Use provided companyId or user's company ID
     const finalCompanyId = companyId || (userCompany ? userCompany.id : null);
     
@@ -416,14 +432,24 @@ exports.createJob = async (req, res, next) => {
       .replace(/-+/g, '-')
       .trim('-') + '-' + Date.now();
     
-    // Determine default expiry: if job is being activated now and no validTill provided, default to 21 days from now
-    let resolvedValidTill = validTill;
+    // Determine publishedAt
     let resolvedPublishedAt = publishedAt;
-    if (status === 'active' && !resolvedValidTill) {
-      resolvedValidTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
-    }
     if (status === 'active' && !resolvedPublishedAt) {
       resolvedPublishedAt = new Date();
+    }
+
+    // CRITICAL: Calculate validTill based on applicationDeadline + super-admin configured days
+    // If applicationDeadline is set: validTill = applicationDeadline + configured days
+    // If no applicationDeadline: validTill = publishedAt + default days (or now + default days)
+    let resolvedValidTill = validTill;
+    if (status === 'active' && !resolvedValidTill) {
+      const { calculateJobExpiry } = require('../utils/jobExpiryHelper');
+      resolvedValidTill = await calculateJobExpiry(applicationDeadline, resolvedPublishedAt);
+      console.log('📅 Calculated validTill:', {
+        applicationDeadline: applicationDeadline ? new Date(applicationDeadline).toISOString() : null,
+        publishedAt: resolvedPublishedAt ? new Date(resolvedPublishedAt).toISOString() : null,
+        calculatedValidTill: resolvedValidTill.toISOString()
+      });
     }
 
     // Create record
@@ -519,7 +545,8 @@ exports.createJob = async (req, res, next) => {
         postingType: postingType || 'company',
         companyName: companyName && companyName.trim() ? companyName.trim() : null,
         ...(postingType === 'consultancy' && {
-          consultancyName: consultancyName && consultancyName.trim() ? consultancyName.trim() : null,
+          // CRITICAL: consultancyName is always the employer's company name (auto-set above)
+          consultancyName: consultancyName && consultancyName.trim() ? consultancyName.trim() : (userCompany ? userCompany.name : null),
           hiringCompany: {
             name: hiringCompanyName && hiringCompanyName.trim() ? hiringCompanyName.trim() : null,
             industry: hiringCompanyIndustry && hiringCompanyIndustry.trim() ? hiringCompanyIndustry.trim() : null,
@@ -920,9 +947,11 @@ exports.getAllJobs = async (req, res, next) => {
         whereClause.status = { [OpIn]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
-      // Default public listing: only active jobs that are not expired by date
+      // CRITICAL: Default public listing: only active jobs that are NOT expired
+      // Expired jobs (validTill < now) should NOT appear in public listings
       whereClause.status = 'active';
       const now = new Date();
+      // Only show jobs where validTill is null (never expires) OR validTill >= now (not expired)
       andGroups.push({ [Or]: [{ validTill: null }, { validTill: { [OpGte]: now } }] });
     }
     if (companyId) whereClause.company_id = companyId;
@@ -1970,6 +1999,38 @@ exports.updateJob = async (req, res, next) => {
         : existingMetadata.showHiringCompanyDetails || false;
     }
 
+    // CRITICAL: Recalculate validTill when:
+    // 1. Status changes to 'active' and validTill is missing/expired
+    // 2. applicationDeadline is being changed
+    const newStatus = updateData.status;
+    const applicationDeadlineChanged = updateData.applicationDeadline !== undefined && 
+                                       updateData.applicationDeadline !== job.applicationDeadline;
+    
+    if ((newStatus === 'active' && job.status !== 'active') || applicationDeadlineChanged) {
+      const { calculateJobExpiry } = require('../utils/jobExpiryHelper');
+      
+      // Job is being activated - set publishedAt if not already set
+      if (newStatus === 'active' && job.status !== 'active' && !job.publishedAt) {
+        otherUpdateData.publishedAt = new Date();
+        console.log('📅 Setting publishedAt for newly activated job');
+      }
+      
+      // Recalculate validTill based on applicationDeadline + super-admin configured days
+      const newApplicationDeadline = updateData.applicationDeadline !== undefined 
+        ? updateData.applicationDeadline 
+        : job.applicationDeadline;
+      const publishedAtToUse = otherUpdateData.publishedAt || job.publishedAt || new Date();
+      
+      otherUpdateData.validTill = await calculateJobExpiry(newApplicationDeadline, publishedAtToUse);
+      console.log('📅 Recalculated validTill for job update:', {
+        jobId: job.id,
+        applicationDeadline: newApplicationDeadline ? new Date(newApplicationDeadline).toISOString() : null,
+        publishedAt: publishedAtToUse ? new Date(publishedAtToUse).toISOString() : null,
+        calculatedValidTill: otherUpdateData.validTill.toISOString(),
+        reason: applicationDeadlineChanged ? 'applicationDeadline changed' : 'status changed to active'
+      });
+    }
+
     // Prepare final update data with metadata
     const finalUpdateData = {
       ...otherUpdateData,
@@ -1985,7 +2046,8 @@ exports.updateJob = async (req, res, next) => {
     console.log('🔄 Update job data:', {
       department: finalUpdateData.department,
       hasCustomBranding: !!finalUpdateData.customBranding,
-      brandingMediaCount: finalUpdateData.customBranding?.brandingMedia?.length || 0
+      brandingMediaCount: finalUpdateData.customBranding?.brandingMedia?.length || 0,
+      publishedAt: finalUpdateData.publishedAt ? new Date(finalUpdateData.publishedAt).toISOString() : 'not set'
     });
 
     await job.update(finalUpdateData);
@@ -2229,8 +2291,15 @@ exports.getJobsByCompany = async (req, res, next) => {
         whereClause.status = { [OpIn]: ['draft', 'paused', 'closed', 'expired'] };
       }
     } else {
-      // Public company page: include active (regardless of validTill) and expired
-      whereClause.status = { [OpIn]: ['active', 'expired'] };
+      // CRITICAL: Public company page: only show active jobs that are NOT expired
+      // Expired jobs should NOT appear in public listings
+      whereClause.status = 'active';
+      const now = new Date();
+      // Only show jobs where validTill is null (never expires) OR validTill >= now (not expired)
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []),
+        { [Op.or]: [{ validTill: null }, { validTill: { [Op.gte]: now } }] }
+      ];
     }
 
     const { count, rows: jobs } = await Job.findAndCountAll({
@@ -2285,16 +2354,25 @@ exports.updateJobStatus = async (req, res, next) => {
       });
     }
 
-    // If setting active while expired or without validTill, set default 21 days from now
+    // CRITICAL: Calculate validTill based on applicationDeadline + super-admin configured days
+    // If setting to active, recalculate validTill if missing or expired
     const updates = { status };
     if (status === 'active') {
       const now = new Date();
-      if (!job.validTill || now > new Date(job.validTill)) {
-        updates.validTill = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
-      }
       // Set publishedAt when job becomes active
       if (!job.publishedAt) {
         updates.publishedAt = now;
+      }
+      // Recalculate validTill if missing or expired
+      if (!job.validTill || now > new Date(job.validTill)) {
+        const { calculateJobExpiry } = require('../utils/jobExpiryHelper');
+        updates.validTill = await calculateJobExpiry(job.applicationDeadline, job.publishedAt || now);
+        console.log('📅 Recalculated validTill for job status update:', {
+          jobId: job.id,
+          applicationDeadline: job.applicationDeadline ? new Date(job.applicationDeadline).toISOString() : null,
+          publishedAt: job.publishedAt ? new Date(job.publishedAt).toISOString() : null,
+          calculatedValidTill: updates.validTill.toISOString()
+        });
       }
     }
     const prevStatus = job.status;

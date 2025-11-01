@@ -764,6 +764,7 @@ router.get('/:id', async (req, res) => {
       const totalApplications = await JobApplication.count({
         include: [{
           model: Job,
+          as: 'job', // CRITICAL: Must specify alias as defined in JobApplication.associate
           where: { companyId: id },
           attributes: []
         }]
@@ -839,10 +840,15 @@ router.get('/:id/jobs', async (req, res) => {
     const Job = require('../models/Job');
     const { Op } = require('sequelize');
     
-    // Build where clause with filters
+    // CRITICAL: Only show active jobs that are NOT expired
+    // Expired jobs (validTill < now) should NOT appear in public listings
+    const now = new Date();
     const where = { 
       companyId: id,
-      status: { [Op.in]: ['active', 'expired'] }
+      status: 'active',
+      [Op.and]: [
+        { [Op.or]: [{ validTill: null }, { validTill: { [Op.gte]: now } }] }
+      ]
     };
 
     // Add department filter

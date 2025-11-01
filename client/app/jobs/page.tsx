@@ -1269,6 +1269,7 @@ export default function JobsPage() {
             posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
             
             applicationDeadline: job.applicationDeadline || job.validTill || null,
+            validTill: job.validTill || null,
 
             applicants: job.applications || job.application_count || 0,
 
@@ -1539,6 +1540,7 @@ export default function JobsPage() {
             posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
             
             applicationDeadline: job.applicationDeadline || job.validTill || null,
+            validTill: job.validTill || null,
 
             applicants: job.applications || job.application_count || 0,
 
@@ -1676,7 +1678,17 @@ export default function JobsPage() {
 
     }
 
+    // CRITICAL: Check if application deadline has passed before opening dialog
+    if (isApplicationDeadlinePassed(job.applicationDeadline || null)) {
+      toast.error('Application deadline has passed for this job')
+      return
+    }
 
+    // Check if job is expired by validTill
+    if (job.validTill && new Date() > new Date(job.validTill)) {
+      toast.error('Applications are closed for this job (expired)')
+      return
+    }
 
     // Show application dialog
 
@@ -3873,7 +3885,20 @@ export default function JobsPage() {
 
 
 
-    console.log('✅ Final filtered jobs:', filtered.length)
+    // CRITICAL: Filter out expired jobs (validTill has passed)
+    // Backend should handle this, but adding frontend safeguard
+    filtered = filtered.filter(job => {
+      if (job.validTill) {
+        const validTillDate = new Date(job.validTill);
+        const now = new Date();
+        // Only show jobs where validTill is in the future (or null)
+        return validTillDate >= now;
+      }
+      // If no validTill, show the job (backend should have filtered expired jobs)
+      return true;
+    });
+
+    console.log('✅ Final filtered jobs (after expiry check):', filtered.length)
 
     if (filtered.length === 0 && (filters.search || filters.industryCategories?.length || filters.departmentCategories?.length || filters.roleCategories?.length)) {
 
@@ -5081,7 +5106,16 @@ export default function JobsPage() {
 
                                       <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700 whitespace-nowrap">
 
-                                        Posted by {job.consultancyName}
+                                        Consultancy Posted
+
+                                      </Badge>
+
+                                    )}
+                                    {job.isConsultancy && job.consultancyName && (
+
+                                      <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700 whitespace-nowrap mt-1">
+
+                                        By {job.consultancyName}
 
                                       </Badge>
 
@@ -5457,7 +5491,7 @@ export default function JobsPage() {
 
                                   <AlertCircle className="w-4 h-4 mr-1" />
 
-                                  Application Closed
+                                  Application Deadline Passed
 
                                 </>
 
@@ -5476,40 +5510,8 @@ export default function JobsPage() {
                             </Button>
 
                             
-                            
-                            {/* Show undo button if already applied */}
 
-                            {appliedJobs.has(job.id) && (
-
-                              <Button
-
-                                onClick={async (e) => {
-
-                                  e.preventDefault()
-
-                                  e.stopPropagation()
-
-                                  await handleUndoApply(job.id)
-
-                                }}
-
-                                variant="outline"
-
-                                size="sm"
-
-                                disabled={withdrawingJobs.has(job.id)}
-
-                                className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50 flex-1 sm:flex-none sm:w-24"
-
-                              >
-
-                                <X className="w-3 h-3 sm:mr-1" />
-
-                                <span className="hidden sm:inline">{withdrawingJobs.has(job.id) ? 'Withdrawing...' : 'Undo'}</span>
-
-                              </Button>
-
-                            )}
+                            {/* Undo button removed as per requirement */}
 
                           </div>
 

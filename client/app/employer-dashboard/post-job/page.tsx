@@ -982,7 +982,8 @@ export default function PostJobPage() {
         companyName: formData.companyName || '',
         postingType: formData.postingType || 'company',
         ...(formData.postingType === 'consultancy' && {
-          consultancyName: formData.consultancyName,
+          // CRITICAL: Consultancy name is always the employer's company name (auto-set)
+          consultancyName: companyData?.name || formData.consultancyName || '',
           hiringCompanyName: formData.hiringCompanyName,
           hiringCompanyIndustry: formData.hiringCompanyIndustry,
           hiringCompanyDescription: formData.hiringCompanyDescription,
@@ -1099,8 +1100,10 @@ export default function PostJobPage() {
     
     // Validate posting type specific fields
     if (formData.postingType === 'consultancy') {
-      if (!formData.consultancyName || formData.consultancyName.trim() === '') {
-        validationErrors.push('Consultancy name is required')
+      // CRITICAL: Consultancy name is auto-set to company name, no validation needed
+      // But ensure company data is available
+      if (!companyData?.name) {
+        validationErrors.push('Company information is required for consultancy posting')
       }
       if (!formData.hiringCompanyName || formData.hiringCompanyName.trim() === '') {
         validationErrors.push('Hiring company name is required')
@@ -1210,7 +1213,7 @@ export default function PostJobPage() {
         companyName: formData.companyName,
         postingType: formData.postingType,
         ...(formData.postingType === 'consultancy' && {
-          consultancyName: formData.consultancyName,
+          consultancyName: companyData?.name || formData.consultancyName,
           hiringCompanyName: formData.hiringCompanyName,
           hiringCompanyIndustry: formData.hiringCompanyIndustry,
           hiringCompanyDescription: formData.hiringCompanyDescription,
@@ -1838,22 +1841,37 @@ export default function PostJobPage() {
               {/* Company Name or Consultancy Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
-                  {formData.postingType === "consultancy" ? "Consultancy Name*" : "Company Name*"}
+                  {formData.postingType === "consultancy" ? "Consultancy Name" : "Company Name*"}
                 </label>
-                <Input
-                  placeholder={formData.postingType === "consultancy" ? "e.g. ABC Consultants" : "e.g. Tech Solutions Pvt Ltd"}
-                  value={formData.postingType === "consultancy" ? formData.consultancyName : formData.companyName}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    [formData.postingType === "consultancy" ? "consultancyName" : "companyName"]: e.target.value 
-                  })}
-                  disabled={formData.postingType === "company" && companyData?.name}
-                  className={formData.postingType === "company" && companyData?.name ? "bg-gray-50 cursor-not-allowed" : ""}
-                />
-                {formData.postingType === "company" && companyData?.name && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Company name is automatically fetched from your company profile
-                  </p>
+                {formData.postingType === "consultancy" ? (
+                  <>
+                    <Input
+                      value={companyData?.name || "Your company name"}
+                      disabled={true}
+                      className="bg-gray-50 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Consultancy name is automatically set to your company name ({companyData?.name || 'N/A'})
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      placeholder="e.g. Tech Solutions Pvt Ltd"
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        companyName: e.target.value 
+                      })}
+                      disabled={companyData?.name ? true : false}
+                      className={companyData?.name ? "bg-gray-50 cursor-not-allowed" : ""}
+                    />
+                    {companyData?.name && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Company name is automatically fetched from your company profile
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -2347,6 +2365,25 @@ export default function PostJobPage() {
                     </label>
                   </div>
                 ))}
+              </div>
+            </div>
+            
+            {/* Application Deadline - Available for ALL users (not just hot vacancy) */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200 mt-6">
+              <h4 className="font-semibold text-gray-900 mb-4">📅 Application Deadline</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Application Deadline (Optional)
+                </label>
+                <Input
+                  type="date"
+                  value={formData.applicationDeadline}
+                  onChange={(e) => setFormData({ ...formData, applicationDeadline: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  When applications close. The job will expire and stop accepting applications after this date + configured grace period.
+                </p>
               </div>
             </div>
             

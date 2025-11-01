@@ -87,12 +87,16 @@ export default function JobDetailPage() {
               const transformedJob = {
                 id: res.data.id,
                 title: res.data.title || 'Untitled Job',
-                // Company name handling - check metadata first, then Company relation
+                // Company name handling - CRITICAL: Show the actual company name, not the consultancy/poster name
+                // For consultancy jobs: 
+                //   - If showHiringCompanyDetails=true: show hiring company name (the company actually hiring)
+                //   - If showHiringCompanyDetails=false: show employer's company name (the consultancy company), NOT the consultancyName
+                // For regular jobs: show the company name
                 company: isConsultancy && metadata.showHiringCompanyDetails 
                   ? metadata.hiringCompany?.name || 'Hiring Company'
                   : isConsultancy 
-                    ? metadata.hiringCompany?.name || 'Hiring Company'
-                    : metadata.companyName || res.data.company?.name || res.data.company || res.data.employer || 'Company Name',
+                    ? (metadata.companyName || res.data.company?.name || res.data.employer?.companyName || 'Company Name')
+                    : (metadata.companyName || res.data.company?.name || res.data.company || res.data.employer || 'Company Name'),
                 companyId: res.data.companyId || res.data.employerId || '',
                 companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
                 // Consultancy-specific data
@@ -460,6 +464,13 @@ export default function JobDetailPage() {
   const handleApply = async () => {
     if (!user) {
       setShowAuthDialog(true)
+      return
+    }
+
+    // CRITICAL: Prevent applying if application deadline has passed
+    const deadline = (job as any)?.applicationDeadline
+    if (deadline && new Date() > new Date(deadline)) {
+      toast.error('Application deadline has passed for this job')
       return
     }
 
@@ -849,7 +860,18 @@ export default function JobDetailPage() {
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </>
                       ) : isExpired ? (
-                        'Application Closed'
+                        (() => {
+                          const deadline = (job as any)?.applicationDeadline;
+                          const vt = (job as any)?.validTill;
+                          const now = new Date();
+                          if (deadline && now > new Date(deadline)) {
+                            return 'Application Deadline Passed';
+                          }
+                          if (vt && now > new Date(vt)) {
+                            return 'Application Closed';
+                          }
+                          return 'Application Closed';
+                        })()
                       ) : (
                         job?.isHotVacancy ? '🔥 Apply to Hot Vacancy' : 'Apply Now'
                       )}

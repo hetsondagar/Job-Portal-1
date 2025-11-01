@@ -223,7 +223,8 @@ export default function ManageJobsPage() {
   }
 
   // Calculate expiry date (21 days default if active and no validTill)
-  const getExpiryDate = (createdAt: string, validTill?: string) => {
+  // CRITICAL: Use publishedAt as base date if available, otherwise use createdAt
+  const getExpiryDate = (createdAt: string, validTill?: string, publishedAt?: string) => {
     if (validTill) {
       const expiryDate = new Date(validTill)
       const now = new Date()
@@ -235,9 +236,10 @@ export default function ManageJobsPage() {
       return `${diffDays} days left`
     }
     
-    // Default 21 days from creation
-    const createdDate = new Date(createdAt)
-    const expiryDate = new Date(createdDate.getTime() + (21 * 24 * 60 * 60 * 1000))
+    // Default 21 days from publishedAt (if available) or createdAt
+    // Expiry should be calculated from when the job was published, not when it was created
+    const baseDate = publishedAt ? new Date(publishedAt) : new Date(createdAt)
+    const expiryDate = new Date(baseDate.getTime() + (21 * 24 * 60 * 60 * 1000))
     const now = new Date()
     const diffTime = expiryDate.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -247,43 +249,8 @@ export default function ManageJobsPage() {
     return `${diffDays} days left`
   }
 
-  const handleEditExpiry = async (job: any) => {
-    const current = job.validTill ? new Date(job.validTill) : new Date(new Date(job.createdAt).getTime() + (21 * 24 * 60 * 60 * 1000))
-    const iso = current.toISOString().slice(0, 10)
-    const input = prompt('Set application deadline (YYYY-MM-DD):', iso)
-    if (!input) return
-    const parsed = new Date(input)
-    if (isNaN(parsed.getTime())) {
-      toast.error('Invalid date')
-      return
-    }
-    try {
-      const res = await apiService.updateJobExpiry(job.id, parsed.toISOString())
-      if (res.success) {
-        toast.success('Expiry updated')
-        fetchJobs()
-      } else {
-        toast.error(res.message || 'Failed to update expiry')
-      }
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to update expiry')
-    }
-  }
-
-  const handleExpireNow = async (jobId: string) => {
-    if (!confirm('Expire this job immediately? Jobseekers will no longer be able to apply.')) return
-    try {
-      const res = await apiService.expireJobNow(jobId)
-      if (res.success) {
-        toast.success('Job expired')
-        fetchJobs()
-      } else {
-        toast.error(res.message || 'Failed to expire job')
-      }
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to expire job')
-    }
-  }
+  // REMOVED: handleEditExpiry and handleExpireNow - Only super-admin can manage expiry dates
+  // Employers can only set application deadline, expiry is calculated automatically
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -392,9 +359,15 @@ export default function ManageJobsPage() {
                           <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur-xl border border-slate-200/50">
                   <TabsTrigger value="all-jobs">All Jobs ({pagination.total})</TabsTrigger>
                   <TabsTrigger value="draft">Drafts ({jobs.filter((j) => j.status === "draft").length})</TabsTrigger>
-                  <TabsTrigger value="active">Active ({jobs.filter((j) => j.status === "active").length})</TabsTrigger>
+                  <TabsTrigger value="active">Active ({jobs.filter((j) => {
+                    const isExpired = j.validTill && new Date(j.validTill) < new Date();
+                    return j.status === "active" && !isExpired;
+                  }).length})</TabsTrigger>
                   <TabsTrigger value="paused">Paused ({jobs.filter((j) => j.status === "paused").length})</TabsTrigger>
-                  <TabsTrigger value="closed">Closed ({jobs.filter((j) => j.status === "closed").length})</TabsTrigger>
+                  <TabsTrigger value="closed">Closed ({jobs.filter((j) => {
+                    const isExpired = j.validTill && new Date(j.validTill) < new Date();
+                    return j.status === "closed" || (j.status === "active" && isExpired);
+                  }).length})</TabsTrigger>
                 </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
@@ -429,7 +402,24 @@ export default function ManageJobsPage() {
 
                   {/* Jobs List */}
                   {!loading && !error && jobs.length > 0 ? (
-                    jobs.map((job: any, index: number) => (
+                    jobs
+                      .map((job: any) => {
+                        // CRITICAL: Check if job is actually expired even if status is 'active'
+                        // If validTill has passed, mark as expired for display purposes
+                        const isActuallyExpired = job.validTill && new Date(job.validTill) < new Date();
+                        const displayStatus = (isActuallyExpired && job.status === 'active') ? 'expired' : job.status;
+                        return { ...job, displayStatus, isActuallyExpired };
+                      })
+                      .filter((job: any) => {
+                        // Filter based on activeTab
+                        if (activeTab === 'all-jobs') return true;
+                        if (activeTab === 'draft') return job.displayStatus === 'draft';
+                        if (activeTab === 'active') return job.displayStatus === 'active' && !job.isActuallyExpired;
+                        if (activeTab === 'paused') return job.displayStatus === 'paused';
+                        if (activeTab === 'closed') return job.displayStatus === 'closed' || job.isActuallyExpired;
+                        return true;
+                      })
+                      .map((job: any, index: number) => (
                       <motion.div
                         key={job.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -440,7 +430,7 @@ export default function ManageJobsPage() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-3 flex-wrap">
-                              {getStatusIcon(job.status)}
+                              {getStatusIcon(job.displayStatus || job.status)}
                               {job.isHotVacancy && (
                                 <span className="text-red-600 text-xl">🔥</span>
                               )}
@@ -450,7 +440,7 @@ export default function ManageJobsPage() {
                               >
                                 {job.title}
                               </Link>
-                              {getStatusBadge(job.status)}
+                              {getStatusBadge(job.displayStatus || job.status)}
                               {job.isHotVacancy && (
                                 <Badge className="bg-gradient-to-r from-red-600 to-orange-600 text-white">
                                   HOT VACANCY
@@ -477,14 +467,34 @@ export default function ManageJobsPage() {
                               </div>
                               <div className="flex items-center space-x-2 text-sm text-slate-600">
                                 <Calendar className="w-4 h-4" />
-                                <span>{job.applicationDeadline ? `Deadline: ${formatDate(job.applicationDeadline)}` : `Posted: ${formatDate(job.createdAt)}`}</span>
+                                <span>
+                                  {job.applicationDeadline ? (
+                                    (() => {
+                                      const deadline = new Date(job.applicationDeadline)
+                                      const now = new Date()
+                                      const diffTime = deadline.getTime() - now.getTime()
+                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                      if (diffDays < 0) {
+                                        return `Deadline: ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} ago (passed)`
+                                      } else if (diffDays === 0) {
+                                        return 'Deadline: Today'
+                                      } else if (diffDays === 1) {
+                                        return 'Deadline: Tomorrow'
+                                      } else {
+                                        return `Deadline: ${deadline.toLocaleDateString()} (${diffDays} days left)`
+                                      }
+                                    })()
+                                  ) : (
+                                    job.publishedAt ? `Posted: ${formatDate(job.publishedAt)}` : `Posted: ${formatDate(job.createdAt)}`
+                                  )}
+                                </span>
                               </div>
                             </div>
 
                             <div className="flex items-center space-x-6 text-sm text-slate-600">
                               <div className="flex items-center space-x-1">
                                 <Users className="w-4 h-4" />
-                                <span>{job.jobApplications?.length || job.applications || 0} applications</span>
+                                <span>{job.applicationsCount ?? job.jobApplications?.length ?? job.applications ?? 0} applications</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Eye className="w-4 h-4" />
@@ -493,8 +503,8 @@ export default function ManageJobsPage() {
                               <span>•</span>
                               <span>{job.salary ? (job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`) : (job.salaryMin && job.salaryMax ? `₹${job.salaryMin}-${job.salaryMax} LPA` : 'Not specified')}</span>
                               <span>•</span>
-                              <span className={getExpiryDate(job.createdAt, job.validTill) === 'Expired' ? "text-red-600" : "text-green-600"}>
-                                {getExpiryDate(job.createdAt, job.validTill)}
+                              <span className={getExpiryDate(job.createdAt, job.validTill, job.publishedAt) === 'Expired' ? "text-red-600" : "text-green-600"}>
+                                {getExpiryDate(job.createdAt, job.validTill, job.publishedAt)}
                               </span>
                             </div>
                           </div>
@@ -519,7 +529,7 @@ export default function ManageJobsPage() {
                                      Edit Job
                                    </Link>
                                  </DropdownMenuItem>
-                                 {job.status !== "draft" && (
+                                 {(job.displayStatus || job.status) !== "draft" && (
                                    <DropdownMenuItem asChild>
                                      <Link href={`/employer-dashboard/applications?jobId=${job.id}`}>
                                        <Users className="w-4 h-4 mr-2" />
@@ -534,35 +544,27 @@ export default function ManageJobsPage() {
                                    </Link>
                                  </DropdownMenuItem>
                                  <DropdownMenuSeparator />
-                                {job.status === "draft" ? (
+                                {(job.displayStatus || job.status) === "draft" ? (
                                    <DropdownMenuItem onClick={() => handlePublishDraft(job.id)}>
                                      <Send className="w-4 h-4 mr-2" />
                                      Publish Draft
                                    </DropdownMenuItem>
-                                ) : job.status === "active" ? (
+                                ) : (job.displayStatus || job.status) === "active" ? (
                                    <DropdownMenuItem onClick={() => handleJobStatusUpdate(job.id, 'paused')}>
                                      <Pause className="w-4 h-4 mr-2" />
                                      Pause Job
                                    </DropdownMenuItem>
-                                ) : job.status === "paused" ? (
+                                ) : (job.displayStatus || job.status) === "paused" ? (
                                    <DropdownMenuItem onClick={() => handleJobStatusUpdate(job.id, 'active')}>
                                      <Play className="w-4 h-4 mr-2" />
                                      Resume Job
                                    </DropdownMenuItem>
-                                ) : job.status === "expired" ? (
+                                ) : (job.displayStatus || job.status) === "expired" ? (
                                   <DropdownMenuItem onClick={() => handleJobStatusUpdate(job.id, 'active')}>
                                     <Play className="w-4 h-4 mr-2" />
                                     Make Active
                                   </DropdownMenuItem>
                                  ) : null}
-                                <DropdownMenuItem onClick={() => handleEditExpiry(job)}>
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  Edit Expiry
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExpireNow(job.id)}>
-                                  <AlertCircle className="w-4 h-4 mr-2" />
-                                  Expire Now
-                                </DropdownMenuItem>
                                  <DropdownMenuItem 
                                    className="text-red-600"
                                    onClick={() => handleJobDelete(job.id)}

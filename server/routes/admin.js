@@ -21,7 +21,8 @@ const {
   UserActivityLog,
   UserSession,
   Analytics,
-  Requirement
+  Requirement,
+  SystemSetting
 } = require('../config');
 const { Op, Sequelize } = require('sequelize');
 const { sequelize } = require('../config/sequelize');
@@ -1929,6 +1930,147 @@ router.get('/jobs/export', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to export jobs',
+      error: error.message
+    });
+  }
+});
+
+// ========== SYSTEM SETTINGS MANAGEMENT (Super Admin Only) ==========
+
+/**
+ * Get all system settings
+ * @route GET /api/admin/settings
+ * @access Super Admin
+ */
+router.get('/settings', async (req, res) => {
+  try {
+    // Verify super-admin access
+    if (req.user.user_type !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Super admin privileges required.'
+      });
+    }
+
+    const settings = await SystemSetting.findAll({
+      order: [['category', 'ASC'], ['key', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('Error fetching system settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch system settings',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get a specific system setting by key
+ * @route GET /api/admin/settings/:key
+ * @access Super Admin
+ */
+router.get('/settings/:key', async (req, res) => {
+  try {
+    // Verify super-admin access
+    if (req.user.user_type !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Super admin privileges required.'
+      });
+    }
+
+    const { key } = req.params;
+    const setting = await SystemSetting.findOne({ where: { key } });
+
+    if (!setting) {
+      return res.status(404).json({
+        success: false,
+        message: 'Setting not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: setting
+    });
+  } catch (error) {
+    console.error('Error fetching system setting:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch system setting',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Create or update a system setting
+ * @route PUT /api/admin/settings/:key
+ * @access Super Admin
+ */
+router.put('/settings/:key', async (req, res) => {
+  try {
+    // Verify super-admin access
+    if (req.user.user_type !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Super admin privileges required.'
+      });
+    }
+
+    const { key } = req.params;
+    const { value, description, category } = req.body;
+
+    if (!value) {
+      return res.status(400).json({
+        success: false,
+        message: 'Value is required'
+      });
+    }
+
+    // Get existing setting to determine type
+    const existing = await SystemSetting.findOne({ where: { key } });
+    const type = existing ? existing.type : 'string';
+
+    // Validate value based on type
+    if (type === 'number' && isNaN(parseFloat(value))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid number value'
+      });
+    }
+
+    const [setting, created] = await SystemSetting.upsert({
+      key,
+      value: String(value),
+      type,
+      description: description || existing?.description || null,
+      category: category || existing?.category || null,
+      updatedBy: req.user.id
+    }, {
+      returning: true
+    });
+
+    // Clear cache when settings are updated
+    const { clearSettingsCache } = require('../utils/jobExpiryHelper');
+    clearSettingsCache();
+
+    res.json({
+      success: true,
+      message: created ? 'Setting created successfully' : 'Setting updated successfully',
+      data: setting
+    });
+  } catch (error) {
+    console.error('Error updating system setting:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update system setting',
       error: error.message
     });
   }

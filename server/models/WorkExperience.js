@@ -26,10 +26,7 @@ const WorkExperience = sequelize.define('WorkExperience', {
     allowNull: false,
     field: 'title'
   },
-  department: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
+  // Note: 'department' field removed - column doesn't exist in work_experiences table
   location: {
     type: DataTypes.STRING,
     allowNull: true

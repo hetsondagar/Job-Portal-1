@@ -40,7 +40,17 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
       setIsLoading(true)
       const response = await apiService.getCompanyJobs(companyId)
       if (response.success && response.data) {
-        setJobs(response.data.jobs || response.data || [])
+        const allJobs = response.data.jobs || response.data || []
+        // Filter to show only active (non-expired) jobs in the display
+        // CRITICAL: Only show jobs that are active AND not expired
+        const now = new Date()
+        const activeJobs = allJobs.filter((job: any) => {
+          if (job.status !== 'active') return false
+          // If validTill is set and has passed, job is expired (even if status is 'active')
+          if (job.validTill && new Date(job.validTill) < now) return false
+          return true
+        })
+        setJobs(activeJobs)
       } else {
         toast.error("Failed to load company jobs")
       }
