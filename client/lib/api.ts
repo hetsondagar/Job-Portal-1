@@ -47,6 +47,7 @@ export interface User {
   noticePeriod?: number;
   willingToRelocate?: boolean;
   gender?: 'male' | 'female' | 'other';
+  dateOfBirth?: string;
   profileVisibility?: 'public' | 'private' | 'connections_only';
   contactVisibility?: 'public' | 'private' | 'connections_only';
   certifications?: any[];
@@ -64,8 +65,9 @@ export interface User {
   // Preferred Professional Details
   preferredJobTitles?: string[];
   preferredIndustries?: string[];
+  preferredLocations?: string[];
   preferredCompanySize?: string;
-  preferredWorkMode?: string;
+  preferredWorkMode?: string | string[];
   preferredEmploymentType?: string;
 }
 
@@ -3132,6 +3134,132 @@ class ApiService {
     } catch (error) {
       console.error('❌ Error updating featured job:', error);
       return { success: false, message: 'Failed to update featured job', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async getTeamMembers(): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/members`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching team members:', error);
+      return { success: false, message: 'Failed to fetch team members', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async inviteTeamMember(data: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    designation?: string;
+    permissions?: any;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/invite`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error inviting team member:', error);
+      return { success: false, message: 'Failed to invite team member', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async removeTeamMember(userId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/members/${userId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error removing team member:', error);
+      return { success: false, message: 'Failed to remove team member', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async cancelInvitation(invitationId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error cancelling invitation:', error);
+      return { success: false, message: 'Failed to cancel invitation', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async verifyInvitation(token: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/verify-invitation?token=${token}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error verifying invitation:', error);
+      return { success: false, message: 'Failed to verify invitation', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async acceptInvitation(data: {
+    token: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/accept-invitation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error accepting invitation:', error);
+      return { success: false, message: 'Failed to accept invitation', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async updateTeamMemberPermissions(userId: string, data: {
+    permissions?: any;
+    designation?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/members/${userId}/permissions`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error updating team member permissions:', error);
+      return { success: false, message: 'Failed to update permissions', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
+  async updateTeamMemberPhone(userId: string, phone: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/team/members/${userId}/phone`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ phone }),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error updating team member phone:', error);
+      return { success: false, message: 'Failed to update phone', errors: ['NETWORK_ERROR'] };
     }
   }
 

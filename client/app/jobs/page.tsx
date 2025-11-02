@@ -1685,7 +1685,8 @@ export default function JobsPage() {
     }
 
     // Check if job is expired by validTill
-    if (job.validTill && new Date() > new Date(job.validTill)) {
+    const validTill = (job as any).validTill
+    if (validTill && new Date() > new Date(validTill)) {
       toast.error('Applications are closed for this job (expired)')
       return
     }
@@ -3888,8 +3889,9 @@ export default function JobsPage() {
     // CRITICAL: Filter out expired jobs (validTill has passed)
     // Backend should handle this, but adding frontend safeguard
     filtered = filtered.filter(job => {
-      if (job.validTill) {
-        const validTillDate = new Date(job.validTill);
+      const validTill = (job as any).validTill
+      if (validTill) {
+        const validTillDate = new Date(validTill);
         const now = new Date();
         // Only show jobs where validTill is in the future (or null)
         return validTillDate >= now;

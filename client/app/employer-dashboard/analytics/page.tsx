@@ -119,7 +119,7 @@ export default function EmployerAnalyticsPage() {
 
         if (activities.success && Array.isArray(activities.data)) {
           // Build perRecruiter rollup
-          const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number; hiredKeys: Set<string>; shortlistedKeys: Set<string>; }> = {}
+          const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number; hiredKeys: Set<string>; shortlistedKeys: Set<string>; accessedKeys: Set<string>; }> = {}
           const shortlistedDebugCompany: Array<{ recruiterId: string; recruiterEmail?: string; appKey: string; activityType: string; activityId?: string; candidate?: any; details?: any }>=[]
           const accessedSet = new Set([
             'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits',
@@ -139,7 +139,7 @@ export default function EmployerAnalyticsPage() {
             const uid = a.userId || a.user?.id
             if (!uid) continue
             if (!byRecruiter[uid]) {
-              byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, hired: 0, shortlisted: 0, hiredKeys: new Set(), shortlistedKeys: new Set() }
+              byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, hired: 0, shortlisted: 0, hiredKeys: new Set(), shortlistedKeys: new Set(), accessedKeys: new Set() }
             }
             const t = String(a.activityType || '').toLowerCase()
             // Only count when tied to a concrete application/candidate; do NOT fallback to log id

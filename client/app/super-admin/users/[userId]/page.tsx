@@ -376,6 +376,11 @@ export default function UserDetailPage() {
         return;
       }
       
+      if (!user) {
+        toast.error('User not found');
+        return;
+      }
+      
       // Fetch resume through admin endpoint (super-admin can view any user's resume)
       const response = await fetch(`${baseUrl}/api/admin/users/${user.id}/resumes/${resume.id}/view`, {
         method: 'GET',
@@ -424,6 +429,11 @@ export default function UserDetailPage() {
       
       if (!token) {
         toast.error('Authentication required');
+        return;
+      }
+      
+      if (!user) {
+        toast.error('User not found');
         return;
       }
       
@@ -951,8 +961,8 @@ export default function UserDetailPage() {
                               {application.status}
                             </Badge>
                             <p className="text-sm text-gray-500 mt-1">
-                              {application.createdAt || application.created_at ? 
-                                new Date(application.createdAt || application.created_at).toLocaleDateString() : 
+                              {application.createdAt ?
+                                new Date(application.createdAt).toLocaleDateString() :
                                 'Date not available'}
                             </p>
                           </div>

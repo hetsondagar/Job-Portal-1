@@ -580,15 +580,19 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label htmlFor="expectedSalary" className="flex items-center space-x-2">
                         <Briefcase className="w-4 h-4" />
-                        <span>Expected Salary</span>
+                        <span>Expected Salary (LPA)</span>
                       </Label>
-                      <Input
-                        id="expectedSalary"
-                        value={formData.expectedSalary}
-                        onChange={(e) => setFormData({ ...formData, expectedSalary: e.target.value })}
-                        placeholder="e.g., $50,000 - $70,000"
-                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="expectedSalary"
+                          value={formData.expectedSalary}
+                          onChange={(e) => setFormData({ ...formData, expectedSalary: e.target.value })}
+                          placeholder="e.g., 12"
+                          type="number"
+                          className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">LPA</span>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">

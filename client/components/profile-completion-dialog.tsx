@@ -13,6 +13,7 @@ import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar, Building2, C
 import { Badge } from "@/components/ui/badge"
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
 
 interface ProfileCompletionDialogProps {
   isOpen: boolean
@@ -47,12 +48,13 @@ export function JobseekerProfileCompletionDialog({
     fieldOfStudy: '',
     // Preferred Professional Details
     preferredJobTitles: '',
-    preferredIndustries: '',
+    preferredIndustries: [] as string[],
     preferredCompanySize: '',
     preferredWorkMode: '',
     preferredEmploymentType: ''
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
 
   // Check if profile is incomplete - COMPREHENSIVE CHECK
   const isProfileIncomplete = () => {
@@ -95,7 +97,7 @@ export function JobseekerProfileCompletionDialog({
         fieldOfStudy: (user as any).fieldOfStudy || '',
         // Preferred Professional Details
         preferredJobTitles: Array.isArray((user as any).preferredJobTitles) ? (user as any).preferredJobTitles.join(', ') : '',
-        preferredIndustries: Array.isArray((user as any).preferredIndustries) ? (user as any).preferredIndustries.join(', ') : '',
+        preferredIndustries: Array.isArray((user as any).preferredIndustries) ? (user as any).preferredIndustries : [],
         preferredCompanySize: (user as any).preferredCompanySize || '',
         preferredWorkMode: (user as any).preferredWorkMode || '',
         preferredEmploymentType: (user as any).preferredEmploymentType || ''
@@ -132,7 +134,7 @@ export function JobseekerProfileCompletionDialog({
         fieldOfStudy: formData.fieldOfStudy || undefined,
         // Preferred Professional Details
         preferredJobTitles: formData.preferredJobTitles ? formData.preferredJobTitles.split(',').map(s => s.trim()).filter(Boolean) : [],
-        preferredIndustries: formData.preferredIndustries ? formData.preferredIndustries.split(',').map(s => s.trim()).filter(Boolean) : [],
+        preferredIndustries: Array.isArray(formData.preferredIndustries) ? formData.preferredIndustries : [],
         preferredCompanySize: formData.preferredCompanySize || undefined,
         preferredWorkMode: formData.preferredWorkMode || undefined,
         preferredEmploymentType: formData.preferredEmploymentType || undefined,
@@ -195,6 +197,7 @@ export function JobseekerProfileCompletionDialog({
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -389,13 +392,34 @@ export function JobseekerProfileCompletionDialog({
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="preferredIndustries">Preferred Industries (comma-separated)</Label>
-                <Input
-                  id="preferredIndustries"
-                  placeholder="e.g., Technology, Finance, Healthcare, E-commerce"
-                  value={formData.preferredIndustries}
-                  onChange={(e) => setFormData(prev => ({ ...prev, preferredIndustries: e.target.value }))}
-                />
+                <Label htmlFor="preferredIndustries">Preferred Industries</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between text-left"
+                  onClick={() => setShowIndustryDropdown(true)}
+                >
+                  <span className="text-left flex-1 truncate">
+                    {formData.preferredIndustries.length > 0
+                      ? `${formData.preferredIndustries.length} industry${formData.preferredIndustries.length !== 1 ? 'ies' : ''} selected`
+                      : "Select preferred industries"}
+                  </span>
+                  <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
+                </Button>
+                {formData.preferredIndustries.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {formData.preferredIndustries.slice(0, 5).map((industry: string) => (
+                      <Badge key={industry} variant="secondary" className="text-xs bg-orange-100 text-orange-800">
+                        {industry}
+                      </Badge>
+                    ))}
+                    {formData.preferredIndustries.length > 5 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{formData.preferredIndustries.length - 5} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -500,6 +524,16 @@ export function JobseekerProfileCompletionDialog({
         </div>
       </DialogContent>
     </Dialog>
+    {showIndustryDropdown && (
+      <IndustryDropdown
+        selectedIndustries={formData.preferredIndustries}
+        onIndustryChange={(industries) => {
+          setFormData(prev => ({ ...prev, preferredIndustries: industries }))
+        }}
+        onClose={() => setShowIndustryDropdown(false)}
+      />
+    )}
+    </>
   )
 }
 

@@ -71,6 +71,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     oauthId: u.oauth_id ?? u.oauthId,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
+    // Personal Details
+    dateOfBirth: u.date_of_birth ?? u.dateOfBirth,
+    // Professional Details
+    experienceYears: u.experience_years ?? u.experienceYears,
+    currentCompany: u.current_company ?? u.currentCompany,
+    currentRole: u.current_role ?? u.currentRole,
+    highestEducation: u.highest_education ?? u.highestEducation,
+    fieldOfStudy: u.field_of_study ?? u.fieldOfStudy,
+    // Preferred Professional Details
+    preferredJobTitles: u.preferred_job_titles ?? u.preferredJobTitles,
+    preferredIndustries: u.preferred_industries ?? u.preferredIndustries,
+    preferredLocations: u.preferred_locations ?? u.preferredLocations,
+    preferredCompanySize: u.preferred_company_size ?? u.preferredCompanySize,
+    preferredWorkMode: u.preferred_work_mode ?? u.preferredWorkMode,
+    preferredEmploymentType: u.preferred_employment_type ?? u.preferredEmploymentType,
     // passthrough helpers if provided by API
     ...(u.requiresPasswordSetup !== undefined && { requiresPasswordSetup: u.requiresPasswordSetup }),
     ...(u.hasPassword !== undefined && { hasPassword: u.hasPassword }),
@@ -329,7 +344,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLastRefreshTime(now);
       
       if (apiService.isAuthenticated()) {
-        const response = await apiService.getCurrentUser();
+        // Use getUserProfile for more complete data including all profile fields
+        let response = await apiService.getUserProfile();
+        if (!response.success || !response.data?.user) {
+          // Fallback to getCurrentUser if getUserProfile fails
+          response = await apiService.getCurrentUser();
+        }
         if (response.success && response.data?.user) {
           const normalized = mapUserFromApi(response.data.user as any);
           setUser(normalized);
@@ -379,7 +399,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRefreshing(true);
       
       if (apiService.isAuthenticated()) {
-        const response = await apiService.getCurrentUser();
+        // Use getUserProfile for more complete data including all profile fields
+        let response = await apiService.getUserProfile();
+        if (!response.success || !response.data?.user) {
+          // Fallback to getCurrentUser if getUserProfile fails
+          response = await apiService.getCurrentUser();
+        }
         if (response.success && response.data?.user) {
           const normalized = mapUserFromApi(response.data.user as any);
           setUser(normalized);

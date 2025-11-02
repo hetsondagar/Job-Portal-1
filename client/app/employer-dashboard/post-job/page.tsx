@@ -592,7 +592,6 @@ export default function PostJobPage() {
               urgencyLevel: jobData.urgencyLevel || "high",
               hiringTimeline: jobData.hiringTimeline || "immediate",
               maxApplications: jobData.maxApplications || 50,
-              applicationDeadline: jobData.applicationDeadline || "",
               pricingTier: jobData.pricingTier || "premium",
               price: jobData.price || jobData.hotVacancyPrice || 0,
               currency: jobData.currency || jobData.hotVacancyCurrency || "INR",

@@ -109,16 +109,17 @@ export function EmployerDashboardNavbar() {
 
   return (
     <nav className="bg-gradient-to-r from-blue-200/60 via-cyan-200/50 to-indigo-200/60 backdrop-blur-xl border-b border-white/30 fixed top-0 left-0 right-0 z-50 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
-          <div className="flex items-center space-x-4">
-            <Link href="/employer-dashboard" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-sm">
-                <Building2 className="w-6 h-6 text-white" />
+          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-shrink">
+            <Link href="/employer-dashboard" className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                <Building2 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
-              <span className="text-2xl font-serif font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent tracking-tight">
-                Employer Portal
+              <span className="text-lg sm:text-2xl font-serif font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent tracking-tight truncate">
+                <span className="hidden sm:inline">Employer Portal</span>
+                <span className="sm:hidden">Portal</span>
               </span>
             </Link>
           </div>
@@ -282,9 +283,9 @@ export function EmployerDashboardNavbar() {
           </div>
 
           {/* Right Side */}
-          <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <Link href="/employer-dashboard/notifications" onClick={handleNotificationClick}>
+          <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+            {/* Notifications - Hidden on mobile as it's in menu */}
+            <Link href="/employer-dashboard/notifications" onClick={handleNotificationClick} className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-slate-600 hover:text-blue-600 relative">
                 <Bell className="w-4 h-4" />
                 {unseenNotifications > 0 && (
@@ -300,25 +301,25 @@ export function EmployerDashboardNavbar() {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2 text-slate-700 hover:text-blue-600">
-                  <Avatar className="w-8 h-8">
+                <Button variant="ghost" className="flex items-center space-x-1 sm:space-x-2 text-slate-700 hover:text-blue-600">
+                  <Avatar className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0">
                     <AvatarImage src={company?.logo || company?.companyLogo || "/placeholder-logo.png"} />
                     <AvatarFallback>
                       {company?.logo || company?.companyLogo ? 
-                        <Building2 className="w-4 h-4" /> : 
+                        <Building2 className="w-3 h-3 sm:w-4 sm:h-4" /> : 
                         `${displayUser?.firstName?.[0]}${displayUser?.lastName?.[0]}`
                       }
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden sm:block text-left">
-                    <div className="text-sm font-medium">
+                  <div className="hidden md:block text-left min-w-0">
+                    <div className="text-sm font-medium truncate">
                       {displayUser?.firstName} {displayUser?.lastName}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-slate-500 truncate">
                       {company?.name || 'Company'}
                     </div>
                   </div>
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 hidden sm:block" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white/90 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgba(59,130,246,0.12)]">
@@ -347,118 +348,173 @@ export function EmployerDashboardNavbar() {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-white/90 backdrop-blur-xl border-white/40">
+              <SheetContent 
+                side="right" 
+                className="w-full sm:w-80 bg-white/95 backdrop-blur-xl border-white/40 p-0 flex flex-col max-h-screen overflow-hidden"
+              >
                 <div className="sr-only">
                   <h2>Navigation Menu</h2>
                 </div>
-                <div className="flex flex-col space-y-6 mt-6">
+                {/* Fixed Header */}
+                <div className="flex-shrink-0 px-4 pt-6 pb-4 border-b border-slate-200/50">
                   <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10">
+                    <Avatar className="w-10 h-10 flex-shrink-0">
                       <AvatarImage src={company?.logo || "/placeholder-logo.png"} />
                       <AvatarFallback>
                         {displayUser?.firstName?.[0]}{displayUser?.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <div className="font-medium">{displayUser?.firstName} {displayUser?.lastName}</div>
-                      <div className="text-sm text-slate-500">{company?.name || 'Company'}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{displayUser?.firstName} {displayUser?.lastName}</div>
+                      <div className="text-sm text-slate-500 truncate">{company?.name || 'Company'}</div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Link
-                      href="/employer-dashboard/post-job"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Post Job</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/post-internship"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Users className="w-4 h-4" />
-                      <span>Post Internship</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/hot-vacancies"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Briefcase className="w-4 h-4" />
-                      <span>Hot Vacancies</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/manage-jobs"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Briefcase className="w-4 h-4" />
-                      <span>Manage Jobs and Responses</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/job-templates"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Job Templates</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/applications"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Users className="w-4 h-4" />
-                      <span>View Applications</span>
-                    </Link>
-                  </div>
-
-                  {/* Database Section */}
-                  <div className="space-y-2">
-                    <div className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Database
-                    </div>
-                    <Link
-                      href="/employer-dashboard/create-requirement"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Create Requirement</span>
-                    </Link>
-                    <Link
-                      href="/employer-dashboard/requirements"
-                      className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Users className="w-4 h-4" />
-                      <span>Manage Requirements</span>
-                    </Link>
-                    {isAdmin && (
+                {/* Scrollable Menu Content */}
+                <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 custom-scrollbar">
+                  <div className="space-y-6">
+                    {/* Jobs and Responses Section */}
+                    <div className="space-y-2">
+                      <div className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Jobs and Responses
+                      </div>
                       <Link
-                        href="/employer-dashboard/bulk-import"
-                        className="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        href="/employer-dashboard/post-job"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                         onClick={() => setIsOpen(false)}
                       >
-                        <Database className="w-4 h-4" />
-                        <span>Bulk Import</span>
+                        <Plus className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Post Job</span>
                       </Link>
-                    )}
-                  </div>
+                      <Link
+                        href="/employer-dashboard/post-internship"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Post Internship</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/hot-vacancies"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Briefcase className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Hot Vacancies</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/manage-jobs"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Briefcase className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Manage Jobs and Responses</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/job-templates"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <FileText className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Job Templates</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/applications"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">View Applications</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/featured-jobs"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Featured Jobs</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/analytics"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Analytics</span>
+                      </Link>
+                    </div>
 
-                  <div className="pt-4 border-t border-white/30">
-                    <Button
-                      onClick={handleLogout}
-                      variant="ghost"
-                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </Button>
+                    {/* Database Section */}
+                    <div className="space-y-2">
+                      <div className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Database
+                      </div>
+                      <Link
+                        href="/employer-dashboard/create-requirement"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <FileText className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Create Requirement</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/requirements"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Manage Requirements</span>
+                      </Link>
+                      {isAdmin && (
+                        <Link
+                          href="/employer-dashboard/bulk-import"
+                          className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <Database className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm">Bulk Import</span>
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Additional Links */}
+                    <div className="space-y-2">
+                      <Link
+                        href="/employer-dashboard/settings"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Settings className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Settings</span>
+                      </Link>
+                      <Link
+                        href="/employer-dashboard/notifications"
+                        className="flex items-center space-x-2 px-3 py-2.5 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Bell className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">Notifications</span>
+                        {unseenNotifications > 0 && (
+                          <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full">
+                            {unseenNotifications > 9 ? '9+' : unseenNotifications}
+                          </span>
+                        )}
+                      </Link>
+                    </div>
                   </div>
+                </div>
+
+                {/* Fixed Footer */}
+                <div className="flex-shrink-0 px-4 pt-4 pb-6 border-t border-slate-200/50">
+                  <Button
+                    onClick={handleLogout}
+                    variant="ghost"
+                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>

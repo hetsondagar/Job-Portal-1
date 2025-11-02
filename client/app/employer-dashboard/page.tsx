@@ -34,6 +34,7 @@ import { CompanyInfoDisplay } from "@/components/company-info-display"
 import { CompanyRegistration } from "@/components/company-registration"
 import { CompanyManagement } from "@/components/company-management"
 import { CompanyJobsDisplay } from "@/components/company-jobs-display"
+import { TeamMembersSection } from "@/components/team-members-section"
 import { toast } from "sonner"
 
 import { apiService } from "@/lib/api"
@@ -1176,6 +1177,11 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
                 </div>
               </CardContent>
             </Card>
+
+            {/* Team Members Section - Only for Admin */}
+            {(user?.userType === 'admin' || user?.userType === 'superadmin') && (
+              <TeamMembersSection />
+            )}
 
             {/* Recent Activity */}
             <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-xl border-white/30 shadow-[0_8px_30px_rgba(59,130,246,0.06)]">
