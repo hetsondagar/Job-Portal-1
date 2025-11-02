@@ -330,11 +330,11 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         }
       } else {
         // Company doesn't exist yet, require industries
-        if (!industries || !Array.isArray(industries) || industries.length === 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'At least one industry must be selected'
-          });
+    if (!industries || !Array.isArray(industries) || industries.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one industry must be selected'
+      });
         }
       }
     } else {

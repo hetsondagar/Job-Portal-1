@@ -419,6 +419,255 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get single requirement by ID
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only employers and admins can view requirements.' 
+      });
+    }
+    
+    const requirement = await Requirement.findOne({
+      where: { id }
+    });
+    
+    if (!requirement) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Requirement not found' 
+      });
+    }
+    
+    // If not admin, enforce ownership
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. This requirement belongs to another company.' 
+      });
+    }
+    
+    return res.status(200).json({ success: true, data: requirement });
+  } catch (error) {
+    console.error('❌ Get requirement error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to retrieve requirement',
+      details: error?.message || error?.stack
+    });
+  }
+});
+
+// Update requirement
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    
+    console.log('📝 Update Requirement request by user:', req.user?.id, 'requirementId:', id);
+    console.log('📝 Payload:', JSON.stringify(body, null, 2));
+    
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only employers can update requirements' });
+    }
+    
+    // Find requirement
+    const requirement = await Requirement.findOne({ where: { id } });
+    
+    if (!requirement) {
+      return res.status(404).json({ success: false, message: 'Requirement not found' });
+    }
+    
+    // If not admin, enforce ownership
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. This requirement belongs to another company.' 
+      });
+    }
+    
+    // Normalize enums to backend values with safe fallbacks (same as create)
+    const jobTypeAllowed = new Set(['full-time', 'part-time', 'contract', 'internship', 'freelance']);
+    let normalizedJobType = body.jobType ? body.jobType.toString().toLowerCase().replace(/\s+/g, '-') : requirement.jobType;
+    if (normalizedJobType && !jobTypeAllowed.has(normalizedJobType)) {
+      normalizedJobType = requirement.jobType || 'full-time';
+    }
+    
+    const remoteWorkAllowed = new Set(['on-site', 'remote', 'hybrid']);
+    let normalizedRemoteWork = body.remoteWork ? body.remoteWork.toString().toLowerCase().replace(/\s+/g, '-') : requirement.remoteWork;
+    if (normalizedRemoteWork && !remoteWorkAllowed.has(normalizedRemoteWork)) {
+      normalizedRemoteWork = requirement.remoteWork || null;
+    }
+    
+    const shiftTimingAllowed = new Set(['day', 'night', 'rotational', 'flexible']);
+    let normalizedShiftTiming = body.shiftTiming ? body.shiftTiming.toString().toLowerCase().replace(/\s+/g, '-') : requirement.shiftTiming;
+    if (normalizedShiftTiming && !shiftTimingAllowed.has(normalizedShiftTiming)) {
+      normalizedShiftTiming = requirement.shiftTiming || null;
+    }
+    
+    // Normalize travelRequired
+    let normalizedTravelRequired = body.travelRequired;
+    if (normalizedTravelRequired !== undefined && normalizedTravelRequired !== null) {
+      if (typeof normalizedTravelRequired === 'string') {
+        const lower = normalizedTravelRequired.toLowerCase();
+        if (lower === 'no' || lower === 'false') normalizedTravelRequired = false;
+        else if (lower === 'occasionally' || lower === 'sometimes') normalizedTravelRequired = true;
+        else if (lower === 'frequently' || lower === 'often' || lower === 'yes' || lower === 'true') normalizedTravelRequired = true;
+      }
+    } else {
+      normalizedTravelRequired = requirement.travelRequired;
+    }
+    
+    // Build update data
+    const updateData = {};
+    if (body.title !== undefined) updateData.title = String(body.title).trim();
+    if (body.description !== undefined) updateData.description = String(body.description).trim();
+    if (body.location !== undefined) updateData.location = String(body.location).trim();
+    if (body.experience !== undefined) updateData.experience = body.experience || null;
+    if (body.workExperienceMin !== undefined || body.experienceMin !== undefined) {
+      updateData.experienceMin = body.workExperienceMin || body.experienceMin || null;
+    }
+    if (body.workExperienceMax !== undefined || body.experienceMax !== undefined) {
+      updateData.experienceMax = body.workExperienceMax || body.experienceMax || null;
+    }
+    if (body.salary !== undefined) updateData.salary = body.salary || null;
+    if (body.currentSalaryMin !== undefined || body.salaryMin !== undefined) {
+      updateData.salaryMin = body.currentSalaryMin || body.salaryMin || null;
+    }
+    if (body.currentSalaryMax !== undefined || body.salaryMax !== undefined) {
+      updateData.salaryMax = body.currentSalaryMax || body.salaryMax || null;
+    }
+    if (body.currency !== undefined) updateData.currency = body.currency || 'INR';
+    if (normalizedJobType) updateData.jobType = normalizedJobType;
+    if (body.skills !== undefined) updateData.skills = Array.isArray(body.skills) ? body.skills : [];
+    if (body.keySkills !== undefined) updateData.keySkills = Array.isArray(body.keySkills) ? body.keySkills : [];
+    if (body.education !== undefined) updateData.education = body.education || null;
+    if (body.validTill !== undefined) updateData.validTill = body.validTill ? new Date(body.validTill) : null;
+    if (body.noticePeriod !== undefined) updateData.noticePeriod = body.noticePeriod || null;
+    if (normalizedRemoteWork) updateData.remoteWork = normalizedRemoteWork;
+    if (normalizedTravelRequired !== undefined) updateData.travelRequired = normalizedTravelRequired;
+    if (normalizedShiftTiming) updateData.shiftTiming = normalizedShiftTiming;
+    if (body.candidateLocations !== undefined) updateData.candidateLocations = Array.isArray(body.candidateLocations) ? body.candidateLocations : [];
+    if (body.candidateDesignations !== undefined) updateData.candidateDesignations = Array.isArray(body.candidateDesignations) ? body.candidateDesignations : [];
+    if (body.includeWillingToRelocate !== undefined) updateData.includeWillingToRelocate = !!body.includeWillingToRelocate;
+    if (body.includeNotMentioned !== undefined) updateData.includeNotMentioned = !!body.includeNotMentioned;
+    if (body.benefits !== undefined) updateData.benefits = Array.isArray(body.benefits) ? body.benefits : [];
+    if (body.metadata !== undefined) updateData.metadata = body.metadata || {};
+    
+    // Update requirement
+    await requirement.update(updateData);
+    
+    console.log('✅ Requirement updated with id:', requirement.id);
+    
+    // Log activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logActivity(
+        req.user.id,
+        'requirement_updated',
+        {
+          details: {
+            requirementId: requirement.id,
+            title: requirement.title,
+            location: requirement.location,
+            jobType: requirement.jobType,
+            companyId: requirement.companyId
+          }
+        }
+      );
+    } catch (activityError) {
+      console.error('Failed to log requirement update activity:', activityError);
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Requirement updated successfully',
+      data: requirement
+    });
+  } catch (error) {
+    console.error('❌ Update requirement error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update requirement',
+      details: error?.message || error?.stack
+    });
+  }
+});
+
+// Delete requirement
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log('🗑️ Delete Requirement request by user:', req.user?.id, 'requirementId:', id);
+    
+    // Check if user is an employer or admin
+    if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only employers can delete requirements' });
+    }
+    
+    // Find requirement
+    const requirement = await Requirement.findOne({ where: { id } });
+    
+    if (!requirement) {
+      return res.status(404).json({ success: false, message: 'Requirement not found' });
+    }
+    
+    // If not admin, enforce ownership
+    if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. This requirement belongs to another company.' 
+      });
+    }
+    
+    // Store requirement details for logging
+    const requirementDetails = {
+      id: requirement.id,
+      title: requirement.title,
+      location: requirement.location,
+      jobType: requirement.jobType,
+      companyId: requirement.companyId
+    };
+    
+    // Delete requirement
+    await requirement.destroy();
+    
+    console.log('✅ Requirement deleted:', id);
+    
+    // Log activity
+    try {
+      const EmployerActivityService = require('../services/employerActivityService');
+      await EmployerActivityService.logActivity(
+        req.user.id,
+        'requirement_deleted',
+        {
+          details: requirementDetails
+        }
+      );
+    } catch (activityError) {
+      console.error('Failed to log requirement deletion activity:', activityError);
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Requirement deleted successfully'
+    });
+  } catch (error) {
+    console.error('❌ Delete requirement error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete requirement',
+      details: error?.message || error?.stack
+    });
+  }
+});
+
 // Get requirement statistics
 router.get('/:id/stats', authenticateToken, async (req, res) => {
   try {
@@ -450,65 +699,175 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
-    // Get total candidates count for this requirement
+    // Use the SAME candidate matching logic as the /requirements/:id/candidates endpoint
+    // This ensures consistency between the stats count and the actual candidates shown
     const { User } = require('../config/index');
+    const { sequelize } = require('../config/sequelize');
     
-    // SIMPLIFIED APPROACH: Use basic filters only (no JSONB overlap to avoid type issues)
+    console.log(`📊 Fetching stats for requirement: ${requirement.id} (${requirement.title})`);
+    
+    // Build the SAME matching logic as used in the candidates endpoint
     const whereClause = {
       user_type: 'jobseeker',
       is_active: true,
       account_status: 'active'
     };
     
-    // Add simple filters (no complex JSONB operations for stats)
+    const matchingConditions = [];
     
     // 1. EXPERIENCE RANGE MATCHING
-    if (requirement.experienceMin || requirement.experienceMax) {
-      whereClause.experience_years = {};
-      if (requirement.experienceMin) {
-        whereClause.experience_years[Op.gte] = requirement.experienceMin;
+    if (requirement.experienceMin !== null && requirement.experienceMin !== undefined || 
+        requirement.experienceMax !== null && requirement.experienceMax !== undefined) {
+      const expConditions = [];
+      if (requirement.experienceMin !== null && requirement.experienceMin !== undefined) {
+        expConditions.push({ experience_years: { [Op.gte]: requirement.experienceMin } });
       }
-      if (requirement.experienceMax) {
-        whereClause.experience_years[Op.lte] = requirement.experienceMax;
+      if (requirement.experienceMax !== null && requirement.experienceMax !== undefined) {
+        expConditions.push({ experience_years: { [Op.lte]: requirement.experienceMax } });
+      }
+      if (expConditions.length > 0) {
+        matchingConditions.push({ [Op.and]: expConditions });
       }
     }
     
     // 2. SALARY RANGE MATCHING
-    if (requirement.salaryMin || requirement.salaryMax) {
-      whereClause.expected_salary = {};
-      if (requirement.salaryMin) {
-        whereClause.expected_salary[Op.gte] = requirement.salaryMin;
+    if (requirement.salaryMin !== null && requirement.salaryMin !== undefined || 
+        requirement.salaryMax !== null && requirement.salaryMax !== undefined) {
+      const salaryConditions = [];
+      if (requirement.salaryMin !== null && requirement.salaryMin !== undefined) {
+        salaryConditions.push({ expected_salary: { [Op.gte]: requirement.salaryMin } });
       }
-      if (requirement.salaryMax) {
-        whereClause.expected_salary[Op.lte] = requirement.salaryMax;
+      if (requirement.salaryMax !== null && requirement.salaryMax !== undefined) {
+        salaryConditions.push({ expected_salary: { [Op.lte]: requirement.salaryMax } });
+      }
+      if (salaryConditions.length > 0) {
+        matchingConditions.push({ [Op.and]: salaryConditions });
       }
     }
     
-    // 3. LOCATION MATCHING (Simple text search, no array operations)
-    if (requirement.location && requirement.location.trim()) {
-      whereClause[Op.or] = [
-        { current_location: { [Op.iLike]: `%${requirement.location.trim()}%` } },
-        { willing_to_relocate: true }
-      ];
+    // 3. LOCATION MATCHING
+    if (requirement.candidateLocations && requirement.candidateLocations.length > 0) {
+      const locationConditions = requirement.candidateLocations.flatMap(loc => [
+        { current_location: { [Op.iLike]: `%${loc}%` } },
+        sequelize.where(
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'),
+          { [Op.iLike]: `%${loc}%` }
+        )
+      ]);
+      
+      if (requirement.includeWillingToRelocate) {
+        locationConditions.push({ willing_to_relocate: true });
+      }
+      
+      if (locationConditions.length > 0) {
+        matchingConditions.push({ [Op.or]: locationConditions });
+      }
     }
     
-    // Get total candidates count
-    const totalCandidates = await User.count({
-      where: whereClause
+    // 4. SKILLS & KEY SKILLS MATCHING
+    const allRequiredSkills = [
+      ...(requirement.skills || []),
+      ...(requirement.keySkills || [])
+    ].filter(Boolean);
+    
+    if (allRequiredSkills.length > 0) {
+      const skillConditions = allRequiredSkills.flatMap(skill => ([
+        { skills: { [Op.contains]: [skill] } },
+        sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
+        { key_skills: { [Op.contains]: [skill] } },
+        sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
+        { headline: { [Op.iLike]: `%${skill}%` } },
+        { summary: { [Op.iLike]: `%${skill}%` } }
+      ]));
+      
+      matchingConditions.push({ [Op.or]: skillConditions });
+    }
+    
+    // 5. REQUIREMENT TITLE MATCHING (high priority for job title relevance)
+    if (requirement.title && requirement.title.trim().length > 3) {
+      const titleWords = requirement.title
+        .split(/\s+/)
+        .filter(word => word.length > 3)
+        .map(word => word.toLowerCase());
+      
+      if (titleWords.length > 0) {
+        const titleConditions = titleWords.flatMap(word => [
+          { headline: { [Op.iLike]: `%${word}%` } },
+          { designation: { [Op.iLike]: `%${word}%` } },
+          sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${word}%` }),
+          sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${word}%` })
+        ]);
+        
+        matchingConditions.push({ [Op.or]: titleConditions });
+      }
+    }
+    
+    // Apply matching conditions with OR logic (same as candidates endpoint)
+    if (matchingConditions.length > 0) {
+      whereClause[Op.or] = matchingConditions;
+    }
+    
+    // Get the actual candidate IDs that match this requirement
+    const matchingCandidates = await User.findAll({
+      where: whereClause,
+      attributes: ['id'],
+      limit: 10000 // Reasonable limit to get all matching candidates
     });
     
-    // Get accessed candidates count from ViewTracking
-    // For now, we'll get a simple count of all candidate views by this employer
-    // In a more sophisticated implementation, this would filter by the same criteria as the requirement
+    const matchingCandidateIds = matchingCandidates.map(c => c.id);
+    
+    // Apply title filtering if requirement has a specific title (same logic as candidates endpoint)
+    let finalCandidateIds = matchingCandidateIds;
+    
+    if (requirement.title && requirement.title.trim().length > 3 && matchingCandidateIds.length > 0) {
+      const titleWords = requirement.title
+        .split(/\s+/)
+        .filter(word => word.length > 3)
+        .map(word => word.toLowerCase());
+      
+      if (titleWords.length > 0) {
+        // Get candidates with matching headlines
+        const titleMatchedCandidates = await User.findAll({
+          where: {
+            id: { [Op.in]: matchingCandidateIds },
+            [Op.or]: titleWords.map(keyword => ({
+              headline: { [Op.iLike]: `%${keyword}%` }
+            }))
+          },
+          attributes: ['id']
+        });
+        
+        if (titleMatchedCandidates.length > 0) {
+          finalCandidateIds = titleMatchedCandidates.map(c => c.id);
+          console.log(`📊 Filtered to ${finalCandidateIds.length} candidates with title match (from ${matchingCandidateIds.length} total matches)`);
+        }
+      }
+    }
+    
+    const totalCandidates = finalCandidateIds.length;
+    
+    console.log(`✅ Total candidates matching requirement: ${totalCandidates}`);
+    
+    // Get accessed candidates count - only count views of candidates that match this requirement
     const { ViewTracking } = require('../config/index');
-    const accessedCandidates = await ViewTracking.count({
-      where: {
-        viewerId: req.user.id,
-        // ViewTracking.viewType enum allows: 'job_view', 'profile_view', 'company_view'
-        // Use 'profile_view' to represent candidate profile views
-        view_type: 'profile_view'
-      }
-    });
+    
+    let accessedCandidates = 0;
+    if (finalCandidateIds.length > 0) {
+      // Count profile views where:
+      // 1. The viewed candidate matches this requirement (in finalCandidateIds)
+      // 2. The viewer is this employer
+      accessedCandidates = await ViewTracking.count({
+        where: {
+          viewerId: req.user.id,
+          viewedUserId: { [Op.in]: finalCandidateIds },
+          view_type: 'profile_view'
+        }
+      });
+      
+      console.log(`✅ Accessed candidates query: viewerId=${req.user.id}, matchingCandidateIds count=${finalCandidateIds.length}`);
+    }
+    
+    console.log(`✅ Accessed candidates for this requirement: ${accessedCandidates}`);
     
     // Get CV access left (this would come from subscription/usage data)
     // For now, we'll use a placeholder - in real implementation this would be from subscription service
@@ -663,6 +1022,29 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       appliedFilters.push(`Skills: ${allRequiredSkills.slice(0, 3).join(', ')}${allRequiredSkills.length > 3 ? '...' : ''}`);
     }
     
+    // 4.5. REQUIREMENT TITLE MATCHING (high priority for job title relevance)
+    // If requirement has a specific title, prioritize candidates with matching headlines/designations
+    if (requirement.title && requirement.title.trim().length > 3) {
+      const titleWords = requirement.title
+        .split(/\s+/)
+        .filter(word => word.length > 3) // Only meaningful words
+        .map(word => word.toLowerCase());
+      
+      if (titleWords.length > 0) {
+        // Match requirement title in candidate headline (highest relevance)
+        const titleConditions = titleWords.flatMap(word => [
+          { headline: { [Op.iLike]: `%${word}%` } },
+          { designation: { [Op.iLike]: `%${word}%` } },
+          sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${word}%` }),
+          sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${word}%` })
+        ]);
+        
+        // Add title matching as a condition (will be combined with OR logic)
+        matchingConditions.push({ [Op.or]: titleConditions });
+        appliedFilters.push(`Title Match: "${requirement.title}"`);
+      }
+    }
+    
     // 5. DESIGNATION MATCHING (candidateDesignations)
     if (requirement.candidateDesignations && requirement.candidateDesignations.length > 0) {
       const designationConditions = requirement.candidateDesignations.flatMap(designation => ([
@@ -770,8 +1152,20 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     console.log('🎯 Applied Filters:', appliedFilters.join(' | '));
     
     // If we have matching conditions, apply them with OR logic (flexible matching)
+    // BUT: If requirement has a title, prioritize title-matched candidates
     if (matchingConditions.length > 0) {
+      // Check if we should prioritize title matches
+      const hasTitleMatch = matchingConditions.some(condition => 
+        condition[Op.or]?.some(c => 
+          c.headline || c.designation || 
+          (sequelize.where && sequelize.cast && String(c).includes('headline'))
+        )
+      );
+      
       whereClause[Op.or] = matchingConditions;
+      
+      // If requirement has specific title, we'll filter results later to prioritize title matches
+      // The WHERE clause still uses OR logic for flexibility, but we'll sort/filter by relevance
     }
     
     // Add search query if provided (narrows down results further)
@@ -896,44 +1290,71 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     let finalCount = count;
     let fallbackApplied = false;
     
-    if (finalCount < 10) { // If less than 10 candidates, try relaxed search
-      console.warn(`⚠️ Only ${finalCount} candidates matched strict filters. Applying smart fallback...`);
+    if (finalCount === 0) {
+      // If NO candidates found, try smart fallback strategies
+      console.warn(`⚠️ No candidates matched strict filters. Applying smart fallback...`);
       
-      // Relaxed criteria: Keep must-have filters (experience, salary) but relax skills/location
+      // Strategy 1: Prioritize requirement title matching in headlines (most relevant)
+      const titleKeywords = requirement.title
+        ? requirement.title.split(/\s+/).filter(word => word.length > 3).map(word => word.toLowerCase())
+        : [];
+      
+      // Strategy 2: Relaxed skill matching with fuzzy search
+      const relaxedSkills = [
+        ...(requirement.skills || []),
+        ...(requirement.keySkills || [])
+      ].filter(Boolean);
+      
+      // Build relaxed criteria prioritizing title matches
       const relaxedWhereClause = {
         user_type: 'jobseeker',
         is_active: true,
         account_status: 'active'
       };
       
-      // Keep experience range if specified
-      if (whereClause.experience_years) {
-        relaxedWhereClause.experience_years = whereClause.experience_years;
+      const relaxedConditions = [];
+      
+      // PRIORITY 1: Match requirement title in headlines (most relevant for job matching)
+      if (titleKeywords.length > 0) {
+        // Try to match at least one significant word from title in headline
+        // This ensures candidates with relevant job titles are found
+        const titleMatchConditions = titleKeywords.map(keyword => ({
+          headline: { [Op.iLike]: `%${keyword}%` }
+        }));
+        
+        // Require at least one title keyword to match in headline for relevance
+        if (titleMatchConditions.length > 0) {
+          relaxedConditions.push({ [Op.or]: titleMatchConditions });
+        }
       }
       
-      // Keep salary range if specified
-      if (whereClause.current_salary) {
-        relaxedWhereClause.current_salary = whereClause.current_salary;
-      }
-      
-      // Add partial skill matching (at least one skill should match)
-      const relaxedSkills = [
-        ...(requirement.skills || []),
-        ...(requirement.keySkills || [])
-      ].filter(Boolean);
-      
+      // PRIORITY 2: Match individual skill words in profiles
       if (relaxedSkills.length > 0) {
-        const partialSkillConditions = relaxedSkills.flatMap(skill => ([
-          sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
-          sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
-          { headline: { [Op.iLike]: `%${skill}%` } }
-        ]));
-        relaxedWhereClause[Op.or] = partialSkillConditions;
+        relaxedSkills.forEach(skill => {
+          // Split compound skills (e.g., "Machine Analysis" -> ["Machine", "Analysis"])
+          const skillWords = skill.split(/\s+/).filter(word => word.length > 3);
+          skillWords.forEach(word => {
+            relaxedConditions.push(
+              sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${word}%` }),
+              sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${word}%` }),
+              { headline: { [Op.iLike]: `%${word}%` } }
+            );
+          });
+        });
+      }
+      
+      // Apply relaxed conditions - candidates must match at least one condition
+      if (relaxedConditions.length > 0) {
+        relaxedWhereClause[Op.or] = relaxedConditions;
       }
       
       const relaxed = await User.findAndCountAll({
         where: relaxedWhereClause,
-        order: [['profile_completion', 'DESC'], ['last_profile_update', 'DESC']],
+        order: [
+          // Prioritize candidates with title matches in headline
+          [sequelize.literal(`CASE WHEN headline ILIKE '%${titleKeywords[0] || ''}%' THEN 0 ELSE 1 END`), 'ASC'],
+          [['profile_completion', 'DESC'], ['last_profile_update', 'DESC']]
+        ],
         limit: limitNum,
         offset,
         attributes: [
@@ -949,15 +1370,38 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       
       console.log(`✅ Relaxed search found ${relaxed.count} candidates`);
       
-      // Combine results: prioritize strict matches, then add relaxed matches
-      const strictCandidateIds = new Set(candidates.map(c => c.id));
-      const additionalCandidates = relaxed.rows.filter(c => !strictCandidateIds.has(c.id));
-      
-      finalCandidates = [...candidates, ...additionalCandidates].slice(0, limitNum);
-      finalCount = count + additionalCandidates.length;
-      fallbackApplied = true;
-      
-      console.log(`✅ Combined results: ${candidates.length} strict + ${additionalCandidates.length} relaxed = ${finalCandidates.length} total`);
+      if (relaxed.count > 0) {
+        // Filter results to prioritize relevance
+        // IMPORTANT: If requirement has a specific title, ONLY show candidates with title matches in headline
+        let filteredCandidates = relaxed.rows;
+        
+        if (titleKeywords.length > 0 && requirement.title) {
+          // For requirements with specific titles (like "Instrumentation engineer"),
+          // ONLY show candidates whose headline contains the title keywords
+          const titleMatched = relaxed.rows.filter(c => {
+            const headline = (c.headline || '').toLowerCase();
+            // Candidate headline must contain at least one significant keyword from requirement title
+            return titleKeywords.some(keyword => headline.includes(keyword));
+          });
+          
+          if (titleMatched.length > 0) {
+            // Only show candidates with title matches
+            filteredCandidates = titleMatched;
+            console.log(`✅ Filtered to ${titleMatched.length} candidates with title match (excluded ${relaxed.rows.length - titleMatched.length} irrelevant candidates)`);
+          } else {
+            // If no title matches found, check for skill-related matches as secondary option
+            console.warn(`⚠️ No candidates with title match found. Checking for skill-related matches...`);
+            filteredCandidates = relaxed.rows; // Fall back to all relaxed matches
+          }
+        }
+        
+        finalCandidates = filteredCandidates.slice(0, limitNum);
+        finalCount = filteredCandidates.length;
+        fallbackApplied = true;
+        console.log(`✅ Using ${finalCount} candidates from relaxed search (filtered by relevance)`);
+      } else {
+        console.warn(`⚠️ No candidates matched even relaxed criteria. No fallback candidates to show.`);
+      }
     }
     
     // ========== IMPROVED RELEVANCE SCORING ALGORITHM ==========
@@ -975,7 +1419,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         );
       };
       
-      // 1. SKILLS MATCHING (35 points max - highest priority)
+      // 1. SKILLS MATCHING (35 points max - high priority, but lower than title match)
       const allRequiredSkills = [
         ...(requirement.skills || []),
         ...(requirement.keySkills || [])
@@ -1209,8 +1653,37 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
     }
     
+    // Filter candidates to ensure relevance when requirement has specific title
+    // IMPORTANT: For requirements with titles like "Instrumentation engineer",
+    // only show candidates whose headline matches the requirement title
+    let filteredFinalCandidates = finalCandidates;
+    
+    if (requirement.title && requirement.title.trim().length > 3) {
+      const titleWords = requirement.title
+        .split(/\s+/)
+        .filter(word => word.length > 3)
+        .map(word => word.toLowerCase());
+      
+      if (titleWords.length > 0) {
+        // Filter to only candidates whose headline contains requirement title keywords
+        const titleMatched = finalCandidates.filter(candidate => {
+          const headline = (candidate.headline || '').toLowerCase();
+          // Candidate headline must contain at least one significant keyword from requirement title
+          return titleWords.some(keyword => headline.includes(keyword));
+        });
+        
+        if (titleMatched.length > 0) {
+          filteredFinalCandidates = titleMatched;
+          console.log(`🎯 Filtered results: ${titleMatched.length} candidates with title match "${requirement.title}" (removed ${finalCandidates.length - titleMatched.length} irrelevant)`);
+        } else {
+          // If no title matches, keep all candidates but log warning
+          console.warn(`⚠️ No candidates with title match found. Showing all ${finalCandidates.length} candidates`);
+        }
+      }
+    }
+    
     // Transform candidates data for frontend with relevance scoring and ATS scores
-    const transformedCandidates = finalCandidates.map(candidate => {
+    const transformedCandidates = filteredFinalCandidates.map(candidate => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
       const atsData = atsScoresMap[candidate.id];
       
@@ -1345,15 +1818,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         requirement: {
           id: requirement.id,
           title: requirement.title,
-          totalCandidates: finalCount,
+          totalCandidates: transformedCandidates.length, // Use filtered count
           appliedFilters: appliedFilters,
           fallbackApplied: fallbackApplied
         },
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: finalCount,
-          pages: Math.ceil(finalCount / limitNum),
+          total: transformedCandidates.length, // Use filtered count
+          pages: Math.ceil(transformedCandidates.length / limitNum),
           showing: transformedCandidates.length
         },
         metadata: {
@@ -1729,12 +2202,21 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         try {
           const resumeArray = toArray(resumes, []);
           console.log(`🔄 Transforming ${resumeArray.length} resumes`);
-          return resumeArray.map(resume => {
+          console.log(`🔄 First resume before transform - isDefault: ${resumeArray[0]?.isDefault}, is_primary: ${resumeArray[0]?.is_primary}`);
+          return resumeArray.map((resume, index) => {
             const metadata = resume.metadata || {};
             const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
             const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
             const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
             const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
+            
+            // Determine if this is the default resume - check multiple possible field names
+            // Backend orders by is_primary DESC, so first resume (index 0) should be default
+            const isDefaultResume = resume.isDefault === true || 
+                                    resume.isDefault === 'true' || 
+                                    resume.is_primary === true || 
+                                    resume.is_primary === 'true' ||
+                                    (index === 0 && resume.is_primary !== false && resume.is_primary !== 'false'); // First resume if ordered by is_primary DESC
             
             const transformedResume = {
               id: resume.id,
@@ -1743,7 +2225,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               fileSize: fileSize,
               uploadDate: resume.createdAt || resume.created_at,
               lastUpdated: resume.lastUpdated || resume.updated_at,
-              is_default: resume.isDefault ?? resume.is_primary ?? false,
+              isDefault: isDefaultResume, // Use camelCase for frontend
+              is_default: isDefaultResume, // Also include snake_case for backward compatibility
               isPublic: resume.isPublic ?? resume.is_public ?? true,
               views: resume.views || resume.view_count || 0,
               downloads: resume.downloads || resume.download_count || 0,
@@ -1755,7 +2238,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               metadata: resume.metadata || {}
             };
             
-            console.log(`📄 Transformed resume:`, transformedResume);
+            console.log(`📄 Transformed resume [${index}]:`, transformedResume.id, 'isDefault:', transformedResume.isDefault);
             return transformedResume;
           });
         } catch (resumeErr) {
@@ -1828,12 +2311,20 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         resumes: (() => {
           try {
             const resumeArray = toArray(resumes, []);
-            return resumeArray.map(resume => {
+            return resumeArray.map((resume, index) => {
               const metadata = resume.metadata || {};
               const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
               const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
               const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
+              
+              // Determine if this is the default resume - check multiple possible field names
+              // Backend orders by is_primary DESC, so first resume (index 0) should be default
+              const isDefaultResume = resume.isDefault === true || 
+                                      resume.isDefault === 'true' || 
+                                      resume.is_primary === true || 
+                                      resume.is_primary === 'true' ||
+                                      (index === 0 && resume.is_primary !== false && resume.is_primary !== 'false'); // First resume if ordered by is_primary DESC
               
               return {
                 id: resume.id,
@@ -1842,7 +2333,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
                 fileSize: fileSize,
                 uploadDate: resume.createdAt || resume.created_at,
                 lastUpdated: resume.lastUpdated || resume.updated_at,
-                is_default: resume.isDefault ?? resume.is_primary ?? false,
+                isDefault: isDefaultResume, // Use camelCase for frontend
+                is_default: isDefaultResume, // Also include snake_case for backward compatibility
                 isPublic: resume.isPublic ?? resume.is_public ?? true,
                 views: resume.views || resume.view_count || 0,
                 downloads: resume.downloads || resume.download_count || 0,

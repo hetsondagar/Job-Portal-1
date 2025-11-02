@@ -17,57 +17,99 @@ import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { useToast } from "@/hooks/use-toast"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { apiService } from "@/lib/api"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
+import DepartmentDropdown from "@/components/ui/department-dropdown"
+import { ChevronDown } from "lucide-react"
 
 export default function EditRequirementPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [currentSkill, setCurrentSkill] = useState("")
   const [currentBenefit, setCurrentBenefit] = useState("")
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
 
-  // Mock requirement data - in real app, this would be fetched from API
-  const [requirement, setRequirement] = useState({
-    id: params.id,
-    title: "Software Engineer",
-    description: "Looking for experienced software engineers with React and Node.js expertise",
-    location: "Vadodara",
-    experience: "3-5 years",
-    salary: "₹8-15 LPA",
-    jobType: "Full-time",
-    skills: ["React", "Node.js", "JavaScript", "TypeScript"],
-    education: "B.Tech/B.E.",
-    industry: "Technology",
-    department: "Engineering",
-    validTill: "2025-08-04",
-    noticePeriod: "Immediately",
-    remoteWork: "Hybrid",
-    travelRequired: "No",
-    shiftTiming: "Day",
-    benefits: [
-      "Competitive salary",
-      "Health insurance",
-      "Flexible working hours",
-      "Professional development"
-    ],
-    // Additional fields for create form compatibility
-    keySkills: ["React", "Node.js", "JavaScript"],
-    candidateDesignations: ["Software Engineer", "Full Stack Developer"],
-    candidateLocations: ["Vadodara", "Mumbai", "Bangalore"],
-    includeWillingToRelocate: true,
-    workExperienceMin: "3",
-    workExperienceMax: "5",
-    currentSalaryMin: "8",
-    currentSalaryMax: "15",
-    currency: "INR",
-    includeNotMentioned: false,
-  })
+  const [requirement, setRequirement] = useState<any>(null)
+  const [formData, setFormData] = useState<any>(null)
 
-  const [formData, setFormData] = useState(requirement)
-
+  // Fetch requirement data from API
   useEffect(() => {
-    setFormData(requirement)
-  }, [requirement])
+    const fetchRequirement = async () => {
+      if (!params.id || typeof params.id !== 'string') {
+        toast({
+          title: "Error",
+          description: "Invalid requirement ID",
+          variant: "destructive",
+        })
+        router.push('/employer-dashboard/requirements')
+        return
+      }
+
+      try {
+        setFetching(true)
+        const response = await apiService.getRequirement(params.id)
+        
+        if (response.success && response.data) {
+          const req = response.data
+          // Normalize data for form
+          const normalized = {
+            id: req.id,
+            title: req.title || "",
+            description: req.description || "",
+            location: req.location || "",
+            experience: req.experience || "",
+            salary: req.salary || "",
+            jobType: req.jobType || "Full-time",
+            skills: Array.isArray(req.skills) ? req.skills : [],
+            education: req.education || "",
+            industry: req.industry || "",
+            department: req.department || "",
+            validTill: req.validTill ? new Date(req.validTill).toISOString().split('T')[0] : "",
+            noticePeriod: req.noticePeriod || "",
+            remoteWork: req.remoteWork || "Hybrid",
+            travelRequired: req.travelRequired === true ? "Frequently" : req.travelRequired === false ? "No" : req.travelRequired || "No",
+            shiftTiming: req.shiftTiming || "Day",
+            benefits: Array.isArray(req.benefits) ? req.benefits : [],
+            keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
+            candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
+            candidateLocations: Array.isArray(req.candidateLocations) ? req.candidateLocations : [],
+            includeWillingToRelocate: req.includeWillingToRelocate || false,
+            workExperienceMin: req.experienceMin?.toString() || "",
+            workExperienceMax: req.experienceMax?.toString() || "",
+            currentSalaryMin: req.salaryMin?.toString() || "",
+            currentSalaryMax: req.salaryMax?.toString() || "",
+            currency: req.currency || "INR",
+            includeNotMentioned: req.includeNotMentioned || false,
+          }
+          setRequirement(normalized)
+          setFormData(normalized)
+        } else {
+          toast({
+            title: "Error",
+            description: response.message || "Failed to fetch requirement",
+            variant: "destructive",
+          })
+          router.push('/employer-dashboard/requirements')
+        }
+      } catch (error: any) {
+        console.error('Error fetching requirement:', error)
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch requirement",
+          variant: "destructive",
+        })
+        router.push('/employer-dashboard/requirements')
+      } finally {
+        setFetching(false)
+      }
+    }
+
+    fetchRequirement()
+  }, [params.id, router, toast])
 
   const handleInputChange = (field: string, value: string | string[] | boolean) => {
     setFormData(prev => ({
@@ -133,22 +175,55 @@ export default function EditRequirementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData || !params.id || typeof params.id !== 'string') return
+    
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Prepare update data
+      const updateData = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        experience: formData.experience,
+        salary: formData.salary,
+        jobType: formData.jobType,
+        skills: formData.skills,
+        keySkills: formData.keySkills,
+        education: formData.education,
+        validTill: formData.validTill || null,
+        noticePeriod: formData.noticePeriod,
+        remoteWork: formData.remoteWork,
+        travelRequired: formData.travelRequired,
+        shiftTiming: formData.shiftTiming,
+        benefits: formData.benefits,
+        candidateDesignations: formData.candidateDesignations,
+        candidateLocations: formData.candidateLocations,
+        includeWillingToRelocate: formData.includeWillingToRelocate,
+        workExperienceMin: formData.workExperienceMin || null,
+        workExperienceMax: formData.workExperienceMax || null,
+        currentSalaryMin: formData.currentSalaryMin || null,
+        currentSalaryMax: formData.currentSalaryMax || null,
+        currency: formData.currency,
+        includeNotMentioned: formData.includeNotMentioned,
+      }
+
+      const response = await apiService.updateRequirement(params.id, updateData)
       
-      toast({
-        title: "Requirement Updated",
-        description: "Your requirement has been updated successfully.",
-      })
-      
-      router.push('/employer-dashboard/requirements')
-    } catch (error) {
+      if (response.success) {
+        toast({
+          title: "Requirement Updated",
+          description: "Your requirement has been updated successfully.",
+        })
+        router.push('/employer-dashboard/requirements')
+      } else {
+        throw new Error(response.message || "Failed to update requirement")
+      }
+    } catch (error: any) {
+      console.error('Error updating requirement:', error)
       toast({
         title: "Error",
-        description: "Failed to update requirement. Please try again.",
+        description: error.message || "Failed to update requirement. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -159,10 +234,22 @@ export default function EditRequirementPage() {
   const commonSkills = ["React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "MongoDB", "PostgreSQL", "AWS", "Docker", "Kubernetes"]
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
 
+  if (fetching || !formData) {
+    return (
+      <EmployerAuthGuard>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading requirement...</p>
+          </div>
+        </div>
+      </EmployerAuthGuard>
+    )
+  }
+
   return (
     <EmployerAuthGuard>
-      return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -444,34 +531,68 @@ export default function EditRequirementPage() {
 
                   <div>
                     <Label htmlFor="industry">Industry</Label>
-                    <Select value={formData.industry} onValueChange={(value) => handleInputChange('industry', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select industry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Technology">Technology</SelectItem>
-                        <SelectItem value="Healthcare">Healthcare</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowIndustryDropdown(true)
+                      }}
+                    >
+                      <span>{formData.industry || "Select industry"}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                    
+                    {showIndustryDropdown && (
+                      <IndustryDropdown
+                        selectedIndustries={formData.industry ? [formData.industry] : []}
+                        onIndustryChange={(industries: string[]) => {
+                          // For requirements, we only allow single selection
+                          if (industries.length > 0) {
+                            handleInputChange('industry', industries[0])
+                          } else {
+                            handleInputChange('industry', '')
+                          }
+                        }}
+                        onClose={() => setShowIndustryDropdown(false)}
+                        hideSelectAllButtons={true}
+                      />
+                    )}
                   </div>
 
                   <div>
                     <Label htmlFor="department">Department</Label>
-                    <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Engineering">Engineering</SelectItem>
-                        <SelectItem value="Product">Product</SelectItem>
-                        <SelectItem value="Design">Design</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Sales">Sales</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowDepartmentDropdown(true)
+                      }}
+                    >
+                      <span>{formData.department || "Select department"}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                    
+                    {showDepartmentDropdown && (
+                      <DepartmentDropdown
+                        selectedDepartments={formData.department ? [formData.department] : []}
+                        onDepartmentChange={(departments: string[]) => {
+                          // For requirements, we only allow single selection
+                          if (departments.length > 0) {
+                            handleInputChange('department', departments[0])
+                          } else {
+                            handleInputChange('department', '')
+                          }
+                        }}
+                        onClose={() => setShowDepartmentDropdown(false)}
+                        hideSelectAllButtons={true}
+                      />
+                    )}
                   </div>
 
                   <div>

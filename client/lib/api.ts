@@ -2587,6 +2587,36 @@ class ApiService {
     return this.handleResponse<Requirement[]>(response);
   }
 
+  async getRequirement(id: string): Promise<ApiResponse<Requirement>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<Requirement>(response);
+  }
+
+  async updateRequirement(id: string, data: any): Promise<ApiResponse<Requirement>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<Requirement>(response);
+  }
+
+  async deleteRequirement(id: string): Promise<ApiResponse<void>> {
+    const response = await fetch(`${API_BASE_URL}/requirements/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<void>(response);
+  }
+
   async createRequirement(data: any): Promise<ApiResponse<any>> {
     // Ensure companyId is present for employers
     const company = this.getCompanyFromStorage();

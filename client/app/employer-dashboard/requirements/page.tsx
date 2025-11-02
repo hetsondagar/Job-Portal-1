@@ -297,16 +297,30 @@ export default function RequirementsPage() {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
-    if (requirementToDelete) {
-      // In a real implementation, this would call the API to delete the requirement
-      setRequirements(requirements.filter(req => req.id !== requirementToDelete))
+  const confirmDelete = async () => {
+    if (!requirementToDelete) return
+    
+    try {
+      const response = await apiService.deleteRequirement(requirementToDelete)
+      
+      if (response.success) {
+        setRequirements(requirements.filter(req => req.id !== requirementToDelete))
+        toast({
+          title: "Requirement Deleted",
+          description: "The requirement has been deleted successfully.",
+        })
+        setDeleteDialogOpen(false)
+        setRequirementToDelete(null)
+      } else {
+        throw new Error(response.message || "Failed to delete requirement")
+      }
+    } catch (error: any) {
+      console.error('Error deleting requirement:', error)
       toast({
-        title: "Requirement Deleted",
-        description: "The requirement has been deleted successfully.",
+        title: "Error",
+        description: error.message || "Failed to delete requirement. Please try again.",
+        variant: "destructive",
       })
-      setDeleteDialogOpen(false)
-      setRequirementToDelete(null)
     }
   }
 

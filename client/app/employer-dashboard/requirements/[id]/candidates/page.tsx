@@ -890,10 +890,20 @@ export default function CandidatesPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 text-xs text-slate-500">
-                      <span>Modified: {candidate.lastModified}</span>
-                      <span>Active: {candidate.activeStatus}</span>
-                      <span>Current: {candidate.currentSalary}</span>
-                      <span>Expected: {candidate.expectedSalary}</span>
+                      <span>Modified: {candidate.lastModified ? (() => {
+                        try {
+                          const date = new Date(candidate.lastModified);
+                          if (isNaN(date.getTime())) {
+                            return candidate.lastModified;
+                          }
+                          return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                        } catch (e) {
+                          return candidate.lastModified;
+                        }
+                      })() : 'N/A'}</span>
+                      <span>Active: {candidate.activeStatus || 'N/A'}</span>
+                      <span>Current: {candidate.currentSalary || 'N/A'}</span>
+                      <span>Expected: {candidate.expectedSalary || 'N/A'}</span>
                     </div>
                     <Link href={`/employer-dashboard/requirements/${params.id}/candidates/${candidate.id}`}>
                     <Button variant="outline" size="sm">

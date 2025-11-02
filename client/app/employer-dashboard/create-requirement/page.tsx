@@ -513,9 +513,14 @@ export default function CreateRequirementPage() {
                   <div>
                     <Label htmlFor="industry">Industry</Label>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-between"
-                      onClick={() => setShowIndustryDropdown(true)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowIndustryDropdown(true)
+                      }}
                     >
                       <span>{formData.industry || "Select industry"}</span>
                       <ChevronDown className="w-4 h-4" />
@@ -541,9 +546,14 @@ export default function CreateRequirementPage() {
                   <div>
                     <Label htmlFor="department">Department</Label>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-between"
-                      onClick={() => setShowDepartmentDropdown(true)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowDepartmentDropdown(true)
+                      }}
                     >
                       <span>{formData.department || "Select department"}</span>
                       <ChevronDown className="w-4 h-4" />
