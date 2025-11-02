@@ -392,20 +392,179 @@ const SalaryCalculator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center space-y-6">
-          <div className="flex items-center justify-center gap-3">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
-              <Calculator className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 relative overflow-hidden">
+      {/* Animated 3D Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Animated Gradient Mesh Background */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `
+              radial-gradient(at 20% 30%, rgba(59, 130, 246, 0.3) 0px, transparent 50%),
+              radial-gradient(at 80% 70%, rgba(139, 92, 246, 0.3) 0px, transparent 50%),
+              radial-gradient(at 50% 50%, rgba(99, 102, 241, 0.2) 0px, transparent 50%),
+              radial-gradient(at 0% 100%, rgba(67, 56, 202, 0.2) 0px, transparent 50%)
+            `,
+            backgroundSize: '100% 100%',
+            animation: 'gradientShift 15s ease infinite'
+          }}></div>
+        </div>
+
+        {/* 3D Animated Orbs */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-3xl animate-pulse" 
+             style={{ 
+               animation: 'float1 20s ease-in-out infinite',
+               transform: 'translate(20%, -20%)'
+             }}></div>
+        
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-3xl" 
+             style={{ 
+               animation: 'float2 25s ease-in-out infinite',
+               transform: 'translate(-20%, 20%)'
+             }}></div>
+        
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-purple-500/15 rounded-full blur-3xl" 
+             style={{ 
+               animation: 'float3 30s ease-in-out infinite'
+             }}></div>
+
+        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-pink-500/15 rounded-full blur-3xl" 
+             style={{ 
+               animation: 'float4 22s ease-in-out infinite'
+             }}></div>
+
+        {/* 3D Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.05]" style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+          transform: 'perspective(1000px) rotateX(60deg)',
+          transformOrigin: 'center center',
+          animation: 'gridMove 20s linear infinite'
+        }}></div>
+
+        {/* Animated Geometric Shapes */}
+        <div className="absolute top-20 left-20 w-64 h-64 border-2 border-blue-400/20 rounded-lg" 
+             style={{
+               transform: 'rotate(45deg) perspective(1000px) rotateY(20deg)',
+               animation: 'rotateShape 15s linear infinite'
+             }}></div>
+        
+        <div className="absolute bottom-32 right-32 w-48 h-48 border-2 border-indigo-400/20 rounded-full" 
+             style={{
+               transform: 'perspective(1000px) rotateX(30deg)',
+               animation: 'pulseShape 8s ease-in-out infinite'
+             }}></div>
+
+        <div className="absolute top-1/3 right-1/3 w-32 h-32 border-2 border-purple-400/20" 
+             style={{
+               transform: 'perspective(1000px) rotateZ(45deg) rotateX(60deg)',
+               animation: 'spin3D 12s linear infinite'
+             }}></div>
+
+        {/* Particle Effects */}
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-blue-400/30 rounded-full blur-sm"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `floatParticle ${10 + Math.random() * 20}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`
+            }}
+          ></div>
+        ))}
+
+        {/* Animated Wave Pattern */}
+        <div className="absolute bottom-0 left-0 right-0 h-64 opacity-10">
+          <svg className="absolute bottom-0 w-full h-full" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path
+              d="M0,60 Q300,20 600,60 T1200,60 L1200,120 L0,120 Z"
+              fill="rgba(59, 130, 246, 0.3)"
+              style={{
+                animation: 'wave 8s ease-in-out infinite'
+              }}
+            ></path>
+          </svg>
+        </div>
+      </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes float1 {
+          0%, 100% { transform: translate(20%, -20%) scale(1); }
+          50% { transform: translate(30%, -30%) scale(1.1); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(-20%, 20%) scale(1); }
+          50% { transform: translate(-30%, 30%) scale(1.15); }
+        }
+        @keyframes float3 {
+          0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+          50% { transform: translate(-50%, -50%) scale(1.2) rotate(180deg); }
+        }
+        @keyframes float4 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          50% { transform: translate(10%, -10%) scale(1.1); }
+        }
+        @keyframes rotateShape {
+          0% { transform: rotate(45deg) perspective(1000px) rotateY(0deg); }
+          100% { transform: rotate(405deg) perspective(1000px) rotateY(360deg); }
+        }
+        @keyframes pulseShape {
+          0%, 100% { transform: perspective(1000px) rotateX(30deg) scale(1); opacity: 0.2; }
+          50% { transform: perspective(1000px) rotateX(30deg) scale(1.3); opacity: 0.4; }
+        }
+        @keyframes spin3D {
+          0% { transform: perspective(1000px) rotateZ(0deg) rotateX(0deg); }
+          100% { transform: perspective(1000px) rotateZ(360deg) rotateX(360deg); }
+        }
+        @keyframes floatParticle {
+          0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
+          25% { transform: translateY(-50px) translateX(30px); opacity: 0.6; }
+          50% { transform: translateY(-100px) translateX(-20px); opacity: 0.4; }
+          75% { transform: translateY(-50px) translateX(-40px); opacity: 0.5; }
+        }
+        @keyframes gridMove {
+          0% { transform: perspective(1000px) rotateX(60deg) translateY(0px); }
+          100% { transform: perspective(1000px) rotateX(60deg) translateY(50px); }
+        }
+        @keyframes gradientShift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        @keyframes wave {
+          0%, 100% { d: path('M0,60 Q300,20 600,60 T1200,60 L1200,120 L0,120 Z'); }
+          50% { d: path('M0,60 Q300,100 600,60 T1200,60 L1200,120 L0,120 Z'); }
+        }
+      `}</style>
+
+      <div className="relative container mx-auto p-6 space-y-6 z-10">
+        {/* Hero Section */}
+        <div className="text-center space-y-6 pb-8 relative z-10">
+          <div className="flex items-center justify-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-2xl blur-2xl opacity-60 animate-pulse"></div>
+              <div className="relative p-4 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl shadow-2xl backdrop-blur-sm border border-white/20">
+                <Calculator className="h-10 w-10 text-white" />
+              </div>
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Salary Calculator
-            </h1>
+            <div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent mb-2 drop-shadow-lg">
+                Salary Calculator
+              </h1>
+              <div className="h-1 w-32 bg-gradient-to-r from-blue-400 to-indigo-400 mx-auto rounded-full shadow-lg"></div>
+            </div>
           </div>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Calculate your take-home salary and tax liability across different tax regimes for FY 2025-26
+          <p className="text-xl text-gray-200 max-w-3xl mx-auto font-medium drop-shadow-md">
+            Calculate your take-home salary and tax liability across different tax regimes for <span className="font-semibold text-blue-300">FY 2025-26</span>
           </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-300">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+            <span className="drop-shadow-md">Accurate calculations • Latest tax rules • Instant results</span>
+          </div>
           
           {/* Demo and Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
@@ -585,23 +744,37 @@ const SalaryCalculator = () => {
         </div>
 
         {/* Legal Disclaimer */}
-        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800 dark:text-amber-200">
-            <strong>Legal Disclaimer:</strong> This calculator provides approximate calculations for estimation purposes only. 
+        <Alert className="border-amber-400/50 bg-gradient-to-r from-amber-900/80 via-yellow-900/80 to-orange-900/80 backdrop-blur-md shadow-2xl border-2 border-amber-400/30 relative z-10">
+          <AlertTriangle className="h-5 w-5 text-amber-300" />
+          <AlertDescription className="text-amber-100 font-medium">
+            <strong className="text-amber-200">Legal Disclaimer:</strong> This calculator provides approximate calculations for estimation purposes only. 
             Tax laws are complex and subject to change. Please consult a Chartered Accountant or verify with the 
             Income Tax Department for final tax calculations and compliance.
           </AlertDescription>
         </Alert>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
           {/* Input Form */}
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-              <CardTitle className="text-xl font-bold">Salary Details</CardTitle>
-              <CardDescription className="text-blue-100">
-                Enter your salary components and deductions for accurate calculation
-              </CardDescription>
+          <Card className="shadow-2xl border border-white/10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+            {/* Decorative gradient line */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+            <CardHeader className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg relative overflow-hidden border-b border-white/20">
+              {/* Subtle pattern overlay */}
+              <div className="absolute inset-0 opacity-10" style={{
+                backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                backgroundSize: '20px 20px'
+              }}></div>
+              <div className="relative z-10">
+                <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <DollarSign className="h-6 w-6" />
+                  </div>
+                  Salary Details
+                </CardTitle>
+                <CardDescription className="text-blue-100 mt-2 text-base">
+                  Enter your salary components and deductions for accurate calculation
+                </CardDescription>
+              </div>
             </CardHeader>
           <CardContent className="space-y-4">
             <Tabs defaultValue="basic" className="w-full">
@@ -1062,19 +1235,22 @@ const SalaryCalculator = () => {
             <Button 
               onClick={calculateSalary} 
               disabled={loading || selectedRegimes.length === 0}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-semibold py-6 text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Calculating...
-                </>
-              ) : (
-                <>
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Calculate Salary
-                </>
-              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="h-5 w-5" />
+                    Calculate Salary
+                  </>
+                )}
+              </span>
             </Button>
             </div>
           </CardContent>
@@ -1085,10 +1261,21 @@ const SalaryCalculator = () => {
             {result && (
               <>
                 {/* Monthly Salary Display */}
-                <Card className="shadow-2xl border-2 border-green-500 bg-gradient-to-r from-green-50 to-emerald-50">
-                  <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
-                    <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                      <DollarSign className="h-6 w-6" />
+                <Card className="shadow-2xl border-2 border-green-500 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 relative overflow-hidden">
+                  {/* Animated background pattern */}
+                  <div className="absolute inset-0 opacity-5" style={{
+                    backgroundImage: `radial-gradient(circle at 3px 3px, rgb(34 197 94) 1px, transparent 0)`,
+                    backgroundSize: '30px 30px'
+                  }}></div>
+                  <CardHeader className="bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 text-white rounded-t-lg relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-10" style={{
+                      backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                      backgroundSize: '20px 20px'
+                    }}></div>
+                    <CardTitle className="flex items-center gap-3 text-3xl font-bold relative z-10">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <DollarSign className="h-7 w-7" />
+                      </div>
                       Your Monthly Take-Home Salary
                     </CardTitle>
                   </CardHeader>
@@ -1183,11 +1370,21 @@ const SalaryCalculator = () => {
                 </Card>
 
                 {/* Regime Comparison */}
-                <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-                  <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
-                    <CardTitle className="flex items-center justify-between text-xl font-bold">
-                      Tax Regime Comparison
-                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-md relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600"></div>
+                  <CardHeader className="bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 text-white rounded-t-lg relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-10" style={{
+                      backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                      backgroundSize: '20px 20px'
+                    }}></div>
+                    <CardTitle className="flex items-center justify-between text-2xl font-bold relative z-10">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                          <BarChart3 className="h-6 w-6" />
+                        </div>
+                        Tax Regime Comparison
+                      </div>
+                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 text-sm font-semibold">
                         FY {result.fy}
                       </Badge>
                     </CardTitle>
@@ -1249,15 +1446,24 @@ const SalaryCalculator = () => {
               </Card>
 
               {/* Comprehensive Comparison Table */}
-              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
-                  <CardTitle className="text-xl font-bold flex items-center gap-2">
-                    <Calculator className="h-5 w-5" />
-                    Comprehensive Tax Regime Comparison
-                  </CardTitle>
-                  <p className="text-blue-100 text-sm">
-                    Detailed comparison of all tax regimes with savings analysis
-                  </p>
+              <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-md relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
+                <CardHeader className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10" style={{
+                    backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                    backgroundSize: '20px 20px'
+                  }}></div>
+                  <div className="relative z-10">
+                    <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <Calculator className="h-6 w-6" />
+                      </div>
+                      Comprehensive Tax Regime Comparison
+                    </CardTitle>
+                    <p className="text-blue-100 text-base mt-2">
+                      Detailed comparison of all tax regimes with savings analysis
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -1520,15 +1726,24 @@ const SalaryCalculator = () => {
               </Card>
 
               {/* Visual Comparison Charts */}
-              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
-                  <CardTitle className="text-xl font-bold flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Visual Comparison
-                  </CardTitle>
-                  <p className="text-indigo-100 text-sm">
-                    Graphical representation of tax regimes comparison
-                  </p>
+              <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-md relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600"></div>
+                <CardHeader className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white rounded-t-lg relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10" style={{
+                    backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                    backgroundSize: '20px 20px'
+                  }}></div>
+                  <div className="relative z-10">
+                    <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <BarChart3 className="h-6 w-6" />
+                      </div>
+                      Visual Comparison
+                    </CardTitle>
+                    <p className="text-indigo-100 text-base mt-2">
+                      Graphical representation of tax regimes comparison
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Tax Comparison Bar Chart */}
@@ -1663,9 +1878,14 @@ const SalaryCalculator = () => {
               </Card>
 
                 {/* Detailed Breakdown */}
-                <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-                  <CardHeader className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-t-lg">
-                    <CardTitle className="text-xl font-bold">Detailed Breakdown</CardTitle>
+                <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-md relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600"></div>
+                  <CardHeader className="bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white rounded-t-lg relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-10" style={{
+                      backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                      backgroundSize: '20px 20px'
+                    }}></div>
+                    <CardTitle className="text-2xl font-bold relative z-10">Detailed Breakdown</CardTitle>
                   </CardHeader>
                 <CardContent>
                   <Tabs defaultValue={Object.keys(result.regimes)[0]} className="w-full">
