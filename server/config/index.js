@@ -42,6 +42,7 @@ const CandidateAnalytics = require('../models/CandidateAnalytics')(sequelize);
 const JobTemplate = require('../models/JobTemplate');
 const JobPreference = require('../models/JobPreference');
 const SupportMessage = require('../models/SupportMessage')(sequelize);
+const TeamInvitation = require('../models/TeamInvitation');
 
 // Define associations
 
@@ -191,6 +192,14 @@ JobApplication.hasMany(Analytics, { foreignKey: 'applicationId', as: 'analytics'
 // FeaturedJob associations
 FeaturedJob.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 
+// TeamInvitation associations
+TeamInvitation.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+Company.hasMany(TeamInvitation, { foreignKey: 'companyId', as: 'invitations' });
+TeamInvitation.belongsTo(User, { foreignKey: 'invitedBy', as: 'inviter' });
+TeamInvitation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(TeamInvitation, { foreignKey: 'invitedBy', as: 'sentInvitations' });
+User.hasMany(TeamInvitation, { foreignKey: 'userId', as: 'receivedInvitations' });
+
 // SecureJobTap associations
 SecureJobTap.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 SecureJobTap.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
@@ -254,5 +263,6 @@ module.exports = {
   JobTemplate,
   JobPreference,
   SupportMessage,
+  TeamInvitation,
   syncDatabase
 }; 

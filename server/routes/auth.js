@@ -808,6 +808,51 @@ router.post('/login', validateLogin, async (req, res) => {
 
     console.log('✅ Password verified successfully');
 
+    // For employer/admin users, verify company membership and verification status
+    if ((user.user_type === 'employer' || user.user_type === 'admin') && loginType !== 'admin') {
+      if (!user.company_id) {
+        console.log('❌ Employer user has no company association:', email);
+        return res.status(403).json({
+          success: false,
+          message: 'Your account is not associated with any company. Please contact your administrator.',
+          redirectTo: '/employer-register'
+        });
+      }
+
+      // Verify company exists and is active
+      const company = await Company.findByPk(user.company_id);
+      if (!company) {
+        console.log('❌ Company not found for user:', email);
+        return res.status(403).json({
+          success: false,
+          message: 'Your company account is not found. Please contact support.',
+          redirectTo: '/employer-register'
+        });
+      }
+
+      if (!company.isActive || company.companyStatus !== 'active') {
+        console.log('❌ Company is not active:', company.companyStatus);
+        return res.status(403).json({
+          success: false,
+          message: 'Your company account is not active. Please contact support.',
+          redirectTo: '/employer-register'
+        });
+      }
+
+      // Verify email verification for employer users
+      if (user.user_type === 'employer' && !user.is_email_verified) {
+        console.log('❌ Employer email not verified:', email);
+        return res.status(403).json({
+          success: false,
+          message: 'Please verify your email address before logging in. Check your inbox for the verification link.',
+          status: 'email_not_verified',
+          redirectTo: '/employer-login'
+        });
+      }
+
+      console.log('✅ Company membership verified:', { companyId: company.id, companyName: company.name });
+    }
+
     // Validate login type if specified
     if (loginType) {
       console.log('🔍 Validating login type:', { loginType, userType: user.user_type });

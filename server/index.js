@@ -82,6 +82,7 @@ const paymentRoutes = require('./routes/payment');
 const verificationRoutes = require('./routes/verification');
 const uploadRoutes = require('./routes/upload');
 const adminInvitationsRoutes = require('./routes/admin-invitations');
+const teamRoutes = require('./routes/team');
 
 // Import passport for OAuth
 const passport = require('passport');
@@ -345,6 +346,8 @@ app.use('/api/candidate-likes', candidateLikesRoutes);
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/hot-vacancies', require('./routes/hot-vacancies'));
 app.use('/api/featured-jobs', featuredJobsRoutes);
+app.use('/api/team', teamRoutes.publicRouter);
+app.use('/api/team', teamRoutes.router);
 app.use('/api/interviews', interviewsRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/gulf', gulfJobsRoutes);

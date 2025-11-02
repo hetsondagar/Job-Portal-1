@@ -93,7 +93,7 @@ router.get('/conversations', authenticateToken, async (req, res) => {
           name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
           email: otherParticipant.email,
           userType: otherParticipant.user_type,
-          company: otherParticipant.company_id ? { id: otherParticipant.company_id } : null
+          company: (otherParticipant.companyId || otherParticipant.company_id) ? { id: (otherParticipant.companyId || otherParticipant.company_id) } : null
         },
         lastMessage: null, // We'll fetch this separately if needed
         metadata: conv.metadata
@@ -116,12 +116,13 @@ router.get('/conversations', authenticateToken, async (req, res) => {
 // List company coworkers (recruiters/admins in same company) to start chats
 router.get('/company-users', authenticateToken, async (req, res) => {
   try {
-    if (!req.user.company_id) {
+    const userCompanyId = req.user.companyId || req.user.company_id
+    if (!userCompanyId) {
       return res.json({ success: true, data: [] })
     }
     const coworkers = await User.findAll({
       where: {
-        company_id: req.user.company_id,
+        companyId: userCompanyId,
         id: { [Op.ne]: req.user.id },
         user_type: { [Op.in]: ['employer', 'admin'] }
       },
@@ -148,32 +149,69 @@ router.post('/start', authenticateToken, async (req, res) => {
     // Validate coworker and same company
     const receiver = await User.findByPk(receiverId)
     if (!receiver) return res.status(404).json({ success: false, message: 'User not found' })
-    if (!req.user.company_id || String(receiver.company_id) !== String(req.user.company_id)) {
+    
+    // Use companyId (camelCase) as Sequelize model attribute maps to company_id in DB
+    const userCompanyId = req.user.companyId || req.user.company_id
+    const receiverCompanyId = receiver.companyId || receiver.company_id
+    if (!userCompanyId || String(receiverCompanyId) !== String(userCompanyId)) {
       return res.status(403).json({ success: false, message: 'Users are not in the same company' })
     }
 
-    // Normalize participants order as in model hook
-    const p1 = req.user.id < receiverId ? req.user.id : receiverId
-    const p2 = req.user.id < receiverId ? receiverId : req.user.id
+    // Normalize participants order as in model hook (compare UUIDs as strings)
+    const userId = String(req.user.id)
+    const recvId = String(receiverId)
+    const p1 = userId < recvId ? userId : recvId
+    const p2 = userId < recvId ? recvId : userId
 
-    // Use raw SQL to avoid column name mapping issues
-    const [rows] = await sequelize.query(
-      'SELECT "id" FROM "conversations" WHERE "participant1Id" = :p1 AND "participant2Id" = :p2 AND "isActive" = true LIMIT 1;',
-      { replacements: { p1, p2 }, type: sequelize.QueryTypes.SELECT }
-    )
-    if (rows && rows.id) {
-      return res.json({ success: true, data: { id: rows.id } })
+    // Use findOrCreate to handle both finding existing and creating new conversations
+    // The unique constraint is on (participant1_id, participant2_id, conversation_type)
+    // This handles race conditions where two requests try to create the same conversation
+    try {
+      const [conversation, created] = await Conversation.findOrCreate({
+        where: {
+          participant1Id: p1,
+          participant2Id: p2,
+          conversationType: 'direct'
+        },
+        defaults: {
+          isBlocked: false
+        }
+      })
+      
+      // If conversation was blocked, unblock it since user is trying to start it
+      if (!created && conversation.isBlocked) {
+        await conversation.update({ isBlocked: false })
+      }
+      
+      return res.json({ success: true, data: { id: conversation.id } })
+    } catch (createError) {
+      // If creation fails due to unique constraint, try to find existing again
+      // This handles race conditions where conversation was created between find and create
+      if (createError.name === 'SequelizeUniqueConstraintError') {
+        const existing = await Conversation.findOne({
+          where: {
+            participant1Id: p1,
+            participant2Id: p2,
+            conversationType: 'direct'
+          }
+        })
+        if (existing) {
+          // Unblock if needed
+          if (existing.isBlocked) {
+            await existing.update({ isBlocked: false })
+          }
+          return res.json({ success: true, data: { id: existing.id } })
+        }
+      }
+      throw createError
     }
-    const uuid = require('uuid').v4()
-    const [created] = await sequelize.query(
-      'INSERT INTO "conversations" ("id","participant1Id","participant2Id","conversationType","title","isActive","created_at","updated_at") VALUES (:id,:p1,:p2,:type,:title,true, NOW(), NOW()) RETURNING "id";',
-      { replacements: { id: uuid, p1, p2, type: 'general', title: title || null }, type: sequelize.QueryTypes.INSERT }
-    )
-    const createdId = created?.id || (Array.isArray(created) ? created[0]?.id : undefined)
-    return res.json({ success: true, data: { id: createdId || uuid } })
   } catch (error) {
     console.error('Error starting conversation:', error)
-    return res.status(500).json({ success: false, message: 'Failed to start conversation' })
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to start conversation',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
@@ -247,7 +285,7 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
         id: msg.sender.id,
         name: `${msg.sender.first_name} ${msg.sender.last_name}`,
         userType: msg.sender.user_type,
-        company: msg.sender.company_id ? { id: msg.sender.company_id } : null
+        company: (msg.sender.companyId || msg.sender.company_id) ? { id: (msg.sender.companyId || msg.sender.company_id) } : null
       },
       metadata: msg.metadata
     }));
