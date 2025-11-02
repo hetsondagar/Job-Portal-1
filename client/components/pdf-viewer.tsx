@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
-import { FileText, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface PDFViewerProps {
@@ -180,76 +180,35 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
 
         {!error && !loading && blobUrl && (
           <div className="relative w-full h-full flex flex-col" key={`pdf-${zoomLevel}-${viewMode}`}>
-            {/* PDF Controls Bar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200 rounded-t-lg z-20">
-              <div className="flex items-center space-x-2">
-                {/* Page Navigation */}
-                {pageCount && pageCount > 1 && (
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePagePrev}
-                      disabled={currentPage === 1}
-                      className="h-7 px-2"
-                    >
-                      ←
-                    </Button>
-                    <span className="text-xs text-slate-600 px-2">
-                      Page {currentPage} of {pageCount}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePageNext}
-                      disabled={currentPage === pageCount}
-                      className="h-7 px-2"
-                    >
-                      →
-                    </Button>
-                  </div>
-                )}
-                {pageCount === 1 && (
-                  <span className="text-xs text-slate-500">1 Page Resume</span>
-                )}
+            {/* PDF Controls Bar - Removed zoom and refresh controls */}
+            {pageCount && pageCount > 1 && (
+              <div className="flex items-center justify-center px-4 py-2 bg-slate-50 border-b border-slate-200 rounded-t-lg z-20">
+                {/* Page Navigation - Only show for multi-page PDFs */}
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePagePrev}
+                    disabled={currentPage === 1}
+                    className="h-7 px-2"
+                  >
+                    ←
+                  </Button>
+                  <span className="text-xs text-slate-600 px-2">
+                    Page {currentPage} of {pageCount}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePageNext}
+                    disabled={currentPage === pageCount}
+                    className="h-7 px-2"
+                  >
+                    →
+                  </Button>
+                </div>
               </div>
-              
-              {/* Zoom Controls */}
-              <div className="flex items-center space-x-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleZoomOut}
-                  disabled={zoomLevel <= 50}
-                  className="h-7 px-2"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="w-4 h-4" />
-                </Button>
-                <span className="text-xs text-slate-600 px-2 min-w-[50px] text-center">
-                  {zoomLevel}%
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleZoomIn}
-                  disabled={zoomLevel >= 200}
-                  className="h-7 px-2"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleZoomReset}
-                  className="h-7 px-2"
-                  title="Reset Zoom"
-                >
-                  <RotateCw className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
+            )}
             
             {/* PDF Container - exactly one page with scrollbar for multi-page */}
             <div 
