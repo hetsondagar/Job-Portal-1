@@ -72,7 +72,7 @@ export function Navbar() {
             <div className="relative group">
               <Button 
                 variant="ghost" 
-                className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-4 after:right-4 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
+                className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-4 after:right-4 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
                 onClick={() => window.location.href = '/jobs'}
               >
                 Jobs
@@ -80,7 +80,7 @@ export function Navbar() {
               </Button>
               
               {/* Jobs Dropdown Menu */}
-              <div className="absolute left-0 mt-2 w-full max-w-[95vw] sm:w-96 lg:w-[600px] xl:w-[700px] bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+              <div className="absolute left-0 mt-2 w-full max-w-[95vw] sm:w-96 lg:w-[600px] xl:w-[700px] bg-purple-50/95 dark:bg-purple-900/80 backdrop-blur-md rounded-lg shadow-xl border border-purple-200/50 dark:border-purple-700/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
                 <div className="p-3 sm:p-4 lg:p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                     {/* Popular Categories */}
@@ -93,7 +93,7 @@ export function Navbar() {
                           params.set('departments', 'Engineering - Software & QA,IT & Information Security,Data Science & Analytics,Quality Assurance,Product Management,Project & Program Management,UX, Design & Architecture')
                           params.set('roleCategories', 'Software Development,IT & Information Security,IT Consulting,IT Network,IT Support,IT Infrastructure Services,IT Security,DevOps,Technology / IT,Engineering - Software & QA,Quality Assurance and Testing,Data Science & Machine Learning,Product Management,Project & Program Management,UX, Design & Architecture')
                           handleFilterClick(`/jobs?${params.toString()}`)
-                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">IT jobs</button>
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">IT jobs</button>
                         <button onClick={() => {
                           const params = new URLSearchParams()
                           params.set('industries', 'Retail (142),FMCG / Foods / Beverage (204),Consumer Electronics (67),Real Estate (182),Travel / Tourism (67),Hotels / Restaurants (45),Automobile (72),Auto Components (67),Banking / Lending (219),Insurance (156),FinTech (76)')
@@ -214,7 +214,7 @@ export function Navbar() {
             <div className="relative group">
               <Button 
                 variant="ghost" 
-                className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-4 after:right-4 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
+                className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-4 after:right-4 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
                 onClick={() => window.location.href = '/companies'}
               >
                 Companies
@@ -222,7 +222,7 @@ export function Navbar() {
               </Button>
               
               {/* Companies Dropdown Menu */}
-              <div className="absolute left-0 mt-2 w-full max-w-[95vw] sm:w-96 lg:w-[500px] xl:w-[600px] bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+              <div className="absolute left-0 mt-2 w-full max-w-[95vw] sm:w-96 lg:w-[500px] xl:w-[600px] bg-purple-50/95 dark:bg-purple-900/80 backdrop-blur-md rounded-lg shadow-xl border border-purple-200/50 dark:border-purple-700/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
                 <div className="p-3 sm:p-4 lg:p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                     {/* Explore Categories */}
@@ -235,7 +235,7 @@ export function Navbar() {
                             params.set('companyType', 'unicorn')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Unicorn
                         </button>
@@ -245,7 +245,7 @@ export function Navbar() {
                             params.set('companyType', 'mnc')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           MNC
                         </button>
@@ -255,7 +255,7 @@ export function Navbar() {
                             params.set('companyType', 'startup')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Startup
                         </button>
@@ -265,7 +265,7 @@ export function Navbar() {
                             params.set('companyType', 'product-based')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Product based
                         </button>
@@ -275,7 +275,7 @@ export function Navbar() {
                             params.set('industry', 'Internet')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Internet
                         </button>
@@ -292,7 +292,7 @@ export function Navbar() {
                             params.set('featured', 'true')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Top companies
                         </button>
@@ -302,7 +302,7 @@ export function Navbar() {
                             params.set('industry', 'IT Services & Consulting')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           IT companies
                         </button>
@@ -312,7 +312,7 @@ export function Navbar() {
                             params.set('industry', 'FinTech')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Fintech companies
                         </button>
@@ -322,7 +322,7 @@ export function Navbar() {
                             params.set('companyType', 'sponsored')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Sponsored companies
                         </button>
@@ -332,7 +332,7 @@ export function Navbar() {
                             params.set('featured', 'true')
                             window.location.href = `/companies?${params.toString()}`
                           }}
-                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full"
+                          className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded"
                         >
                           Featured companies
                         </button>
@@ -345,15 +345,15 @@ export function Navbar() {
 
             {/* Tools Dropdown */}
             <div className="relative group">
-              <Button variant="ghost" className="text-slate-700 dark:text-slate-300">
+              <Button variant="ghost" className="text-slate-700 dark:text-slate-300 hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors duration-200">
                 Tools
                 <ChevronDown className="w-4 h-4 ml-1" />
               </Button>
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              <div className="absolute right-0 mt-2 w-48 bg-purple-50/95 dark:bg-purple-900/80 backdrop-blur-md rounded-lg shadow-lg border border-purple-200/50 dark:border-purple-700/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                 <div className="py-2">
                   <Link
                     href="/salary-calculator"
-                    className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 rounded mx-1"
                   >
                     Salary Calculator
                   </Link>
@@ -447,28 +447,28 @@ export function Navbar() {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-2 after:right-2 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
+                    className="relative text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-blue-400 hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors duration-200 tracking-wider uppercase text-[12px] px-4 py-2 after:absolute after:left-2 after:right-2 after:-bottom-1 after:h-[2px] after:scale-x-0 hover:after:scale-x-100 after:origin-left after:transition-transform after:bg-gradient-to-r after:from-[#5A00F2] after:to-[#4F9BFF]"
                   >
                     For Employers
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="absolute right-0 mt-2 w-56 bg-purple-50/95 dark:bg-purple-900/80 backdrop-blur-md rounded-lg shadow-lg border border-purple-200/50 dark:border-purple-700/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                     <div className="py-2">
                       <Link
                         href="/pricing"
-                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 rounded mx-1"
                       >
                         Pricing
                       </Link>
                       <Link
                         href="/hyrebridge-solutions"
-                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 rounded mx-1"
                       >
                         HyreBridge Solutions
                       </Link>
                       <Link
                         href="/employer-login"
-                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 rounded mx-1"
                       >
                         Employer Login
                       </Link>

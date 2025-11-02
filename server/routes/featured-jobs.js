@@ -33,6 +33,9 @@ router.get('/employer/jobs', FeaturedJobController.getEmployerJobs);
 // Get employer's featured jobs
 router.get('/employer', FeaturedJobController.getEmployerFeaturedJobs);
 
+// Get applications for a featured job
+router.get('/:id/applications', FeaturedJobController.getFeaturedJobApplications);
+
 // Get featured job details
 router.get('/:id', FeaturedJobController.getFeaturedJobDetails);
 

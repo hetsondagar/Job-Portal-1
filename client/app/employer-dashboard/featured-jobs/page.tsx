@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, TrendingUp, Eye, MousePointer, Users, DollarSign, Calendar, Target, BarChart3, Settings, Loader2 } from "lucide-react"
+import { Plus, TrendingUp, Eye, MousePointer, Users, DollarSign, Calendar, Target, BarChart3, Settings, Loader2, FileText, Mail, Phone, MapPin, Briefcase, GraduationCap, Award, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,6 +19,7 @@ import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService } from "@/lib/api"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
+import { ApplicationsDialog } from "./ApplicationsDialog"
 
 export default function FeaturedJobsPage() {
   const [featuredJobs, setFeaturedJobs] = useState<any[]>([])
@@ -116,7 +119,7 @@ export default function FeaturedJobsPage() {
   const totalBudget = featuredJobs.reduce((sum, job) => sum + job.budget, 0)
   const totalSpent = featuredJobs.reduce((sum, job) => sum + job.spentAmount, 0)
   const totalImpressions = featuredJobs.reduce((sum, job) => sum + job.impressions, 0)
-  const totalApplications = featuredJobs.reduce((sum, job) => sum + job.applications, 0)
+  const totalApplications = featuredJobs.reduce((sum, job) => sum + (job.applicationCount || job.applications || 0), 0)
 
   return (
     <EmployerAuthGuard>
@@ -299,8 +302,8 @@ export default function FeaturedJobsPage() {
                     
                     <div>
                       <p className="text-sm text-slate-600 mb-1">Applications</p>
-                      <p className="text-lg font-semibold">{job.applications}</p>
-                      <p className="text-xs text-slate-500">{job.conversionRate}% conversion</p>
+                      <p className="text-lg font-semibold">{job.applicationCount || job.applications || 0}</p>
+                      <p className="text-xs text-slate-500">{job.conversionRate ? `${job.conversionRate}% conversion` : 'No conversion data'}</p>
                     </div>
                   </div>
                   
@@ -311,9 +314,7 @@ export default function FeaturedJobsPage() {
                       <span>₹{(job.spentAmount / job.impressions * 1000).toFixed(2)} per 1K impressions</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button size="sm" variant="outline">
-                        View Details
-                      </Button>
+                      <ApplicationsDialog featuredJobId={job.id} jobTitle={job.job?.title || 'Unknown Job'} applicationCount={job.applicationCount || job.applications || 0} />
                       <Button size="sm" variant="outline">
                         Edit
                       </Button>

@@ -425,10 +425,10 @@ export default function JobDetailPage() {
                       const currency = job.salaryCurrency || 'INR';
                       const symbol = currency === 'INR' ? '₹' : '';
                       return (
-                        <div className="flex items-center">
-                          <DollarSign className="w-4 h-4 mr-2" />
+                    <div className="flex items-center">
+                      <DollarSign className="w-4 h-4 mr-2" />
                           {symbol}{minLPA}-{maxLPA} LPA
-                        </div>
+                    </div>
                       );
                     } else if (job.salary) {
                       const currency = job.salaryCurrency || 'INR';
@@ -814,8 +814,8 @@ export default function JobDetailPage() {
                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="prose max-w-none">
                         <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{job.requirements}</p>
-                      </div>
-                    </div>
+                          </div>
+                            </div>
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No requirements specified</p>
@@ -825,23 +825,23 @@ export default function JobDetailPage() {
 
             {/* Skills & Education Requirements */}
             {job.skills && Array.isArray(job.skills) && job.skills.length > 0 && (
-              <Card className="bg-white border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900 flex items-center">
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center">
                     <Award className="w-5 h-5 mr-2" />
                     Required Skills
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {job.skills.map((skill: string, index: number) => (
                       <Badge key={index} className="bg-blue-600 text-white">
                         {skill}
                       </Badge>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
             )}
 
             {job.education && (

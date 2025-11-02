@@ -1086,14 +1086,14 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             companyId: companyId // Only show jobs from the same company
           },
           attributes: ['id', 'title', 'location', 'salary', 'salary_min', 'salary_max', 'salary_currency', 'job_type', 'status', 'created_at', 'valid_till'],
-          include: [{
-            model: Company,
-            as: 'company',
+      include: [{
+        model: Company,
+        as: 'company',
             attributes: ['id', 'name', 'industries', 'sector']
-          }],
-          limit: 5,
-          order: [['created_at', 'DESC']]
-        });
+      }],
+      limit: 5,
+      order: [['created_at', 'DESC']]
+    });
         console.log(`✅ Found ${similarJobs.length} similar jobs for company ${companyId}`);
       } catch (error) {
         console.error('❌ Error fetching similar jobs:', error);
@@ -1111,7 +1111,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
         requiredRequirements: requirementsLines, // For now, all are considered required
         optionalRequirements: 0
     };
-    
+
     // Ensure timestamps are properly mapped
     const jobDetails = {
       ...jobData,

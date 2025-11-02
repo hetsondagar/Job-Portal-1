@@ -1209,23 +1209,23 @@ export default function UserDetailPage() {
                         };
                         
                         return (
-                          <div key={job.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex justify-between items-start">
-                              <div>
+                      <div key={job.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div>
                                 <h4 className="text-gray-900 font-semibold">{job.title || 'Untitled Job'}</h4>
                                 <p className="text-gray-600">{job.location || 'Location not specified'}</p>
-                                <p className="text-sm text-gray-500">Applications: {job.applicationCount || 0}</p>
+                            <p className="text-sm text-gray-500">Applications: {job.applicationCount || 0}</p>
                                 {validTill && (
                                   <p className="text-xs text-gray-400 mt-1">
                                     Valid till: {new Date(validTill).toLocaleDateString()}
                                   </p>
                                 )}
-                              </div>
+                          </div>
                               <Badge className={getStatusBadgeColor(displayStatus)}>
                                 {displayStatus}
-                              </Badge>
-                            </div>
-                          </div>
+                          </Badge>
+                        </div>
+                      </div>
                         );
                       })}
                   </div>

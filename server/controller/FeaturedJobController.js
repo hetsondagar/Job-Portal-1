@@ -1,6 +1,7 @@
 'use strict';
 
-const { FeaturedJob, Job, Company, User, Notification } = require('../config');
+const { Op, Sequelize } = require('sequelize');
+const { FeaturedJob, Job, Company, User, Notification, JobApplication, Resume, CoverLetter } = require('../config');
 
 /**
  * Create a new featured job promotion
@@ -85,7 +86,8 @@ exports.createFeaturedJob = async (req, res, next) => {
       price: pricing.price,
       currency: 'INR',
       paymentStatus: 'pending',
-      status: 'draft' // Start as draft until payment is confirmed
+      status: 'draft', // Start as draft until payment is confirmed
+      createdBy: req.user.id // Set the creator to the authenticated user
     };
 
     const featuredJob = await FeaturedJob.create(featuredJobData);
@@ -142,7 +144,7 @@ exports.getEmployerFeaturedJobs = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const whereClause = { 
-      '$job.employerId$': req.user.id 
+      '$job.posted_by$': req.user.id 
     };
 
     if (status) {
@@ -154,23 +156,47 @@ exports.getEmployerFeaturedJobs = async (req, res, next) => {
       include: [{
         model: Job,
         as: 'job',
-        attributes: ['id', 'title', 'location', 'status', 'createdAt'],
+        attributes: ['id', 'title', 'location', 'status', [Sequelize.literal('"job"."created_at"'), 'createdAt']],
         include: [{
           model: Company,
           as: 'company',
           attributes: ['id', 'name', 'logo']
         }]
       }],
-      order: [['createdAt', 'DESC']],
+      order: [[Sequelize.col('FeaturedJob.created_at'), 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
+
+    // Get application counts for each featured job
+    const featuredJobsWithApplications = await Promise.all(
+      featuredJobs.map(async (featuredJob) => {
+        const applicationCount = await JobApplication.count({
+          where: {
+            jobId: featuredJob.jobId
+          },
+          include: [{
+            model: Job,
+            as: 'job',
+            where: {
+              '$Job.posted_by$': req.user.id
+            },
+            attributes: []
+          }]
+        });
+
+        return {
+          ...featuredJob.toJSON(),
+          applicationCount
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Featured jobs retrieved successfully',
       data: {
-        featuredJobs,
+        featuredJobs: featuredJobsWithApplications,
         pagination: {
           total: count,
           page: parseInt(page),
@@ -444,13 +470,13 @@ exports.getEmployerJobs = async (req, res, next) => {
         employerId: req.user.id,
         status: status
       },
-      attributes: ['id', 'title', 'location', 'status', 'createdAt', 'views', 'applications'],
+      attributes: ['id', 'title', 'location', 'status', [Sequelize.col('Job.created_at'), 'createdAt'], 'views', 'applications'],
       include: [{
         model: Company,
         as: 'company',
         attributes: ['id', 'name', 'logo']
       }],
-      order: [['createdAt', 'DESC']],
+      order: [[Sequelize.col('Job.created_at'), 'DESC']],
       limit: parseInt(limit)
     });
 
@@ -577,6 +603,121 @@ exports.processPayment = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to process payment',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get applications for a featured job
+ */
+exports.getFeaturedJobApplications = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 20, status } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Verify the featured job belongs to the employer
+    const featuredJob = await FeaturedJob.findOne({
+      where: { id },
+      include: [{
+        model: Job,
+        as: 'job',
+        where: { 
+          '$Job.posted_by$': req.user.id 
+        },
+        attributes: ['id', 'title']
+      }]
+    });
+
+    if (!featuredJob) {
+      return res.status(404).json({
+        success: false,
+        message: 'Featured job promotion not found'
+      });
+    }
+
+    // Build where clause for applications
+    const whereClause = {
+      jobId: featuredJob.jobId
+    };
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    // Get applications with all details
+    const { count, rows: applications } = await JobApplication.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Job,
+          as: 'job',
+          where: {
+            '$Job.posted_by$': req.user.id
+          },
+          attributes: ['id', 'title', 'location', 'status'],
+          include: [{
+            model: Company,
+            as: 'company',
+            attributes: ['id', 'name', 'logo']
+          }],
+          required: true
+        },
+        {
+          model: User,
+          as: 'applicant',
+          attributes: [
+            'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
+            'headline', 'summary', 'skills', 'languages', 'certifications',
+            'current_location', 'willing_to_relocate', 'expected_salary',
+            'notice_period', 'date_of_birth', 'gender', 'social_links',
+            'profile_completion', 'verification_level', 'last_profile_update',
+            'experience_years', 'current_company', 'current_role'
+          ]
+        },
+        {
+          model: Resume,
+          as: 'jobResume',
+          attributes: [
+            'id', 'title', 'summary', 'objective', 'skills', 'languages',
+            'certifications', 'projects', 'achievements', 'isDefault',
+            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+          ]
+        },
+        {
+          model: CoverLetter,
+          as: 'jobCoverLetter',
+          attributes: [
+            'id', 'title', 'content', 'summary', 'isDefault',
+            'isPublic', 'views', 'downloads', 'lastUpdated', 'metadata'
+          ]
+        },
+      ],
+      order: [['appliedAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Applications retrieved successfully',
+      data: {
+        applications,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(count / limit)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Get featured job applications error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve applications',
       error: error.message
     });
   }

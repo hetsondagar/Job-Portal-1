@@ -50,7 +50,9 @@ export default function EmployerAnalyticsPage() {
         const hiredKeys = new Set<string>()
         const shortlistedDebugSelf: Array<{ appKey: string; activityType: string; activityId?: string; candidate?: any; details?: any }>=[]
         const accessedSet = new Set([
-          'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
+          'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits',
+          'resume_view', 'candidate_view', 'profile_view', 'candidate_profile_view',
+          'application_viewed', 'application_reviewed', 'view_resume', 'view_profile'
         ])
         const hiredSet = new Set([
           'application_hired', 'candidate_hired', 'hired'
@@ -64,11 +66,19 @@ export default function EmployerAnalyticsPage() {
           'shortlisted'
         ])
 
+        const accessedKeys = new Set<string>()
         for (const a of myActs.data) {
           const t = String(a.activityType || '').toLowerCase()
-          if (accessedSet.has(t)) counts.accessed += 1
           // Only count when tied to a concrete application/candidate; do NOT fallback to log id
-          const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || '').toString()
+          const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.details?.viewedUserId || '').toString()
+          const candidateKey = (a.details?.candidateId || a.details?.viewedUserId || appKey || '').toString()
+          
+          // Count unique candidates accessed (profile views, resume views, etc.)
+          if (accessedSet.has(t) && candidateKey && !accessedKeys.has(candidateKey)) {
+            accessedKeys.add(candidateKey)
+            counts.accessed += 1
+          }
+          
           const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
           if (hiredSet.has(t) && appKey && !hiredKeys.has(appKey)) { hiredKeys.add(appKey); counts.hired += 1 }
           // Only count shortlist events if not an 'under_review' state; if status present, require 'shortlisted'
@@ -112,7 +122,9 @@ export default function EmployerAnalyticsPage() {
           const byRecruiter: Record<string, { userId: string; name?: string; email?: string; accessed: number; hired: number; shortlisted: number; hiredKeys: Set<string>; shortlistedKeys: Set<string>; }> = {}
           const shortlistedDebugCompany: Array<{ recruiterId: string; recruiterEmail?: string; appKey: string; activityType: string; activityId?: string; candidate?: any; details?: any }>=[]
           const accessedSet = new Set([
-            'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits'
+            'profile_viewed', 'resume_view', 'resume_downloaded', 'profile_visits',
+            'candidate_view', 'profile_view', 'candidate_profile_view',
+            'application_viewed', 'application_reviewed', 'view_resume', 'view_profile'
           ])
           const hiredSet = new Set([
             'application_hired', 'candidate_hired', 'hired'
@@ -122,6 +134,7 @@ export default function EmployerAnalyticsPage() {
             'application_status_changed',
             'shortlisted'
           ])
+          const companyAccessedKeys = new Set<string>()
           for (const a of activities.data) {
             const uid = a.userId || a.user?.id
             if (!uid) continue
@@ -129,9 +142,25 @@ export default function EmployerAnalyticsPage() {
               byRecruiter[uid] = { userId: uid, name: a.user?.name, email: a.user?.email, accessed: 0, hired: 0, shortlisted: 0, hiredKeys: new Set(), shortlistedKeys: new Set() }
             }
             const t = String(a.activityType || '').toLowerCase()
-            if (accessedSet.has(t)) byRecruiter[uid].accessed += 1
             // Only count when tied to a concrete application/candidate; do NOT fallback to log id
-            const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || '').toString()
+            const appKey = (a.applicationId || a.details?.applicationId || a.details?.candidateId || a.details?.viewedUserId || '').toString()
+            const candidateKey = (a.details?.candidateId || a.details?.viewedUserId || appKey || '').toString()
+            
+            // Count unique candidates accessed per recruiter and company total
+            if (accessedSet.has(t) && candidateKey) {
+              if (!byRecruiter[uid].accessedKeys) {
+                byRecruiter[uid].accessedKeys = new Set()
+              }
+              if (!byRecruiter[uid].accessedKeys.has(candidateKey)) {
+                byRecruiter[uid].accessedKeys.add(candidateKey)
+                byRecruiter[uid].accessed += 1
+              }
+              // Count for company total (unique candidates across all recruiters)
+              if (!companyAccessedKeys.has(candidateKey)) {
+                companyAccessedKeys.add(candidateKey)
+              }
+            }
+            
             if (hiredSet.has(t) && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
             const newStatus = (a.details && (a.details.newStatus || a.details.status))?.toString().toLowerCase()
             if (shortlistedSet.has(t) && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) {
@@ -145,6 +174,7 @@ export default function EmployerAnalyticsPage() {
             if (newStatus === 'hired' && appKey && !byRecruiter[uid].hiredKeys.has(appKey)) { byRecruiter[uid].hiredKeys.add(appKey); byRecruiter[uid].hired += 1 }
             if (newStatus === 'shortlisted' && appKey && !byRecruiter[uid].shortlistedKeys.has(appKey)) { byRecruiter[uid].shortlistedKeys.add(appKey); byRecruiter[uid].shortlisted += 1; shortlistedDebugCompany.push({ recruiterId: uid, recruiterEmail: a.user?.email, appKey, activityType: 'status_change', activityId: a.id, candidate: a.applicant || a.details?.candidate, details: a.details }) }
           }
+          
           const rows = Object.values(byRecruiter).map(r => ({ userId: r.userId, name: r.name, email: r.email, accessed: r.accessed, hired: r.hired, shortlisted: r.shortlisted }))
           const companyNames = shortlistedDebugCompany.map(e => {
             const c = e.candidate || {};
@@ -154,12 +184,12 @@ export default function EmployerAnalyticsPage() {
           console.log('🔍 Company shortlisted candidates (names):', Array.from(new Set(companyNames)))
           setPerRecruiter(rows)
 
-          // Totals
-          setCompanyTotals(rows.reduce((acc, r) => ({
-            accessed: acc.accessed + r.accessed,
-            hired: acc.hired + r.hired,
-            shortlisted: acc.shortlisted + r.shortlisted,
-          }), { accessed: 0, hired: 0, shortlisted: 0 }))
+          // Set company totals based on unique candidates accessed (not summing per-recruiter counts which can duplicate)
+          setCompanyTotals({
+            accessed: companyAccessedKeys.size,
+            hired: Array.from(new Set(Array.from(Object.values(byRecruiter)).flatMap(r => Array.from(r.hiredKeys)))).length,
+            shortlisted: Array.from(new Set(Array.from(Object.values(byRecruiter)).flatMap(r => Array.from(r.shortlistedKeys)))).length
+          })
         }
 
         // Optionally merge recruiter identity from summary

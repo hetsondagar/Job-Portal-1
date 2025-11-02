@@ -499,11 +499,11 @@ export function CompanyManagementDialog({
                                         
                                         // Create a download link
                                         const blobUrl = URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
+                                      const link = document.createElement('a');
                                         link.href = blobUrl;
                                         link.download = filename || `document-${index + 1}.pdf`;
                                         document.body.appendChild(link);
-                                        link.click();
+                                      link.click();
                                         document.body.removeChild(link);
                                         
                                         // Clean up the blob URL
@@ -763,7 +763,7 @@ export function CompanyManagementDialog({
                                 return (
                                   <Badge className={`ml-2 ${statusColor}`}>
                                     {statusText}
-                                  </Badge>
+                              </Badge>
                                 );
                               })()}
                             </div>

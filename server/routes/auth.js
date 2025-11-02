@@ -313,16 +313,42 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
 
     const { email, password, fullName, companyName, companyId, phone, companySize, industries, website, region, role, companyAccountType } = req.body;
     
-    // Validate that at least one industry is provided
-    if (!industries || !Array.isArray(industries) || industries.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one industry must be selected'
-      });
+    // When joining existing company, industries can be empty - will use company's industries
+    // When creating new company, industries are required
+    let finalIndustries = industries;
+    
+    if (companyId) {
+      // Joining existing company - fetch company industries if not provided
+      const existingCompanyCheck = await Company.findByPk(companyId);
+      if (existingCompanyCheck) {
+        // Use company's existing industries if none provided
+        if (!industries || !Array.isArray(industries) || industries.length === 0) {
+          finalIndustries = existingCompanyCheck.industries || existingCompanyCheck.industry ? 
+            (Array.isArray(existingCompanyCheck.industries) ? existingCompanyCheck.industries : 
+             [existingCompanyCheck.industry || existingCompanyCheck.industries].filter(Boolean)) : 
+            ['Other'];
+        }
+      } else {
+        // Company doesn't exist yet, require industries
+        if (!industries || !Array.isArray(industries) || industries.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'At least one industry must be selected'
+          });
+        }
+      }
+    } else {
+      // Creating new company - industries are required
+      if (!industries || !Array.isArray(industries) || industries.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one industry must be selected'
+        });
+      }
     }
     
     // Use the first industry as the primary industry for backward compatibility
-    const primaryIndustry = industries[0];
+    const primaryIndustry = finalIndustries[0];
 
     // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
@@ -452,7 +478,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             
             await company.update({
               name: companyName,
-              industries: industries,
+              industries: finalIndustries,
               companySize: companySize || company.companySize,
               website: website || company.website,
               email: email,
@@ -473,11 +499,11 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         if (!company) {
           // Create new company record
           const companySlug = await generateSlug(companyName);
-          console.log('📝 Creating company record:', { name: companyName, industries, companySize, website, slug: companySlug, companyAccountType });
+          console.log('📝 Creating company record:', { name: companyName, industries: finalIndustries, companySize, website, slug: companySlug, companyAccountType });
           company = await Company.create({
             name: companyName,
             slug: companySlug,
-            industries: industries,
+            industries: finalIndustries,
             companySize: companySize || '1-50',
             website: website,
             email: email,

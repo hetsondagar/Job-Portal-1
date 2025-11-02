@@ -10,27 +10,32 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
     jobId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'job_id',
       comment: 'Reference to the job being featured'
     },
     promotionType: {
       type: DataTypes.ENUM('featured', 'premium', 'urgent', 'sponsored', 'top-listing'),
       allowNull: false,
       defaultValue: 'featured',
+      field: 'promotion_type',
       comment: 'Type of promotion'
     },
     startDate: {
       type: DataTypes.DATE,
       allowNull: false,
+      field: 'start_date',
       comment: 'When the promotion starts'
     },
     endDate: {
       type: DataTypes.DATE,
       allowNull: false,
+      field: 'end_date',
       comment: 'When the promotion ends'
     },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+      field: 'is_active',
       comment: 'Whether the promotion is currently active'
     },
     priority: {
@@ -46,6 +51,7 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
     spentAmount: {
       type: DataTypes.DECIMAL(10, 2),
       defaultValue: 0,
+      field: 'spent_amount',
       comment: 'Amount spent so far on this promotion'
     },
     impressions: {
@@ -71,11 +77,13 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
     conversionRate: {
       type: DataTypes.DECIMAL(5, 4),
       defaultValue: 0,
+      field: 'conversion_rate',
       comment: 'Application conversion rate'
     },
     targetAudience: {
       type: DataTypes.JSONB,
       defaultValue: {},
+      field: 'target_audience',
       comment: 'Target audience criteria (location, skills, experience, etc.)'
     },
     placement: {
@@ -86,6 +94,7 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
     customStyling: {
       type: DataTypes.JSONB,
       defaultValue: {},
+      field: 'custom_styling',
       comment: 'Custom styling for the featured job'
     },
     notes: {
@@ -96,21 +105,26 @@ const FeaturedJob = sequelize.define('FeaturedJob', {
     createdBy: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'created_by',
       comment: 'User who created this promotion'
     },
     approvedBy: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'approved_by',
       comment: 'Admin who approved this promotion'
     },
     approvedAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'approved_at',
       comment: 'When the promotion was approved'
     }
   }, {
   tableName: 'featured_jobs',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
     indexes: [
       {
         fields: ['jobId']

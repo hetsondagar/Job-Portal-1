@@ -3072,6 +3072,28 @@ class ApiService {
     }
   }
 
+  async getFeaturedJobApplications(id: string, params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.status) queryParams.append('status', params.status);
+
+      const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const response = await fetch(`${API_BASE_URL}/featured-jobs/${id}/applications${query}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('❌ Error fetching featured job applications:', error);
+      return { success: false, message: 'Failed to fetch applications', errors: ['NETWORK_ERROR'] };
+    }
+  }
+
   async createFeaturedJob(data: {
     jobId: string;
     promotionType: 'featured' | 'premium' | 'urgent' | 'sponsored';
