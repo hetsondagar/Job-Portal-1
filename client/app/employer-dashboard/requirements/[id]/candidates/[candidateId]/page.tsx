@@ -410,9 +410,11 @@ export default function CandidateProfilePage() {
     }
   }
 
-  // Handle contact candidate - show contact info modal
+  // Handle contact candidate - directly open message modal
   const handleContactCandidate = () => {
-    setShowContactModal(true)
+    setShowMessageModal(true)
+    setSubject(`Job Opportunity: ${requirement?.title || ''}`)
+    setMessage(`Hello ${candidate?.name || 'Candidate'},\n\nI'm interested in discussing the ${requirement?.title || 'position'} position with you. Please let me know if you're available for a conversation.\n\nBest regards`)
   }
 
   // Handle send message
@@ -659,11 +661,10 @@ export default function CandidateProfilePage() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="experience">Experience</TabsTrigger>
             <TabsTrigger value="education">Education</TabsTrigger>
-            <TabsTrigger value="projects">Projects</TabsTrigger>
             <TabsTrigger value="cv">CV</TabsTrigger>
           </TabsList>
 
@@ -817,28 +818,38 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {candidate.workExperience.map((exp: { id: string; title: string; company: string; duration: string; location: string; description?: string; skills: string[] }) => (
-                    <div key={exp.id} className="border-l-4 border-blue-500 pl-6">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-lg">{exp.title}</h3>
-                          <p className="text-slate-600">{exp.company}</p>
+                  {candidate.workExperience && candidate.workExperience.length > 0 ? (
+                    candidate.workExperience.map((exp: { id: string; title: string; company: string; duration: string; location: string; description?: string; skills?: string[] }) => (
+                      <div key={exp.id || `exp_${Math.random()}`} className="border-l-4 border-blue-500 pl-6">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold text-lg">{exp.title || 'Not specified'}</h3>
+                            <p className="text-slate-600">{exp.company || 'Not specified'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-slate-500">{exp.duration || 'Not specified'}</p>
+                            <p className="text-sm text-slate-500">{exp.location || 'Not specified'}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-slate-500">{exp.duration}</p>
-                          <p className="text-sm text-slate-500">{exp.location}</p>
-                        </div>
+                        {exp.description && (
+                          <p className="text-slate-600 mb-3">{exp.description}</p>
+                        )}
+                        {exp.skills && exp.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {exp.skills.map((skill: string, idx: number) => (
+                              <Badge key={skill || idx} variant="outline" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-slate-600 mb-3">{exp.description}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {exp.skills.map((skill: string) => (
-                          <Badge key={skill} variant="outline" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-500">No work experience details available</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -851,81 +862,123 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {candidate.educationDetails.map((edu: { id: string; degree: string; institution: string; duration: string; location: string; cgpa?: string; percentage?: string; relevantCourses?: string[] }) => (
-                    <div key={edu.id} className="border-l-4 border-green-500 pl-6">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-lg">{edu.degree}</h3>
-                          <p className="text-slate-600">{edu.institution}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-slate-500">{edu.duration}</p>
-                          <p className="text-sm text-slate-500">{edu.location}</p>
-                        </div>
-                      </div>
-                      {edu.cgpa && (
-                        <p className="text-sm text-slate-600 mb-2">CGPA: {edu.cgpa}</p>
-                      )}
-                      {edu.percentage && (
-                        <p className="text-sm text-slate-600 mb-2">Percentage: {edu.percentage}</p>
-                      )}
-                      {edu.relevantCourses && (
-                        <div>
-                          <p className="text-sm text-slate-500 mb-2">Relevant Courses:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {edu.relevantCourses.map((course: string) => (
-                              <Badge key={course} variant="outline" className="text-xs">
-                                {course}
-                              </Badge>
-                            ))}
+                  {candidate.educationDetails && candidate.educationDetails.length > 0 ? (
+                    candidate.educationDetails.map((edu: { id: string; degree: string; institution: string; fieldOfStudy?: string; duration: string; location: string; cgpa?: string | number | null; percentage?: string | number | null; relevantCourses?: string[] }) => {
+                      // Format degree name (e.g., "bachelor" -> "Bachelor's Degree", "btech" -> "B.Tech", etc.)
+                      const formatDegreeName = (degree: string): string => {
+                        if (!degree || degree.toLowerCase() === 'not specified') return '';
+                        const degreeLower = degree.toLowerCase().trim();
+                        // Common degree mappings
+                        const degreeMap: Record<string, string> = {
+                          'bachelor': "Bachelor's Degree",
+                          'bachelors': "Bachelor's Degree",
+                          'btech': 'B.Tech',
+                          'b.tech': 'B.Tech',
+                          'be': 'B.E.',
+                          'b.e.': 'B.E.',
+                          'bsc': 'B.Sc',
+                          'b.sc': 'B.Sc',
+                          'ba': 'B.A.',
+                          'b.a.': 'B.A.',
+                          'master': "Master's Degree",
+                          'masters': "Master's Degree",
+                          'mtech': 'M.Tech',
+                          'm.tech': 'M.Tech',
+                          'me': 'M.E.',
+                          'm.e.': 'M.E.',
+                          'msc': 'M.Sc',
+                          'm.sc': 'M.Sc',
+                          'ma': 'M.A.',
+                          'm.a.': 'M.A.',
+                          'mba': 'MBA',
+                          'phd': 'Ph.D',
+                          'ph.d': 'Ph.D',
+                          'diploma': 'Diploma',
+                          'certification': 'Certification',
+                          'high-school': 'High School',
+                          'highschool': 'High School'
+                        };
+                        
+                        // Check exact match first
+                        if (degreeMap[degreeLower]) {
+                          return degreeMap[degreeLower];
+                        }
+                        
+                        // Check if contains any key
+                        for (const [key, value] of Object.entries(degreeMap)) {
+                          if (degreeLower.includes(key)) {
+                            return value;
+                          }
+                        }
+                        
+                        // Capitalize first letter of each word
+                        return degree.split(' ').map(word => 
+                          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                        ).join(' ');
+                      };
+                      
+                      const formattedDegree = formatDegreeName(edu.degree || '');
+                      const displayInstitution = edu.institution && edu.institution.toLowerCase() !== 'not specified' ? edu.institution : '';
+                      const displayFieldOfStudy = edu.fieldOfStudy && edu.fieldOfStudy.toLowerCase() !== 'not specified' ? edu.fieldOfStudy : '';
+                      const displayDuration = edu.duration && edu.duration.toLowerCase() !== 'not specified' ? edu.duration : '';
+                      const displayLocation = edu.location && edu.location.toLowerCase() !== 'not specified' ? edu.location : '';
+                      
+                      // Skip if no meaningful data
+                      if (!formattedDegree && !displayInstitution) {
+                        return null;
+                      }
+                      
+                      return (
+                        <div key={edu.id} className="border-l-4 border-green-500 pl-6">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              {formattedDegree && (
+                                <h3 className="font-semibold text-lg">{formattedDegree}</h3>
+                              )}
+                              {displayInstitution && (
+                                <p className="text-slate-600">{displayInstitution}</p>
+                              )}
+                              {displayFieldOfStudy && (
+                                <p className="text-sm text-slate-500 mt-1">Field of Study: {displayFieldOfStudy}</p>
+                              )}
+                            </div>
+                            {(displayDuration || displayLocation) && (
+                              <div className="text-right">
+                                {displayDuration && (
+                                  <p className="text-sm text-slate-500">{displayDuration}</p>
+                                )}
+                                {displayLocation && (
+                                  <p className="text-sm text-slate-500">{displayLocation}</p>
+                                )}
+                              </div>
+                            )}
                           </div>
+                          {edu.cgpa && (
+                            <p className="text-sm text-slate-600 mb-2">CGPA: {edu.cgpa}</p>
+                          )}
+                          {edu.percentage && (
+                            <p className="text-sm text-slate-600 mb-2">Percentage: {edu.percentage}%</p>
+                          )}
+                          {edu.relevantCourses && edu.relevantCourses.length > 0 && (
+                            <div>
+                              <p className="text-sm text-slate-500 mb-2">Relevant Courses:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {edu.relevantCourses.map((course: string) => (
+                                  <Badge key={course} variant="outline" className="text-xs">
+                                    {course}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      );
+                    }).filter(Boolean)
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-500">No education details available</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="projects" className="space-y-6">
-            <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
-              <CardHeader>
-                <CardTitle>Projects</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {candidate.projects.map((project: { id: string; title: string; description: string; technologies: string[]; github?: string; live?: string }) => (
-                    <div key={project.id} className="border rounded-lg p-6">
-                      <h3 className="font-semibold text-lg mb-2">{project.title}</h3>
-                      <p className="text-slate-600 mb-4">{project.description}</p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {project.technologies.map((tech: string) => (
-                          <Badge key={tech} variant="secondary" className="text-xs">
-                            {tech}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex space-x-2">
-                        {project.github && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`https://${project.github}`} target="_blank" rel="noopener noreferrer">
-                              <Github className="w-4 h-4 mr-2" />
-                              GitHub
-                            </a>
-                          </Button>
-                        )}
-                        {project.live && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`https://${project.live}`} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Live Demo
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -977,150 +1030,150 @@ export default function CandidateProfilePage() {
                             {/* Multiple CVs Selection - Only show if there are other CVs besides default */}
                             {otherResumes.length > 0 && (
                               <div className="mb-6" data-available-cvs>
-                                <h4 className="text-lg font-semibold mb-3">Available CVs</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <h4 className="text-lg font-semibold mb-3">Available CVs</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                   {otherResumes.map((resume: any, index: number) => (
-                                    <Card key={resume.id} className="cursor-pointer rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
-                                      <CardContent className="p-4">
-                                        <div className="flex items-center space-x-3">
-                                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                            <FileText className="w-5 h-5 text-blue-600" />
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">
-                                              {resume.filename || resume.title || `CV ${index + 1}`}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                              {resume.fileSize || 'PDF'} • {new Date(resume.uploadDate || resume.lastUpdated).toLocaleDateString()}
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <div className="flex space-x-2 mt-3">
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="flex-1"
-                                            onClick={() => handleViewResume(resume)}
-                                          >
-                                            <Eye className="w-3 h-3 mr-1" />
-                                            View
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="flex-1"
-                                            onClick={() => handleDownloadResume(resume)}
-                                            disabled={isDownloading}
-                                          >
-                                            <Download className="w-3 h-3 mr-1" />
-                                            Download
-                                          </Button>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                              <Card key={resume.id} className="cursor-pointer rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
+                                <CardContent className="p-4">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {resume.filename || resume.title || `CV ${index + 1}`}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {resume.fileSize || 'PDF'} • {new Date(resume.uploadDate || resume.lastUpdated).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex space-x-2 mt-3">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => handleViewResume(resume)}
+                                    >
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      View
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => handleDownloadResume(resume)}
+                                      disabled={isDownloading}
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Download
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                             {/* Primary CV Preview - Use default CV */}
                             {(() => {
                               const primaryResume = defaultResume;
                               return (
                                 <>
-                                  <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center">
-                                    <div className="max-w-md mx-auto">
-                                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Download className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                                      </div>
-                                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center">
+                    <div className="max-w-md mx-auto">
+                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Download className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
                                         {primaryResume.filename || primaryResume.title || 'Resume'}
                                         {primaryResume.isDefault && (
                                           <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Default</Badge>
                                         )}
-                                      </h3>
-                                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                      </h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
                                         PDF • {primaryResume.fileSize || 'Document'} • Uploaded {new Date(primaryResume.uploadDate || primaryResume.lastUpdated).toLocaleDateString()}
-                                      </p>
-                                      
+                      </p>
+                      
                                       {/* CV Preview using PDFViewer - white background to eliminate black space */}
                                       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden mb-4 shadow-sm" style={{ background: 'white', padding: '0' }}>
-                                        {(() => {
-                                          // Use the view URL with token for preview
-                                          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                        {(() => {
+                          // Use the view URL with token for preview
+                          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
                                           const pdfUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/requirements/${requirementId}/candidates/${candidateIdStr}/resume/${primaryResume.id}/view`;
-                                          console.log('📄 PDF URL for preview:', pdfUrl);
-                                          
+                          console.log('📄 PDF URL for preview:', pdfUrl);
+                          
                                           if (!pdfUrl || !primaryResume?.id) {
-                                            return (
+                            return (
                                               <div className="flex items-center justify-center h-[600px] sm:h-[700px] lg:h-[800px] xl:h-[900px] bg-slate-50 dark:bg-slate-800">
-                                                <div className="text-center p-8">
-                                                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
-                                                  </div>
-                                                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No PDF URL</h3>
-                                                  <p className="text-sm text-slate-600 dark:text-slate-400">Resume URL not available.</p>
-                                                </div>
-                                              </div>
-                                            );
-                                          }
-                                          
-                                          return (
-                                            <PDFViewer 
-                                              pdfUrl={pdfUrl} 
-                                              className="w-full"
-                                            />
-                                          );
-                                        })()}
-                                      </div>
-                                      
-                                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => handleViewResume(primaryResume)}>
-                                          <Eye className="w-4 h-4 mr-2" />
-                                          View CV
-                                        </Button>
-                                        <Button 
-                                          variant="outline" 
-                                          onClick={() => handleDownloadResume(primaryResume)}
-                                          disabled={isDownloading}
-                                        >
-                                          <Download className="w-4 h-4 mr-2" />
-                                          {isDownloading ? "Downloading..." : "Download PDF"}
-                                        </Button>
-                                      </div>
-                                    </div>
+                                <div className="text-center p-8">
+                                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
                                   </div>
+                                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No PDF URL</h3>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400">Resume URL not available.</p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <PDFViewer 
+                              pdfUrl={pdfUrl} 
+                                              className="w-full"
+                            />
+                          );
+                        })()}
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => handleViewResume(primaryResume)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View CV
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                                          onClick={() => handleDownloadResume(primaryResume)}
+                              disabled={isDownloading}
+                            >
+                          <Download className="w-4 h-4 mr-2" />
+                          {isDownloading ? "Downloading..." : "Download PDF"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
 
-                                  {/* CV Information */}
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
-                                      <CardHeader>
-                                        <CardTitle className="text-lg">CV Details</CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="space-y-4">
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600 dark:text-slate-400">File Name</span>
+                  {/* CV Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
+                      <CardHeader>
+                        <CardTitle className="text-lg">CV Details</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">File Name</span>
                                           <span className="font-medium">{primaryResume.filename || primaryResume.title || 'Resume'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600 dark:text-slate-400">File Size</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">File Size</span>
                                           <span className="font-medium">{primaryResume.fileSize || 'PDF Document'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600 dark:text-slate-400">Upload Date</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">Upload Date</span>
                                           <span className="font-medium">{new Date(primaryResume.uploadDate || primaryResume.lastUpdated).toLocaleDateString()}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600 dark:text-slate-400">Last Updated</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">Last Updated</span>
                                           <span className="font-medium">{new Date(primaryResume.lastUpdated).toLocaleDateString()}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600 dark:text-slate-400">Format</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">Format</span>
                                           <span className="font-medium">{primaryResume.metadata?.mimeType?.includes('pdf') ? 'PDF' : 'Document'}</span>
-                                        </div>
+                        </div>
                                         {primaryResume.metadata?.originalName && (
-                                          <div className="flex justify-between">
-                                            <span className="text-slate-600 dark:text-slate-400">Original Name</span>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600 dark:text-slate-400">Original Name</span>
                                             <span className="font-medium">{primaryResume.metadata.originalName}</span>
                                           </div>
                                         )}
@@ -1128,83 +1181,83 @@ export default function CandidateProfilePage() {
                                           <div className="flex justify-between">
                                             <span className="text-slate-600 dark:text-slate-400">Status</span>
                                             <Badge variant="secondary" className="bg-green-100 text-green-800">Default CV</Badge>
-                                          </div>
-                                        )}
-                                      </CardContent>
-                                    </Card>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
 
-                                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
-                                      <CardHeader>
-                                        <CardTitle className="text-lg">CV Actions</CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="space-y-3">
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
+                      <CardHeader>
+                        <CardTitle className="text-lg">CV Actions</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
                                         <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleViewResume(primaryResume)}>
-                                          <Eye className="w-4 h-4 mr-2" />
-                                          View Full CV
-                                        </Button>
-                                        <Button 
-                                          variant="outline" 
-                                          className="w-full"
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Full CV
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="w-full"
                                           onClick={() => handleDownloadResume(primaryResume)}
-                                          disabled={isDownloading}
-                                        >
-                                          <Download className="w-4 h-4 mr-2" />
-                                          {isDownloading ? "Downloading..." : "Download CV"}
-                                        </Button>
-                                        {candidate.resumes.length > 1 && (
-                                          <Button 
-                                            variant="outline" 
-                                            className="w-full"
+                              disabled={isDownloading}
+                            >
+                          <Download className="w-4 h-4 mr-2" />
+                          {isDownloading ? "Downloading..." : "Download CV"}
+                        </Button>
+                        {candidate.resumes.length > 1 && (
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
                                             onClick={() => {
                                               // Scroll to available CVs section
                                               document.querySelector('[data-available-cvs]')?.scrollIntoView({ behavior: 'smooth' });
                                             }}
-                                          >
-                                            <FileText className="w-4 h-4 mr-2" />
-                                            View All CVs ({candidate.resumes.length})
-                                          </Button>
-                                        )}
-                                        <Button variant="outline" className="w-full">
-                                          <Share2 className="w-4 h-4 mr-2" />
-                                          Share CV
-                                        </Button>
-                                        <Button variant="outline" className="w-full">
-                                          <Mail className="w-4 h-4 mr-2" />
-                                          Email CV
-                                        </Button>
-                                      </CardContent>
-                                    </Card>
-                                  </div>
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            View All CVs ({candidate.resumes.length})
+                          </Button>
+                        )}
+                        <Button variant="outline" className="w-full">
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Share CV
+                        </Button>
+                        <Button variant="outline" className="w-full">
+                          <Mail className="w-4 h-4 mr-2" />
+                          Email CV
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                                  {/* Resume Summary and Skills */}
+                  {/* Resume Summary and Skills */}
                                   {primaryResume.summary && (
-                                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
-                                      <CardHeader>
-                                        <CardTitle className="text-lg">Resume Summary</CardTitle>
-                                      </CardHeader>
-                                      <CardContent>
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Resume Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
                                         <p className="text-gray-600 whitespace-pre-wrap">{primaryResume.summary}</p>
-                                      </CardContent>
-                                    </Card>
-                                  )}
+                      </CardContent>
+                    </Card>
+                  )}
 
-                                  {/* Resume Skills */}
+                  {/* Resume Skills */}
                                   {primaryResume.skills && primaryResume.skills.length > 0 && (
-                                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
-                                      <CardHeader>
-                                        <CardTitle className="text-lg">Resume Skills</CardTitle>
-                                      </CardHeader>
-                                      <CardContent>
-                                        <div className="flex flex-wrap gap-2">
+                    <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Resume Skills</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
                                           {primaryResume.skills.map((skill: string, index: number) => (
-                                            <Badge key={index} variant="outline" className="text-sm">
-                                              {skill}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  )}
+                            <Badge key={index} variant="outline" className="text-sm">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                                 </>
                               );
                             })()}
@@ -1473,6 +1526,16 @@ export default function CandidateProfilePage() {
                   >
                     <Mail className="w-4 h-4 mr-2" />
                     Send Email
+                  </a>
+                )}
+                
+                {candidate?.phone && (
+                  <a
+                    href={`tel:${candidate.phone}`}
+                    className="inline-flex items-center justify-center w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call Now
                   </a>
                 )}
               </div>

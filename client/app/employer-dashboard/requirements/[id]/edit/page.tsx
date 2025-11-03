@@ -55,24 +55,47 @@ export default function EditRequirementPage() {
         
         if (response.success && response.data) {
           const req = response.data
-          // Normalize data for form
+          console.log('📥 Fetched requirement data:', {
+            industry: req.industry,
+            department: req.department,
+            location: req.location,
+            jobType: req.jobType,
+            education: req.education,
+            metadata: req.metadata
+          })
+          // Normalize data for form - include all fields from create page
           const normalized = {
             id: req.id,
             title: req.title || "",
             description: req.description || "",
-            location: req.location || "",
+            location: (req.location && req.location.trim() !== '') ? req.location.trim() : "",
             experience: req.experience || "",
             salary: req.salary || "",
-            jobType: req.jobType || "Full-time",
+            jobType: (() => {
+              if (!req.jobType || req.jobType.trim() === '') return "Full-time";
+              // Handle both "full-time" and "Full-time" formats
+              const normalized = req.jobType.toLowerCase().replace(/\s+/g, '-');
+              const capitalized = normalized.split('-').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join('-');
+              // Ensure it matches one of the valid SelectItem values
+              const validTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
+              return validTypes.includes(capitalized) ? capitalized : "Full-time";
+            })(),
             skills: Array.isArray(req.skills) ? req.skills : [],
-            education: req.education || "",
-            industry: req.industry || "",
-            department: req.department || "",
+            education: (req.education && req.education.trim() !== '') ? req.education.trim() : "",
+            industry: (req.industry && req.industry.trim() !== '') ? req.industry.trim() : "",
+            department: (req.department && req.department.trim() !== '') ? req.department.trim() : "",
             validTill: req.validTill ? new Date(req.validTill).toISOString().split('T')[0] : "",
             noticePeriod: req.noticePeriod || "",
-            remoteWork: req.remoteWork || "Hybrid",
-            travelRequired: req.travelRequired === true ? "Frequently" : req.travelRequired === false ? "No" : req.travelRequired || "No",
-            shiftTiming: req.shiftTiming || "Day",
+            remoteWork: (() => {
+              const rw = req.remoteWork || req.location_type || "Hybrid";
+              const normalized = typeof rw === 'string' ? rw.toLowerCase() : '';
+              if (normalized === 'remote' || normalized === 'Remote') return 'Remote';
+              if (normalized === 'on-site' || normalized === 'onsite' || normalized === 'On-site') return 'On-site';
+              if (normalized === 'hybrid' || normalized === 'Hybrid') return 'Hybrid';
+              return rw || "Hybrid";
+            })(),
+            travelRequired: req.travelRequired === true ? "Frequently" : req.travelRequired === false ? "No" : (typeof req.travelRequired === 'string' ? req.travelRequired : "No"),
+            shiftTiming: req.shiftTiming === 'day' ? 'Day' : req.shiftTiming === 'night' ? 'Night' : req.shiftTiming === 'rotational' ? 'Rotational' : req.shiftTiming === 'flexible' ? 'Flexible' : (req.shiftTiming || "Day"),
             benefits: Array.isArray(req.benefits) ? req.benefits : [],
             keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
             candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
@@ -84,7 +107,16 @@ export default function EditRequirementPage() {
             currentSalaryMax: req.salaryMax?.toString() || "",
             currency: req.currency || "INR",
             includeNotMentioned: req.includeNotMentioned || false,
+            // Additional fields from create page
+            institute: (req as any).institute || "",
+            resumeFreshness: (req as any).resumeFreshness ? new Date((req as any).resumeFreshness).toISOString().split('T')[0] : "",
+            currentCompany: (req as any).currentCompany || "",
           }
+          console.log('📝 Normalized form data:', {
+            industry: normalized.industry,
+            department: normalized.department,
+            location: normalized.location
+          })
           setRequirement(normalized)
           setFormData(normalized)
         } else {
@@ -112,7 +144,7 @@ export default function EditRequirementPage() {
   }, [params.id, router, toast])
 
   const handleInputChange = (field: string, value: string | string[] | boolean) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       [field]: value
     }))
@@ -120,35 +152,35 @@ export default function EditRequirementPage() {
 
   const handleSkillChange = (skill: string, action: 'add' | 'remove') => {
     if (action === 'add' && !formData.skills.includes(skill)) {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         skills: [...prev.skills, skill]
       }))
     } else if (action === 'remove') {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
-        skills: prev.skills.filter(s => s !== skill)
+        skills: prev.skills.filter((s: string) => s !== skill)
       }))
     }
   }
 
   const handleBenefitChange = (benefit: string, action: 'add' | 'remove') => {
     if (action === 'add' && !formData.benefits.includes(benefit)) {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         benefits: [...prev.benefits, benefit]
       }))
     } else if (action === 'remove') {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
-        benefits: prev.benefits.filter(b => b !== benefit)
+        benefits: prev.benefits.filter((b: string) => b !== benefit)
       }))
     }
   }
 
   const handleAddSkill = () => {
     if (currentSkill.trim() && !formData.keySkills.includes(currentSkill.trim())) {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         keySkills: [...prev.keySkills, currentSkill.trim()]
       }))
@@ -157,15 +189,15 @@ export default function EditRequirementPage() {
   }
 
   const handleRemoveSkill = (skill: string) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
-      keySkills: prev.keySkills.filter(s => s !== skill)
+      keySkills: prev.keySkills.filter((s: string) => s !== skill)
     }))
   }
 
   const handleAddBenefit = () => {
     if (currentBenefit.trim() && !formData.benefits.includes(currentBenefit.trim())) {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         benefits: [...prev.benefits, currentBenefit.trim()]
       }))
@@ -180,7 +212,14 @@ export default function EditRequirementPage() {
     setIsLoading(true)
 
     try {
-      // Prepare update data
+      console.log('📤 Submitting update with formData:', {
+        industry: formData.industry,
+        department: formData.department,
+        location: formData.location,
+        jobType: formData.jobType,
+        education: formData.education
+      })
+      // Prepare update data - include all fields
       const updateData = {
         title: formData.title,
         description: formData.description,
@@ -191,6 +230,8 @@ export default function EditRequirementPage() {
         skills: formData.skills,
         keySkills: formData.keySkills,
         education: formData.education,
+        industry: formData.industry,
+        department: formData.department,
         validTill: formData.validTill || null,
         noticePeriod: formData.noticePeriod,
         remoteWork: formData.remoteWork,
@@ -206,6 +247,9 @@ export default function EditRequirementPage() {
         currentSalaryMax: formData.currentSalaryMax || null,
         currency: formData.currency,
         includeNotMentioned: formData.includeNotMentioned,
+        institute: formData.institute || null,
+        resumeFreshness: formData.resumeFreshness || null,
+        currentCompany: formData.currentCompany || null,
       }
 
       const response = await apiService.updateRequirement(params.id, updateData)
@@ -215,7 +259,63 @@ export default function EditRequirementPage() {
           title: "Requirement Updated",
           description: "Your requirement has been updated successfully.",
         })
-        router.push('/employer-dashboard/requirements')
+        // Reload the page data to show updated values
+        const refreshResponse = await apiService.getRequirement(params.id)
+        if (refreshResponse.success && refreshResponse.data) {
+          const req = refreshResponse.data
+          const normalized = {
+            id: req.id,
+            title: req.title || "",
+            description: req.description || "",
+            location: (req.location && req.location.trim() !== '') ? req.location.trim() : "",
+            experience: req.experience || "",
+            salary: req.salary || "",
+            jobType: (() => {
+              if (!req.jobType || req.jobType.trim() === '') return "Full-time";
+              // Handle both "full-time" and "Full-time" formats
+              const normalized = req.jobType.toLowerCase().replace(/\s+/g, '-');
+              const capitalized = normalized.split('-').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join('-');
+              // Ensure it matches one of the valid SelectItem values
+              const validTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
+              return validTypes.includes(capitalized) ? capitalized : "Full-time";
+            })(),
+            skills: Array.isArray(req.skills) ? req.skills : [],
+            education: (req.education && req.education.trim() !== '') ? req.education.trim() : "",
+            industry: (req.industry && req.industry.trim() !== '') ? req.industry.trim() : "",
+            department: (req.department && req.department.trim() !== '') ? req.department.trim() : "",
+            validTill: req.validTill ? new Date(req.validTill).toISOString().split('T')[0] : "",
+            noticePeriod: req.noticePeriod || "",
+            remoteWork: (() => {
+              const rw = req.remoteWork || req.location_type || "Hybrid";
+              const normalized = typeof rw === 'string' ? rw.toLowerCase() : '';
+              if (normalized === 'remote' || normalized === 'Remote') return 'Remote';
+              if (normalized === 'on-site' || normalized === 'onsite' || normalized === 'On-site') return 'On-site';
+              if (normalized === 'hybrid' || normalized === 'Hybrid') return 'Hybrid';
+              return rw || "Hybrid";
+            })(),
+            travelRequired: req.travelRequired === true ? "Frequently" : req.travelRequired === false ? "No" : (typeof req.travelRequired === 'string' ? req.travelRequired : "No"),
+            shiftTiming: req.shiftTiming === 'day' ? 'Day' : req.shiftTiming === 'night' ? 'Night' : req.shiftTiming === 'rotational' ? 'Rotational' : req.shiftTiming === 'flexible' ? 'Flexible' : (req.shiftTiming || "Day"),
+            benefits: Array.isArray(req.benefits) ? req.benefits : [],
+            keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
+            candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
+            candidateLocations: Array.isArray(req.candidateLocations) ? req.candidateLocations : [],
+            includeWillingToRelocate: req.includeWillingToRelocate || false,
+            workExperienceMin: req.experienceMin?.toString() || "",
+            workExperienceMax: req.experienceMax?.toString() || "",
+            currentSalaryMin: req.salaryMin?.toString() || "",
+            currentSalaryMax: req.salaryMax?.toString() || "",
+            currency: req.currency || "INR",
+            includeNotMentioned: req.includeNotMentioned || false,
+            institute: (req as any).institute || "",
+            resumeFreshness: (req as any).resumeFreshness ? new Date((req as any).resumeFreshness).toISOString().split('T')[0] : "",
+            currentCompany: (req as any).currentCompany || "",
+          }
+          setFormData(normalized)
+          setRequirement(normalized)
+          console.log('✅ Form refreshed with updated data:', normalized)
+        }
+        // Don't navigate away - stay on edit page to see updated values
+        // router.push('/employer-dashboard/requirements')
       } else {
         throw new Error(response.message || "Failed to update requirement")
       }
@@ -275,13 +375,10 @@ export default function EditRequirementPage() {
               <span>Back</span>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Edit Requirement</h1>
-              <p className="text-slate-600">Update your requirement details</p>
+              <h1 className="text-3xl font-bold text-slate-900">Edit Job Posting</h1>
+              <p className="text-slate-600">Update your job posting details</p>
             </div>
           </div>
-          <Badge variant="outline" className="text-blue-600 border-blue-200">
-            Requirement ID: {requirement.id}
-          </Badge>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -353,7 +450,10 @@ export default function EditRequirementPage() {
                     
                     <div>
                       <Label htmlFor="jobType">Job Type</Label>
-                      <Select value={formData.jobType} onValueChange={(value) => handleInputChange('jobType', value)}>
+                      <Select 
+                        value={formData.jobType && formData.jobType.trim() !== "" ? formData.jobType : "Full-time"} 
+                        onValueChange={(value) => handleInputChange('jobType', value)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select job type" />
                         </SelectTrigger>
@@ -378,7 +478,7 @@ export default function EditRequirementPage() {
                   <div>
                     <Label>Selected Skills</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.skills.map((skill) => (
+                      {formData.skills.map((skill: string) => (
                         <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
                           <span>{skill}</span>
                           <button
@@ -426,7 +526,7 @@ export default function EditRequirementPage() {
                     </div>
                     {formData.keySkills.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {formData.keySkills.map((skill) => (
+                        {formData.keySkills.map((skill: string) => (
                           <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
                             {skill}
                             <button
@@ -453,7 +553,7 @@ export default function EditRequirementPage() {
                   <div>
                     <Label>Selected Benefits</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.benefits.map((benefit) => (
+                      {formData.benefits.map((benefit: string) => (
                         <Badge key={benefit} variant="secondary" className="flex items-center space-x-1">
                           <span>{benefit}</span>
                           <button
@@ -514,7 +614,7 @@ export default function EditRequirementPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="education">Education</Label>
-                    <Select value={formData.education} onValueChange={(value) => handleInputChange('education', value)}>
+                    <Select value={formData.education || ""} onValueChange={(value) => handleInputChange('education', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select education" />
                       </SelectTrigger>
@@ -541,8 +641,10 @@ export default function EditRequirementPage() {
                         setShowIndustryDropdown(true)
                       }}
                     >
-                      <span>{formData.industry || "Select industry"}</span>
-                      <ChevronDown className="w-4 h-4" />
+                      <span className={`${formData.industry ? "text-slate-900" : "text-slate-500"} truncate`}>
+                        {formData.industry || "Select industry"}
+                      </span>
+                      <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
                     </Button>
                     
                     {showIndustryDropdown && (
@@ -574,8 +676,10 @@ export default function EditRequirementPage() {
                         setShowDepartmentDropdown(true)
                       }}
                     >
-                      <span>{formData.department || "Select department"}</span>
-                      <ChevronDown className="w-4 h-4" />
+                      <span className={`${formData.department ? "text-slate-900" : "text-slate-500"} truncate`}>
+                        {formData.department || "Select department"}
+                      </span>
+                      <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
                     </Button>
                     
                     {showDepartmentDropdown && (
@@ -607,7 +711,7 @@ export default function EditRequirementPage() {
 
                   <div>
                     <Label htmlFor="noticePeriod">Notice Period</Label>
-                    <Select value={formData.noticePeriod} onValueChange={(value) => handleInputChange('noticePeriod', value)}>
+                    <Select value={formData.noticePeriod || ""} onValueChange={(value) => handleInputChange('noticePeriod', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select notice period" />
                       </SelectTrigger>
@@ -620,6 +724,36 @@ export default function EditRequirementPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div>
+                    <Label htmlFor="institute">Institute / University</Label>
+                    <Input
+                      id="institute"
+                      value={formData.institute || ""}
+                      onChange={(e) => handleInputChange('institute', e.target.value)}
+                      placeholder="e.g., IIT Bombay, IIM Ahmedabad"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="resumeFreshness">Resume Freshness / Last Updated Date</Label>
+                    <Input
+                      id="resumeFreshness"
+                      type="date"
+                      value={formData.resumeFreshness || ""}
+                      onChange={(e) => handleInputChange('resumeFreshness', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="currentCompany">Current Company</Label>
+                    <Input
+                      id="currentCompany"
+                      value={formData.currentCompany || ""}
+                      onChange={(e) => handleInputChange('currentCompany', e.target.value)}
+                      placeholder="e.g., Infosys, TCS"
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
@@ -631,7 +765,7 @@ export default function EditRequirementPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="remoteWork">Remote Work</Label>
-                    <Select value={formData.remoteWork} onValueChange={(value) => handleInputChange('remoteWork', value)}>
+                    <Select value={formData.remoteWork || "Hybrid"} onValueChange={(value) => handleInputChange('remoteWork', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select remote work option" />
                       </SelectTrigger>
@@ -645,7 +779,7 @@ export default function EditRequirementPage() {
 
                   <div>
                     <Label htmlFor="travelRequired">Travel Required</Label>
-                    <Select value={formData.travelRequired} onValueChange={(value) => handleInputChange('travelRequired', value)}>
+                    <Select value={formData.travelRequired || "No"} onValueChange={(value) => handleInputChange('travelRequired', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select travel requirement" />
                       </SelectTrigger>
@@ -659,7 +793,7 @@ export default function EditRequirementPage() {
 
                   <div>
                     <Label htmlFor="shiftTiming">Shift Timing</Label>
-                    <Select value={formData.shiftTiming} onValueChange={(value) => handleInputChange('shiftTiming', value)}>
+                    <Select value={formData.shiftTiming || "Day"} onValueChange={(value) => handleInputChange('shiftTiming', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select shift timing" />
                       </SelectTrigger>
@@ -667,6 +801,7 @@ export default function EditRequirementPage() {
                         <SelectItem value="Day">Day</SelectItem>
                         <SelectItem value="Night">Night</SelectItem>
                         <SelectItem value="Rotational">Rotational</SelectItem>
+                        <SelectItem value="Flexible">Flexible</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -710,3 +845,12 @@ export default function EditRequirementPage() {
     </EmployerAuthGuard>
   )
 } 
+
+
+
+
+
+
+
+
+

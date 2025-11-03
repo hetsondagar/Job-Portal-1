@@ -360,12 +360,6 @@ export default function RequirementsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">My requirements</h1>
-            <div className="flex items-center space-x-4 text-sm text-slate-600">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-slate-300 rounded"></div>
-                <span>Requirement remaining: 0</span>
-              </div>
-            </div>
           </div>
           <Link href="/employer-dashboard/create-requirement">
             <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">

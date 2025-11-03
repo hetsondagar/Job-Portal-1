@@ -119,7 +119,11 @@ const Requirement = sequelize.define('Requirement', {
   },
   closedAt: { type: DataTypes.VIRTUAL },
   tags: { type: DataTypes.VIRTUAL },
-  metadata: { type: DataTypes.VIRTUAL }
+  metadata: {
+    type: DataTypes.JSONB,
+    defaultValue: {},
+    allowNull: true
+  }
 }, {
   tableName: 'requirements',
   timestamps: true,

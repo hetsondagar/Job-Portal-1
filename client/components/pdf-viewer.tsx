@@ -227,15 +227,15 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
               }}
             >
               {/* Use iframe - fixed to one page height, PDF scrolls internally */}
-              <iframe
-                src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&zoom=${zoomLevel}`}
-                title="Resume Preview"
-                style={{ 
-                  width: '100%',
+                <iframe
+                  src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&zoom=${zoomLevel}`}
+                  title="Resume Preview"
+                  style={{ 
+                    width: '100%',
                   height: '1050px',
-                  border: 'none',
-                  outline: 'none',
-                  display: 'block',
+                    border: 'none',
+                    outline: 'none',
+                    display: 'block',
                   background: '#ffffff',
                   backgroundColor: '#ffffff',
                   padding: '0',
