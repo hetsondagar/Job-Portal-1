@@ -198,7 +198,12 @@ export function JobseekerProfileCompletionDialog({
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={async (open) => {
+      if (!open) {
+        // Dialog is being closed (X button or outside click) - trigger skip logic for 12 hours
+        await handleSkip()
+      }
+    }}>
       <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -1003,13 +1008,19 @@ export function EmployerProfileCompletionDialog({
     }
   }
 
-  const handleDialogOpenChange = (open: boolean) => {
+  // Handle dialog close - snooze for 12 hours when user closes
+  const handleDialogOpenChange = async (open: boolean) => {
     console.log('🔄 Dialog open change requested:', { open, showNatureOfBusinessDropdown, showCompanyTypesDropdown, showDepartmentDropdown });
     
     // Don't close the dialog if any dropdown is open
     if (!open && (showNatureOfBusinessDropdown || showCompanyTypesDropdown || showDepartmentDropdown)) {
       console.log('🚫 Preventing dialog close - dropdown is open');
       return;
+    }
+    
+    // If dialog is being closed, trigger skip logic (12 hour snooze)
+    if (!open) {
+      await handleSkip()
     }
     
     console.log('✅ Dialog close allowed');

@@ -89,46 +89,46 @@ export function Navbar() {
                       <div className="space-y-3">
                         <button onClick={() => {
                           const params = new URLSearchParams()
-                          params.set('industries', 'IT Services & Consulting (2378),Software Product (532),Internet (246),Electronics Manufacturing (74),Electronic Components (61),Hardware & Networking (54),Emerging Technology (44)')
+                          params.set('industries', 'IT Services & Consulting,Software Product,Internet,Electronics Manufacturing,Electronic Components,Hardware & Networking,Emerging Technology')
                           params.set('departments', 'Engineering - Software & QA,IT & Information Security,Data Science & Analytics,Quality Assurance,Product Management,Project & Program Management,UX, Design & Architecture')
                           params.set('roleCategories', 'Software Development,IT & Information Security,IT Consulting,IT Network,IT Support,IT Infrastructure Services,IT Security,DevOps,Technology / IT,Engineering - Software & QA,Quality Assurance and Testing,Data Science & Machine Learning,Product Management,Project & Program Management,UX, Design & Architecture')
                           handleFilterClick(`/jobs?${params.toString()}`)
                         }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">IT jobs</button>
                         <button onClick={() => {
                           const params = new URLSearchParams()
-                          params.set('industries', 'Retail (142),FMCG / Foods / Beverage (204),Consumer Electronics (67),Real Estate (182),Travel / Tourism (67),Hotels / Restaurants (45),Automobile (72),Auto Components (67),Banking / Lending (219),Insurance (156),FinTech (76)')
+                          params.set('industries', 'Retail,FMCG / Foods / Beverage,Consumer Electronics,Real Estate,Travel / Tourism,Hotels / Restaurants,Automobile,Auto Components,Banking / Lending,Insurance,FinTech')
                           params.set('departments', 'Sales & Business Development,Customer Success Service & Operations,Marketing & Communication,Merchandising Retail & eCommerce')
                           params.set('roleCategories', 'Sales & Business Development,Retail & B2C Sales,BD / Pre Sales,Enterprise & B2B Sales,Sales Support & Operations,After Sales Service & Repair,Customer Success, Service,Customer Success')
                           handleFilterClick(`/jobs?${params.toString()}`)
-                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Sales jobs</button>
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">Sales jobs</button>
                         <button onClick={() => {
                           const params = new URLSearchParams()
-                          params.set('industries', 'Media / Entertainment / Broadcasting (156),Advertising / Marketing / PR (78),Gaming (89),Publishing (45),E-commerce / Internet (156),Online Services (89),Marketplace (67),Internet (246),Telecom / ISP (28)')
+                          params.set('industries', 'Media / Entertainment / Broadcasting,Advertising / Marketing / PR,Gaming,Publishing,E-commerce / Internet,Online Services,Marketplace,Internet,Telecom / ISP')
                           params.set('departments', 'Marketing & Communication,Content Editorial & Journalism,UX Design & Architecture,Product Management')
                           params.set('roleCategories', 'Marketing & Communication,Marketing,Digital Marketing,Marketing and Communications,Recruitment Marketing & Branding,Content, Editorial & Journalism,Media Production & Entertainment,UX, Design & Architecture')
                           handleFilterClick(`/jobs?${params.toString()}`)
-                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Marketing jobs</button>
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">Marketing jobs</button>
                         <button onClick={() => {
                           const params = new URLSearchParams()
-                          params.set('industries', 'IT Services & Consulting (2378),Software Product (532),Internet (246),Medical Services (264),Pharmaceutical & Life Sciences (252),Biotechnology (40),Clinical Research (33),Market Research (32),Market Research / Business Intelligence (28)')
+                          params.set('industries', 'IT Services & Consulting,Software Product,Internet,Medical Services,Pharmaceutical & Life Sciences,Biotechnology,Clinical Research,Market Research,Market Research / Business Intelligence')
                           params.set('departments', 'Data Science & Analytics,IT & Information Security,Healthcare & Life Sciences,Research & Development')
                           params.set('roleCategories', 'Data Science & Analytics,Data Science & Machine Learning,DBA / Data warehousing,IT & Information Security,Healthcare & Life Sciences,Research & Development,IT Consulting')
                           handleFilterClick(`/jobs?${params.toString()}`)
-                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Data Science jobs</button>
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">Data Science jobs</button>
                         <button onClick={() => {
                           const params = new URLSearchParams()
-                          params.set('industries', 'Education / Training (297),E-Learning / EdTech (165),Medical Services (264),Recruitment / Staffing (38),Consulting (142),Legal Services (45),Market Research (32),NGO / Social Services (45)')
+                          params.set('industries', 'Education / Training,E-Learning / EdTech,Medical Services,Recruitment / Staffing,Consulting,Legal Services,Market Research,NGO / Social Services')
                           params.set('departments', 'Human Resources,Teaching & Training,Administration & Facilities')
                           params.set('roleCategories', 'Human Resources,Human Resources - Other,Recruitment & Talent Acquisition,Teaching & Training,Administration & Facilities,Consulting,Legal & Regulatory')
                           handleFilterClick(`/jobs?${params.toString()}`)
-                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">HR jobs</button>
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">HR jobs</button>
                         <button onClick={() => {
                           const params = new URLSearchParams()
-                          params.set('industries', 'Industrial Equipment (270),Auto Components (155),Chemicals (112),Building Material (74),Automobile (72),Electrical Equipment (70),Industrial Automation (52),Iron & Steel (38),Construction / Infrastructure (258),Real Estate (182),Electronics Manufacturing (74),Electronic Components (61),Hardware & Networking (54),Power / Energy (89),Oil & Gas (67),Renewable Energy (45)')
+                          params.set('industries', 'Industrial Equipment,Auto Components,Chemicals,Building Material,Automobile,Electrical Equipment,Industrial Automation,Iron & Steel,Construction / Infrastructure,Real Estate,Electronics Manufacturing,Electronic Components,Hardware & Networking,Power / Energy,Oil & Gas,Renewable Energy')
                           params.set('departments', 'Engineering - Software & QA,Engineering - Hardware & Networks,Production Manufacturing & Maintenance,Construction & Site Engineering,Quality Assurance,Project & Program Management')
                           params.set('roleCategories', 'Engineering - Software & QA,Engineering - Hardware & Networks,Construction & Site Engineering,Engineering,Construction Engineering,Engineering & Manufacturing,Aviation Engineering,Shipping Engineering & Technology,Production, Manufacturing & Maintenance,Quality Assurance and Testing,Project & Program Management,IT & Information Security,IT Consulting')
                           handleFilterClick(`/jobs?${params.toString()}`)
-                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-left w-full">Engineering jobs</button>
+                        }} className="block text-sm text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-purple-100/60 dark:hover:bg-purple-800/40 transition-colors duration-200 text-left w-full px-2 py-1 rounded">Engineering jobs</button>
                       </div>
                     </div>
 

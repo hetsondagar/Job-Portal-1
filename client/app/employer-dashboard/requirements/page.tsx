@@ -304,13 +304,13 @@ export default function RequirementsPage() {
       const response = await apiService.deleteRequirement(requirementToDelete)
       
       if (response.success) {
-        setRequirements(requirements.filter(req => req.id !== requirementToDelete))
-        toast({
-          title: "Requirement Deleted",
-          description: "The requirement has been deleted successfully.",
-        })
-        setDeleteDialogOpen(false)
-        setRequirementToDelete(null)
+      setRequirements(requirements.filter(req => req.id !== requirementToDelete))
+      toast({
+        title: "Requirement Deleted",
+        description: "The requirement has been deleted successfully.",
+      })
+      setDeleteDialogOpen(false)
+      setRequirementToDelete(null)
       } else {
         throw new Error(response.message || "Failed to delete requirement")
       }

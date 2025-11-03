@@ -32,7 +32,7 @@ import {
   ArrowRight,
   Briefcase
 } from 'lucide-react'
-import { Navbar } from '@/components/navbar'
+import GulfNavbar from '@/components/gulf-navbar'
 import { toast } from 'sonner'
 import { apiService, Resume, JobBookmark, JobAlert, CoverLetter } from '@/lib/api'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -628,7 +628,7 @@ export default function JobseekerGulfDashboardPage() {
   return (
     <GulfJobseekerAuthGuard>
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Navbar />
+      <GulfNavbar />
       
       <div className="pt-16 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

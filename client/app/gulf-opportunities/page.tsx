@@ -307,7 +307,7 @@ export default function GulfOpportunitiesPage() {
         subscribeNewsletter: registerData.subscribeNewsletter
       })
       
-      await signup({
+      const result = await signup({
         fullName: registerData.fullName,
         email: registerData.email,
         password: registerData.password,
@@ -319,14 +319,26 @@ export default function GulfOpportunitiesPage() {
       })
       
       console.log('✅ Gulf registration successful')
-      toast.success("Account created successfully! Please sign in to continue.")
       
-      // Close register dialog and show login dialog
-      setShowRegisterDialog(false)
-      setShowLoginDialog(true)
-      
-      // Pre-fill login form with registered email
-      setLoginData(prev => ({ ...prev, email: registerData.email }))
+      // Auto-login after successful registration
+      if (result?.user && result?.token) {
+        toast.success("Account created successfully! Redirecting to Gulf dashboard...")
+        // Close register dialog
+        setShowRegisterDialog(false)
+        
+        // Redirect to Gulf dashboard where profile completion dialog will show
+        setTimeout(() => {
+          router.push('/jobseeker-gulf-dashboard')
+        }, 1500)
+      } else {
+        toast.success("Account created successfully! Please sign in to continue.")
+        // Close register dialog and show login dialog
+        setShowRegisterDialog(false)
+        setShowLoginDialog(true)
+        
+        // Pre-fill login form with registered email
+        setLoginData(prev => ({ ...prev, email: registerData.email }))
+      }
       
     } catch (error: any) {
       console.error('❌ Gulf registration error:', error)

@@ -213,6 +213,11 @@ interface Job {
   boostedSearch?: boolean
 
   externalApplyUrl?: string
+  
+  // CRITICAL: Fields for filtering (from database)
+  industryType?: string | null
+  department?: string | null
+  roleCategory?: string | null
 
   // Agency posting fields
 
@@ -464,9 +469,12 @@ export default function JobsPage() {
 
       if (industries) {
 
-        // Split comma-separated values and clean them
+        // Split comma-separated values and clean them (strip count info like "(2378)")
 
-        const industryList = industries.split(',').map(i => i.trim()).filter(i => i)
+        const industryList = industries.split(',').map(i => {
+          const cleaned = i.trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+          return cleaned
+        }).filter(i => i)
 
         newFilters.industryCategories = industryList
 
@@ -650,7 +658,11 @@ export default function JobsPage() {
 
       if (industries) {
 
-        const industryList = industries.split(',').map(i => i.trim()).filter(i => i)
+        // Strip count information like "(2378)" from industry names
+        const industryList = industries.split(',').map(i => {
+          const cleaned = i.trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+          return cleaned
+        }).filter(i => i)
 
         newFilters.industryCategories = industryList
 
@@ -832,7 +844,11 @@ export default function JobsPage() {
 
         if (industries) {
 
-          const industryList = industries.split(',').map(i => i.trim()).filter(i => i)
+          // Strip count information like "(2378)" from industry names
+          const industryList = industries.split(',').map(i => {
+            const cleaned = i.trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+            return cleaned
+          }).filter(i => i)
 
           newFilters.industryCategories = industryList
 
@@ -1220,10 +1236,12 @@ export default function JobsPage() {
 
                   : metadata.companyName || job.company?.name || 'Unknown Company',
 
-              // enrich for filtering
-
-              industry: job.industryType || metadata.hiringCompany?.industry || job.company?.industry,
-
+              // enrich for filtering - check multiple sources for industry
+              industry: job.industryType || 
+                       metadata.hiringCompany?.industry || 
+                       (Array.isArray(job.company?.industries) && job.company.industries.length > 0 ? job.company.industries[0] : null) ||
+                       job.company?.industry,
+              industries: job.company?.industries || [],
               companyType: job.company?.companyType,
 
             } as any,
@@ -1286,6 +1304,11 @@ export default function JobsPage() {
             companyRating: 4.5, // Default rating
 
             category: job.category || 'General',
+            
+            // CRITICAL: Add industryType, department, and roleCategory for filtering
+            industryType: job.industryType || metadata.industryType || metadata.hiringCompany?.industry || null,
+            department: job.department || metadata.department || null,
+            roleCategory: job.roleCategory || metadata.roleCategory || null,
 
             photos: job.photos || [], // Include job photos
 
@@ -3460,9 +3483,353 @@ export default function JobsPage() {
 
 
 
-    // Role Categories - Case insensitive matching with better logic
+    // IMPORTANT: When multiple category filters are set (industryCategories, departmentCategories, roleCategories),
+    // use OR logic - a job should match if it matches ANY of these categories, not ALL of them.
+    // This allows "HR jobs" to show HR-related jobs even if they don't match all three categories.
 
-    if (filters.roleCategories && filters.roleCategories.length > 0) {
+    const hasCategoryFilters = 
+      (filters.industryCategories && filters.industryCategories.length > 0) ||
+      (filters.departmentCategories && filters.departmentCategories.length > 0) ||
+      (filters.roleCategories && filters.roleCategories.length > 0)
+
+    // If multiple category filters are present, apply them with OR logic
+    if (hasCategoryFilters) {
+      const beforeCount = filtered.length
+      
+      console.log('🎯 Applying category filters:', {
+        industryCategories: filters.industryCategories,
+        departmentCategories: filters.departmentCategories,
+        roleCategories: filters.roleCategories,
+        totalJobsBeforeFilter: beforeCount
+      })
+      
+      filtered = filtered.filter(job => {
+        let matchesIndustry = false
+        let matchesDepartment = false
+        let matchesRole = false
+
+        // Check industry match - CRITICAL: Use job.industryType first (from database)
+        if (filters.industryCategories && filters.industryCategories.length > 0) {
+          // Get industryType from multiple sources and clean it
+          const rawIndustryType = (job as any).industryType || (job as any).metadata?.industryType || ''
+          const jobIndustryType = String(rawIndustryType).toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+          const companyIndustry = ((job as any).company?.industry || '').toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+          const companyIndustries = Array.isArray((job as any).company?.industries) 
+            ? (job as any).company.industries.map((ind: any) => String(ind).toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim())
+            : []
+          const jobCategory = ((job as any).category || '').toLowerCase().trim()
+          const companyName = job.company.name.toLowerCase().trim()
+          // CRITICAL: Include industryType first - it's the most reliable field
+          const allIndustrySources = [jobIndustryType, companyIndustry, ...companyIndustries, jobCategory, companyName].filter(Boolean)
+
+          matchesIndustry = filters.industryCategories.some(industry => {
+            // Clean filter value - remove count info like "(2378)"
+            const industryLower = industry.toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+            
+            // CRITICAL: Only match if we have a valid industryType (strict matching)
+            const hasValidIndustry = jobIndustryType && jobIndustryType !== 'n/a' && jobIndustryType !== ''
+            
+            // CRITICAL: For category filters, ONLY use jobIndustryType for direct matching
+            // Do NOT use companyIndustries, jobCategory, or companyName - they cause false matches
+            const cleanedJobIndustryType = hasValidIndustry ? jobIndustryType.replace(/\s*\(\d+\)\s*$/, '').trim() : ''
+            
+            // Direct match: only match if jobIndustryType explicitly matches the filter
+            // CRITICAL: Be very strict - only match exact or clear substrings
+            const directMatch = hasValidIndustry && (
+              cleanedJobIndustryType === industryLower || 
+              // Only allow includes if filter is a clear substring (avoid partial word matches)
+              (industryLower.length >= 4 && cleanedJobIndustryType.includes(industryLower)) || 
+              (cleanedJobIndustryType.length >= 4 && industryLower.includes(cleanedJobIndustryType)) ||
+              // Allow matching if first significant word matches (for categories like "IT Services")
+              (industryLower.split(' ')[0].length >= 2 && cleanedJobIndustryType.split(' ')[0] === industryLower.split(' ')[0])
+            )
+            
+            // ONLY use fallback sources (companyIndustries, etc.) if NO jobIndustryType exists
+            const fallbackMatch = !hasValidIndustry && allIndustrySources.some(source => {
+              const cleanedSource = source.replace(/\s*\(\d+\)\s*$/, '').trim()
+              return cleanedSource === industryLower || 
+                     cleanedSource.includes(industryLower) || 
+                     industryLower.includes(cleanedSource.split(' ')[0])
+            })
+            
+            // Build abbreviation match checks (using already declared cleanedJobIndustryType)
+            let abbreviationMatch = false
+            if (hasValidIndustry && cleanedJobIndustryType) {
+              // IT-related
+              if ((industryLower.includes('it services') || industryLower.includes('it consulting')) && 
+                  (cleanedJobIndustryType.includes('it services') || cleanedJobIndustryType.includes('it consulting') || cleanedJobIndustryType.includes('software') || cleanedJobIndustryType.includes('technology'))) {
+                abbreviationMatch = true
+              }
+              // Software Product
+              else if (industryLower.includes('software product') &&
+                      (cleanedJobIndustryType.includes('software product') || cleanedJobIndustryType.includes('software') || cleanedJobIndustryType.includes('technology'))) {
+                abbreviationMatch = true
+              }
+              // Internet
+              else if (industryLower === 'internet' &&
+                      (cleanedJobIndustryType.includes('internet') || cleanedJobIndustryType.includes('technology') || cleanedJobIndustryType.includes('software'))) {
+                abbreviationMatch = true
+              }
+              // Data Science
+              else if ((industryLower.includes('data science') || industryLower.includes('data analytics')) &&
+                      (cleanedJobIndustryType.includes('medical') || cleanedJobIndustryType.includes('pharmaceutical') || cleanedJobIndustryType.includes('research') || cleanedJobIndustryType.includes('analytics') || cleanedJobIndustryType.includes('biotechnology') || cleanedJobIndustryType.includes('clinical'))) {
+                abbreviationMatch = true
+              }
+              // IT general
+              else if ((industryLower === 'it' || industryLower.includes('it ')) && 
+                      (cleanedJobIndustryType.includes('it') || cleanedJobIndustryType.includes('software') || cleanedJobIndustryType.includes('technology') || cleanedJobIndustryType.includes('information technology'))) {
+                abbreviationMatch = true
+              }
+              // FinTech
+              else if (industryLower === 'fintech' && (cleanedJobIndustryType.includes('financial') || cleanedJobIndustryType.includes('banking') || cleanedJobIndustryType.includes('fintech'))) {
+                abbreviationMatch = true
+              }
+              // HR-related
+              else if ((industryLower.includes('education') || industryLower.includes('training') || industryLower.includes('recruitment') || industryLower.includes('hr') || industryLower.includes('human resources')) &&
+                      (cleanedJobIndustryType.includes('education') || cleanedJobIndustryType.includes('training') || cleanedJobIndustryType.includes('recruitment') || cleanedJobIndustryType.includes('hr') || cleanedJobIndustryType.includes('human resources'))) {
+                abbreviationMatch = true
+              }
+              // Medical/Healthcare
+              else if ((industryLower.includes('medical services') || industryLower.includes('healthcare')) &&
+                      (cleanedJobIndustryType.includes('medical') || cleanedJobIndustryType.includes('healthcare') || cleanedJobIndustryType.includes('health'))) {
+                abbreviationMatch = true
+              }
+              // Sales-related
+              else if ((industryLower.includes('retail') || industryLower.includes('fmcg') || industryLower.includes('real estate') || industryLower.includes('travel') || industryLower.includes('tourism') || industryLower.includes('hotels') || industryLower.includes('restaurants') || industryLower.includes('automobile') || industryLower.includes('banking') || industryLower.includes('lending') || industryLower.includes('insurance')) &&
+                      (cleanedJobIndustryType.includes('retail') || cleanedJobIndustryType.includes('fmcg') || cleanedJobIndustryType.includes('real estate') || cleanedJobIndustryType.includes('travel') || cleanedJobIndustryType.includes('tourism') || cleanedJobIndustryType.includes('hotels') || cleanedJobIndustryType.includes('restaurants') || cleanedJobIndustryType.includes('automobile') || cleanedJobIndustryType.includes('banking') || cleanedJobIndustryType.includes('lending') || cleanedJobIndustryType.includes('insurance'))) {
+                abbreviationMatch = true
+              }
+              // Marketing-related
+              else if ((industryLower.includes('media') || industryLower.includes('entertainment') || industryLower.includes('broadcasting') || industryLower.includes('advertising') || industryLower.includes('marketing') || industryLower.includes('pr') || industryLower.includes('gaming') || industryLower.includes('publishing') || industryLower.includes('e-commerce') || industryLower.includes('internet') || industryLower.includes('telecom') || industryLower.includes('isp')) &&
+                      (cleanedJobIndustryType.includes('media') || cleanedJobIndustryType.includes('entertainment') || cleanedJobIndustryType.includes('broadcasting') || cleanedJobIndustryType.includes('advertising') || cleanedJobIndustryType.includes('marketing') || cleanedJobIndustryType.includes('pr') || cleanedJobIndustryType.includes('gaming') || cleanedJobIndustryType.includes('publishing') || cleanedJobIndustryType.includes('e-commerce') || cleanedJobIndustryType.includes('internet') || cleanedJobIndustryType.includes('telecom') || cleanedJobIndustryType.includes('isp'))) {
+                abbreviationMatch = true
+              }
+              // Engineering-related
+              else if ((industryLower.includes('industrial equipment') || industryLower.includes('auto components') || industryLower.includes('chemicals') || industryLower.includes('building material') || industryLower.includes('automobile') || industryLower.includes('electrical equipment') || industryLower.includes('industrial automation') || industryLower.includes('iron') || industryLower.includes('steel') || industryLower.includes('construction') || industryLower.includes('infrastructure') || industryLower.includes('electronics manufacturing') || industryLower.includes('electronic components') || industryLower.includes('hardware') || industryLower.includes('networking') || industryLower.includes('power') || industryLower.includes('energy') || industryLower.includes('oil') || industryLower.includes('gas') || industryLower.includes('renewable energy')) &&
+                      (cleanedJobIndustryType.includes('industrial') || cleanedJobIndustryType.includes('equipment') || cleanedJobIndustryType.includes('auto') || cleanedJobIndustryType.includes('chemicals') || cleanedJobIndustryType.includes('building') || cleanedJobIndustryType.includes('material') || cleanedJobIndustryType.includes('automobile') || cleanedJobIndustryType.includes('electrical') || cleanedJobIndustryType.includes('automation') || cleanedJobIndustryType.includes('iron') || cleanedJobIndustryType.includes('steel') || cleanedJobIndustryType.includes('construction') || cleanedJobIndustryType.includes('infrastructure') || cleanedJobIndustryType.includes('electronics') || cleanedJobIndustryType.includes('hardware') || cleanedJobIndustryType.includes('networking') || cleanedJobIndustryType.includes('power') || cleanedJobIndustryType.includes('energy') || cleanedJobIndustryType.includes('oil') || cleanedJobIndustryType.includes('gas') || cleanedJobIndustryType.includes('renewable'))) {
+                abbreviationMatch = true
+              }
+            }
+
+            return directMatch || fallbackMatch || abbreviationMatch
+          })
+          
+          // Debug: Log if no industry match found
+          if (!matchesIndustry && filters.industryCategories && filters.industryCategories.length > 0) {
+            console.log('🔍 Industry filter check:', {
+              jobTitle: job.title,
+              jobIndustryType: (job as any).industryType || 'N/A',
+              filterIndustries: filters.industryCategories,
+              rawIndustryType: (job as any).industryType
+            })
+          }
+        }
+
+        // Check department match - CRITICAL: Use job.department first (from database)
+        if (filters.departmentCategories && filters.departmentCategories.length > 0) {
+          const jobDepartment = String((job as any).department || (job as any).metadata?.department || '').toLowerCase().trim()
+          const jobCategory = (job.category || '').toLowerCase().trim()
+          const jobTitle = job.title.toLowerCase().trim()
+
+          matchesDepartment = filters.departmentCategories.some(department => {
+            const deptLower = department.toLowerCase().trim()
+            const deptWords = deptLower.split(/\s+/).filter(w => w.length > 2)
+
+            // CRITICAL: Exact match first (e.g., "Engineering" matches "Engineering")
+            const exactMatch = 
+              jobDepartment === deptLower ||
+              deptLower === jobDepartment
+            
+            // CRITICAL: Only match if jobDepartment exists and is not empty/N/A
+            const hasValidDepartment = jobDepartment && jobDepartment !== 'n/a' && jobDepartment !== '' && jobDepartment.length > 0
+            
+            // CRITICAL: Direct matching - ONLY use department field
+            const directMatch = hasValidDepartment && (
+              exactMatch ||
+              jobDepartment.includes(deptLower) ||
+              deptLower.includes(jobDepartment) ||
+              // Handle variations like "Engineering - Software & QA" matching "Engineering - Software & QA"
+              (deptLower.includes('engineering') && jobDepartment.includes('engineering')) ||
+              (deptLower.includes('engineering - software') && jobDepartment.includes('engineering - software')) ||
+              (deptLower.includes('data science') && (jobDepartment.includes('data science') || jobDepartment.includes('data science & analytics'))) ||
+              (deptLower.includes('data science & analytics') && (jobDepartment.includes('data science') || jobDepartment === 'data science & analytics')) ||
+              (deptLower.includes('it') && jobDepartment.includes('it')) ||
+              (deptLower.includes('marketing') && jobDepartment.includes('marketing')) ||
+              (deptLower.includes('sales') && jobDepartment.includes('sales')) ||
+              (deptLower.includes('human resources') && jobDepartment.includes('human resources'))
+            )
+
+            // Only use word matching if department exists
+            const wordMatch = hasValidDepartment && deptWords.length > 0 && deptWords.some(word => 
+              jobDepartment.includes(word)
+            )
+
+            // Only use abbreviation matching if department exists
+            const abbreviationMatch = hasValidDepartment && (
+              deptLower.includes('engineering') &&
+                jobDepartment.includes('engineering') ||
+              (deptLower.includes('it') || deptLower.includes('information security')) &&
+                jobDepartment.includes('it') ||
+              deptLower.includes('data science') &&
+                jobDepartment.includes('data') ||
+              deptLower.includes('quality assurance') &&
+                jobDepartment.includes('quality') ||
+              // HR-related departments
+              (deptLower.includes('human resources') || deptLower.includes('hr')) &&
+                (jobDepartment.includes('human resources') || jobDepartment.includes('hr')) ||
+              // Sales-related departments
+              (deptLower.includes('sales') || deptLower.includes('business development')) &&
+                (jobDepartment.includes('sales') || jobDepartment.includes('business development')) ||
+              // Marketing-related departments
+              (deptLower.includes('marketing') || deptLower.includes('communication')) &&
+                (jobDepartment.includes('marketing') || jobDepartment.includes('communication'))
+            )
+
+            return directMatch || wordMatch || abbreviationMatch
+          })
+          
+          // Debug: Log if no department match found
+          if (!matchesDepartment && filters.departmentCategories && filters.departmentCategories.length > 0) {
+            console.log('🔍 Department filter check:', {
+              jobTitle: job.title,
+              jobDepartment: (job as any).department || 'N/A',
+              filterDepartments: filters.departmentCategories,
+              rawDepartment: (job as any).department
+            })
+          }
+        }
+
+        // Check role match - CRITICAL: Use job.roleCategory first (from database)
+        if (filters.roleCategories && filters.roleCategories.length > 0) {
+          const jobRoleCategory = String((job as any).roleCategory || (job as any).metadata?.roleCategory || '').toLowerCase().trim()
+          const jobTitle = job.title.toLowerCase().trim()
+          const jobCategory = (job.category || '').toLowerCase().trim()
+          const jobSkills = (job.skills || []).join(' ').toLowerCase().trim()
+
+          matchesRole = filters.roleCategories.some(role => {
+            const roleLower = role.toLowerCase().trim()
+            const roleWords = roleLower.split(/\s+/).filter(w => w.length > 2)
+
+            // CRITICAL: Only match if jobRoleCategory actually exists (not empty/N/A)
+            const hasValidRoleCategory = jobRoleCategory && jobRoleCategory !== 'n/a' && jobRoleCategory !== '' && jobRoleCategory.length > 0
+            
+            // CRITICAL: Exact match first (e.g., "Software Development" matches "Software Development")
+            const exactMatch = 
+              jobRoleCategory === roleLower ||
+              roleLower === jobRoleCategory
+
+            // CRITICAL: Check job.roleCategory - match if it contains the filter or vice versa
+            const directMatch = hasValidRoleCategory && (
+              exactMatch ||
+              jobRoleCategory.includes(roleLower) ||
+              roleLower.includes(jobRoleCategory) ||
+              // Handle variations - match if key words are present
+              (roleLower.includes('software development') && jobRoleCategory.includes('software')) ||
+              (roleLower.includes('software development') && jobRoleCategory.includes('development')) ||
+              (roleLower.includes('data science & analytics') && (jobRoleCategory.includes('data science') || jobRoleCategory.includes('analytics'))) ||
+              (roleLower.includes('data science') && (jobRoleCategory.includes('data science') || jobRoleCategory.includes('data') || jobRoleCategory.includes('analytics'))) ||
+              (roleLower.includes('it') && jobRoleCategory.includes('it')) ||
+              (roleLower.includes('marketing') && jobRoleCategory.includes('marketing'))
+            )
+
+            // CRITICAL: Only use wordMatch/abbreviationMatch if roleCategory exists (strict matching)
+            const wordMatch = hasValidRoleCategory && roleWords.length > 0 && roleWords.some(word => 
+              jobRoleCategory.includes(word)
+            )
+
+            const abbreviationMatch = hasValidRoleCategory && (
+              (roleLower.includes('software development') || roleLower.includes('software engineer')) &&
+                jobRoleCategory.includes('software') ||
+              (roleLower.includes('it') || roleLower.includes('information security')) &&
+                jobRoleCategory.includes('it') ||
+              (roleLower.includes('data science') || roleLower.includes('machine learning') || roleLower.includes('data analytics')) &&
+                jobRoleCategory.includes('data') ||
+              roleLower.includes('engineering') &&
+                jobRoleCategory.includes('engineering') ||
+              roleLower.includes('devops') &&
+                jobRoleCategory.includes('devops') ||
+              // HR-related roles
+              (roleLower.includes('human resources') || roleLower.includes('hr') || roleLower.includes('recruitment')) &&
+                jobRoleCategory.includes('human resources') ||
+              // Sales-related roles
+              (roleLower.includes('sales') || roleLower.includes('business development') || roleLower.includes('bd') || roleLower.includes('pre sales') || roleLower.includes('customer success')) &&
+                jobRoleCategory.includes('sales') ||
+              // Marketing-related roles
+              (roleLower.includes('marketing') || roleLower.includes('digital marketing') || roleLower.includes('content') || roleLower.includes('editorial') || roleLower.includes('journalism')) &&
+                jobRoleCategory.includes('marketing')
+            )
+
+            return directMatch || wordMatch || abbreviationMatch
+          })
+          
+          // Debug: Log if no role match found
+          if (!matchesRole && filters.roleCategories && filters.roleCategories.length > 0) {
+            console.log('🔍 Role filter check:', {
+              jobTitle: job.title,
+              jobRoleCategory: (job as any).roleCategory || 'N/A',
+              filterRoles: filters.roleCategories,
+              rawRoleCategory: (job as any).roleCategory
+            })
+          }
+        }
+
+        // Use OR logic - job matches if it matches ANY category filter
+        const match = matchesIndustry || matchesDepartment || matchesRole
+        
+        if (match) {
+          console.log('✅ Category filter MATCH:', { 
+            jobTitle: job.title,
+            jobIndustryType: (job as any).industryType || 'N/A',
+            jobDepartment: (job as any).department || 'N/A',
+            jobRoleCategory: (job as any).roleCategory || 'N/A',
+            matchesIndustry,
+            matchesDepartment,
+            matchesRole,
+            matchReason: matchesIndustry ? 'industry' : matchesDepartment ? 'department' : matchesRole ? 'role' : 'unknown'
+          })
+        } else {
+          // Debug non-matches to see why they didn't match
+          const hasAnyFilter = filters.industryCategories?.length || filters.departmentCategories?.length || filters.roleCategories?.length
+          if (hasAnyFilter) {
+            console.log('❌ Category filter NO MATCH:', { 
+              jobTitle: job.title,
+              jobIndustryType: (job as any).industryType || 'N/A',
+              jobDepartment: (job as any).department || 'N/A',
+              jobRoleCategory: (job as any).roleCategory || 'N/A',
+              filtersIndustry: filters.industryCategories,
+              filtersDept: filters.departmentCategories,
+              filtersRole: filters.roleCategories
+            })
+          }
+        }
+
+        return match
+      })
+
+      console.log(`🎯 Category filters result: ${beforeCount} → ${filtered.length} jobs`)
+      if (filtered.length === 0 && beforeCount > 0) {
+        console.warn('⚠️ WARNING: All jobs filtered out!', {
+          sampleJob: jobs.length > 0 ? {
+            title: jobs[0].title,
+            industryType: (jobs[0] as any).industryType,
+            department: (jobs[0] as any).department,
+            roleCategory: (jobs[0] as any).roleCategory,
+            category: (jobs[0] as any).category
+          } : 'No jobs',
+          activeFilters: {
+            industryCategories: filters.industryCategories,
+            departmentCategories: filters.departmentCategories,
+            roleCategories: filters.roleCategories
+          }
+        })
+      }
+    }
+
+    // Note: Individual category filters below are now only applied if the OR logic block above didn't run
+    // This maintains backward compatibility for cases where only one category filter is used
+
+    // Role Categories - Standalone filter (only if OR logic didn't apply)
+    if (!hasCategoryFilters && filters.roleCategories && filters.roleCategories.length > 0) {
 
       console.log('🎯 Applying role categories filter:', filters.roleCategories)
 
@@ -3490,7 +3857,15 @@ export default function JobsPage() {
 
                  roleLower.includes(jobTitle.split(' ')[0]) ||
 
-                 jobTitle.includes(roleLower.split(' ')[0])
+                 jobTitle.includes(roleLower.split(' ')[0]) ||
+                 // Enhanced matching for IT/Software/Data Science jobs - CRITICAL for "AI Engineer", "Software Engineer"
+                 (roleLower.includes('software') && (jobTitle.includes('software') || jobTitle.includes('engineer') || jobTitle.includes('developer'))) ||
+                 (roleLower.includes('it') && (jobTitle.includes('engineer') || jobTitle.includes('developer') || jobTitle.includes('it') || jobCategory.includes('technology'))) ||
+                 (roleLower.includes('data science') && (jobTitle.includes('data') || jobTitle.includes('analyst') || jobTitle.includes('scientist') || jobTitle.includes('ai') || jobTitle.includes('ml'))) ||
+                 (roleLower.includes('engineering') && (jobTitle.includes('engineer') || jobTitle.includes('engineering'))) ||
+                 (roleLower.includes('machine learning') && (jobTitle.includes('ai') || jobTitle.includes('ml') || jobTitle.includes('scientist') || jobTitle.includes('engineer'))) ||
+                 // Match any job with "engineer" in title if category is technology - catches "AI Engineer", "Software Engineer"
+                 (jobTitle.includes('engineer') && jobCategory.includes('technology'))
 
         })
 
@@ -3500,73 +3875,79 @@ export default function JobsPage() {
 
 
 
-    // Industry Categories - Case insensitive matching with better logic
+    // Industry Categories - Standalone filter (only if OR logic didn't apply)
+    // CRITICAL: Skip this if hasCategoryFilters is true, because the OR logic block already filtered by industry
+    if (!hasCategoryFilters && filters.industryCategories && filters.industryCategories.length > 0) {
 
-    if (filters.industryCategories && filters.industryCategories.length > 0) {
-
-      console.log('🏭 Applying industry categories filter:', filters.industryCategories)
+      console.log('🏭 Applying industry categories filter (standalone):', filters.industryCategories)
 
       const beforeCount = filtered.length
 
       filtered = filtered.filter(job => {
-
-        const companyIndustry = ((job as any).company?.industry || '').toLowerCase().trim()
-
+        // CRITICAL: Use job.industryType first (from database), then fallback to company data
+        const rawIndustryType = (job as any).industryType || (job as any).metadata?.industryType || ''
+        const jobIndustryType = String(rawIndustryType).toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+        const companyIndustry = ((job as any).company?.industry || '').toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+        const companyIndustries = Array.isArray((job as any).company?.industries) 
+          ? (job as any).company.industries.map((ind: any) => String(ind).toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim())
+          : []
+        const jobCategory = ((job as any).category || '').toLowerCase().trim()
         const companyName = job.company.name.toLowerCase().trim()
-
-        
+        // CRITICAL: Prioritize jobIndustryType first
+        const allIndustrySources = [jobIndustryType, companyIndustry, ...companyIndustries, jobCategory, companyName].filter(Boolean)
         
         const match = filters.industryCategories!.some(industry => {
-
-          const industryLower = industry.toLowerCase().trim()
-
-          return companyIndustry.includes(industryLower) ||
-
-                 industryLower.includes(companyIndustry) ||
-
-                 companyName.includes(industryLower) ||
-
-                 // Handle common abbreviations
-
-                 (industryLower === 'it' && (companyIndustry.includes('information technology') || companyIndustry.includes('software'))) ||
-
-                 (industryLower === 'fintech' && (companyIndustry.includes('financial') || companyIndustry.includes('banking')))
-
-        })
-
-        
-        
-        if (match) {
-
-          console.log('✅ Industry match found:', { 
-
-            jobTitle: job.title, 
-
-            companyName: job.company.name, 
-
-            companyIndustry, 
-
-            selectedIndustries: filters.industryCategories 
-
+          const industryLower = industry.toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, '').trim()
+          
+          // CRITICAL: Exact match first, then partial - prioritize jobIndustryType
+          const exactMatch = allIndustrySources.some(source => {
+            const cleanedSource = source.replace(/\s*\(\d+\)\s*$/, '').trim()
+            // Prioritize matches from jobIndustryType
+            const isPrimarySource = source === jobIndustryType || companyIndustries.includes(source)
+            if (isPrimarySource) {
+              return cleanedSource === industryLower || 
+                     cleanedSource.includes(industryLower) || 
+                     industryLower.includes(cleanedSource.split(' ')[0])
+            }
+            // Only use category/companyName if no industryType exists
+            const hasValidIndustry = jobIndustryType && jobIndustryType !== 'n/a' && jobIndustryType !== ''
+            return !hasValidIndustry && (cleanedSource.includes(industryLower) || industryLower.includes(cleanedSource.split(' ')[0]))
           })
-
-        }
-
-        
+          
+          // Handle specific abbreviations - only use primary sources (jobIndustryType, companyIndustries)
+          const primarySources = [jobIndustryType, ...companyIndustries].filter(Boolean).map(s => s.replace(/\s*\(\d+\)\s*$/, '').trim())
+          const abbreviationMatch = 
+            (industryLower.includes('it services') || industryLower.includes('it consulting')) && 
+              (primarySources.some(s => s.includes('it services') || s.includes('it consulting') || s.includes('software') || s.includes('technology'))) ||
+            industryLower.includes('software product') &&
+              (primarySources.some(s => s.includes('software product') || s.includes('software') || s.includes('technology'))) ||
+            industryLower === 'internet' &&
+              (primarySources.some(s => s.includes('internet') || s.includes('technology') || s.includes('software'))) ||
+            industryLower.includes('electronics') &&
+              (primarySources.some(s => s.includes('electronics') || s.includes('manufacturing'))) ||
+            (industryLower.includes('data science') || industryLower.includes('data analytics')) &&
+              (primarySources.some(s => s.includes('medical') || s.includes('pharmaceutical') || s.includes('research') || s.includes('analytics') || s.includes('biotechnology') || s.includes('clinical'))) ||
+            (industryLower === 'it' || industryLower.includes('it ')) && 
+              (primarySources.some(s => s.includes('it') || s.includes('software') || s.includes('technology') || s.includes('information technology'))) ||
+            (industryLower === 'fintech' && primarySources.some(s => s.includes('financial') || s.includes('banking') || s.includes('fintech'))) ||
+            // Sales-related industries
+            (industryLower.includes('retail') || industryLower.includes('fmcg') || industryLower.includes('real estate') || industryLower.includes('travel') || industryLower.includes('tourism') || industryLower.includes('hotels') || industryLower.includes('restaurants') || industryLower.includes('automobile') || industryLower.includes('banking') || industryLower.includes('lending') || industryLower.includes('insurance')) &&
+              (primarySources.some(s => s.includes('retail') || s.includes('fmcg') || s.includes('real estate') || s.includes('travel') || s.includes('tourism') || s.includes('hotels') || s.includes('restaurants') || s.includes('automobile') || s.includes('banking') || s.includes('lending') || s.includes('insurance')))
+          
+          return exactMatch || abbreviationMatch
+        })
         
         return match
-
       })
 
-      console.log(`🏭 Industry filter: ${beforeCount} → ${filtered.length} jobs`)
+      console.log(`🏭 Industry filter (standalone): ${beforeCount} → ${filtered.length} jobs`)
 
     }
 
 
 
-    // Department Categories - Case insensitive matching with better logic
-
-    if (filters.departmentCategories && filters.departmentCategories.length > 0) {
+    // Department Categories - Standalone filter (only if OR logic didn't apply)
+    if (!hasCategoryFilters && filters.departmentCategories && filters.departmentCategories.length > 0) {
 
       console.log('🏢 Applying department categories filter:', filters.departmentCategories)
 
@@ -3596,7 +3977,11 @@ export default function JobsPage() {
 
                  (deptLower.includes('hr') && (jobCategory.includes('human resources') || jobTitle.includes('hr'))) ||
 
-                 (deptLower.includes('it') && (jobCategory.includes('information technology') || jobTitle.includes('software')))
+                 (deptLower.includes('it') && (jobCategory.includes('information technology') || jobTitle.includes('software') || jobTitle.includes('engineer') || jobTitle.includes('developer'))) ||
+                 // Enhanced matching for Engineering/Data Science departments
+                 (deptLower.includes('engineering') && (jobTitle.includes('engineer') || jobTitle.includes('engineering') || jobCategory.includes('technology'))) ||
+                 (deptLower.includes('data science') && (jobTitle.includes('data') || jobTitle.includes('analyst') || jobTitle.includes('scientist') || jobTitle.includes('ai') || jobCategory.includes('technology'))) ||
+                 (deptLower.includes('it') && (jobTitle.includes('engineer') || jobTitle.includes('developer') || jobCategory.includes('technology')))
 
         })
 
@@ -5233,7 +5618,7 @@ export default function JobsPage() {
 
                                   <IndianRupee className="w-4 h-4" />
 
-                                  <span>{job.salary}</span>
+                                  <span>{job.salary && !job.salary.includes('LPA') ? `${job.salary} LPA` : (job.salary || 'Not specified')}</span>
 
                                 </div>
 

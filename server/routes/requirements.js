@@ -1182,7 +1182,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
             // Count views that happened AFTER requirement creation (with small buffer to exclude redirect views)
             // IMPORTANT: Use snake_case column names since we're using raw: true
             const verifyViews = await ViewTracking.findAll({
-              where: {
+      where: {
                 viewer_id: req.user.id,
                 viewed_user_id: { [Op.in]: finalCandidateIds },
                 view_type: 'profile_view',
@@ -1854,7 +1854,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         
         finalCandidates = filteredCandidates.slice(0, limitNum);
         finalCount = filteredCandidates.length;
-        fallbackApplied = true;
+      fallbackApplied = true;
         console.log(`✅ Using ${finalCount} candidates from relaxed search (filtered by relevance)`);
       } else {
         console.warn(`⚠️ No candidates matched even relaxed criteria. No fallback candidates to show.`);

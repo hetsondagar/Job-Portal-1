@@ -142,7 +142,40 @@ export default function RegisterPage() {
       if (error.message && error.message.includes('Validation failed')) {
         toast.error("Please check your input and try again")
       } else if (error.message && error.message.includes('already exists')) {
-        toast.error("An account with this email already exists")
+        // User exists - check for cross-portal registration (Gulf user registering for India portal)
+        console.log('🔍 User exists, checking for cross-portal registration...')
+        
+        try {
+          const checkResponse = await apiService.checkExistingUser(
+            formData.email,
+            formData.password,
+            'india' // Requesting access to India portal
+          )
+          
+          if (checkResponse.success && checkResponse.userExists) {
+            // Show dialog to verify OTP for cross-portal registration
+            const userData = checkResponse.data?.data || checkResponse.data
+            toast.success("Password verified! OTP sent to your email.")
+            
+            // You can show an OTP dialog here if needed, or redirect to a cross-portal registration page
+            // For now, show a message and redirect to login
+            toast.info("Please check your email for OTP to complete cross-portal registration.")
+            
+            // Redirect to a page where they can verify OTP
+            setTimeout(() => {
+              window.location.href = `/register?crossPortal=true&email=${encodeURIComponent(formData.email)}`
+            }, 2000)
+            return
+          } else if (!checkResponse.success) {
+            toast.error(checkResponse.message || 'Invalid password or error occurred')
+            return
+          }
+        } catch (checkError: any) {
+          console.error('❌ Check existing user error:', checkError)
+          // Fall through to show generic error
+        }
+        
+        toast.error("An account with this email already exists. If you're a Gulf user, you can log in and access the India portal.")
       } else {
         toast.error(error.message || "Registration failed")
       }

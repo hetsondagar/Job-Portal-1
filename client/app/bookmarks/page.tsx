@@ -605,15 +605,6 @@ export default function BookmarksPage() {
                               View Job
                             </Button>
                           </Link>
-                          <Button 
-                            variant={bookmark.isApplied ? "default" : "outline"} 
-                            size="sm" 
-                            onClick={() => handleToggleApplied(bookmark)}
-                            className={bookmark.isApplied ? "bg-green-600 hover:bg-green-700" : ""}
-                          >
-                            <FileText className="w-4 h-4 mr-1" />
-                            {bookmark.isApplied ? 'Applied' : 'Mark Applied'}
-                          </Button>
                           <Button variant="outline" size="sm" onClick={() => handleEditBookmark(bookmark)}>
                             <Edit className="w-4 h-4 mr-1" />
                             Edit

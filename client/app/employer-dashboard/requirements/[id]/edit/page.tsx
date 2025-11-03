@@ -255,10 +255,10 @@ export default function EditRequirementPage() {
       const response = await apiService.updateRequirement(params.id, updateData)
       
       if (response.success) {
-        toast({
-          title: "Requirement Updated",
-          description: "Your requirement has been updated successfully.",
-        })
+      toast({
+        title: "Requirement Updated",
+        description: "Your requirement has been updated successfully.",
+      })
         // Reload the page data to show updated values
         const refreshResponse = await apiService.getRequirement(params.id)
         if (refreshResponse.success && refreshResponse.data) {
@@ -335,8 +335,8 @@ export default function EditRequirementPage() {
   const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
 
   if (fetching || !formData) {
-    return (
-      <EmployerAuthGuard>
+  return (
+    <EmployerAuthGuard>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -347,9 +347,9 @@ export default function EditRequirementPage() {
     )
   }
 
-  return (
+      return (
     <EmployerAuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
