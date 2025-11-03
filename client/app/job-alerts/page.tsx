@@ -71,13 +71,29 @@ export default function JobAlertsPage() {
   const fetchAlerts = async () => {
     try {
       setAlertsLoading(true)
+      console.log('🔍 Fetching job alerts for user:', user?.id)
       const response = await apiService.getJobAlerts()
-      if (response.success && response.data) {
-        setAlerts(response.data)
+      console.log('🔍 Job alerts API response:', response)
+      if (response.success) {
+        const alertsData = Array.isArray(response.data) ? response.data : []
+        console.log('✅ Loaded', alertsData.length, 'job alerts')
+        setAlerts(alertsData)
+        if (alertsData.length === 0) {
+          console.log('ℹ️ No job alerts found. User can create new alerts.')
+        }
+      } else {
+        console.error('❌ API returned error:', response.message)
+        setAlerts([])
       }
-    } catch (error) {
-      console.error('Error fetching alerts:', error)
-      toast.error('Failed to load job alerts')
+    } catch (error: any) {
+      console.error('❌ Error fetching alerts:', error)
+      console.error('❌ Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      })
+      toast.error(error?.message || 'Failed to load job alerts')
+      setAlerts([])
     } finally {
       setAlertsLoading(false)
     }
@@ -620,4 +636,3 @@ export default function JobAlertsPage() {
     </JobseekerAuthGuard>
   )
 }
-

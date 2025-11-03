@@ -87,7 +87,7 @@ export default function EditRequirementPage() {
             validTill: req.validTill ? new Date(req.validTill).toISOString().split('T')[0] : "",
             noticePeriod: req.noticePeriod || "",
             remoteWork: (() => {
-              const rw = req.remoteWork || req.location_type || "Hybrid";
+              const rw = req.remoteWork || (req as any).location_type || "Hybrid";
               const normalized = typeof rw === 'string' ? rw.toLowerCase() : '';
               if (normalized === 'remote' || normalized === 'Remote') return 'Remote';
               if (normalized === 'on-site' || normalized === 'onsite' || normalized === 'On-site') return 'On-site';
@@ -286,7 +286,7 @@ export default function EditRequirementPage() {
             validTill: req.validTill ? new Date(req.validTill).toISOString().split('T')[0] : "",
             noticePeriod: req.noticePeriod || "",
             remoteWork: (() => {
-              const rw = req.remoteWork || req.location_type || "Hybrid";
+              const rw = req.remoteWork || (req as any).location_type || "Hybrid";
               const normalized = typeof rw === 'string' ? rw.toLowerCase() : '';
               if (normalized === 'remote' || normalized === 'Remote') return 'Remote';
               if (normalized === 'on-site' || normalized === 'onsite' || normalized === 'On-site') return 'On-site';

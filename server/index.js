@@ -55,6 +55,8 @@ const { sessionManager } = require('./middleware/activityTracker');
 
 // Import inactivity management service
 const InactivityCronService = require('./services/inactivityCronService');
+// Import job alerts cron service
+const JobAlertCronService = require('./services/jobAlertCronService');
 const requirementsRoutes = require('./routes/requirements');
 const jobAlertsRoutes = require('./routes/job-alerts');
 const jobTemplatesRoutes = require('./routes/job-templates');
@@ -630,6 +632,9 @@ const startServer = async () => {
         
         // Start inactivity management cron jobs
         InactivityCronService.start();
+        
+        // Start job alerts cron service
+        JobAlertCronService.start();
       } catch (error) {
         console.warn('⚠️ Failed to start contract expiry service:', error.message);
       }

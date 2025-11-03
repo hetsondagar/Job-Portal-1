@@ -70,9 +70,9 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
         // Try to detect page count using PDF.js if available
         try {
           // @ts-ignore - pdfjs-dist may not be installed, but we'll check if it's available
-          if (typeof window !== 'undefined' && window.pdfjsLib) {
+          if (typeof window !== 'undefined' && (window as any).pdfjsLib) {
             const arrayBuffer = await blob.arrayBuffer();
-            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pdf = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             const detectedPageCount = pdf.numPages;
             setPageCount(detectedPageCount);
             console.log('📄 Detected page count:', detectedPageCount);

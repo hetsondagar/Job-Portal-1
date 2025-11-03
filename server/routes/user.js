@@ -455,6 +455,32 @@ const validateProfileUpdate = [
 // Get user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
+    // Fetch JobPreference if it exists
+    let jobPreferences = null;
+    try {
+      const { JobPreference } = require('../config/index');
+      jobPreferences = await JobPreference.findOne({
+        where: { userId: req.user.id, isActive: true }
+      });
+    } catch (prefError) {
+      console.log('⚠️ Could not fetch JobPreference (table may not exist):', prefError.message);
+    }
+
+    // Merge preferences from JobPreference table into user preferences
+    let mergedPreferences = req.user.preferences || {};
+    if (jobPreferences) {
+      mergedPreferences = {
+        ...mergedPreferences,
+        preferredJobTypes: jobPreferences.preferredJobTypes || mergedPreferences.preferredJobTypes || [],
+        preferredSkills: jobPreferences.preferredSkills || mergedPreferences.preferredSkills || [],
+        preferredExperienceLevels: jobPreferences.preferredExperienceLevels || mergedPreferences.preferredExperienceLevels || [],
+        preferredSalaryMin: jobPreferences.preferredSalaryMin || mergedPreferences.preferredSalaryMin,
+        preferredSalaryMax: jobPreferences.preferredSalaryMax || mergedPreferences.preferredSalaryMax,
+        preferredWorkMode: jobPreferences.preferredWorkMode || mergedPreferences.preferredWorkMode || [],
+        willingToTravel: jobPreferences.willingToTravel !== undefined ? jobPreferences.willingToTravel : mergedPreferences.willingToTravel
+      };
+    }
+
     // Transform user data to camelCase format to match frontend expectations
     const userData = {
       id: req.user.id,
@@ -504,8 +530,8 @@ router.get('/profile', authenticateToken, async (req, res) => {
       preferredCompanySize: req.user.preferred_company_size,
       preferredWorkMode: req.user.preferred_work_mode,
       preferredEmploymentType: req.user.preferred_employment_type,
-      // Preferences (CRITICAL for profile completion tracking)
-      preferences: req.user.preferences,
+      // Preferences (CRITICAL for profile completion tracking) - includes JobPreference data
+      preferences: mergedPreferences,
       hasPassword: !!(req.user.password && String(req.user.password).trim().length > 0),
       passwordSkipped: Boolean(req.user.password_skipped),
       requiresPasswordSetup: !(req.user.password && String(req.user.password).trim().length > 0) && req.user.oauth_provider && req.user.oauth_provider !== 'local' && !req.user.password_skipped,

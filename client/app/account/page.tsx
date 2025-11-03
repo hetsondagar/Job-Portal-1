@@ -420,6 +420,8 @@ export default function AccountPage() {
         const preferencesResponse = await apiService.updateJobPreferences(professionalData.jobPreferences || {})
         
         if (preferencesResponse.success) {
+          // Re-fetch job preferences to update display
+          await fetchJobPreferences()
           await refreshUser()
           setEditingProfessional(false)
           toast.success('Professional details and job preferences updated successfully')
@@ -1836,6 +1838,30 @@ export default function AccountPage() {
                                 <p className="font-medium text-slate-900 dark:text-white capitalize">
                                   {(user.preferredEmploymentType || (user as any).preferredEmploymentType || '').replace('_', ' ')}
                                 </p>
+                              </div>
+                            )}
+                            
+                            {/* Preferred Job Types */}
+                            {((user.preferences?.preferredJobTypes && user.preferences.preferredJobTypes.length > 0) || (professionalData.jobPreferences?.preferredJobTypes && professionalData.jobPreferences.preferredJobTypes.length > 0)) && (
+                              <div>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Preferred Job Types</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {(user.preferences?.preferredJobTypes || professionalData.jobPreferences?.preferredJobTypes || []).map((type: string, index: number) => (
+                                    <Badge key={index} variant="outline" className="capitalize">{type}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Preferred Skills */}
+                            {((user.preferences?.preferredSkills && user.preferences.preferredSkills.length > 0) || (professionalData.jobPreferences?.preferredSkills && professionalData.jobPreferences.preferredSkills.length > 0)) && (
+                              <div>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Preferred Skills</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {(user.preferences?.preferredSkills || professionalData.jobPreferences?.preferredSkills || []).map((skill: string, index: number) => (
+                                    <Badge key={index} variant="secondary">{skill}</Badge>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
