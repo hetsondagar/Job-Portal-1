@@ -227,7 +227,7 @@ class AdminNotificationService {
           {
             model: Company,
             as: 'RelatedCompany',
-            attributes: ['id', 'name', 'industry', 'companySize'],
+            attributes: ['id', 'name', 'industries', 'companySize', 'sector'],
             required: false
           },
           {
@@ -239,8 +239,27 @@ class AdminNotificationService {
         ]
       });
 
+      // Transform notifications to convert industries array to industry string for frontend compatibility
+      const transformedNotifications = notifications.map(notification => {
+        const notificationData = notification.toJSON ? notification.toJSON() : notification;
+        
+        // Transform RelatedCompany if present
+        if (notificationData.RelatedCompany) {
+          const industries = notificationData.RelatedCompany.industries || [];
+          // Get first industry from array, or use sector as fallback
+          notificationData.RelatedCompany.industry = Array.isArray(industries) && industries.length > 0 
+            ? industries[0] 
+            : (notificationData.RelatedCompany.sector || 'Not specified');
+          
+          // Remove industries array to avoid confusion
+          delete notificationData.RelatedCompany.industries;
+        }
+        
+        return notificationData;
+      });
+
       return {
-        notifications,
+        notifications: transformedNotifications,
         pagination: {
           total: count,
           page: parseInt(page),
