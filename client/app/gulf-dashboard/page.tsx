@@ -586,37 +586,37 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
       </div>
 
               {/* Welcome Banner */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-6 sm:pb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="relative rounded-3xl p-8 text-white overflow-hidden mb-8 bg-gradient-to-br from-emerald-600/90 via-teal-600/90 to-emerald-500/90 backdrop-blur-xl border border-white/20 shadow-[0_20px_60px_rgba(16,185,129,0.25)]"
+            className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 text-white overflow-hidden mb-6 sm:mb-8 bg-gradient-to-br from-emerald-600/90 via-teal-600/90 to-emerald-500/90 backdrop-blur-xl border border-white/20 shadow-[0_20px_60px_rgba(16,185,129,0.25)]"
           >
             <div className="relative z-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center space-x-3 mb-2">
-                    <Globe className="w-8 h-8 text-emerald-200" />
-                    <h1 className="serif-heading text-3xl sm:text-4xl font-bold drop-shadow">
+              <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
+                    <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-200 flex-shrink-0" />
+                    <h1 className="serif-heading text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold drop-shadow">
                       Gulf Region Dashboard
                     </h1>
                   </div>
-                  <p className="text-emerald-100/90 text-lg mb-6 leading-relaxed">
+                  <p className="text-emerald-100/90 text-sm sm:text-base lg:text-lg mb-4 sm:mb-6 leading-relaxed">
                     Welcome back, {user?.firstName ? user.firstName.toUpperCase() : 'EMPLOYER'}! Ready to hire in the Gulf region?
                   </p>
-                  <div className="flex items-center space-x-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
                     <div className="flex items-center space-x-2">
-                      <TrendingUp className="w-5 h-5 text-emerald-200" />
-                      <span className="text-sm">{stats.find(s => s.title === "Active Jobs")?.value || "0"} Active Jobs</span>
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm">{stats.find(s => s.title === "Active Jobs")?.value || "0"} Active Jobs</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Users className="w-5 h-5 text-emerald-200" />
-                      <span className="text-sm">{stats.find(s => s.title === "Total Applications")?.value || "0"} Applications</span>
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm">{stats.find(s => s.title === "Total Applications")?.value || "0"} Applications</span>
                     </div>
                   </div>
                 </div>
-                <div className="hidden lg:block">
+                <div className="hidden lg:block flex-shrink-0">
                   <div className="w-32 h-32 bg-white/10 ring-1 ring-white/30 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(255,255,255,0.15)]">
                     <Globe className="w-16 h-16 text-white/80" />
                   </div>

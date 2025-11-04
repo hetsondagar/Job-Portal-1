@@ -107,36 +107,7 @@ export default function GulfCompaniesPage() {
   // Check if user has access to Gulf pages
   const [accessDenied, setAccessDenied] = useState(false)
   
-  // Auth check - redirect employers/admins to Gulf dashboard
-  useEffect(() => {
-    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
-      console.log('🔄 Employer/Admin detected on Gulf companies page, redirecting to Gulf dashboard')
-      setIsRedirecting(true)
-      router.replace('/gulf-dashboard')
-      return
-    }
-  }, [user, router])
-  
-  useEffect(() => {
-    if (!authLoading && user && !user.regions?.includes('gulf') && user.region !== 'gulf') {
-      setAccessDenied(true)
-      return
-    }
-    setAccessDenied(false)
-  }, [user, authLoading])
-
-  // Show loading while redirecting
-  if (isRedirecting) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
-        </div>
-      </div>
-    )
-  }
-
+  // All hooks must be called before any conditional returns
   const debouncedSearch = useMemo(() => {
     let t: any
     return (value: string) => {
@@ -172,6 +143,24 @@ export default function GulfCompaniesPage() {
   useEffect(() => {
     fetchCompanies()
   }, [page, search])
+
+  // Auth check - redirect employers/admins to Gulf dashboard (after all data hooks)
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on Gulf companies page, redirecting to Gulf dashboard')
+      setIsRedirecting(true)
+      router.replace('/gulf-dashboard')
+      return
+    }
+  }, [user, router])
+  
+  useEffect(() => {
+    if (!authLoading && user && !user.regions?.includes('gulf') && user.region !== 'gulf') {
+      setAccessDenied(true)
+      return
+    }
+    setAccessDenied(false)
+  }, [user, authLoading])
 
   // Filter handlers
   const handleFilterChange = (key: keyof FilterState, value: any) => {
@@ -320,6 +309,43 @@ export default function GulfCompaniesPage() {
   const endIndex = startIndex + companiesPerPage
   const paginatedCompanies = filteredAndSortedCompanies.slice(startIndex, endIndex)
   const totalFilteredPages = Math.ceil(filteredAndSortedCompanies.length / companiesPerPage)
+
+  // Show proper message for employer/admin users instead of redirect error
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <GulfNavbar />
+        <div className="flex items-center justify-center min-h-screen pt-20">
+          <div className="text-center max-w-md mx-auto p-8">
+            <div className="mb-6">
+              <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-10 h-10 text-yellow-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Access Restricted</h1>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                This page is only available for job seekers. As an employer, you can manage your company and jobs from your dashboard.
+              </p>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => router.push('/gulf-dashboard')}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-green-600 hover:from-yellow-600 hover:to-green-700 text-white"
+                >
+                  Go to Gulf Employer Dashboard
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => router.push('/gulf-dashboard/manage-jobs')}
+                  className="w-full"
+                >
+                  Manage Your Jobs
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Show access denied message for non-Gulf users
   if (accessDenied) {

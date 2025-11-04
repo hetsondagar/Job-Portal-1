@@ -129,30 +129,30 @@ export function GulfEmployerNavbar() {
   ]
 
   return (
-    <nav className="bg-gradient-to-r from-green-200/60 via-emerald-200/50 to-teal-200/60 dark:from-gray-900/80 dark:via-gray-800/70 dark:to-gray-900/80 backdrop-blur-xl border-b border-white/30 dark:border-gray-700/50 fixed top-0 left-0 right-0 z-50 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="bg-gradient-to-r from-yellow-400/80 via-yellow-300/70 to-green-500/80 dark:from-gray-900/80 dark:via-gray-800/70 dark:to-gray-900/80 backdrop-blur-xl border-b border-yellow-300/30 dark:border-gray-700/50 fixed top-0 left-0 right-0 z-50 transition-colors shadow-lg">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        <div className="flex justify-between items-center h-14 sm:h-16 gap-2">
           {/* Logo */}
-          <Link href="/gulf-dashboard" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
-              <Globe className="w-6 h-6 text-white" />
+          <Link href="/gulf-dashboard" className="flex items-center space-x-2 flex-shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
+              <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <span className="text-2xl font-serif font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent tracking-tight">
+            <span className="text-lg sm:text-xl lg:text-2xl font-serif font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent tracking-tight">
               Gulf Jobs
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-6">
             {/* Jobs & Responses Dropdown */}
             <div
               className="relative"
               onMouseEnter={() => setShowJobsDropdown(true)}
               onMouseLeave={() => setShowJobsDropdown(false)}
             >
-              <button className="flex items-center space-x-1 text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-emerald-400 transition-colors font-medium">
-                <span>Jobs & Responses</span>
-                <ChevronDown className="w-4 h-4" />
+              <button className="flex items-center space-x-1 text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-emerald-400 transition-colors font-medium text-sm lg:text-base">
+                <span className="whitespace-nowrap">Jobs & Responses</span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0" />
               </button>
 
               <AnimatePresence>
@@ -162,25 +162,25 @@ export function GulfEmployerNavbar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute left-0 mt-2 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-200/50 dark:border-gray-700/50 p-6"
+                    className="absolute left-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-200/50 dark:border-gray-700/50 p-4 z-50"
                   >
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Jobs & Responses</h3>
-                      <p className="text-sm text-slate-600 dark:text-gray-300">Manage your job postings and candidate responses</p>
+                    <div className="mb-3">
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-1">Jobs & Responses</h3>
+                      <p className="text-xs text-slate-600 dark:text-gray-300 line-clamp-2">Manage jobs and responses</p>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {getJobsMenuItems().map((item, index) => (
                         <Link
                           key={index}
                           href={item.href}
-                          className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50/80 dark:hover:bg-gray-700/80 transition-colors group"
+                          className="flex items-start space-x-2.5 p-2.5 rounded-lg hover:bg-slate-50/80 dark:hover:bg-gray-700/80 transition-colors group"
                         >
-                          <div className="w-10 h-10 bg-green-100/80 dark:bg-green-900/80 rounded-lg flex items-center justify-center group-hover:bg-green-200/80 dark:group-hover:bg-green-800/80 transition-colors">
-                            <item.icon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          <div className="w-8 h-8 bg-green-100/80 dark:bg-green-900/80 rounded-lg flex items-center justify-center group-hover:bg-green-200/80 dark:group-hover:bg-green-800/80 transition-colors flex-shrink-0">
+                            <item.icon className="w-4 h-4 text-green-600 dark:text-green-400" />
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-slate-900 dark:text-white text-sm">{item.name}</div>
-                            <div className="text-xs text-slate-500 dark:text-gray-300 mt-1">{item.description}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-white text-xs line-clamp-1">{item.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-gray-300 mt-0.5 line-clamp-1">{item.description}</div>
                           </div>
                         </Link>
                       ))}
@@ -196,10 +196,10 @@ export function GulfEmployerNavbar() {
               onMouseEnter={() => setShowDatabaseDropdown(true)}
               onMouseLeave={() => setShowDatabaseDropdown(false)}
             >
-              <button className="flex items-center space-x-1 text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-emerald-400 transition-colors font-medium">
-                <Database className="w-4 h-4" />
-                <span>Database</span>
-                <ChevronDown className="w-4 h-4" />
+              <button className="flex items-center space-x-1 text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-emerald-400 transition-colors font-medium text-sm lg:text-base">
+                <Database className="w-4 h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Database</span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0" />
               </button>
 
               <AnimatePresence>
@@ -209,25 +209,25 @@ export function GulfEmployerNavbar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute left-0 mt-2 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-200/50 dark:border-gray-700/50 p-6"
+                    className="absolute left-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-200/50 dark:border-gray-700/50 p-4 z-50"
                   >
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Candidate Database</h3>
-                      <p className="text-sm text-slate-600 dark:text-gray-300">Search and manage candidate requirements</p>
+                    <div className="mb-3">
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-1">Candidate Database</h3>
+                      <p className="text-xs text-slate-600 dark:text-gray-300 line-clamp-2">Search and manage requirements</p>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {getDatabaseMenuItems().map((item, index) => (
                         <Link
                           key={index}
                           href={item.href}
-                          className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50/80 dark:hover:bg-gray-700/80 transition-colors group"
+                          className="flex items-start space-x-2.5 p-2.5 rounded-lg hover:bg-slate-50/80 dark:hover:bg-gray-700/80 transition-colors group"
                         >
-                          <div className="w-10 h-10 bg-emerald-100/80 dark:bg-emerald-900/80 rounded-lg flex items-center justify-center group-hover:bg-emerald-200/80 dark:group-hover:bg-emerald-800/80 transition-colors">
-                            <item.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          <div className="w-8 h-8 bg-emerald-100/80 dark:bg-emerald-900/80 rounded-lg flex items-center justify-center group-hover:bg-emerald-200/80 dark:group-hover:bg-emerald-800/80 transition-colors flex-shrink-0">
+                            <item.icon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-slate-900 dark:text-white text-sm">{item.name}</div>
-                            <div className="text-xs text-slate-500 dark:text-gray-300 mt-1">{item.description}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-white text-xs line-clamp-1">{item.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-gray-300 mt-0.5 line-clamp-1">{item.description}</div>
                           </div>
                         </Link>
                       ))}
@@ -239,7 +239,7 @@ export function GulfEmployerNavbar() {
           </div>
 
           {/* Right side buttons */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-3">
             {/* Dark Theme Toggle */}
             <Button
               variant="ghost"
@@ -318,11 +318,11 @@ export function GulfEmployerNavbar() {
           {/* Mobile menu button */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="md:hidden">
-                <Menu className="w-5 h-5" />
+              <Button variant="ghost" size="sm" className="lg:hidden">
+                <Menu className="w-5 h-5 text-slate-700 dark:text-slate-300" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-l border-slate-200/50 dark:border-gray-800/50">
+            <SheetContent side="right" className="w-[85vw] sm:w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-l border-slate-200/50 dark:border-gray-800/50 overflow-y-auto">
               <div className="flex flex-col space-y-6 mt-6">
                 {/* User Profile Section */}
                 <div className="flex items-center space-x-3 p-3 bg-slate-50/80 dark:bg-gray-800/80 rounded-lg border border-slate-200/50 dark:border-gray-700/50">

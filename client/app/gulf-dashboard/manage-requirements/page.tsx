@@ -137,26 +137,37 @@ export default function GulfManageRequirementsPage() {
   return (
     <EmployerAuthGuard>
       <GulfEmployerAuthGuard>
-        <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-lime-50/40 to-yellow-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
           <GulfEmployerNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
-        <div className="flex items-center justify-between mb-8">
+      {/* Background Effects - Gulf theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Base green gradient overlay to ensure visible background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/45 via-lime-200/35 to-yellow-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-emerald-300/10 to-lime-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-yellow-300/10 to-amber-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-lime-300/10 to-emerald-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* Wide translucent green-yellow gradient strip (raised a bit like hero strip) */}
+        <div className="absolute top-[22%] left-0 right-0 h-24 bg-gradient-to-r from-emerald-400/20 via-lime-400/20 to-yellow-400/20"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-6 sm:pb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Gulf Manage Requirements</h1>
-            <div className="text-sm text-slate-600">View and manage all your Gulf region requirements</div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">Gulf Manage Requirements</h1>
+            <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">View and manage all your Gulf region requirements</div>
           </div>
-          <Link href="/gulf-dashboard/create-requirement">
-            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+          <Link href="/gulf-dashboard/create-requirement" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-green-600 hover:from-yellow-600 hover:to-green-700 text-white">
               <Plus className="w-4 h-4 mr-2" />
               Create Requirement
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           <div className="lg:col-span-1">
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 sticky top-28">
+            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 sticky top-20 sm:top-24 lg:top-28">
               <CardHeader>
                 <CardTitle className="text-lg text-slate-900 flex items-center justify-between">
                   <div className="flex items-center">
@@ -211,7 +222,7 @@ export default function GulfManageRequirementsPage() {
                   {loading ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-2">Loading requirements...</h3>
                     </motion.div>
@@ -223,7 +234,7 @@ export default function GulfManageRequirementsPage() {
                       <h3 className="text-lg font-medium text-slate-900 mb-2">Error loading requirements</h3>
                       <p className="text-slate-600 mb-4">{error}</p>
                       <div className="flex space-x-3 justify-center">
-                        <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">Try Again</Button>
+                        <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-yellow-500 to-green-600 hover:from-yellow-600 hover:to-green-700">Try Again</Button>
                         <Button variant="outline" onClick={() => router.push('/employer-login')}>Go to Login</Button>
                       </div>
                     </motion.div>

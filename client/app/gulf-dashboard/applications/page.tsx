@@ -277,7 +277,7 @@ function GulfApplicationsContent({ user }: { user: any }) {
         <div className="absolute top-1/3 left-0 right-0 h-24 bg-gradient-to-r from-emerald-400/20 via-lime-400/20 to-yellow-400/20"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-6 sm:pb-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

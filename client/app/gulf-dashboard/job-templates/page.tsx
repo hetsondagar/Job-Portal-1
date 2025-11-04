@@ -218,7 +218,7 @@ export default function GulfJobTemplatesPage() {
         <GulfEmployerAuthGuard>
           <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50/30 to-blue-50/30">
             <GulfEmployerNavbar />
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-6 sm:pb-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600 mx-auto"></div>
                 <p className="mt-4 text-slate-600">Loading templates...</p>
