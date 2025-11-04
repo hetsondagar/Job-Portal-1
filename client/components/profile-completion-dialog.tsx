@@ -569,6 +569,7 @@ export function EmployerProfileCompletionDialog({
   const [submitting, setSubmitting] = useState(false)
   const [needsCompany, setNeedsCompany] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+  const [skipCompanySteps, setSkipCompanySteps] = useState(false) // Computed state for consistent step display
   const [showNatureOfBusinessDropdown, setShowNatureOfBusinessDropdown] = useState(false)
   const [showCompanyTypesDropdown, setShowCompanyTypesDropdown] = useState(false)
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
@@ -601,20 +602,17 @@ export function EmployerProfileCompletionDialog({
       return false
     }
 
-    // Check if user has skipped and the skip period hasn't expired
+    // Check if user has skipped and the skip period hasn't expired (12 hours regardless of session)
     if (user.preferences?.profileCompletionSkippedUntil) {
       const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
       const now = new Date()
       
+      // Honor skip for 12 hours regardless of login session
       if (skipUntil > now) {
-        // Check if it's the same login session
-        const skipSession = user.preferences.profileCompletionSkipSession
-        const currentSession = user.lastLoginAt || new Date().toISOString()
-        
-        if (skipSession === currentSession) {
-          console.log('🕒 Profile completion skipped until:', skipUntil.toISOString())
-          return false
-        }
+        console.log('🕒 Profile completion skipped until:', skipUntil.toISOString(), '(12 hour snooze)')
+        return false
+      } else {
+        console.log('⏰ Skip period expired, showing dialog again')
       }
     }
 
@@ -638,19 +636,55 @@ export function EmployerProfileCompletionDialog({
 
   // Determine if user needs company setup (for users in same company, skip steps 1-3)
   const shouldSkipCompanySteps = () => {
-    // If user already has a companyId, they're in an existing company
-    // Only show step 4 (personal info) for them
-    // For admin users, also skip company steps since they don't need a company
     const isAdmin = user.userType === 'admin'
-    return !!(user.companyId && !needsCompany) || isAdmin
+    // Check both companyId and company_id (handle property name variations)
+    const companyId = user.companyId || (user as any).company_id
+    const hasCompanyId = !!companyId
+    
+    console.log('🔍 shouldSkipCompanySteps check:', {
+      companyId: companyId || 'NULL/UNDEFINED',
+      hasCompanyId,
+      isAdmin,
+      userEmail: user.email,
+      userType: user.userType,
+      companyData: companyData ? {
+        contactEmail: companyData.contactEmail || companyData.contact_email,
+        name: companyData.name
+      } : null
+    });
+    
+    // CRITICAL: If user doesn't have a company, show all 4 steps (new company creation)
+    if (!hasCompanyId) {
+      console.log('✅ No company (companyId is NULL/UNDEFINED) - showing all 4 steps for new company creation');
+      return false
+    }
+    
+    // If user has a company, check if they are the company creator
+    // Company creator = admin user whose email matches company's contactEmail
+    // Note: companyData might not be loaded yet, so we check if it exists
+    if (companyData) {
+      const contactEmail = companyData.contactEmail || companyData.contact_email;
+      if (isAdmin && contactEmail === user.email) {
+        // This is the company creator (first admin) - show all 4 steps
+        console.log('👑 User is company creator (first admin) - showing all 4 steps');
+        return false
+      }
+    }
+    
+    // For fellow employers or admins who joined existing company - show only Step 4
+    console.log('🏢 User is fellow employer/admin - showing only Step 4');
+    return true
   }
 
-  // Load company data if user has a company
+  // Load company data if user has a company (CRITICAL: Always load for company creator check)
   useEffect(() => {
     const loadCompanyData = async () => {
-      if (user?.companyId && !needsCompany) {
+      // Check both companyId and company_id (handle property name variations)
+      const companyId = user?.companyId || (user as any)?.company_id
+      if (companyId) {
         try {
-          const response = await apiService.getCompany(user.companyId)
+          console.log('📥 Loading company data for companyId:', companyId);
+          const response = await apiService.getCompany(companyId)
           if (response.success && response.data) {
             setCompanyData(response.data)
             setFormData(prev => ({
@@ -658,33 +692,90 @@ export function EmployerProfileCompletionDialog({
               natureOfBusiness: response.data.natureOfBusiness || [],
               companyTypes: response.data.companyTypes || []
             }))
+            const contactEmail = response.data.contactEmail || response.data.contact_email;
+            console.log('✅ Company data loaded:', {
+              companyId: companyId,
+              contactEmail: contactEmail,
+              userEmail: user.email,
+              isCompanyCreator: contactEmail === user.email
+            })
           }
         } catch (error) {
-          console.error('Error loading company data:', error)
+          console.error('❌ Error loading company data:', error)
         }
+      } else {
+        console.log('ℹ️ No companyId found - user does not have a company');
       }
     }
 
     loadCompanyData()
-  }, [user?.companyId, needsCompany])
+  }, [user?.companyId, (user as any)?.company_id])
 
   // Set initial step based on user's company status
+  // Wait for company data to load ONLY if user has a companyId
   useEffect(() => {
     if (user && isOpen) {
-      if (shouldSkipCompanySteps()) {
-        // User is in existing company, skip to step 4 (personal info)
-        console.log('🏢 User in existing company, skipping to step 4');
+      // Check both companyId and company_id (handle property name variations)
+      const companyId = user.companyId || (user as any).company_id
+      
+      // If user has companyId but company data not loaded yet, wait
+      // If user has NO companyId, we don't need to wait - proceed immediately
+      if (companyId && !companyData) {
+        console.log('⏳ Waiting for company data to load...');
+        return
+      }
+      
+      // Determine steps based on company status
+      const skipSteps = shouldSkipCompanySteps();
+      // Update the computed state for consistent use in JSX
+      setSkipCompanySteps(skipSteps);
+      
+      console.log('🎯 Step determination:', {
+        skipSteps,
+        companyId: companyId || 'NULL/UNDEFINED',
+        hasCompanyId: !!companyId,
+        isAdmin: user.userType === 'admin',
+        companyDataLoaded: !!companyData
+      });
+      
+      if (skipSteps) {
+        // User is fellow employer/admin of existing company, skip to step 4 (personal info)
+        console.log('🏢 User is fellow employer/admin, skipping to step 4');
         setCurrentStep(4)
       } else {
-        // New user or needs company setup, start from step 1
-        console.log('🆕 New user or needs company setup, starting from step 1');
+        // New company creator (first admin) or new user without company, start from step 1
+        console.log('🆕 New company creator or new user, starting from step 1');
         setCurrentStep(1)
+      }
+    }
+  }, [user, isOpen, companyData])
+  
+  // Initialize skipCompanySteps when dialog opens (before company data loads)
+  useEffect(() => {
+    if (user && isOpen) {
+      // Initial check without waiting for company data
+      const companyId = user.companyId || (user as any).company_id
+      const isAdmin = user.userType === 'admin'
+      
+      if (!companyId) {
+        // No company - show all 4 steps (brand new user)
+        setSkipCompanySteps(false);
+        setCurrentStep(1);
+        console.log('🆕 Initial: No company - will show all 4 steps (Step 1 of 4)');
+      } else if (isAdmin && companyId) {
+        // Admin user WITH company - likely company creator (newly created company)
+        // Default to showing all 4 steps, will verify once company data loads
+        setSkipCompanySteps(false);
+        setCurrentStep(1);
+        console.log('👑 Initial: Admin user with company - showing all 4 steps (assuming company creator)');
       }
     }
   }, [user, isOpen])
 
   useEffect(() => {
-    setNeedsCompany(!user.companyId)
+    // Check both companyId and company_id (handle property name variations)
+    const companyId = user?.companyId || (user as any)?.company_id
+    setNeedsCompany(!companyId)
     if (user) {
       setFormData(prev => ({
         ...prev,
@@ -722,7 +813,7 @@ export function EmployerProfileCompletionDialog({
 
   const handleSubmit = async () => {
     // For users in existing companies, only validate step 4
-    if (shouldSkipCompanySteps()) {
+    if (skipCompanySteps) {
       if (!formData.phone || !formData.designation) {
         toast.error('Please fill in all required fields (Phone, Designation)')
         return
@@ -765,9 +856,10 @@ export function EmployerProfileCompletionDialog({
       let companyId = user.companyId
 
       // For users in existing companies, skip company creation/update
-      if (shouldSkipCompanySteps()) {
+      if (skipCompanySteps) {
         // User is in existing company, just update personal info
-        companyId = user.companyId
+        const userCompanyId = user.companyId || (user as any).company_id
+        companyId = userCompanyId
       } else if (needsCompany && formData.companyName) {
         const companyResponse = await apiService.createCompany({
           name: formData.companyName,
@@ -977,7 +1069,7 @@ export function EmployerProfileCompletionDialog({
   }
 
   const getStepTitle = () => {
-    if (shouldSkipCompanySteps()) {
+    if (skipCompanySteps) {
       return "Your Personal Information"
     }
     
@@ -991,7 +1083,7 @@ export function EmployerProfileCompletionDialog({
   }
 
   const getStepDescription = () => {
-    if (shouldSkipCompanySteps()) {
+    if (skipCompanySteps) {
       const isAdmin = user.userType === 'admin'
       if (isAdmin) {
         return "👑 You're an admin user! Let's complete your personal professional information to get started."
@@ -1056,7 +1148,7 @@ export function EmployerProfileCompletionDialog({
             <Briefcase className="w-5 h-5" />
             Complete Your Employer Profile
             <Badge variant="outline" className="ml-2">
-              {shouldSkipCompanySteps() ? 'Step 1 of 1' : `Step ${currentStep} of 4`}
+              {skipCompanySteps ? 'Step 1 of 1' : `Step ${currentStep} of 4`}
             </Badge>
           </DialogTitle>
           <DialogDescription>
@@ -1067,14 +1159,14 @@ export function EmployerProfileCompletionDialog({
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div 
               className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${shouldSkipCompanySteps() ? '100%' : `${(currentStep / 4) * 100}%`}` }}
+              style={{ width: `${skipCompanySteps ? '100%' : `${(currentStep / 4) * 100}%`}` }}
             />
           </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           {/* Step 1: About Your Company (moved from Step 3) - Only for new companies */}
-          {currentStep === 1 && !shouldSkipCompanySteps() && (
+          {currentStep === 1 && !skipCompanySteps && (
             <div className="space-y-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-4">
@@ -1245,7 +1337,7 @@ export function EmployerProfileCompletionDialog({
           )}
 
           {/* Step 2: Company Logo & Branding - Only for new companies */}
-          {currentStep === 2 && !shouldSkipCompanySteps() && (
+          {currentStep === 2 && !skipCompanySteps && (
             <div className="space-y-6 p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-lg">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full mb-4">
@@ -1331,7 +1423,7 @@ export function EmployerProfileCompletionDialog({
           )}
 
           {/* Step 3: Company Details - Only for new companies */}
-          {currentStep === 3 && !shouldSkipCompanySteps() && (
+          {currentStep === 3 && !skipCompanySteps && (
             <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <h3 className="font-semibold text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
@@ -1408,7 +1500,7 @@ export function EmployerProfileCompletionDialog({
           )}
 
           {/* Step 4: Your Personal Information - Always show for all users */}
-          {(currentStep === 4 || shouldSkipCompanySteps()) && (
+          {(currentStep === 4 || skipCompanySteps) && (
             <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
@@ -1503,7 +1595,7 @@ export function EmployerProfileCompletionDialog({
             >
               Skip for Now
             </Button>
-            {currentStep > 1 && !shouldSkipCompanySteps() && (
+            {currentStep > 1 && !skipCompanySteps && (
               <Button
                 variant="outline"
                 onClick={handlePrevious}
@@ -1518,14 +1610,14 @@ export function EmployerProfileCompletionDialog({
             onClick={handleSubmit}
             disabled={
               submitting || 
-              (shouldSkipCompanySteps() && (!formData.phone || !formData.designation)) ||
+              (skipCompanySteps && (!formData.phone || !formData.designation)) ||
               (currentStep === 3 && needsCompany && (!formData.companyName || !formData.companyIndustry)) ||
               (currentStep === 4 && (!formData.phone || !formData.designation))
             }
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           >
             {submitting ? 'Saving...' : 
-             shouldSkipCompanySteps() ? '🚀 Complete Profile' :
+             skipCompanySteps ? '🚀 Complete Profile' :
              currentStep < 4 ? 'Next' : '🚀 Complete & Get FREE Branding'}
           </Button>
         </div>

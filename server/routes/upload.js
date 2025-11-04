@@ -10,7 +10,15 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let uploadDir;
     
-    switch (req.body.type) {
+    // Determine upload type from route path or req.body.type
+    // Note: req.body.type might not be available yet as multer parses form data after destination
+    // So we check req.uploadType (set by route middleware) or req.body.type or use route path
+    const uploadType = req.uploadType || req.body?.type || (req.path && req.path.includes('verification-document') ? 'verification_document' : 
+                                                           req.path && req.path.includes('profile-photo') ? 'profile_photo' :
+                                                           req.path && req.path.includes('company-logo') ? 'company_logo' :
+                                                           req.path && req.path.includes('resume') ? 'resume' : 'general');
+    
+    switch (uploadType) {
       case 'verification_document':
         uploadDir = path.join(__dirname, '../uploads/verification-documents');
         break;
@@ -74,7 +82,13 @@ const upload = multer({
  * @access  Private
  */
 router.post('/verification-document', authenticateToken, (req, res, next) => {
-  // Explicitly set the type for verification documents
+  // Set upload type on request object so multer's destination function can access it
+  // req.body is not available yet when multer determines destination
+  req.uploadType = 'verification_document';
+  // Also set it in req.body for the route handler (after multer parses form data)
+  if (!req.body) {
+    req.body = {};
+  }
   req.body.type = 'verification_document';
   next();
 }, upload.single('file'), async (req, res) => {

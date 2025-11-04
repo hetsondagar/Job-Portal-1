@@ -333,12 +333,12 @@ export default function GulfOpportunitiesPage() {
         }, 1500)
       } else {
         toast.success("Account created successfully! Please sign in to continue.")
-        // Close register dialog and show login dialog
-        setShowRegisterDialog(false)
-        setShowLoginDialog(true)
-        
-        // Pre-fill login form with registered email
-        setLoginData(prev => ({ ...prev, email: registerData.email }))
+      // Close register dialog and show login dialog
+      setShowRegisterDialog(false)
+      setShowLoginDialog(true)
+      
+      // Pre-fill login form with registered email
+      setLoginData(prev => ({ ...prev, email: registerData.email }))
       }
       
     } catch (error: any) {

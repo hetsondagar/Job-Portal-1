@@ -387,19 +387,17 @@ function EmployerDashboardContent({ user, refreshUser }: { user: any; refreshUse
           return false
         }
         
-        // Check if user has skipped and the skip period hasn't expired
+        // Check if user has skipped and the skip period hasn't expired (12 hours regardless of session)
         if (user.preferences?.profileCompletionSkippedUntil) {
           const skipUntil = new Date(user.preferences.profileCompletionSkippedUntil)
-          const skipSession = user.preferences?.profileCompletionSkipSession
-          const currentSession = user.lastLoginAt
           const now = new Date()
           
-          // Only honor skip if it's the SAME login session
-          if (skipSession === currentSession && skipUntil > now) {
-            console.log('⏰ Profile completion skipped until:', skipUntil, '(same session)')
+          // Honor skip for 12 hours regardless of login session
+          if (skipUntil > now) {
+            console.log('⏰ Profile completion skipped until:', skipUntil.toISOString(), '(12 hour snooze)')
             return false // Don't show dialog yet
-          } else if (skipSession !== currentSession) {
-            console.log('🔄 New login session detected - showing popup again')
+          } else {
+            console.log('⏰ Skip period expired, showing dialog again')
           }
         }
         
