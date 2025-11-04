@@ -175,13 +175,23 @@ const generateToken = (user) => {
 };
 
 // Helper function to determine redirect URL based on user type and region
-const getRedirectUrl = (userType, region) => {
+// Accepts optional company object to check company region as fallback
+const getRedirectUrl = (userType, region, company = null) => {
+  // Determine effective region: prefer user region, fallback to company region
+  let effectiveRegion = region;
+  if (!effectiveRegion || effectiveRegion === 'india') {
+    // If user region is not set or is default 'india', check company region
+    if (company && company.region === 'gulf') {
+      effectiveRegion = 'gulf';
+    }
+  }
+  
   if (userType === 'superadmin') {
     return '/admin/dashboard';
   } else if (userType === 'employer' || userType === 'admin') {
-    return region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard';
+    return effectiveRegion === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard';
   } else if (userType === 'jobseeker') {
-    if (region === 'gulf') {
+    if (effectiveRegion === 'gulf') {
       return '/jobseeker-gulf-dashboard';
     } else {
       return '/dashboard';
@@ -587,6 +597,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           designation: designation,
           account_status: 'pending_verification', // Set to pending verification initially
           company_id: company.id,
+          region: region || company.region || 'india', // Set user region from registration or company region
           preferences: {
             employerRole: companyId ? (role || 'recruiter') : 'admin',
             ...req.body.preferences
@@ -616,6 +627,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           account_status: 'pending_verification', // Set to pending verification initially
           is_email_verified: false,
           company_id: company.id,
+          region: region || company.region || 'india', // Set user region from registration or company region
           oauth_provider: 'local',
           preferences: {
             employerRole: companyId ? (role || 'recruiter') : 'admin',
@@ -913,6 +925,13 @@ router.post('/login', validateLogin, async (req, res) => {
 
     // Prepare response data
     const userRegions = user.preferences?.regions || [user.region].filter(Boolean);
+    
+    // Get company info early for redirect determination
+    let company = null;
+    if ((user.user_type === 'employer' || user.user_type === 'admin') && user.company_id) {
+      company = await Company.findByPk(user.company_id);
+    }
+    
     const responseData = {
       user: {
         id: user.id,
@@ -930,25 +949,23 @@ router.post('/login', validateLogin, async (req, res) => {
         profileCompletion: user.profile_completion
       },
       token,
-      redirectTo: getRedirectUrl(user.user_type, user.region)
+      redirectTo: getRedirectUrl(user.user_type, user.region, company)
     };
 
     // If user is an employer or admin, include company information
-    if ((user.user_type === 'employer' || user.user_type === 'admin') && user.company_id) {
-      const company = await Company.findByPk(user.company_id);
-      if (company) {
-        responseData.company = {
-          id: company.id,
-          name: company.name,
-          industries: company.industries || [],
-          companySize: company.companySize,
-          website: company.website,
-          email: company.contactEmail,
-          phone: company.contactPhone,
-          verificationStatus: company.verificationStatus,
-          companyAccountType: company.companyAccountType
-        };
-      }
+    if (company) {
+      responseData.company = {
+        id: company.id,
+        name: company.name,
+        industries: company.industries || [],
+        companySize: company.companySize,
+        website: company.website,
+        email: company.contactEmail,
+        phone: company.contactPhone,
+        verificationStatus: company.verificationStatus,
+        companyAccountType: company.companyAccountType,
+        region: company.region // Include company region in response
+      };
     }
 
     console.log('✅ Login successful for user:', user.email);

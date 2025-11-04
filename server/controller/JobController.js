@@ -425,6 +425,16 @@ exports.createJob = async (req, res, next) => {
     // Set region based on request body or user's region to ensure Gulf employers create Gulf jobs
     const jobRegion = region || req.user.region || 'india'; // Use request body region first, then user region, default to 'india'
     
+    // VALIDATION: Prevent India companies from posting Gulf jobs
+    // Only Gulf region users can post Gulf jobs
+    if (jobRegion === 'gulf' && req.user.region !== 'gulf') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Only Gulf region companies can post Gulf jobs. Your account is configured for India region.',
+        error: 'REGION_MISMATCH'
+      });
+    }
+    
     // Generate slug from title
     const slug = title.toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
