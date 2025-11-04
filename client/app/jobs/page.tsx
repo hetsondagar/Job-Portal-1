@@ -92,6 +92,7 @@ import DepartmentDropdown from "@/components/ui/department-dropdown"
 
 
 
+
 // Types for state management
 
 interface FilterState {
@@ -6121,6 +6122,7 @@ export default function JobsPage() {
         </DialogContent>
 
       </Dialog>
+
 
     </div>
 

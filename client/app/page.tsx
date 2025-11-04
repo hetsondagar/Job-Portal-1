@@ -35,6 +35,7 @@ import { Navbar } from "@/components/navbar"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
+import { RegistrationChatbot } from "@/components/registration-chatbot"
 
 export default function HomePage() {
   const { user, loading } = useAuth()
@@ -1725,6 +1726,9 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      
+      {/* Registration Chatbot */}
+      <RegistrationChatbot />
     </div>
   )
 }

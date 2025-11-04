@@ -80,7 +80,7 @@ export default function JobAlertsPage() {
         setAlerts(alertsData)
         if (alertsData.length === 0) {
           console.log('ℹ️ No job alerts found. User can create new alerts.')
-        }
+      }
       } else {
         console.error('❌ API returned error:', response.message)
         setAlerts([])

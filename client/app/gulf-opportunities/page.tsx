@@ -31,6 +31,7 @@ import GulfNavbar from '@/components/gulf-navbar'
 import { useAuth } from '@/hooks/useAuth'
 import { apiService } from '@/lib/api'
 import { toast } from 'sonner'
+import { RegistrationChatbot } from '@/components/registration-chatbot'
 
 export default function GulfOpportunitiesPage() {
   const router = useRouter()
@@ -1287,6 +1288,9 @@ export default function GulfOpportunitiesPage() {
           </div>
         </div>
       </footer>
+      
+      {/* Registration Chatbot */}
+      <RegistrationChatbot />
     </div>
   )
 }
