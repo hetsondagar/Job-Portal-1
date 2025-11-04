@@ -1,31 +1,121 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Building2, MapPin, Briefcase, Search, Loader2, Globe } from "lucide-react"
+import { Building2, MapPin, Briefcase, Search, Loader2, Globe, Star, Eye, Filter, X, ChevronLeft, ChevronRight, Sparkles, Zap } from "lucide-react"
 import GulfNavbar from "@/components/gulf-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { motion } from "framer-motion"
+import IndustryDropdown from "@/components/ui/industry-dropdown"
 import { apiService } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 
+interface FilterState {
+  search: string
+  location: string
+  industries: string[]
+  companyTypes: string[]
+  companySizes: string[]
+  locations: string[]
+  minRating: string
+}
+
+// Industry-specific color schemes for Gulf theme
+const getIndustryColors = (industry: string) => {
+  const industryLower = industry.toLowerCase()
+  
+  // Technology & IT - Green theme
+  if (industryLower.includes('technology') || industryLower.includes('software') || industryLower.includes('it services')) {
+    return {
+      bg: 'from-green-500 to-emerald-600',
+      hover: 'hover:from-green-600 hover:to-emerald-700',
+      text: 'text-green-600',
+      border: 'border-green-200',
+      badge: 'bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 text-green-800 border-green-200'
+    }
+  }
+  
+  // Finance - Emerald theme
+  if (industryLower.includes('finance') || industryLower.includes('banking')) {
+    return {
+      bg: 'from-emerald-500 to-teal-600',
+      hover: 'hover:from-emerald-600 hover:to-teal-700',
+      text: 'text-emerald-600',
+      border: 'border-emerald-200',
+      badge: 'bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100 text-emerald-800 border-emerald-200'
+    }
+  }
+  
+  // Healthcare - Teal theme
+  if (industryLower.includes('healthcare') || industryLower.includes('medical')) {
+    return {
+      bg: 'from-teal-500 to-cyan-600',
+      hover: 'hover:from-teal-600 hover:to-cyan-700',
+      text: 'text-teal-600',
+      border: 'border-teal-200',
+      badge: 'bg-gradient-to-r from-teal-100 via-cyan-100 to-blue-100 text-teal-800 border-teal-200'
+    }
+  }
+  
+  // Default - Green gradient
+  return {
+    bg: 'from-green-500 to-emerald-600',
+    hover: 'hover:from-green-600 hover:to-emerald-700',
+    text: 'text-green-600',
+    border: 'border-green-200',
+    badge: 'bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 text-green-800 border-green-200'
+  }
+}
+
 export default function GulfCompaniesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [companies, setCompanies] = useState<any[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [showFilters, setShowFilters] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sortBy, setSortBy] = useState("rating")
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null)
+
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    location: "",
+    industries: [],
+    companyTypes: [],
+    companySizes: [],
+    locations: [],
+    minRating: "",
+  })
 
   // Check if user has access to Gulf pages
   const [accessDenied, setAccessDenied] = useState(false)
+  
+  // Auth check - redirect employers/admins to Gulf dashboard
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on Gulf companies page, redirecting to Gulf dashboard')
+      setIsRedirecting(true)
+      router.replace('/gulf-dashboard')
+      return
+    }
+  }, [user, router])
   
   useEffect(() => {
     if (!authLoading && user && !user.regions?.includes('gulf') && user.region !== 'gulf') {
@@ -35,6 +125,18 @@ export default function GulfCompaniesPage() {
     setAccessDenied(false)
   }, [user, authLoading])
 
+  // Show loading while redirecting
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
+
   const debouncedSearch = useMemo(() => {
     let t: any
     return (value: string) => {
@@ -42,6 +144,7 @@ export default function GulfCompaniesPage() {
       t = setTimeout(() => {
         setPage(1)
         setSearch(value)
+        setFilters(prev => ({ ...prev, search: value }))
       }, 300)
     }
   }, [])
@@ -69,6 +172,154 @@ export default function GulfCompaniesPage() {
   useEffect(() => {
     fetchCompanies()
   }, [page, search])
+
+  // Filter handlers
+  const handleFilterChange = (key: keyof FilterState, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    setCurrentPage(1)
+  }
+
+  const handleIndustryToggle = (industry: string) => {
+    setFilters(prev => ({
+      ...prev,
+      industries: prev.industries.includes(industry)
+        ? prev.industries.filter(i => i !== industry)
+        : [...prev.industries, industry]
+    }))
+    setCurrentPage(1)
+  }
+
+  const handleCompanyTypeToggle = (type: string) => {
+    setFilters(prev => ({
+      ...prev,
+      companyTypes: prev.companyTypes.includes(type)
+        ? prev.companyTypes.filter(t => t !== type)
+        : [...prev.companyTypes, type]
+    }))
+    setCurrentPage(1)
+  }
+
+  const handleLocationToggle = (location: string) => {
+    setFilters(prev => ({
+      ...prev,
+      locations: prev.locations.includes(location)
+        ? prev.locations.filter(l => l !== location)
+        : [...prev.locations, location]
+    }))
+    setCurrentPage(1)
+  }
+
+  const clearAllFilters = () => {
+    setFilters({
+      search: "",
+      location: "",
+      industries: [],
+      companyTypes: [],
+      companySizes: [],
+      locations: [],
+      minRating: "",
+    })
+    setSearch("")
+    setCurrentPage(1)
+  }
+
+  // Get unique values for filters
+  const uniqueIndustries = useMemo(() => {
+    const industries = new Set<string>()
+    companies.forEach(c => {
+      if (c.industry) industries.add(c.industry)
+      if (c.industries && Array.isArray(c.industries)) {
+        c.industries.forEach((ind: string) => industries.add(ind))
+      }
+    })
+    return Array.from(industries).sort()
+  }, [companies])
+
+  const uniqueLocations = useMemo(() => {
+    const locations = new Set<string>()
+    companies.forEach(c => {
+      if (c.location) locations.add(c.location)
+      if (c.city) locations.add(c.city)
+      if (c.country) locations.add(c.country)
+    })
+    return Array.from(locations).sort()
+  }, [companies])
+
+  // Filter and sort companies
+  const filteredAndSortedCompanies = useMemo(() => {
+    let filtered = [...companies]
+
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase()
+      filtered = filtered.filter(c => 
+        c.name?.toLowerCase().includes(searchLower) ||
+        c.industry?.toLowerCase().includes(searchLower) ||
+        c.location?.toLowerCase().includes(searchLower) ||
+        c.description?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    // Industry filter
+    if (filters.industries.length > 0) {
+      filtered = filtered.filter(c => {
+        const companyIndustries = c.industries && Array.isArray(c.industries) ? c.industries : [c.industry].filter(Boolean)
+        return filters.industries.some(industry => 
+          companyIndustries.some((ci: string) => ci?.toLowerCase().includes(industry.toLowerCase()))
+        )
+      })
+    }
+
+    // Company type filter
+    if (filters.companyTypes.length > 0) {
+      filtered = filtered.filter(c => {
+        const companyTypes = c.companyTypes && Array.isArray(c.companyTypes) ? c.companyTypes : [c.companyType].filter(Boolean)
+        return filters.companyTypes.some(type => 
+          companyTypes.some((ct: string) => ct?.toLowerCase().includes(type.toLowerCase()))
+        )
+      })
+    }
+
+    // Location filter
+    if (filters.locations.length > 0) {
+      filtered = filtered.filter(c => 
+        filters.locations.some(location => 
+          c.location?.toLowerCase().includes(location.toLowerCase()) ||
+          c.city?.toLowerCase().includes(location.toLowerCase()) ||
+          c.country?.toLowerCase().includes(location.toLowerCase())
+        )
+      )
+    }
+
+    // Rating filter
+    if (filters.minRating) {
+      const minRating = parseFloat(filters.minRating)
+      filtered = filtered.filter(c => (c.rating || 0) >= minRating)
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0)
+        case "openings":
+          return (b.activeJobsCount || b.activeJobs || 0) - (a.activeJobsCount || a.activeJobs || 0)
+        case "name":
+          return (a.name || "").localeCompare(b.name || "")
+        default:
+          return 0
+      }
+    })
+
+    return filtered
+  }, [companies, filters, sortBy])
+
+  // Pagination
+  const companiesPerPage = 20
+  const startIndex = (currentPage - 1) * companiesPerPage
+  const endIndex = startIndex + companiesPerPage
+  const paginatedCompanies = filteredAndSortedCompanies.slice(startIndex, endIndex)
+  const totalFilteredPages = Math.ceil(filteredAndSortedCompanies.length / companiesPerPage)
 
   // Show access denied message for non-Gulf users
   if (accessDenied) {
@@ -110,7 +361,7 @@ export default function GulfCompaniesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-green-100 to-yellow-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <GulfNavbar />
 
       {/* Hero Section */}
@@ -136,84 +387,457 @@ export default function GulfCompaniesPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-
-        <div className="flex items-center gap-3 mb-6">
-          <div className="relative w-full max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search companies, industries..."
-              className="pl-9"
-              onChange={(e) => debouncedSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
-          </div>
-        ) : error ? (
-          <div className="text-center text-red-600 py-8">{error}</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {companies.map((c) => (
-              <Card key={c.id} className="bg-white/80 backdrop-blur-xl border-slate-200/50 hover:shadow-lg transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-slate-600" />
+        <div className="flex gap-6 sm:gap-8 items-start">
+          {/* Filters Sidebar */}
+          <div className={`w-full lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}>
+            <div className="sticky top-24 z-10 h-fit max-h-[calc(100vh-6rem)] overflow-y-auto">
+              <Card className="border-white/30 dark:border-white/10 bg-white/50 dark:bg-white/10 backdrop-blur-xl shadow-xl">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base sm:text-lg flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-600" />
+                      All Filters
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Link href={`/gulf-companies/${c.id}`} className="font-semibold text-slate-900 truncate hover:underline">
-                          {c.name}
-                        </Link>
-                        {c.industry && <Badge variant="outline" className="text-xs">{c.industry}</Badge>}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilters(false)}
+                      className="lg:hidden text-slate-500 hover:text-slate-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Search */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Search
+                    </h3>
+                    <Input
+                      placeholder="Search companies..."
+                      value={filters.search}
+                      onChange={(e) => handleFilterChange("search", e.target.value)}
+                      className="bg-white/70 dark:bg-slate-700/70"
+                    />
+                  </div>
+
+                  <Separator className="bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Industries */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Industries
+                    </h3>
+                    <ScrollArea className="h-48">
+                      <div className="space-y-2">
+                        {uniqueIndustries.map((industry) => (
+                          <div key={industry} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`industry-${industry}`}
+                              checked={filters.industries.includes(industry)}
+                              onCheckedChange={() => handleIndustryToggle(industry)}
+                            />
+                            <label
+                              htmlFor={`industry-${industry}`}
+                              className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                            >
+                              {industry}
+                            </label>
+                          </div>
+                        ))}
                       </div>
-                      <div className="text-sm text-slate-600 flex items-center gap-3">
-                        {c.location || c.city || c.country ? (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {c.location || [c.city, c.state, c.country].filter(Boolean).join(', ')}
-                          </span>
-                        ) : null}
-                        <span className="inline-flex items-center gap-1">
-                          <Briefcase className="w-3.5 h-3.5" />
-                          {c.activeJobsCount ?? c.activeJobs ?? 0} jobs
-                        </span>
-                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <Separator className="bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Company Types */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Company Type
+                    </h3>
+                    <div className="space-y-2">
+                      {['Startup', 'MNC', 'Product Based', 'Fortune 500', 'Government', 'Non-Profit'].map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`type-${type}`}
+                            checked={filters.companyTypes.includes(type)}
+                            onCheckedChange={() => handleCompanyTypeToggle(type)}
+                          />
+                          <label
+                            htmlFor={`type-${type}`}
+                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                          >
+                            {type}
+                          </label>
+                        </div>
+                      ))}
                     </div>
                   </div>
+
+                  <Separator className="bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Locations */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Locations
+                    </h3>
+                    <ScrollArea className="h-48">
+                      <div className="space-y-2">
+                        {uniqueLocations.slice(0, 20).map((location) => (
+                          <div key={location} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`location-${location}`}
+                              checked={filters.locations.includes(location)}
+                              onCheckedChange={() => handleLocationToggle(location)}
+                            />
+                            <label
+                              htmlFor={`location-${location}`}
+                              className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                            >
+                              {location}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <Separator className="bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Rating */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Minimum Rating
+                    </h3>
+                    <Select value={filters.minRating} onValueChange={(value) => handleFilterChange("minRating", value)}>
+                      <SelectTrigger className="bg-white/70 dark:bg-slate-700/70">
+                        <SelectValue placeholder="Select rating" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4.5">4.5+ stars</SelectItem>
+                        <SelectItem value="4.0">4.0+ stars</SelectItem>
+                        <SelectItem value="3.5">3.5+ stars</SelectItem>
+                        <SelectItem value="3.0">3.0+ stars</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear Filters */}
+                  {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.search) && (
+                    <Button
+                      variant="outline"
+                      onClick={clearAllFilters}
+                      className="w-full bg-white/70 dark:bg-slate-700/70"
+                    >
+                      Clear All Filters
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
-            ))}
+            </div>
           </div>
-        )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</Button>
-            <div className="text-sm text-slate-600">Page {page} of {totalPages}</div>
-            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next</Button>
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Search and Filters Toggle */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                    Gulf Companies
+                  </h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">
+                    {startIndex + 1}-{Math.min(endIndex, filteredAndSortedCompanies.length)} of {filteredAndSortedCompanies.length} companies
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="lg:hidden bg-white/70 dark:bg-slate-700/70"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    {showFilters ? 'Hide' : 'Show'} Filters
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full sm:w-48 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                    <SelectItem value="openings">Most Openings</SelectItem>
+                    <SelectItem value="name">Company Name</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Active Filters Summary */}
+            {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.search) && (
+              <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-green-900 dark:text-green-100">Active Filters:</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {filters.industries.map((industry) => (
+                    <Badge key={industry} variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      Industry: {industry}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleIndustryToggle(industry)} />
+                    </Badge>
+                  ))}
+                  {filters.companyTypes.map((type) => (
+                    <Badge key={type} variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      Type: {type}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleCompanyTypeToggle(type)} />
+                    </Badge>
+                  ))}
+                  {filters.locations.map((location) => (
+                    <Badge key={location} variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      Location: {location}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleLocationToggle(location)} />
+                    </Badge>
+                  ))}
+                  {filters.minRating && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      Rating: {filters.minRating}+
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("minRating", "")} />
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Company Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {loading ? (
+                <div className="col-span-2 flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+                </div>
+              ) : error ? (
+                <div className="col-span-2 text-center text-red-600 py-8">{error}</div>
+              ) : paginatedCompanies.length === 0 ? (
+                <div className="col-span-2 text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                    <Search className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No companies found</h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-4">
+                    Try adjusting your filters or search terms to find more companies.
+                  </p>
+                  <Button onClick={clearAllFilters} variant="outline" className="bg-green-50 hover:bg-green-100">
+                    Clear All Filters
+                  </Button>
+                </div>
+              ) : (
+                paginatedCompanies.map((company, index) => {
+                  const industryColors = getIndustryColors(company.industry || '')
+                  
+                  return (
+                    <motion.div
+                      key={company.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05, duration: 0.6 }}
+                      whileHover={{ y: -5 }}
+                      onHoverStart={() => setSelectedCompany(company.id)}
+                      onHoverEnd={() => setSelectedCompany(null)}
+                    >
+                      <Card className={`group cursor-pointer border-0 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 overflow-hidden relative bg-white/50 dark:bg-white/10 border-white/30 dark:border-white/10`}>
+                        {(company.featured || company.urgent) && (
+                          <div className="absolute top-4 right-4 z-10">
+                            {company.featured && (
+                              <Badge className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Featured
+                              </Badge>
+                            )}
+                            {company.urgent && (
+                              <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs animate-pulse ml-2">
+                                <Zap className="w-3 h-3 mr-1" />
+                                Urgent Hiring
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+
+                        <div className={`absolute inset-0 bg-gradient-to-br ${industryColors.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+
+                        <CardContent className="p-3 sm:p-4 lg:p-5">
+                          <div className="flex flex-col lg:flex-row gap-2 lg:gap-3">
+                            <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }} className="relative">
+                              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-white/50 group-hover:ring-4 transition-all duration-300 shadow-lg flex-shrink-0 mx-auto lg:mx-0 relative z-10">
+                                <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
+                                <AvatarFallback className={`text-lg sm:text-xl font-bold ${industryColors.text}`}>
+                                  {company.name?.[0] || 'G'}
+                                </AvatarFallback>
+                              </Avatar>
+                            </motion.div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <h3 className="text-lg sm:text-xl font-bold transition-colors duration-300 text-slate-900 dark:text-white group-hover:text-green-600 line-clamp-2 flex-1">
+                                      {company.name}
+                                    </h3>
+                                    <div className="flex items-center ml-2">
+                                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
+                                        {company.rating || 0}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 h-8 overflow-hidden">
+                                    {company.industry && (
+                                      <Badge className={`${industryColors.badge} text-xs sm:text-sm`}>
+                                        {company.industry}
+                                      </Badge>
+                                    )}
+                                    {company.companyType && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {company.companyType}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row lg:flex-col items-center lg:items-end space-y-1 sm:space-y-0 sm:space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0">
+                                  <Link href={`/gulf-companies/${company.id}`}>
+                                    <Button className={`w-full sm:w-auto bg-gradient-to-r ${industryColors.bg} ${industryColors.hover} hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-xs h-8 px-3`}>
+                                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                      View ({company.activeJobsCount || company.activeJobs || 0})
+                                    </Button>
+                                  </Link>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+                                <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                                  <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {company.activeJobsCount || company.activeJobs || 0} open positions
+                                  </span>
+                                </div>
+                                <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {company.location || company.city || company.country || 'Gulf Region'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {company.description && (
+                                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                                  {company.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalFilteredPages > 1 && (
+              <div className="flex flex-col sm:flex-row justify-center items-center mt-8 sm:mt-12 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalFilteredPages) }, (_, i) => {
+                      const pageNum = currentPage <= 3 ? i + 1 : currentPage - 2 + i
+                      if (pageNum > totalFilteredPages) return null
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={
+                            currentPage === pageNum
+                              ? "bg-green-600 text-white text-xs sm:text-sm"
+                              : "bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
+                          }
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    })}
+
+                    {totalFilteredPages > 5 && currentPage < totalFilteredPages - 2 && (
+                      <>
+                        <span className="text-slate-400">...</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(totalFilteredPages)}
+                          className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
+                        >
+                          {totalFilteredPages}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    disabled={currentPage === totalFilteredPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalFilteredPages, prev + 1))}
+                    className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    Next
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Footer */}
       <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Effects */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-600/5 via-yellow-600/5 to-green-600/5"></div>
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-green-500/10 to-yellow-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-gradient-to-br from-yellow-500/10 to-green-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-600/5 via-emerald-600/5 to-teal-600/5"></div>
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
             <div className="lg:col-span-1">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Globe className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Gulf Companies</span>
@@ -221,17 +845,6 @@ export default function GulfCompaniesPage() {
               <p className="text-slate-300 text-sm leading-relaxed mb-6">
                 Discover leading companies in the Gulf region. Connect with top employers and explore exceptional career opportunities.
               </p>
-              <div className="flex space-x-4">
-                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-green-600/20 transition-colors cursor-pointer">
-                  <span className="text-sm font-bold">f</span>
-                </div>
-                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-green-600/20 transition-colors cursor-pointer">
-                  <span className="text-sm font-bold">t</span>
-                </div>
-                <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-green-600/20 transition-colors cursor-pointer">
-                  <span className="text-sm font-bold">in</span>
-                </div>
-              </div>
             </div>
             
             <div>
@@ -280,5 +893,3 @@ export default function GulfCompaniesPage() {
     </div>
   )
 }
-
-

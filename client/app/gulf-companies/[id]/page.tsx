@@ -324,28 +324,28 @@ function GulfCompanyDetailPage() {
 
   const getSectorColor = (sector: string) => {
     const colors: { [key: string]: string } = {
-      'Technology': 'from-blue-500 to-cyan-500',
-      'Healthcare': 'from-green-500 to-emerald-500',
-      'Finance': 'from-purple-500 to-violet-500',
-      'Education': 'from-orange-500 to-amber-500',
-      'Manufacturing': 'from-gray-500 to-slate-500',
-      'Retail': 'from-pink-500 to-rose-500',
-      'Consulting': 'from-indigo-500 to-blue-500',
-      'Marketing': 'from-yellow-500 to-orange-500',
+      'Technology': 'from-green-500 to-emerald-500',
+      'Healthcare': 'from-emerald-500 to-teal-500',
+      'Finance': 'from-teal-500 to-cyan-500',
+      'Education': 'from-green-600 to-emerald-600',
+      'Manufacturing': 'from-emerald-600 to-teal-600',
+      'Retail': 'from-teal-600 to-cyan-600',
+      'Consulting': 'from-green-500 to-teal-500',
+      'Marketing': 'from-emerald-500 to-cyan-500',
       'Real Estate': 'from-teal-500 to-green-500',
-      'Other': 'from-slate-500 to-gray-500'
+      'Other': 'from-green-500 to-emerald-500'
     }
-    return colors[sector] || 'from-slate-500 to-gray-500'
+    return colors[sector] || 'from-green-500 to-emerald-500'
   }
 
   if (loadingCompany) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Navbar />
         <div className="pt-20 pb-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="mt-4 text-slate-600 dark:text-slate-300">Loading company information...</p>
             </div>
           </div>
@@ -356,7 +356,7 @@ function GulfCompanyDetailPage() {
 
   if (companyError || !company) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Navbar />
         <div className="pt-20 pb-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -385,7 +385,7 @@ function GulfCompanyDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <Navbar />
       
       <div className="pt-20 pb-8">
@@ -407,7 +407,7 @@ function GulfCompanyDetailPage() {
               <div className="flex items-start space-x-6">
                 <Avatar className="w-20 h-20">
                   <AvatarImage src="/placeholder-logo.png" alt={company.name} />
-                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-white">
                     {getInitials(company.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -489,8 +489,8 @@ function GulfCompanyDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-0">
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Briefcase className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Briefcase className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="text-2xl font-bold text-slate-900 dark:text-white">{safeJobs.length}</div>
                 <div className="text-sm text-slate-600 dark:text-slate-300">Active Jobs</div>
@@ -509,8 +509,8 @@ function GulfCompanyDetailPage() {
             
             <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-0">
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div className="text-2xl font-bold text-slate-900 dark:text-white">{company.rating || 'N/A'}</div>
                 <div className="text-sm text-slate-600 dark:text-slate-300">Rating</div>
@@ -582,7 +582,7 @@ function GulfCompanyDetailPage() {
                             <div className="flex-1">
                               <div className="flex items-start justify-between mb-4">
                                 <div>
-                                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white group-hover:text-green-600 transition-colors">
                                     {job.title}
                                   </h3>
                                   <div className="flex items-center space-x-4 mt-2 text-slate-600 dark:text-slate-300">
@@ -646,7 +646,7 @@ function GulfCompanyDetailPage() {
                                     className={`$${' '}
                                       ${job.validTill && new Date() > new Date(job.validTill)
                                         ? 'bg-gray-300 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                        : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
                                       }`}
                                   >
                                     {job.validTill && new Date() > new Date(job.validTill) ? 'Applications Closed' : 'Apply Now'}
@@ -834,7 +834,7 @@ function GulfCompanyDetailPage() {
             <Button 
               onClick={handleApplicationSubmit}
               disabled={submitting}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
             >
               {submitting ? 'Submitting...' : 'Submit Application'}
             </Button>
@@ -868,11 +868,11 @@ function GulfCompanyDetailPage() {
 export default dynamic(() => Promise.resolve(CompanyErrorBoundary), { 
   ssr: false,
   loading: () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="pt-20 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
             <p className="mt-4 text-slate-600 dark:text-slate-300">Loading company information...</p>
           </div>
         </div>

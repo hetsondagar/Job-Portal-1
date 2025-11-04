@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { CompanyInfoDisplay } from "@/components/company-info-display"
 import { CompanyRegistration } from "@/components/company-registration"
@@ -572,7 +572,7 @@ function GulfDashboardContent({ user, refreshUser }: { user: any; refreshUser: (
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-lime-50/40 to-yellow-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-      <EmployerNavbar />
+      <GulfEmployerNavbar />
 
       {/* Background Effects - Gulf theme */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

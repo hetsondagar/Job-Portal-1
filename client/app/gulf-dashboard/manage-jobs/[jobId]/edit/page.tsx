@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { useAuth } from "@/hooks/useAuth"
@@ -212,7 +212,7 @@ function GulfEditJobContent() {
   if (loadingDraft) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-        <EmployerNavbar />
+        <GulfEmployerNavbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -228,7 +228,7 @@ function GulfEditJobContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerNavbar />
+      <GulfEmployerNavbar />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}

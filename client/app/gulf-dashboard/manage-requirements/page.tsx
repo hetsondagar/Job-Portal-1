@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
@@ -137,17 +137,17 @@ export default function GulfManageRequirementsPage() {
   return (
     <EmployerAuthGuard>
       <GulfEmployerAuthGuard>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-          <EmployerNavbar />
+        <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
+          <GulfEmployerNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Gulf Manage Requirements</h1>
             <div className="text-sm text-slate-600">View and manage all your Gulf region requirements</div>
           </div>
           <Link href="/gulf-dashboard/create-requirement">
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
               <Plus className="w-4 h-4 mr-2" />
               Create Requirement
             </Button>
@@ -156,7 +156,7 @@ export default function GulfManageRequirementsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
-            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 sticky top-24">
+            <Card className="bg-white/80 backdrop-blur-xl border-slate-200/50 sticky top-28">
               <CardHeader>
                 <CardTitle className="text-lg text-slate-900 flex items-center justify-between">
                   <div className="flex items-center">
@@ -291,7 +291,7 @@ export default function GulfManageRequirementsPage() {
                       <h3 className="text-lg font-medium text-slate-900 mb-2">No requirements found</h3>
                       <p className="text-slate-600 mb-4">Create your first Gulf requirement to start getting matches.</p>
                       <Link href="/gulf-dashboard/create-requirement">
-                        <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">Create Requirement</Button>
+                        <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">Create Requirement</Button>
                       </Link>
                     </motion.div>
                   )}

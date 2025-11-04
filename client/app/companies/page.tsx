@@ -1176,35 +1176,22 @@ export default function CompaniesPage() {
 
 
 
-  // Fetch followed companies when user changes
-
+  // Auth check - redirect employers to employer dashboard (BEFORE fetching followed companies)
   useEffect(() => {
-
-    if (user) {
-
-      fetchFollowedCompanies()
-
-    }
-
-  }, [user, fetchFollowedCompanies])
-
-
-
-  // Auth check - redirect employers to employer dashboard
-
-  useEffect(() => {
-
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
-
       console.log('🔄 Employer/Admin detected on companies page, redirecting to employer dashboard')
-
       setIsRedirecting(true)
-
       router.replace(user.region === 'gulf' ? '/gulf-dashboard' : '/employer-dashboard')
-
+      return // Don't proceed with fetching followed companies
     }
-
   }, [user, router])
+
+  // Fetch followed companies when user changes (ONLY for jobseekers)
+  useEffect(() => {
+    if (user && user.userType === 'jobseeker') {
+      fetchFollowedCompanies()
+    }
+  }, [user, fetchFollowedCompanies])
 
 
 

@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { useAuth } from "@/hooks/useAuth"
@@ -267,7 +267,7 @@ function GulfApplicationsContent({ user }: { user: any }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-lime-50/40 to-yellow-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-      <EmployerNavbar />
+      <GulfEmployerNavbar />
 
       {/* Background Effects - Gulf theme */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

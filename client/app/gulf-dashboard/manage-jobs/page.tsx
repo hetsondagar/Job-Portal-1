@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { useAuth } from "@/hooks/useAuth"
@@ -126,7 +126,7 @@ function GulfManageJobsContent({ user }: { user: any }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-lime-50/40 to-yellow-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-      <EmployerNavbar />
+      <GulfEmployerNavbar />
 
       {/* Background Effects - Gulf theme */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

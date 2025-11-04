@@ -93,7 +93,9 @@ interface GulfJob {
 }
 
 export default function GulfJobsPage() {
+  const router = useRouter()
   const { user, loading } = useAuth()
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set())
@@ -110,6 +112,16 @@ export default function GulfJobsPage() {
   // Check if user has access to Gulf pages
   const [accessDenied, setAccessDenied] = useState(false)
   
+  // Auth check - redirect employers/admins to Gulf dashboard
+  useEffect(() => {
+    if (user && (user.userType === 'employer' || user.userType === 'admin')) {
+      console.log('🔄 Employer/Admin detected on Gulf jobs page, redirecting to Gulf dashboard')
+      setIsRedirecting(true)
+      router.replace('/gulf-dashboard')
+      return
+    }
+  }, [user, router])
+  
   useEffect(() => {
     if (!loading && user && !user.regions?.includes('gulf') && user.region !== 'gulf') {
       setAccessDenied(true)
@@ -117,6 +129,18 @@ export default function GulfJobsPage() {
     }
     setAccessDenied(false)
   }, [user, loading])
+
+  // Show loading while redirecting
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
