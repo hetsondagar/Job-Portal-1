@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Filter, Plus, Search, MoreHorizontal, Edit, Trash2, Copy, X, Users } from "lucide-react"
@@ -234,8 +234,64 @@ export default function RequirementsPage() {
   }
 
   const getAccessedCount = (requirement: Requirement) => {
-    return requirementStats[requirement.id]?.accessedCandidates || 0
+    const count = requirementStats[requirement.id]?.accessedCandidates || 0;
+    console.log(`🔍 Getting accessed count for ${requirement.title}:`, count, requirementStats[requirement.id]);
+    return count;
   }
+  
+  // Refresh stats function
+  const refreshStats = useCallback(() => {
+    console.log('🔄 Refreshing requirement stats...');
+    requirements.forEach(req => {
+      apiService.getRequirementStats(req.id).then(resp => {
+        if (resp.success && resp.data) {
+          setRequirementStats(prev => ({
+            ...prev,
+            [req.id]: {
+              ...prev[req.id],
+              accessedCandidates: resp.data.accessedCandidates || 0,
+              totalCandidates: resp.data.totalCandidates || 0,
+              cvAccessLeft: resp.data.cvAccessLeft || 0
+            }
+          }));
+          console.log(`✅ Updated stats for ${req.title}:`, resp.data.accessedCandidates);
+        }
+      }).catch(err => console.error('❌ Failed to refresh stats:', err));
+    });
+  }, [requirements]);
+  
+  // Periodically refresh requirement stats
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStats();
+    }, 3000); // Refresh every 3 seconds for faster updates
+    
+    // Also refresh when page becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('👁️ Page visible, refreshing stats...');
+        refreshStats();
+      }
+    };
+    
+    // Refresh when window gains focus (user navigates back)
+    const handleFocus = () => {
+      console.log('🎯 Window focused, refreshing stats...');
+      refreshStats();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    // Initial refresh
+    refreshStats();
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshStats])
 
   // Filter requirements based on search query and status filters
   const filteredRequirements = requirements.filter((req) => {

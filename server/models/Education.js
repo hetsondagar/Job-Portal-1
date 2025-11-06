@@ -92,50 +92,39 @@ const Education = sequelize.define('Education', {
     type: DataTypes.DATE,
     allowNull: true,
     field: 'verification_date'
-  },
-  scale: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: '10'
-  },
-  country: {
-    type: DataTypes.STRING(255),
-    allowNull: true
-  },
-  level: {
-    type: DataTypes.ENUM('high-school', 'diploma', 'bachelor', 'master', 'phd', 'certification', 'other'),
-    allowNull: true
-  },
-  order: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: {}
-  },
-  resumeId: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    references: {
-      model: 'resumes',
-      key: 'id'
-    }
   }
+  // Note: The following fields are NOT in the database table, so they're removed:
+  // scale, country, level, order, metadata, resumeId
 }, {
   tableName: 'educations',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  underscored: false, // Don't automatically convert to snake_case
   hooks: {
     beforeCreate: async (education) => {
       if (education.isCurrent) {
         education.endDate = null;
       }
+      // Remove any fields that don't exist in the database
+      if (education.scale !== undefined) delete education.scale;
+      if (education.country !== undefined) delete education.country;
+      if (education.level !== undefined) delete education.level;
+      if (education.order !== undefined) delete education.order;
+      if (education.metadata !== undefined) delete education.metadata;
+      if (education.resumeId !== undefined) delete education.resumeId;
     },
     beforeUpdate: async (education) => {
       if (education.changed('isCurrent') && education.isCurrent) {
         education.endDate = null;
       }
+      // Remove any fields that don't exist in the database
+      if (education.scale !== undefined) delete education.scale;
+      if (education.country !== undefined) delete education.country;
+      if (education.level !== undefined) delete education.level;
+      if (education.order !== undefined) delete education.order;
+      if (education.metadata !== undefined) delete education.metadata;
+      if (education.resumeId !== undefined) delete education.resumeId;
     }
   }
 });

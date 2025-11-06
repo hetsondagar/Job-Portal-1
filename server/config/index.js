@@ -119,19 +119,19 @@ RequirementApplication.belongsTo(Resume, { foreignKey: 'resumeId', as: 'requirem
 
 // Resume associations
 Resume.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-Resume.hasMany(WorkExperience, { foreignKey: 'resumeId', as: 'resumeWorkExperiences' });
-Resume.hasMany(Education, { foreignKey: 'resumeId', as: 'resumeEducations' });
+// Note: Removed WorkExperience association - resumeId column doesn't exist in work_experiences table
+// Note: Removed Education association - resumeId column doesn't exist in educations table
 
 // CoverLetter associations
 CoverLetter.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // WorkExperience associations
 WorkExperience.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-WorkExperience.belongsTo(Resume, { foreignKey: 'resumeId', as: 'workExperienceResume' });
+// Note: Removed Resume association - resumeId column doesn't exist in work_experiences table
 
 // Education associations
 Education.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-Education.belongsTo(Resume, { foreignKey: 'resumeId', as: 'educationResume' });
+// Note: Removed Resume association - resumeId column doesn't exist in educations table
 
 // Notification associations
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });

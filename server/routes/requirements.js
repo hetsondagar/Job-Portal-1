@@ -15,6 +15,9 @@ const Company = require('../models/Company');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Resume = require('../models/Resume');
+const WorkExperience = require('../models/WorkExperience');
+const Education = require('../models/Education');
+const ViewTracking = require('../models/ViewTracking');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -1169,31 +1172,49 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
           console.log(`   - Checking for profile views by employer ${req.user.id}...`);
           
           try {
-            // Get requirement creation date
-            // Use >= (not >) to count views from requirement creation onwards
-            // But add 1 second buffer to exclude views that might have been created during redirect
-            const requirementCreatedDate = new Date(requirement.created_at);
-            const minViewDate = new Date(requirementCreatedDate.getTime() + 1000); // Add 1 second buffer to exclude redirect views
-            
-            console.log(`   - Requirement created at: ${requirementCreatedDate.toISOString()}`);
-            console.log(`   - Counting views AFTER: ${minViewDate.toISOString()} (1 second buffer to exclude redirect views)`);
+            console.log(`   - Requirement ID: ${requirement.id}`);
+            console.log(`   - Checking for views with requirementId in metadata...`);
             
             // Get ALL views for this employer viewing matching candidates
-            // Count views that happened AFTER requirement creation (with small buffer to exclude redirect views)
+            // CRITICAL: Must check metadata for requirementId to ensure we only count views for THIS requirement
+            // This is the most reliable way - no date restrictions needed since metadata is requirement-specific
             // IMPORTANT: Use snake_case column names since we're using raw: true
+            const requirementIdStr = String(requirement.id);
             const verifyViews = await ViewTracking.findAll({
-      where: {
+              where: {
                 viewer_id: req.user.id,
                 viewed_user_id: { [Op.in]: finalCandidateIds },
                 view_type: 'profile_view',
-                created_at: { [Op.gt]: minViewDate } // Use > with 1 second buffer - excludes redirect views but includes actual profile views
+                [Op.or]: [
+                  // Check if metadata contains this requirementId (single or array format)
+                  sequelize.where(
+                    sequelize.cast(sequelize.col('metadata'), 'text'),
+                    { [Op.like]: `%"requirementId":"${requirementIdStr}"%` }
+                  ),
+                  sequelize.where(
+                    sequelize.cast(sequelize.col('metadata'), 'text'),
+                    { [Op.like]: `%"requirementId": "${requirementIdStr}"%` }
+                  ),
+                  sequelize.where(
+                    sequelize.cast(sequelize.col('metadata'), 'text'),
+                    { [Op.like]: `%"requirementIds":["${requirementIdStr}"]%` }
+                  ),
+                  sequelize.where(
+                    sequelize.cast(sequelize.col('metadata'), 'text'),
+                    { [Op.like]: `%"requirementIds": ["${requirementIdStr}"]%` }
+                  ),
+                  sequelize.where(
+                    sequelize.cast(sequelize.col('metadata'), 'text'),
+                    { [Op.like]: `%"${requirementIdStr}"%` }  // Check if requirementId appears anywhere in metadata
+                  )
+                ]
               },
-              attributes: ['viewed_user_id', 'created_at'],
+              attributes: ['viewed_user_id', 'created_at', 'metadata'],
               raw: true,
               order: [['created_at', 'DESC']]
             });
             
-            console.log(`   - Total views found (after requirement creation + 1s buffer): ${verifyViews.length}`);
+            console.log(`   - Total views found with requirementId ${requirement.id}: ${verifyViews.length}`);
             if (verifyViews.length > 0) {
               console.log(`   - Sample view dates: ${verifyViews.slice(0, 3).map(v => v.created_at || v.createdAt).join(', ')}`);
             }
@@ -1208,18 +1229,48 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
                 const id = view.viewed_user_id;
                 if (id) {
                   const idStr = String(id).trim();
-                  // Check if this viewed ID matches any of our matching candidate IDs
+                  
+                  // CRITICAL: Verify metadata contains correct requirementId (check both single and array formats)
+                  let metadataValid = false;
+                  try {
+                    const metadata = typeof view.metadata === 'string' ? JSON.parse(view.metadata) : view.metadata;
+                    if (metadata) {
+                      const requirementIdStr = String(requirement.id);
+                      // Check single requirementId
+                      if (metadata.requirementId === requirement.id || 
+                          String(metadata.requirementId) === requirementIdStr) {
+                        metadataValid = true;
+                      }
+                      // Check requirementIds array
+                      if (!metadataValid && metadata.requirementIds && Array.isArray(metadata.requirementIds)) {
+                        metadataValid = metadata.requirementIds.some(rid => 
+                          String(rid) === requirementIdStr || rid === requirement.id
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    // If metadata parsing fails, skip this view
+                    console.log(`   ⚠️ View ${idx + 1}: Invalid metadata format - ${e.message}`);
+                  }
+                  
+                  // Check if this viewed ID matches any of our matching candidate IDs AND metadata is valid
                   const matches = finalCandidateIdsStr.some(candidateId => 
                     candidateId === idStr
                   );
-                  if (matches) {
+                  
+                  if (matches && metadataValid) {
                     manualCount.add(idStr);
-                    const viewDate = new Date(view.created_at);
-                    const timeDiff = viewDate.getTime() - requirementCreatedDate.getTime();
-                    const isAfterCreation = viewDate > minViewDate;
-                    console.log(`   ${isAfterCreation ? '✅' : '⚠️'} View ${idx + 1}: Counting candidate ${idStr.substring(0, 8)}... (viewed: ${view.created_at || 'N/A'}, time diff from creation: ${timeDiff}ms)`);
+                    console.log(`   ✅ View ${idx + 1}: Counting candidate ${idStr.substring(0, 8)}... for requirement ${requirement.id}`);
                   } else {
-                    console.log(`   ❌ View ${idx + 1}: Candidate ${idStr.substring(0, 8)}... NOT in matching list`);
+                    if (!matches) {
+                      console.log(`   ❌ View ${idx + 1}: Candidate ${idStr.substring(0, 8)}... NOT in matching list`);
+                    }
+                    if (!metadataValid) {
+                      console.log(`   ❌ View ${idx + 1}: Metadata does not contain requirementId ${requirement.id}`);
+                      if (view.metadata) {
+                        console.log(`      Metadata content: ${JSON.stringify(view.metadata).substring(0, 100)}`);
+                      }
+                    }
                   }
                 } else {
                   console.log(`   ❌ View ${idx + 1}: No valid ID found`);
@@ -2058,6 +2109,10 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     // Fetch ATS scores for candidates
     const candidateIds = finalCandidates.map(c => c.id);
     let atsScoresMap = {};
+    let workExperiencesByUser = new Map();
+    let educationsByUser = new Map();
+    let viewedCandidates = new Set();
+    let savedCandidates = new Set();
     
     if (candidateIds.length > 0) {
       try {
@@ -2108,6 +2163,109 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         console.log('⚠️ Could not fetch ATS scores:', atsError.message);
         console.log('🔍 ATS Error details:', atsError);
       }
+      
+      // Fetch work experiences for all candidates
+      try {
+        const workExperiences = await WorkExperience.findAll({
+          where: { userId: { [Op.in]: candidateIds } },
+          attributes: [
+            'id', 'userId', 'companyName', 'jobTitle', 'location', 'startDate', 'endDate',
+            'isCurrent', 'description', 'employmentType', 'skills', 'achievements',
+            'salary', 'salaryCurrency'
+          ],
+          order: [
+            ['is_current', 'DESC'],
+            ['start_date', 'DESC']
+          ]
+        });
+        
+        workExperiences.forEach(exp => {
+          const userId = exp.userId;
+          const arr = workExperiencesByUser.get(userId) || [];
+          arr.push(exp);
+          workExperiencesByUser.set(userId, arr);
+        });
+        
+        console.log(`✅ Fetched ${workExperiences.length} work experiences for ${workExperiencesByUser.size} candidates`);
+      } catch (weError) {
+        console.error('⚠️ Could not fetch work experiences:', weError.message);
+      }
+      
+      // Fetch education for all candidates
+      try {
+        const educations = await Education.findAll({
+          where: { userId: { [Op.in]: candidateIds } },
+          attributes: [
+            'id', 'userId', 'institution', 'degree', 'fieldOfStudy', 'startDate',
+            'endDate', 'isCurrent', 'grade', 'percentage', 'cgpa', 'location'
+          ],
+          order: [
+            ['isCurrent', 'DESC'],
+            ['startDate', 'DESC']
+          ],
+          raw: false // Get model instances to use toJSON() for proper field mapping
+        });
+        
+        educations.forEach(edu => {
+          const userId = edu.userId;
+          const arr = educationsByUser.get(userId) || [];
+          arr.push(edu);
+          educationsByUser.set(userId, arr);
+        });
+        
+        console.log(`✅ Fetched ${educations.length} education records for ${educationsByUser.size} candidates`);
+      } catch (eduError) {
+        console.error('⚠️ Could not fetch education:', eduError.message);
+      }
+      
+      // Fetch viewed status - check if employer has viewed each candidate's profile
+      try {
+        const views = await ViewTracking.findAll({
+          where: {
+            viewerId: req.user.id,
+            viewedUserId: { [Op.in]: candidateIds },
+            viewType: 'profile_view',
+            [Op.or]: [
+              sequelize.where(sequelize.cast(sequelize.col('metadata'), 'text'), { [Op.like]: `%"requirementId":"${id}"%` }),
+              sequelize.where(sequelize.cast(sequelize.col('metadata'), 'text'), { [Op.like]: `%"requirementId": "${id}"%` })
+            ]
+          },
+          attributes: ['viewedUserId'],
+          raw: true
+        });
+        
+        views.forEach(view => {
+          viewedCandidates.add(view.viewed_user_id || view.viewedUserId);
+        });
+        
+        console.log(`✅ Fetched viewed status for ${viewedCandidates.size} candidates`);
+      } catch (viewError) {
+        console.error('⚠️ Could not fetch viewed status:', viewError.message);
+      }
+      
+      // Fetch saved candidates - check if employer has saved candidates for this requirement
+      // Note: This would require a saved_candidates table or similar. For now, we'll use a placeholder.
+      // You can implement this with a new table or add to existing metadata
+      try {
+        // Check if there's a saved_candidates table or similar mechanism
+        // For now, we'll use CandidateLike as a proxy for "saved" status
+        const saved = await CandidateLike.findAll({
+          where: {
+            employerId: req.user.id,
+            candidateId: { [Op.in]: candidateIds }
+          },
+          attributes: ['candidateId'],
+          raw: true
+        });
+        
+        saved.forEach(item => {
+          savedCandidates.add(item.candidate_id);
+        });
+        
+        console.log(`✅ Fetched saved status for ${savedCandidates.size} candidates`);
+      } catch (savedError) {
+        console.error('⚠️ Could not fetch saved status:', savedError.message);
+      }
     }
     
     // Filter candidates to ensure relevance when requirement has specific title
@@ -2147,6 +2305,48 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       // Only include ATS score if it matches the current requirement
       const validAtsData = atsData && atsData.requirementId === id ? atsData : null;
       
+      // Get work experiences for this candidate
+      const workExperiences = workExperiencesByUser.get(candidate.id) || [];
+      const currentExp = workExperiences.find(exp => exp.isCurrent === true);
+      const pastExps = workExperiences.filter(exp => exp.isCurrent === false).sort((a, b) => {
+        const dateA = new Date(b.startDate || 0);
+        const dateB = new Date(a.startDate || 0);
+        return dateA.getTime() - dateB.getTime();
+      });
+      const previousExp = pastExps[0] || null;
+      
+      // Extract current designation from description if present
+      let currentDesignation = '';
+      if (currentExp && currentExp.description) {
+        const desc = currentExp.description;
+        if (desc.startsWith('Designation: ')) {
+          const lines = desc.split('\n\n');
+          currentDesignation = lines[0].replace('Designation: ', '');
+        }
+      }
+      
+      // Get education for this candidate
+      const educations = educationsByUser.get(candidate.id) || [];
+      const highestEducation = educations.length > 0 ? educations[0] : null;
+      const educationDisplay = highestEducation 
+        ? `${highestEducation.degree || ''}${highestEducation.fieldOfStudy ? ` - ${highestEducation.fieldOfStudy}` : ''}`.trim() || 'Not specified'
+        : (candidate.education && candidate.education.length > 0 ? 
+          candidate.education.map(edu => edu.degree || edu.course).join(', ') : 'Not specified');
+      
+      // Log education data for first few candidates for debugging
+      if (filteredFinalCandidates.indexOf(candidate) < 3) {
+        console.log(`🔍 Candidate ${candidate.id} - Education debug:`, {
+          educationsCount: educations.length,
+          highestEducation: highestEducation,
+          educationDisplay: educationDisplay,
+          candidateEducation: candidate.education
+        });
+      }
+      
+      // Check viewed and saved status
+      const isViewed = viewedCandidates.has(candidate.id);
+      const isSaved = savedCandidates.has(candidate.id);
+      
       // Debug: Log ATS data for specific candidates
       if (candidate.id === '4200f403-25dc-4aa6-bcc9-1363adf0ee7b' || candidate.id === '10994ba4-1e33-45c3-b522-2f56a873e1e2') {
         console.log(`🔍 Candidate ${candidate.id} (${candidate.first_name} ${candidate.last_name}) ATS data:`, {
@@ -2162,32 +2362,175 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       return {
         id: candidate.id,
         name: `${candidate.first_name} ${candidate.last_name}`,
+        headline: candidate.headline || 'Job Seeker',
         designation: candidate.designation || candidate.headline || 'Job Seeker',
         experience: candidate.experience_years ? `${candidate.experience_years} years` : 'Not specified',
         location: candidate.current_location || 'Not specified',
-        education: candidate.education && candidate.education.length > 0 ? 
-          candidate.education.map(edu => edu.degree || edu.course).join(', ') : 'Not specified',
-        keySkills: candidate.key_skills || candidate.skills || [],
+        education: educationDisplay,
+        keySkills: (() => {
+          // Get skills from database - handle both array and string formats
+          if (candidate.key_skills && Array.isArray(candidate.key_skills) && candidate.key_skills.length > 0) {
+            return candidate.key_skills;
+          }
+          if (candidate.skills) {
+            if (Array.isArray(candidate.skills)) {
+              return candidate.skills;
+            }
+            if (typeof candidate.skills === 'string') {
+              // Parse comma-separated string
+              return candidate.skills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            }
+          }
+          return [];
+        })(),
         preferredLocations: candidate.preferred_locations && candidate.preferred_locations.length > 0 ? 
           candidate.preferred_locations : 
           (candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location]),
-        avatar: candidate.avatar || '/placeholder.svg?height=80&width=80',
+        avatar: candidate.avatar || null,
         isAttached: true,
         lastModified: candidate.last_profile_update ? 
           new Date(candidate.last_profile_update).toLocaleDateString() : 'Not specified',
         activeStatus: candidate.last_login_at ? 
           new Date(candidate.last_login_at).toLocaleDateString() : 'Not specified',
+        lastActive: candidate.last_login_at ? new Date(candidate.last_login_at).toISOString() : null,
         additionalInfo: candidate.summary || 'No summary available',
         phoneVerified: candidate.is_phone_verified || false,
         emailVerified: candidate.is_email_verified || false,
-        currentSalary: candidate.current_salary ? `${candidate.current_salary} LPA` : 'Not specified',
+        phone: candidate.phone || null,
+        email: candidate.email || null,
+        currentSalary: (() => {
+        if (currentExp && currentExp.salary) {
+          const salary = currentExp.salary;
+          const currency = currentExp.salaryCurrency || 'INR';
+          return `${currency} ${salary}`;
+        }
+        return candidate.current_salary ? `${candidate.current_salary} LPA` : 'Not specified';
+      })(),
         expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
         noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
         profileCompletion: candidate.profile_completion || 0,
         relevanceScore: score,
         matchReasons: matchReasons,
         atsScore: validAtsData ? validAtsData.score : null,
-        atsCalculatedAt: validAtsData ? validAtsData.lastCalculated : null
+        atsCalculatedAt: validAtsData ? validAtsData.lastCalculated : null,
+        // New fields
+        currentCompany: currentExp ? currentExp.companyName : null,
+        previousCompany: previousExp ? previousExp.companyName : null,
+        currentDesignation: currentDesignation || (currentExp ? currentExp.jobTitle : null),
+        isViewed: isViewed,
+        isSaved: isSaved,
+        workExperiences: workExperiences.map(exp => {
+          const expData = exp.toJSON ? exp.toJSON() : exp;
+          let desig = '';
+          let desc = expData.description || '';
+          if (desc && desc.startsWith('Designation: ')) {
+            const lines = desc.split('\n\n');
+            desig = lines[0].replace('Designation: ', '');
+            desc = lines.slice(1).join('\n\n');
+          }
+          return {
+            ...expData,
+            currentDesignation: desig,
+            description: desc
+          };
+        }),
+        educationDetails: educations.map(edu => {
+          const eduData = edu.toJSON ? edu.toJSON() : edu;
+          
+          // Format degree name properly
+          const formatDegree = (degreeStr) => {
+            if (!degreeStr || String(degreeStr).toLowerCase() === 'not specified') return '';
+            const deg = String(degreeStr).trim();
+            const degLower = deg.toLowerCase();
+            
+            const degreeMappings = {
+              'bachelor': "Bachelor's Degree",
+              'bachelors': "Bachelor's Degree",
+              'btech': 'B.Tech',
+              'b.tech': 'B.Tech',
+              'be': 'B.E.',
+              'b.e.': 'B.E.',
+              'bsc': 'B.Sc',
+              'b.sc': 'B.Sc',
+              'ba': 'B.A.',
+              'b.a.': 'B.A.',
+              'master': "Master's Degree",
+              'masters': "Master's Degree",
+              'mtech': 'M.Tech',
+              'm.tech': 'M.Tech',
+              'me': 'M.E.',
+              'm.e.': 'M.E.',
+              'msc': 'M.Sc',
+              'm.sc': 'M.Sc',
+              'ma': 'M.A.',
+              'm.a.': 'M.A.',
+              'mba': 'MBA',
+              'phd': 'Ph.D',
+              'ph.d': 'Ph.D',
+              'diploma': 'Diploma',
+              'certification': 'Certification',
+              'high-school': 'High School',
+              'highschool': 'High School'
+            };
+            
+            if (degreeMappings[degLower]) return degreeMappings[degLower];
+            
+            for (const [key, value] of Object.entries(degreeMappings)) {
+              if (degLower.includes(key)) return value;
+            }
+            
+            return deg.split(' ').map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+          };
+          
+          // Build duration string
+          const startDate = eduData.startDate || eduData.start_date;
+          const endDate = eduData.endDate || eduData.end_date;
+          const isCurrent = eduData.isCurrent || eduData.is_current || false;
+          
+          let duration = 'Not specified';
+          if (startDate) {
+            try {
+              const start = new Date(startDate);
+              const startYear = start.getFullYear();
+              if (!isNaN(start.getTime())) {
+                if (isCurrent || !endDate) {
+                  duration = `${startYear} - Present`;
+                } else {
+                  try {
+                    const end = new Date(endDate);
+                    const endYear = end.getFullYear();
+                    if (!isNaN(end.getTime())) {
+                      duration = `${startYear} - ${endYear}`;
+                    }
+                  } catch (e) {
+                    duration = `${startYear} - Present`;
+                  }
+                }
+              }
+            } catch (e) {
+              // Keep default
+            }
+          }
+          
+          return {
+            id: eduData.id,
+            degree: formatDegree(eduData.degree || ''),
+            institution: eduData.institution || 'Not specified',
+            fieldOfStudy: eduData.fieldOfStudy || eduData.field_of_study || '',
+            duration: duration,
+            location: eduData.location || '',
+            cgpa: eduData.cgpa || eduData.gpa || null,
+            percentage: eduData.percentage || null,
+            grade: eduData.grade || null,
+            relevantCourses: eduData.activities || eduData.relevant_courses || [],
+            startDate: startDate,
+            endDate: endDate,
+            isCurrent: isCurrent
+          };
+        }),
+        headline: candidate.headline || null
       };
     });
     
@@ -2344,6 +2687,76 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     
     console.log('🔍 Fetching detailed profile for candidate:', candidateId);
     
+    // Track view - record that this employer viewed this candidate's profile FOR THIS REQUIREMENT
+    try {
+      // Check if a view already exists for this employer, candidate, and requirement combination
+      // Use camelCase field names for Sequelize model operations
+      const existingView = await ViewTracking.findOne({
+        where: {
+          viewerId: req.user.id,
+          viewedUserId: candidateId,
+          viewType: 'profile_view'
+        }
+      });
+      
+      // Parse existing metadata if it exists
+      let existingMetadata = {};
+      if (existingView && existingView.metadata) {
+        try {
+          existingMetadata = typeof existingView.metadata === 'string' 
+            ? JSON.parse(existingView.metadata) 
+            : existingView.metadata;
+        } catch (e) {
+          console.log('⚠️ Could not parse existing metadata, using empty object');
+          existingMetadata = {};
+        }
+      }
+      
+      // Check if this requirement is already tracked in metadata
+      const requirementIds = existingMetadata.requirementIds || [];
+      const requirementIdStr = String(requirementId);
+      const alreadyTracked = requirementIds.includes(requirementIdStr) || 
+                           existingMetadata.requirementId === requirementIdStr ||
+                           String(existingMetadata.requirementId) === requirementIdStr;
+      
+      if (!alreadyTracked) {
+        // Add this requirementId to the list (or create new entry)
+        if (existingView) {
+          // Update existing view to include this requirementId
+          const updatedMetadata = {
+            ...existingMetadata,
+            requirementId: requirementIdStr, // Keep single requirementId for backward compatibility
+            requirementIds: Array.isArray(requirementIds) && !requirementIds.includes(requirementIdStr)
+              ? [...requirementIds, requirementIdStr]
+              : [requirementIdStr]
+          };
+          
+          await existingView.update({
+            metadata: updatedMetadata
+          });
+          console.log(`✅ Updated view tracking: Added requirement ${requirementId} to existing view for candidate ${candidateId}`);
+        } else {
+          // Create new view record with requirementId
+          await ViewTracking.create({
+            viewerId: req.user.id,
+            viewedUserId: candidateId,
+            viewType: 'profile_view',
+            metadata: {
+              requirementId: requirementIdStr,
+              requirementIds: [requirementIdStr]
+            }
+          });
+          console.log(`✅ View tracked: Employer ${req.user.id} viewed candidate ${candidateId} for requirement ${requirementId}`);
+        }
+      } else {
+        console.log(`ℹ️ View already tracked for employer ${req.user.id} viewing candidate ${candidateId} for requirement ${requirementId}`);
+      }
+    } catch (viewError) {
+      console.error('⚠️ Error tracking view:', viewError);
+      console.error('⚠️ View tracking error stack:', viewError.stack);
+      // Don't fail the request if view tracking fails
+    }
+    
     // Get candidate details
     const candidate = await User.findOne({
       where: { 
@@ -2355,11 +2768,11 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       attributes: [
         'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
         'current_location', 'headline', 'summary', 'skills', 'languages',
-        'expected_salary', 'notice_period', 'willing_to_relocate',
+        'expected_salary', 'current_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
         'is_email_verified', 'is_phone_verified', 'created_at',
         'date_of_birth', 'gender', 'social_links', 'certifications',
-        'highest_education', 'field_of_study'
+        'highest_education', 'field_of_study', 'experience_years'
       ]
     });
     
@@ -2372,32 +2785,40 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       });
     }
     
-    // Get work experience using raw query to avoid model field name issues
+    // Get work experience using WorkExperience model
     let workExperience = [];
     try {
-      // Try with camelCase column names first
-      const workExpResults = await sequelize.query(`
-        SELECT * FROM work_experiences 
-        WHERE "userId" = :userId 
-        ORDER BY "startDate" DESC, "start_date" DESC
-      `, {
-        replacements: { userId: candidateId },
-        type: QueryTypes.SELECT
+      const workExperiences = await WorkExperience.findAll({
+        where: { userId: candidateId },
+        attributes: [
+          'id', 'userId', 'companyName', 'jobTitle', 'location', 'startDate', 'endDate',
+          'isCurrent', 'description', 'employmentType', 'skills', 'achievements',
+          'salary', 'salaryCurrency'
+        ],
+        order: [
+          ['is_current', 'DESC'],
+          ['start_date', 'DESC']
+        ]
       });
-      workExperience = workExpResults || [];
       
-      // If no results, try with snake_case
-      if (workExperience.length === 0) {
-        const workExpResultsAlt = await sequelize.query(`
-          SELECT * FROM work_experiences 
-          WHERE user_id = :userId 
-          ORDER BY start_date DESC
-        `, {
-          replacements: { userId: candidateId },
-          type: QueryTypes.SELECT
-        });
-        workExperience = workExpResultsAlt || [];
-      }
+      // Transform to plain objects and extract currentDesignation
+      workExperience = workExperiences.map(exp => {
+        const expData = exp.toJSON ? exp.toJSON() : exp;
+        let currentDesignation = '';
+        let description = expData.description || '';
+        
+        if (description && description.startsWith('Designation: ')) {
+          const lines = description.split('\n\n');
+          currentDesignation = lines[0].replace('Designation: ', '');
+          description = lines.slice(1).join('\n\n');
+        }
+        
+        return {
+          ...expData,
+          currentDesignation,
+          description
+        };
+      });
       
       console.log(`💼 Found ${workExperience.length} work experience entries for candidate ${candidateId}`);
       if (workExperience.length > 0) {
@@ -2408,32 +2829,45 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       workExperience = [];
     }
     
-    // Get education details using raw query
+    // Get education details using Education model for proper field mapping
     let education = [];
     try {
-      // Try with camelCase column names first
-      const eduResults = await sequelize.query(`
-        SELECT * FROM educations 
-        WHERE "userId" = :userId 
-        ORDER BY "endDate" DESC, "end_date" DESC
-      `, {
-        replacements: { userId: candidateId },
-        type: QueryTypes.SELECT
+      const { Education } = require('../config/index');
+      const educations = await Education.findAll({
+        where: { userId: candidateId },
+        attributes: [
+          'id', 'userId', 'degree', 'institution', 'fieldOfStudy', 'startDate', 'endDate',
+          'isCurrent', 'gpa', 'percentage', 'grade', 'description', 'location', 'educationType'
+        ],
+        order: [
+          ['is_current', 'DESC'],
+          ['start_date', 'DESC']
+        ]
       });
-      education = eduResults || [];
       
-      // If no results, try with snake_case
-      if (education.length === 0) {
-        const eduResultsAlt = await sequelize.query(`
-          SELECT * FROM educations 
-          WHERE user_id = :userId 
-          ORDER BY end_date DESC
-        `, {
-          replacements: { userId: candidateId },
-          type: QueryTypes.SELECT
-        });
-        education = eduResultsAlt || [];
-      }
+      education = educations.map(edu => {
+        const eduData = edu.toJSON ? edu.toJSON() : edu;
+        return {
+          id: eduData.id,
+          degree: eduData.degree || '',
+          institution: eduData.institution || '',
+          field_of_study: eduData.fieldOfStudy || '',
+          fieldOfStudy: eduData.fieldOfStudy || '', // Include both formats for compatibility
+          start_date: eduData.startDate || '',
+          startDate: eduData.startDate || '', // Include both formats
+          end_date: eduData.endDate || null,
+          endDate: eduData.endDate || null, // Include both formats
+          is_current: eduData.isCurrent || false,
+          isCurrent: eduData.isCurrent || false, // Include both formats
+          gpa: eduData.cgpa || eduData.gpa || null,
+          cgpa: eduData.cgpa || eduData.gpa || null, // Include both formats
+          percentage: eduData.percentage || null,
+          grade: eduData.grade || null,
+          location: eduData.location || '',
+          relevant_courses: eduData.activities || [],
+          activities: eduData.activities || [] // Include both formats
+        };
+      });
       
       console.log(`🎓 Found ${education.length} education entries for candidate ${candidateId}`);
       if (education.length > 0) {
@@ -2441,6 +2875,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       }
     } catch (eduError) {
       console.log('⚠️ Could not fetch education:', eduError.message);
+      console.log('⚠️ Education error details:', eduError);
       education = [];
     }
     
@@ -2623,7 +3058,46 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       id: candidate.id,
       name: `${candidate.first_name} ${candidate.last_name}`,
       designation: candidate.headline || 'Job Seeker',
-      experience: (Array.isArray(workExperience) && workExperience.length > 0) ? 'Experienced' : 'Fresher',
+      experience: (() => {
+        // PRIORITY: Use experience_years field if available (user explicitly set this)
+        if (candidate.experience_years !== null && candidate.experience_years !== undefined) {
+          const totalYears = Number(candidate.experience_years);
+          const years = Math.floor(totalYears);
+          const fractionalPart = totalYears - years;
+          const months = Math.floor(fractionalPart * 12);
+          const days = Math.floor((fractionalPart * 12 - months) * 30);
+          const parts = [];
+          if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+          if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+          if (days > 0 && years === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+          return parts.length > 0 ? parts.join(', ') : 'Fresher';
+        }
+        
+        // Fallback: Calculate from work experiences if no experience_years set
+        if (Array.isArray(workExperience) && workExperience.length > 0) {
+          let totalDays = 0;
+          workExperience.forEach(exp => {
+            const start = new Date(exp.startDate || exp.start_date);
+            const end = exp.isCurrent || exp.is_current ? new Date() : new Date(exp.endDate || exp.end_date);
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+              const diffTime = Math.abs(end.getTime() - start.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              totalDays += diffDays;
+            }
+          });
+          const years = Math.floor(totalDays / 365);
+          const remainingDays = totalDays % 365;
+          const months = Math.floor(remainingDays / 30);
+          const days = remainingDays % 30;
+          const parts = [];
+          if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+          if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+          if (days > 0 && years === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+          return parts.length > 0 ? parts.join(', ') : 'Fresher';
+        }
+        
+        return 'Fresher';
+      })(),
       location: candidate.current_location || 'Not specified',
       education: (Array.isArray(education) && education.length > 0) ? (education[0].degree || 'Not specified') : 'Not specified',
       keySkills: toArray(candidate.skills, []),
@@ -2635,7 +3109,22 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       additionalInfo: candidate.summary || 'No summary available',
       phoneVerified: candidate.is_phone_verified || false,
       emailVerified: candidate.is_email_verified || false,
-      currentSalary: 'Not specified',
+      currentSalary: (() => {
+        // PRIORITY: Use user's current_salary field (user explicitly set this)
+        if (candidate.current_salary !== null && candidate.current_salary !== undefined) {
+          return `${candidate.current_salary} LPA`;
+        }
+        
+        // Fallback: Get from current work experience
+        const currentExp = workExperience.find(exp => exp.isCurrent || exp.is_current);
+        if (currentExp && currentExp.salary) {
+          const salary = currentExp.salary;
+          const currency = currentExp.salaryCurrency || 'INR';
+          return `${currency} ${salary}`;
+        }
+        
+        return 'Not specified';
+      })(),
       expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
       noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
       profileCompletion: candidate.profile_completion || 0,
@@ -2650,16 +3139,28 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       // Detailed information
       about: candidate.summary || 'No summary available',
       
-      // Work experience - handle both camelCase and snake_case field names
-      workExperience: toArray(workExperience, []).map(exp => ({
-        id: exp.id || `exp_${Math.random()}`,
-        title: exp.title || exp.job_title || 'Not specified',
-        company: exp.company || exp.company_name || 'Not specified',
-        duration: `${safeDateString(exp.start_date || exp.startDate)} - ${exp.end_date || exp.endDate ? safeDateString(exp.end_date || exp.endDate) : 'Present'}`,
-        location: exp.location || exp.work_location || 'Not specified',
-        description: exp.description || exp.job_description || '',
-        skills: toArray(exp.skills || exp.technologies || exp.tech_stack, [])
-      })),
+      // Work experience - already transformed above with currentDesignation extracted
+      workExperience: toArray(workExperience, []).map((exp, index) => {
+        // The workExperience array is already processed with currentDesignation extracted
+        // Just format the duration and ensure all fields are present
+        const startDate = exp.startDate || exp.start_date;
+        const endDate = exp.endDate || exp.end_date;
+        const isCurrent = exp.isCurrent || exp.is_current || false;
+        
+        return {
+          id: exp.id || `exp_${index}`,
+          title: exp.jobTitle || exp.title || exp.job_title || 'Not specified',
+          company: exp.companyName || exp.company || exp.company_name || 'Not specified',
+          currentDesignation: exp.currentDesignation || (exp.jobTitle || exp.title || 'Not specified'),
+          duration: `${safeDateString(startDate)} - ${endDate ? safeDateString(endDate) : 'Present'}`,
+          location: exp.location || 'Not specified',
+          description: exp.description || '',
+          skills: toArray(exp.skills || [], []),
+          isCurrent: isCurrent,
+          startDate: startDate,
+          endDate: endDate
+        };
+      }),
       
       // Education details - include highest_education and field_of_study from user profile
       educationDetails: (() => {
@@ -2711,7 +3212,9 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               'phd': 'Ph.D',
               'ph.d': 'Ph.D',
               'diploma': 'Diploma',
-              'certification': 'Certification'
+              'certification': 'Certification',
+              'high-school': 'High School',
+              'highschool': 'High School'
             };
             
             // Check exact match
@@ -2735,24 +3238,50 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           const degreeValue = edu.degree || edu.highest_education || candidate.highest_education || '';
           const formattedDegree = formatDegree(degreeValue);
           const institutionValue = edu.institution || edu.institute || '';
-          const fieldOfStudyValue = edu.field_of_study || candidate.field_of_study || '';
+          const fieldOfStudyValue = edu.field_of_study || edu.fieldOfStudy || candidate.field_of_study || '';
           const locationValue = edu.location || '';
           
-          // Build duration string
-          const startYear = edu.start_date || edu.startDate ? (new Date(edu.start_date || edu.startDate)).getFullYear?.() ? new Date(edu.start_date || edu.startDate).getFullYear() : '' : '';
-          const endYear = edu.end_date || edu.endDate ? (new Date(edu.end_date || edu.endDate)).getFullYear?.() ? new Date(edu.end_date || edu.endDate).getFullYear() : 'Present' : (startYear ? 'Present' : '');
-          const durationStr = startYear && endYear ? `${startYear} - ${endYear}` : (startYear ? `${startYear} - Present` : '');
+          // Build duration string properly
+          const startDate = edu.start_date || edu.startDate;
+          const endDate = edu.end_date || edu.endDate;
+          const isCurrent = edu.is_current || edu.isCurrent || false;
+          
+          let durationStr = 'Not specified';
+          if (startDate) {
+            try {
+              const start = new Date(startDate);
+              const startYear = start.getFullYear();
+              if (!isNaN(start.getTime())) {
+                if (isCurrent || !endDate) {
+                  durationStr = `${startYear} - Present`;
+                } else {
+                  try {
+                    const end = new Date(endDate);
+                    const endYear = end.getFullYear();
+                    if (!isNaN(end.getTime())) {
+                      durationStr = `${startYear} - ${endYear}`;
+                    }
+                  } catch (e) {
+                    durationStr = `${startYear} - Present`;
+                  }
+                }
+              }
+            } catch (e) {
+              // Keep default
+            }
+          }
           
           return {
             id: edu.id || `edu_${Math.random()}`,
-            degree: formattedDegree,
-            institution: institutionValue,
-            fieldOfStudy: fieldOfStudyValue,
+            degree: formattedDegree || 'Not specified',
+            institution: institutionValue || 'Not specified',
+            fieldOfStudy: fieldOfStudyValue || '',
             duration: durationStr,
-            location: locationValue,
+            location: locationValue || '',
             grade: edu.grade || null,
             percentage: edu.percentage || null,
-            cgpa: edu.gpa || edu.cgpa || null
+            cgpa: edu.gpa || edu.cgpa || null,
+            relevantCourses: edu.relevant_courses || edu.activities || []
           };
         });
       })(),
@@ -2760,11 +3289,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       // Certifications
       certifications: toArray(candidate.certifications, []),
       
-      // Languages
-      languages: toArray(candidate.languages, [
-        { name: "English", proficiency: "Professional" },
-        { name: "Hindi", proficiency: "Native" }
-      ]),
+      // Languages - return empty array if no languages, don't use default fallback
+      languages: toArray(candidate.languages, []),
       
       // Resume information - return API endpoints instead of absolute file paths
       resumes: (() => {
@@ -3940,20 +4466,18 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         console.log(`📄 Using relaxed criteria: ${targetCandidateIds.length} candidates`);
       } else {
         if (processAll) {
-          // Process all candidates with pagination
-          const offset = (page - 1) * limit;
-          const candidates = await User.findAll({
+          // Process ALL candidates for this requirement (no pagination)
+          const allCandidates = await User.findAll({
             where: whereConditions,
             attributes: ['id'],
-            limit: parseInt(limit),
-            offset: offset,
             order: [['created_at', 'DESC']]
+            // No limit/offset - get ALL candidates
           });
           
-          targetCandidateIds = candidates.map(c => c.id);
-          hasMorePages = offset + candidates.length < totalCandidates;
+          targetCandidateIds = allCandidates.map(c => c.id);
+          hasMorePages = false;
           
-          console.log(`📄 Processing page ${page}: ${targetCandidateIds.length} candidates (${offset + 1}-${offset + targetCandidateIds.length} of ${totalCandidates})`);
+          console.log(`📄 Processing ALL candidates: ${targetCandidateIds.length} candidates for requirement ${requirementId}`);
         } else {
           // Process only current page
           const candidates = await User.findAll({

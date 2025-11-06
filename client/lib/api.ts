@@ -30,6 +30,7 @@ export interface User {
   region?: 'india' | 'gulf' | 'other';
   regions?: string[]; // Array of regions for multi-portal access
   isEmailVerified: boolean;
+  isPhoneVerified?: boolean;
   accountStatus: string;
   avatar?: string;
   phone?: string;
@@ -69,6 +70,27 @@ export interface User {
   preferredCompanySize?: string;
   preferredWorkMode?: string | string[];
   preferredEmploymentType?: string;
+  workExperiences?: WorkExperience[];
+}
+
+export interface WorkExperience {
+  id?: string;
+  userId?: string;
+  companyName?: string;
+  jobTitle: string;
+  currentDesignation?: string;
+  location?: string;
+  startDate: string;
+  endDate?: string | null;
+  isCurrent?: boolean;
+  description?: string;
+  achievements?: string[];
+  skills?: string[];
+  salary?: number;
+  salaryCurrency?: string;
+  employmentType?: 'full-time' | 'part-time' | 'contract' | 'internship' | 'freelance';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Company {
@@ -3615,6 +3637,136 @@ class ApiService {
     });
 
     return this.handleResponse<any>(response);
+  }
+
+  // ==========================================
+  // Work Experience Endpoints
+  // ==========================================
+
+  // Get all work experiences
+  async getWorkExperiences(): Promise<ApiResponse<WorkExperience[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/work-experiences`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<WorkExperience[]>(response);
+  }
+
+  // Create a new work experience
+  async createWorkExperience(data: WorkExperience): Promise<ApiResponse<WorkExperience>> {
+    const response = await fetch(`${API_BASE_URL}/user/work-experiences`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<WorkExperience>(response);
+  }
+
+  // Update a work experience
+  async updateWorkExperience(id: string, data: Partial<WorkExperience>): Promise<ApiResponse<WorkExperience>> {
+    const response = await fetch(`${API_BASE_URL}/user/work-experiences/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<WorkExperience>(response);
+  }
+
+  // Delete a work experience
+  async deleteWorkExperience(id: string): Promise<ApiResponse<void>> {
+    const response = await fetch(`${API_BASE_URL}/user/work-experiences/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<void>(response);
+  }
+
+  // ==========================================
+  // Education Management Methods
+  // ==========================================
+
+  // Get all educations for the authenticated user
+  async getEducations(): Promise<ApiResponse<any[]>> {
+    const response = await fetch(`${API_BASE_URL}/user/educations`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any[]>(response);
+  }
+
+  // Create a new education
+  async createEducation(data: {
+    degree: string;
+    institution: string;
+    fieldOfStudy?: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent?: boolean;
+    gpa?: number;
+    percentage?: number;
+    grade?: string;
+    description?: string;
+    location?: string;
+    educationType?: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/educations`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  // Update an education
+  async updateEducation(id: string, data: Partial<{
+    degree: string;
+    institution: string;
+    fieldOfStudy?: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent?: boolean;
+    gpa?: number;
+    percentage?: number;
+    grade?: string;
+    description?: string;
+    location?: string;
+    educationType?: string;
+  }>): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/user/educations/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  // Delete an education
+  async deleteEducation(id: string): Promise<ApiResponse<void>> {
+    const response = await fetch(`${API_BASE_URL}/user/educations/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<void>(response);
   }
 
   // Record search endpoint

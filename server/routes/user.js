@@ -186,10 +186,19 @@ const avatarUpload = multer({
     fileSize: 2 * 1024 * 1024 // 2MB limit for avatars
   },
   fileFilter: function (req, file, cb) {
-    const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    
     const ext = path.extname(file.originalname).toLowerCase();
-    console.log('🔍 File type check:', ext, 'Allowed:', allowedTypes);
-    if (allowedTypes.includes(ext)) {
+    const mimeType = file.mimetype ? file.mimetype.toLowerCase() : '';
+    
+    console.log('🔍 File type check:', { ext, mimeType, originalname: file.originalname });
+    
+    // Check both extension and MIME type for better compatibility
+    const isValidExtension = allowedExtensions.includes(ext);
+    const isValidMimeType = allowedMimeTypes.includes(mimeType);
+    
+    if (isValidExtension || isValidMimeType) {
       cb(null, true);
     } else {
       cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed for avatars'));
@@ -790,6 +799,15 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
     });
 
     // Normalize numeric fields: convert empty strings to null, and valid strings to numbers
+    if (Object.prototype.hasOwnProperty.call(updateData, 'current_salary')) {
+      const v = updateData.current_salary;
+      if (v === '' || v === undefined) {
+        updateData.current_salary = null;
+      } else if (typeof v === 'string') {
+        const num = parseFloat(v);
+        updateData.current_salary = isNaN(num) ? null : num;
+      }
+    }
     if (Object.prototype.hasOwnProperty.call(updateData, 'expected_salary')) {
       const v = updateData.expected_salary;
       if (v === '' || v === undefined) {
@@ -806,6 +824,20 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       } else if (typeof v === 'string') {
         const num = parseInt(v);
         updateData.notice_period = isNaN(num) ? null : num;
+      }
+    }
+    // Fix experience_years: Since column is INTEGER, we need to round, but we'll store the decimal
+    // PostgreSQL will truncate decimals in INTEGER columns, so we round to preserve at least the integer part
+    if (Object.prototype.hasOwnProperty.call(updateData, 'experience_years')) {
+      const v = updateData.experience_years;
+      if (v === '' || v === undefined) {
+        updateData.experience_years = null;
+      } else if (typeof v === 'string') {
+        const num = parseFloat(v);
+        // Store as-is (Sequelize will handle INTEGER conversion, but we preserve the decimal value in calculation)
+        updateData.experience_years = isNaN(num) ? null : Math.round(num);
+      } else if (typeof v === 'number') {
+        updateData.experience_years = Math.round(v);
       }
     }
 
@@ -857,6 +889,10 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
     });
     
     updateData.profileCompletion = Math.round((completedFields / profileFields.length) * 100);
+
+    // Debug: Log updateData to verify currentSalary is included
+    console.log('🔍 Profile update - updateData:', JSON.stringify(updateData, null, 2));
+    console.log('🔍 Profile update - current_salary value:', updateData.current_salary);
 
     await req.user.update(updateData);
 
@@ -6015,5 +6051,510 @@ async function deleteUserSpecificData(userId, transaction) {
     throw error;
   }
 }
+
+// ==========================================
+// Work Experience Endpoints
+// ==========================================
+
+// Get all work experiences for the authenticated user
+router.get('/work-experiences', authenticateToken, async (req, res) => {
+  try {
+    const { WorkExperience } = require('../models');
+    
+    // Only select columns that exist in the database
+    // Note: createdAt and updatedAt are automatically included by Sequelize when timestamps: true
+    const workExperiences = await WorkExperience.findAll({
+      where: { userId: req.user.id },
+      attributes: [
+        'id', 'userId', 'companyName', 'jobTitle', 'location', 'startDate', 'endDate', 
+        'isCurrent', 'description', 'employmentType', 'skills', 'achievements', 
+        'salary', 'salaryCurrency'
+      ],
+      order: [
+        ['is_current', 'DESC'], // Current jobs first
+        ['start_date', 'DESC'] // Then by start date descending
+      ]
+    });
+
+    // Extract currentDesignation from description if present
+    const formattedExperiences = workExperiences.map(exp => {
+      const expData = exp.toJSON();
+      let currentDesignation = '';
+      let description = expData.description || '';
+      
+      // Check if description starts with "Designation: "
+      if (description && description.startsWith('Designation: ')) {
+        const lines = description.split('\n\n');
+        const designationLine = lines[0];
+        currentDesignation = designationLine.replace('Designation: ', '');
+        description = lines.slice(1).join('\n\n');
+      }
+      
+      return {
+        ...expData,
+        currentDesignation,
+        description
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Work experiences fetched successfully',
+      data: formattedExperiences
+    });
+  } catch (error) {
+    console.error('❌ Error fetching work experiences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch work experiences',
+      error: error.message
+    });
+  }
+});
+
+// Create a new work experience
+router.post('/work-experiences', authenticateToken, async (req, res) => {
+  try {
+    const { WorkExperience } = require('../models');
+    const {
+      companyName,
+      jobTitle,
+      location,
+      startDate,
+      endDate,
+      isCurrent,
+      description,
+      achievements,
+      skills,
+      salary,
+      salaryCurrency,
+      employmentType,
+      currentDesignation
+    } = req.body;
+
+    // Validation
+    if (!jobTitle || !startDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job title and start date are required'
+      });
+    }
+
+    // If isCurrent is true, set endDate to null
+    const finalEndDate = isCurrent ? null : endDate;
+
+    // Combine designation with description if provided
+    let finalDescription = description || '';
+    if (currentDesignation) {
+      finalDescription = `Designation: ${currentDesignation}${finalDescription ? '\n\n' + finalDescription : ''}`;
+    }
+
+    // Only include fields that exist in the database
+    const workExperience = await WorkExperience.create({
+      userId: req.user.id,
+      companyName: companyName || null,
+      jobTitle,
+      location: location || null,
+      startDate,
+      endDate: finalEndDate,
+      isCurrent: isCurrent || false,
+      description: finalDescription || null,
+      achievements: Array.isArray(achievements) ? achievements : [],
+      skills: Array.isArray(skills) ? skills : [],
+      salary: salary || null,
+      salaryCurrency: salaryCurrency || 'INR',
+      employmentType: employmentType || 'full-time'
+    });
+
+    // Extract currentDesignation from description if present
+    const expData = workExperience.toJSON();
+    let extractedCurrentDesignation = '';
+    let extractedDescription = expData.description || '';
+    
+    if (extractedDescription && extractedDescription.startsWith('Designation: ')) {
+      const lines = extractedDescription.split('\n\n');
+      const designationLine = lines[0];
+      extractedCurrentDesignation = designationLine.replace('Designation: ', '');
+      extractedDescription = lines.slice(1).join('\n\n');
+    }
+
+    const formattedExperience = {
+      ...expData,
+      currentDesignation: extractedCurrentDesignation,
+      description: extractedDescription
+    };
+
+    res.status(201).json({
+      success: true,
+      message: 'Work experience created successfully',
+      data: formattedExperience
+    });
+  } catch (error) {
+    console.error('❌ Error creating work experience:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create work experience',
+      error: error.message
+    });
+  }
+});
+
+// Update a work experience
+router.put('/work-experiences/:id', authenticateToken, async (req, res) => {
+  try {
+    const { WorkExperience } = require('../models');
+    const { id } = req.params;
+    const {
+      companyName,
+      jobTitle,
+      location,
+      startDate,
+      endDate,
+      isCurrent,
+      description,
+      achievements,
+      skills,
+      salary,
+      salaryCurrency,
+      employmentType,
+      currentDesignation
+    } = req.body;
+
+    // Find the work experience and verify ownership
+    const workExperience = await WorkExperience.findOne({
+      where: { id, userId: req.user.id }
+    });
+
+    if (!workExperience) {
+      return res.status(404).json({
+        success: false,
+        message: 'Work experience not found'
+      });
+    }
+
+    // If isCurrent is true, set endDate to null
+    const finalEndDate = isCurrent ? null : (endDate || workExperience.endDate);
+
+    // Combine designation with description if provided
+    let finalDescription = description;
+    if (currentDesignation !== undefined) {
+      const existingDesc = finalDescription || workExperience.description || '';
+      finalDescription = `Designation: ${currentDesignation}${existingDesc ? '\n\n' + existingDesc : ''}`;
+    }
+
+    // Prepare update data - only include fields that exist in database
+    const updateData = {};
+    if (companyName !== undefined) updateData.companyName = companyName;
+    if (jobTitle !== undefined) updateData.jobTitle = jobTitle;
+    if (location !== undefined) updateData.location = location;
+    if (startDate !== undefined) updateData.startDate = startDate;
+    if (endDate !== undefined || isCurrent !== undefined) updateData.endDate = finalEndDate;
+    if (isCurrent !== undefined) updateData.isCurrent = isCurrent;
+    if (description !== undefined || currentDesignation !== undefined) updateData.description = finalDescription;
+    if (achievements !== undefined) updateData.achievements = Array.isArray(achievements) ? achievements : [];
+    if (skills !== undefined) updateData.skills = Array.isArray(skills) ? skills : [];
+    if (salary !== undefined) updateData.salary = salary;
+    if (salaryCurrency !== undefined) updateData.salaryCurrency = salaryCurrency;
+    if (employmentType !== undefined) updateData.employmentType = employmentType;
+
+    await workExperience.update(updateData);
+
+    // Refresh the updated work experience
+    await workExperience.reload();
+
+    // Extract currentDesignation from description if present
+    const expData = workExperience.toJSON();
+    let extractedCurrentDesignation = '';
+    let extractedDescription = expData.description || '';
+    
+    if (extractedDescription && extractedDescription.startsWith('Designation: ')) {
+      const lines = extractedDescription.split('\n\n');
+      const designationLine = lines[0];
+      extractedCurrentDesignation = designationLine.replace('Designation: ', '');
+      extractedDescription = lines.slice(1).join('\n\n');
+    }
+
+    const formattedExperience = {
+      ...expData,
+      currentDesignation: extractedCurrentDesignation,
+      description: extractedDescription
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Work experience updated successfully',
+      data: formattedExperience
+    });
+  } catch (error) {
+    console.error('❌ Error updating work experience:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update work experience',
+      error: error.message
+    });
+  }
+});
+
+// Delete a work experience
+router.delete('/work-experiences/:id', authenticateToken, async (req, res) => {
+  try {
+    const { WorkExperience } = require('../models');
+    const { id } = req.params;
+
+    // Find the work experience and verify ownership
+    const workExperience = await WorkExperience.findOne({
+      where: { id, userId: req.user.id }
+    });
+
+    if (!workExperience) {
+      return res.status(404).json({
+        success: false,
+        message: 'Work experience not found'
+      });
+    }
+
+    await workExperience.destroy();
+
+    res.status(200).json({
+      success: true,
+      message: 'Work experience deleted successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error deleting work experience:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete work experience',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// Education Management Endpoints
+// ==========================================
+
+// Get all educations for the authenticated user
+router.get('/educations', authenticateToken, async (req, res) => {
+  try {
+    const { Education } = require('../models');
+    
+    // Only select columns that exist in the database
+    const educations = await Education.findAll({
+      where: { userId: req.user.id },
+      attributes: [
+        'id', 'userId', 'degree', 'institution', 'fieldOfStudy', 'startDate', 'endDate',
+        'isCurrent', 'gpa', 'percentage', 'grade', 'description', 'location', 'educationType'
+      ],
+      order: [
+        ['is_current', 'DESC'], // Current education first
+        ['start_date', 'DESC'] // Then by start date descending
+      ],
+      raw: false // Ensure we get Sequelize instances
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Educations fetched successfully',
+      data: educations.map(edu => edu.toJSON())
+    });
+  } catch (error) {
+    console.error('❌ Error fetching educations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch educations',
+      error: error.message
+    });
+  }
+});
+
+// Create a new education
+router.post('/educations', authenticateToken, async (req, res) => {
+  try {
+    const { Education } = require('../models');
+    const {
+      degree,
+      institution,
+      fieldOfStudy,
+      startDate,
+      endDate,
+      isCurrent,
+      gpa,
+      percentage,
+      grade,
+      description,
+      location,
+      educationType
+    } = req.body;
+
+    // Validation
+    if (!degree || !institution || !startDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Degree, institution, and start date are required'
+      });
+    }
+
+    // If isCurrent is true, set endDate to null
+    const finalEndDate = isCurrent ? null : endDate;
+
+    // Only include fields that exist in the database table
+    // Exclude: scale, country, level, order, metadata, resumeId
+    // Use build + save to have more control
+    const educationData = {
+      userId: req.user.id,
+      degree,
+      institution,
+      fieldOfStudy: fieldOfStudy || null,
+      startDate,
+      endDate: finalEndDate,
+      isCurrent: isCurrent || false,
+      gpa: gpa || null,
+      percentage: percentage || null,
+      grade: grade || null,
+      description: description || null,
+      location: location || null,
+      educationType: educationType || null
+    };
+    
+    // Explicitly exclude non-existent fields
+    delete educationData.scale;
+    delete educationData.country;
+    delete educationData.level;
+    delete educationData.order;
+    delete educationData.metadata;
+    delete educationData.resumeId;
+    
+    const education = await Education.create(educationData, {
+      fields: ['userId', 'degree', 'institution', 'fieldOfStudy', 'startDate', 'endDate', 'isCurrent', 'gpa', 'percentage', 'grade', 'description', 'location', 'educationType'],
+      returning: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Education created successfully',
+      data: education.toJSON()
+    });
+  } catch (error) {
+    console.error('❌ Error creating education:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create education',
+      error: error.message
+    });
+  }
+});
+
+// Update an education
+router.put('/educations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { Education } = require('../models');
+    const { id } = req.params;
+    const {
+      degree,
+      institution,
+      fieldOfStudy,
+      startDate,
+      endDate,
+      isCurrent,
+      gpa,
+      percentage,
+      grade,
+      description,
+      location,
+      educationType
+    } = req.body;
+
+    // Find the education and verify ownership
+    const education = await Education.findOne({
+      where: { id, userId: req.user.id }
+    });
+
+    if (!education) {
+      return res.status(404).json({
+        success: false,
+        message: 'Education not found'
+      });
+    }
+
+    // If isCurrent is true, set endDate to null
+    const finalEndDate = isCurrent ? null : (endDate !== undefined ? endDate : education.endDate);
+
+    // Prepare update data - only include fields that exist in database
+    const updateData = {};
+    if (degree !== undefined) updateData.degree = degree;
+    if (institution !== undefined) updateData.institution = institution;
+    if (fieldOfStudy !== undefined) updateData.fieldOfStudy = fieldOfStudy;
+    if (startDate !== undefined) updateData.startDate = startDate;
+    if (endDate !== undefined || isCurrent !== undefined) updateData.endDate = finalEndDate;
+    if (isCurrent !== undefined) updateData.isCurrent = isCurrent;
+    if (gpa !== undefined) updateData.gpa = gpa;
+    if (percentage !== undefined) updateData.percentage = percentage;
+    if (grade !== undefined) updateData.grade = grade;
+    if (description !== undefined) updateData.description = description;
+    if (location !== undefined) updateData.location = location;
+    if (educationType !== undefined) updateData.educationType = educationType;
+
+    // Explicitly exclude non-existent fields
+    delete updateData.scale;
+    delete updateData.country;
+    delete updateData.level;
+    delete updateData.order;
+    delete updateData.metadata;
+    delete updateData.resumeId;
+
+    // Only update fields that exist in the database
+    await education.update(updateData, {
+      fields: ['degree', 'institution', 'fieldOfStudy', 'startDate', 'endDate', 'isCurrent', 'gpa', 'percentage', 'grade', 'description', 'location', 'educationType']
+    });
+    await education.reload();
+
+    res.status(200).json({
+      success: true,
+      message: 'Education updated successfully',
+      data: education.toJSON()
+    });
+  } catch (error) {
+    console.error('❌ Error updating education:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update education',
+      error: error.message
+    });
+  }
+});
+
+// Delete an education
+router.delete('/educations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { Education } = require('../models');
+    const { id } = req.params;
+
+    // Find the education and verify ownership
+    const education = await Education.findOne({
+      where: { id, userId: req.user.id }
+    });
+
+    if (!education) {
+      return res.status(404).json({
+        success: false,
+        message: 'Education not found'
+      });
+    }
+
+    await education.destroy();
+
+    res.status(200).json({
+      success: true,
+      message: 'Education deleted successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error deleting education:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete education',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

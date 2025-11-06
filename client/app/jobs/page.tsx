@@ -3503,7 +3503,7 @@ export default function JobsPage() {
         roleCategories: filters.roleCategories,
         totalJobsBeforeFilter: beforeCount
       })
-      
+
       filtered = filtered.filter(job => {
         let matchesIndustry = false
         let matchesDepartment = false
@@ -5898,7 +5898,7 @@ export default function JobsPage() {
                             </Button>
 
                             
-
+                            
                             {/* Undo button removed as per requirement */}
 
                           </div>

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp, Brain } from "lucide-react"
+import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp, Brain, Phone, Mail, CheckCircle2, Save, Eye, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { apiService, constructAvatarUrl } from "@/lib/api"
@@ -22,6 +23,7 @@ import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 interface Candidate {
   id: string;
   name: string;
+  headline?: string;
   designation: string;
   experience: string;
   location: string;
@@ -32,9 +34,12 @@ interface Candidate {
   isAttached: boolean;
   lastModified: string;
   activeStatus: string;
+  lastActive?: string | null;
   additionalInfo: string;
   phoneVerified: boolean;
   emailVerified: boolean;
+  phone?: string | null;
+  email?: string | null;
   currentSalary: string;
   expectedSalary: string;
   noticePeriod: string;
@@ -45,6 +50,13 @@ interface Candidate {
   atsCalculatedAt?: string | null;
   relevanceScore?: number;
   matchReasons?: string[];
+  currentCompany?: string | null;
+  previousCompany?: string | null;
+  currentDesignation?: string | null;
+  isViewed?: boolean;
+  isSaved?: boolean;
+  workExperiences?: any[];
+  educationDetails?: any[];
 }
 
 interface Requirement {
@@ -67,6 +79,11 @@ export default function CandidatesPage() {
   // Data states
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [requirement, setRequirement] = useState<Requirement | null>(null)
+  const [revealedPhones, setRevealedPhones] = useState<Set<string>>(new Set())
+  const [revealedEmails, setRevealedEmails] = useState<Set<string>>(new Set())
+  const [savingCandidate, setSavingCandidate] = useState<string | null>(null)
+  const [contactDialogOpen, setContactDialogOpen] = useState(false)
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -75,15 +92,34 @@ export default function CandidatesPage() {
   })
   
   // Filter states
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    experience: number[],
+    salary: number[],
+    locationInclude: string,
+    locationExclude: string,
+    skillsInclude: string,
+    skillsExclude: string,
+    keyword: string,
+    education: string[],
+    availability: string[],
+    verification: string[],
+    lastActive: string[],
+    saved: boolean,
+    accessed: boolean,
+  }>({
     experience: [0, 20],
     salary: [0, 50],
-    location: [] as string[],
-    skills: [] as string[],
-    education: [] as string[],
-    availability: [] as string[],
-    verification: [] as string[],
-    lastActive: [] as string[],
+    locationInclude: '',
+    locationExclude: '',
+    skillsInclude: '',
+    skillsExclude: '',
+    keyword: '',
+    education: [],
+    availability: [],
+    verification: [],
+    lastActive: [],
+    saved: false,
+    accessed: false,
   })
 
   // Filter options
@@ -180,14 +216,247 @@ export default function CandidatesPage() {
     setFilters({
       experience: [0, 20],
       salary: [0, 50],
-      location: [],
-      skills: [],
+      locationInclude: '',
+      locationExclude: '',
+      skillsInclude: '',
+      skillsExclude: '',
+      keyword: '',
       education: [],
       availability: [],
       verification: [],
       lastActive: [],
+      saved: false,
+      accessed: false,
     })
   }
+  
+  // Apply filters to candidates using useMemo for proper re-rendering
+  const filteredCandidates = useMemo(() => {
+    console.log('🔍 Applying filters:', filters, 'to', candidates.length, 'candidates');
+    let result = [...candidates];
+    
+    // Filter by saved status
+    if (filters.saved) {
+      result = result.filter(c => c.isSaved);
+      console.log('✅ After saved filter:', result.length);
+    }
+    
+    // Filter by accessed/viewed status
+    if (filters.accessed) {
+      result = result.filter(c => c.isViewed);
+      console.log('✅ After accessed filter:', result.length);
+    }
+    
+    // Filter by keyword (name, designation, etc.)
+    if (filters.keyword.trim()) {
+      const keywordLower = filters.keyword.toLowerCase().trim();
+      result = result.filter(c => {
+        const nameMatch = c.name.toLowerCase().includes(keywordLower);
+        const designationMatch = (c.designation || '').toLowerCase().includes(keywordLower);
+        const headlineMatch = ((c as any).headline || '').toLowerCase().includes(keywordLower);
+        const summaryMatch = (c.additionalInfo || '').toLowerCase().includes(keywordLower);
+        return nameMatch || designationMatch || headlineMatch || summaryMatch;
+      });
+      console.log('✅ After keyword filter:', result.length);
+    }
+    
+    // Filter by location - Include
+    if (filters.locationInclude.trim()) {
+      const locationLower = filters.locationInclude.toLowerCase().trim();
+      result = result.filter(c => {
+        const currentLocationMatch = (c.location || '').toLowerCase().includes(locationLower);
+        const preferredLocationMatch = (c.preferredLocations || []).some((loc: string) => 
+          loc.toLowerCase().includes(locationLower)
+        );
+        return currentLocationMatch || preferredLocationMatch;
+      });
+      console.log('✅ After location include filter:', result.length);
+    }
+    
+    // Filter by location - Exclude
+    if (filters.locationExclude.trim()) {
+      const locationLower = filters.locationExclude.toLowerCase().trim();
+      result = result.filter(c => {
+        const currentLocationMatch = (c.location || '').toLowerCase().includes(locationLower);
+        const preferredLocationMatch = (c.preferredLocations || []).some((loc: string) => 
+          loc.toLowerCase().includes(locationLower)
+        );
+        return !currentLocationMatch && !preferredLocationMatch;
+      });
+      console.log('✅ After location exclude filter:', result.length);
+    }
+    
+    // Filter by skills - Include
+    if (filters.skillsInclude.trim()) {
+      const skillsLower = filters.skillsInclude.toLowerCase().trim();
+      const includeSkills = skillsLower.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      result = result.filter(c => {
+        const candidateSkills = (c.keySkills || []).map((s: string) => s.toLowerCase());
+        return includeSkills.some(skill => 
+          candidateSkills.some((cs: string) => cs.includes(skill))
+        );
+      });
+      console.log('✅ After skills include filter:', result.length);
+    }
+    
+    // Filter by skills - Exclude
+    if (filters.skillsExclude.trim()) {
+      const skillsLower = filters.skillsExclude.toLowerCase().trim();
+      const excludeSkills = skillsLower.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      result = result.filter(c => {
+        const candidateSkills = (c.keySkills || []).map((s: string) => s.toLowerCase());
+        return !excludeSkills.some(skill => 
+          candidateSkills.some((cs: string) => cs.includes(skill))
+        );
+      });
+      console.log('✅ After skills exclude filter:', result.length);
+    }
+    
+    // Filter by experience range
+    if (filters.experience && filters.experience.length === 2 && (filters.experience[0] > 0 || filters.experience[1] < 20)) {
+      const [minExp, maxExp] = filters.experience;
+      result = result.filter(c => {
+        let expYears = 0;
+        
+        // Method 1: Check workExperiences to calculate total experience (most accurate)
+        if (c.workExperiences && Array.isArray(c.workExperiences) && c.workExperiences.length > 0) {
+          let totalMonths = 0;
+          c.workExperiences.forEach((exp: any) => {
+            const startDate = exp.startDate || exp.start_date;
+            const endDate = exp.endDate || exp.end_date;
+            const isCurrent = exp.isCurrent || exp.is_current || false;
+            
+            if (startDate) {
+              try {
+                const start = new Date(startDate);
+                const end = isCurrent ? new Date() : (endDate ? new Date(endDate) : new Date());
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                  totalMonths += Math.max(0, months);
+                }
+              } catch (e) {
+                // Ignore invalid dates
+              }
+            }
+          });
+          expYears = totalMonths / 12;
+          if (expYears > 0) {
+            return expYears >= minExp && expYears <= maxExp;
+          }
+        }
+        
+        // Method 2: Extract years from experience string (e.g., "3 years" or "3.5 years" -> 3.5)
+        const expMatch = (c.experience || '').match(/(\d+(?:\.\d+)?)/);
+        if (expMatch) {
+          expYears = parseFloat(expMatch[1]);
+          return expYears >= minExp && expYears <= maxExp;
+        }
+        
+        // Method 3: Check if candidate has experience_years field (from backend)
+        if ((c as any).experienceYears !== undefined) {
+          expYears = Number((c as any).experienceYears) || 0;
+          return expYears >= minExp && expYears <= maxExp;
+        }
+        
+        // If no experience data and min > 0, exclude (freshers)
+        if (minExp > 0) return false;
+        // If min is 0, include candidates with no experience (freshers)
+        return true;
+      });
+      console.log(`✅ After experience filter (${minExp}-${maxExp} years):`, result.length);
+    }
+    
+    // Filter by salary range
+    if (filters.salary && filters.salary.length === 2 && (filters.salary[0] > 0 || filters.salary[1] < 50)) {
+      const [minSalary, maxSalary] = filters.salary;
+      result = result.filter(c => {
+        const parseSalary = (salaryStr: string): number | null => {
+          if (!salaryStr || salaryStr === 'Not specified' || salaryStr === 'null') {
+            return null;
+          }
+          
+          // Try to extract number from salary string (handles formats like "INR 50000", "50000 LPA", "5 LPA", etc.)
+          const salaryMatch = salaryStr.match(/(\d+(?:,\d+)*(?:\.\d+)?)/);
+          if (salaryMatch) {
+            let salary = parseFloat(salaryMatch[1].replace(/,/g, ''));
+            
+            // Check if string contains "LPA" or "lakh" - already in LPA
+            if (salaryStr.toLowerCase().includes('lpa') || salaryStr.toLowerCase().includes('lakh')) {
+              return salary;
+            }
+            
+            // If salary is very large (>= 100000), assume it's already in LPA
+            if (salary >= 100000) {
+              return salary / 100000; // Convert to LPA (e.g., 500000 -> 5 LPA)
+            }
+            
+            // If salary is between 1000-100000, assume it's monthly and convert to LPA
+            if (salary >= 1000 && salary < 100000) {
+              return (salary * 12) / 100000; // Convert monthly to LPA
+            }
+            
+            // If salary is < 1000, assume it's already in LPA
+            return salary;
+          }
+          
+          return null;
+        };
+        
+        // Check currentSalary first
+        const currentSalaryValue = parseSalary(c.currentSalary || '');
+        if (currentSalaryValue !== null && currentSalaryValue >= minSalary && currentSalaryValue <= maxSalary) {
+          return true;
+        }
+        
+        // Also check expectedSalary
+        const expectedSalaryValue = parseSalary(c.expectedSalary || '');
+        if (expectedSalaryValue !== null && expectedSalaryValue >= minSalary && expectedSalaryValue <= maxSalary) {
+          return true;
+        }
+        
+        // If no salary data and filters are not at default, exclude
+        return false;
+      });
+      console.log(`✅ After salary filter (${minSalary}-${maxSalary} LPA):`, result.length);
+    }
+    
+    // Filter by verification
+    if (filters.verification.length > 0) {
+      result = result.filter(c => {
+        const checks = [];
+        if (filters.verification.includes('Phone Verified')) {
+          checks.push(c.phoneVerified === true);
+        }
+        if (filters.verification.includes('Email Verified')) {
+          checks.push(c.emailVerified === true);
+        }
+        if (filters.verification.includes('Profile Complete')) {
+          // Consider profile complete if profileCompletion >= 80
+          const isComplete = (c.profileCompletion || 0) >= 80;
+          checks.push(isComplete);
+        }
+        // If multiple verification filters selected, candidate must match ALL selected
+        return checks.length > 0 && checks.every(Boolean);
+      });
+      console.log('✅ After verification filter:', result.length);
+    }
+    
+    // Filter by education
+    if (filters.education.length > 0) {
+      result = result.filter(c => {
+        const eduText = c.education || '';
+        const eduDetails = c.educationDetails || [];
+        const eduDegree = eduDetails.length > 0 ? (eduDetails[0].degree || '') : '';
+        return filters.education.some(edu => 
+          eduText.toLowerCase().includes(edu.toLowerCase()) ||
+          eduDegree.toLowerCase().includes(edu.toLowerCase())
+        );
+      });
+    }
+    
+    console.log('✅ Final filtered candidates:', result.length);
+    return result;
+  }, [candidates, filters]);
 
   const handleCalculateATS = async (processAll = false) => {
     try {
@@ -201,12 +470,12 @@ export default function CandidatesPage() {
       // Prepare request body based on processing mode
       const requestBody = processAll 
         ? { 
-            page: pagination.page, 
-            limit: parseInt(showCount), 
             processAll: true 
+            // Don't send page/limit - backend will process ALL candidates for the requirement
           }
         : { 
-            candidateIds: candidates.map(c => c.id) 
+            candidateIds: filteredCandidates.map(c => c.id) 
+            // Only process candidates visible on current page (after filters)
           }
       
       console.log('🚀 STREAMING ATS calculation request:', { processAll, requestBody })
@@ -306,8 +575,7 @@ export default function CandidatesPage() {
 
   return (
     <EmployerAuthGuard>
-      return (
-    <div key={String(params.id)} className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      <div key={String(params.id)} className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -360,8 +628,6 @@ export default function CandidatesPage() {
                 <p className="text-slate-600">Found {requirement.totalCandidates} matching candidates</p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-slate-900">{requirement.accessedCandidates || 0}</div>
-                <div className="text-sm text-slate-600">Accessed Today</div>
               </div>
             </div>
             
@@ -526,6 +792,29 @@ export default function CandidatesPage() {
           {/* Advanced Filters */}
           {showFilters && (
             <Card className="mt-4 p-6 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)]">
+              <div className="mb-6 pb-6 border-b space-y-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="saved-only"
+                    checked={filters.saved}
+                    onCheckedChange={(checked) => setFilters(prev => ({ ...prev, saved: checked as boolean }))}
+                  />
+                  <Label htmlFor="saved-only" className="text-sm font-medium cursor-pointer">
+                    Show Saved Candidates Only
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="accessed-only"
+                    checked={filters.accessed}
+                    onCheckedChange={(checked) => setFilters(prev => ({ ...prev, accessed: checked as boolean }))}
+                  />
+                  <Label htmlFor="accessed-only" className="text-sm font-medium cursor-pointer">
+                    Show Accessed/Viewed Candidates Only
+                  </Label>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Experience Range */}
                 <div>
@@ -563,51 +852,70 @@ export default function CandidatesPage() {
                             </div>
                           </div>
 
-                {/* Location */}
-                            <div>
-                  <Label className="text-sm font-medium mb-3 block">Preferred Locations</Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {filterOptions.locations.map((location) => (
-                      <div key={location} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`location-${location}`}
-                          checked={filters.location.includes(location)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              handleFilterChange('location', [...filters.location, location])
-                            } else {
-                              handleFilterChange('location', filters.location.filter(l => l !== location))
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`location-${location}`} className="text-sm">{location}</Label>
-                      </div>
-                    ))}
-                  </div>
-                            </div>
+                {/* Keyword/Name Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">Keyword/Name</Label>
+                  <Input
+                    type="text"
+                    placeholder="Search by name, designation, or keyword..."
+                    value={filters.keyword}
+                    onChange={(e) => handleFilterChange('keyword', e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Searches in name, designation, headline, and summary</p>
+                </div>
 
-                {/* Skills */}
-                            <div>
-                  <Label className="text-sm font-medium mb-3 block">Key Skills</Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {filterOptions.skills.map((skill) => (
-                      <div key={skill} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`skill-${skill}`}
-                          checked={filters.skills.includes(skill)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              handleFilterChange('skills', [...filters.skills, skill])
-                            } else {
-                              handleFilterChange('skills', filters.skills.filter(s => s !== skill))
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`skill-${skill}`} className="text-sm">{skill}</Label>
-                      </div>
-                    ))}
-                  </div>
-                            </div>
+                {/* Location - Include */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">Include Location</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter location to include (e.g., Bangalore, Mumbai)"
+                    value={filters.locationInclude}
+                    onChange={(e) => handleFilterChange('locationInclude', e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Shows candidates with this location in current or preferred locations</p>
+                </div>
+
+                {/* Location - Exclude */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">Exclude Location</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter location to exclude (e.g., Delhi)"
+                    value={filters.locationExclude}
+                    onChange={(e) => handleFilterChange('locationExclude', e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Hides candidates with this location</p>
+                </div>
+
+                {/* Skills - Include */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">Include Key Skills</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter skills separated by comma (e.g., React, Node.js, Python)"
+                    value={filters.skillsInclude}
+                    onChange={(e) => handleFilterChange('skillsInclude', e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Shows candidates with any of these skills</p>
+                </div>
+
+                {/* Skills - Exclude */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">Exclude Key Skills</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter skills separated by comma (e.g., Java, C++)"
+                    value={filters.skillsExclude}
+                    onChange={(e) => handleFilterChange('skillsExclude', e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Hides candidates with any of these skills</p>
+                </div>
 
                 {/* Education */}
                             <div>
@@ -694,83 +1002,213 @@ export default function CandidatesPage() {
         {/* Candidates List */}
         {!loading && !error && (
         <div className="space-y-4">
-            {candidates.length > 0 ? (
-              candidates.map((candidate) => (
-            <Card key={candidate.id} className={`p-6 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300 ${calculatingATS ? 'opacity-75' : ''}`}>
-              <div className="flex items-start space-x-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage 
-                    src={constructAvatarUrl(candidate.avatar)} 
-                    alt={candidate.name}
-                    onError={(e) => {
-                      console.log('Avatar image failed to load:', candidate.avatar);
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                  <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                    {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+            {filteredCandidates.length > 0 ? (
+              filteredCandidates.map((candidate) => (
+            <Card key={candidate.id} className={`rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300 ${calculatingATS ? 'opacity-75' : ''} ${candidate.isViewed ? 'border-green-300 border-2' : ''}`}>
+              <div className="flex items-stretch">
+                {/* LEFT PARTITION - Profile Picture, Education & Summary */}
+                <div className="border-r border-slate-200 p-6 flex flex-col items-center w-40 flex-shrink-0 bg-gradient-to-b from-slate-50 to-white">
+                  <Avatar className="w-28 h-28 mb-4 border-2 border-slate-300 shadow-lg">
+                    <AvatarImage 
+                      src={constructAvatarUrl(candidate.avatar || null)} 
+                      alt={candidate.name}
+                      className="object-cover w-full h-full"
+                      onLoad={() => console.log('✅ Avatar loaded:', candidate.name)}
+                      onError={(e) => {
+                        console.log('❌ Avatar failed:', candidate.name);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white w-full h-full flex items-center justify-center">
+                      {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  {/* Education */}
+                  <div className="text-center w-full mb-3">
+                    <p className="text-xs font-semibold text-slate-600 mb-1">Education</p>
+                    <p className="text-xs font-medium text-slate-700 line-clamp-2">
+                      {(() => {
+                        // Debug logging
+                        console.log('🔍 Education Debug for', candidate.name, ':', {
+                          educationDetails: candidate.educationDetails,
+                          educationString: candidate.education,
+                          hasEducationDetails: !!candidate.educationDetails,
+                          isArray: Array.isArray(candidate.educationDetails),
+                          length: candidate.educationDetails?.length
+                        });
+                        
+                        // Check educationDetails first (from database)
+                        if (candidate.educationDetails && Array.isArray(candidate.educationDetails) && candidate.educationDetails.length > 0) {
+                          const edu = candidate.educationDetails[0];
+                          // Format: "Degree - Institution" or "Degree - Field of Study - Institution"
+                          const degree = edu.degree || '';
+                          const institution = edu.institution || '';
+                          const fieldOfStudy = edu.fieldOfStudy || '';
+                          
+                          let result = '';
+                          if (degree && institution) {
+                            if (fieldOfStudy && fieldOfStudy !== institution) {
+                              result = `${degree} - ${fieldOfStudy} - ${institution}`;
+                            } else {
+                              result = `${degree} - ${institution}`;
+                            }
+                          } else if (degree) {
+                            result = degree;
+                          } else if (institution) {
+                            result = institution;
+                          } else if (fieldOfStudy) {
+                            result = fieldOfStudy;
+                          } else {
+                            result = 'Not specified';
+                          }
+                          
+                          console.log('✅ Using educationDetails:', result);
+                          return result;
+                        }
+                        
+                        // Fallback to education string field
+                        if (candidate.education && candidate.education !== 'Not specified' && candidate.education !== 'null' && candidate.education.trim() !== '') {
+                          console.log('✅ Using education string:', candidate.education);
+                          return candidate.education;
+                        }
+                        
+                        console.log('⚠️ No education data found');
+                        return 'Not specified';
+                      })()}
+                    </p>
+                  </div>
+                  
+                  {/* Professional Summary */}
+                  <div className="text-center w-full text-xs bg-slate-100 rounded-lg p-2 mb-3">
+                    <p className="text-slate-700 line-clamp-3">{candidate.additionalInfo || 'No summary'}</p>
+                  </div>
+                  
+                  {/* Viewed Indicator */}
+                  {candidate.isViewed && (
+                    <div className="flex items-center gap-1 text-green-600 text-xs font-semibold">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Viewed
+                    </div>
+                  )}
+                </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-slate-900 text-lg">{candidate.name}</h3>
+                {/* RIGHT SIDE - Information & Actions */}
+                <div className="flex-1 p-6 flex flex-col">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 pr-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-slate-900 text-xl">{candidate.name}</h3>
                         {(candidate as any)?.verification_level === 'premium' || (candidate as any)?.verificationLevel === 'premium' || (candidate as any)?.preferences?.premium ? (
-                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Premium</Badge>
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">Premium</Badge>
                         ) : null}
+                        {candidate.isViewed && (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        )}
                       </div>
-                      <p className="text-slate-600 text-sm mb-2">{candidate.designation}</p>
-                      {/* Enhanced Relevance Score and Match Reasons */}
-                      {candidate.relevanceScore !== undefined && (
-                        <div className="mb-3">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Badge 
-                              variant="default"
-                              className={`text-xs font-semibold px-3 py-1 ${
-                                candidate.relevanceScore >= 80 ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                                candidate.relevanceScore >= 60 ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                candidate.relevanceScore >= 40 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                'bg-gray-100 text-gray-800 border-gray-200'
-                              }`}
-                            >
-                              <Star className="w-3 h-3 mr-1 inline" />
-                              {candidate.relevanceScore}% Relevance
-                            </Badge>
-                            <span className="text-xs text-slate-500">
-                              {candidate.relevanceScore >= 80 ? '🎯 Excellent Match' :
-                               candidate.relevanceScore >= 60 ? '✅ Good Match' :
-                               candidate.relevanceScore >= 40 ? '⚡ Potential Match' :
-                               '💡 Consider'}
-                            </span>
-                          </div>
-                          {candidate.matchReasons && candidate.matchReasons.length > 0 && (
+                      <p className="text-slate-600 text-sm mb-2 font-medium">
+                        {(candidate as any).headline || candidate.designation || 'Job Seeker'}
+                      </p>
+                      
+                      {/* Current Designation */}
+                      {candidate.currentDesignation && (
+                        <p className="text-sm text-slate-800 mb-2 font-semibold">
+                          Designation: {candidate.currentDesignation}
+                        </p>
+                      )}
+                      
+                      {/* Company Info */}
+                      <div className="mb-3 space-y-1">
+                        {candidate.currentCompany && (
+                          <p className="text-sm text-slate-700">
+                            Current Company: <span className="font-semibold">{candidate.currentCompany}</span>
+                            {candidate.currentDesignation && ` (${candidate.currentDesignation})`}
+                          </p>
+                        )}
+                        
+                        {candidate.previousCompany && (
+                          <p className="text-sm text-slate-600">
+                            Previous Company: <span className="font-medium">{candidate.previousCompany}</span>
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Location & Experience */}
+                      <div className="mb-3 space-y-1">
+                        {candidate.location && candidate.location !== 'Not specified' && (
+                          <p className="text-sm text-slate-600">
+                            Current Location: {candidate.location}
+                          </p>
+                        )}
+                        
+                        {candidate.preferredLocations && candidate.preferredLocations.length > 0 && (
+                          <p className="text-sm text-slate-600">
+                            Preferred: {candidate.preferredLocations.slice(0, 2).join(', ')}
+                            {candidate.preferredLocations.length > 2 && ` +${candidate.preferredLocations.length - 2}`}
+                          </p>
+                        )}
+                        
+                        {candidate.experience && candidate.experience !== 'Not specified' && (
+                          <p className="text-sm text-slate-600">
+                            Experience: {candidate.experience}
+                          </p>
+                        )}
+                        
+                        {(() => {
+                          const salary = candidate.currentSalary;
+                          console.log('🔍 Salary Debug for', candidate.name, ':', salary);
+                          if (salary && salary !== 'Not specified' && salary !== 'null' && salary.trim() !== '') {
+                            return (
+                              <p className="text-sm text-slate-600 font-medium">
+                                Current Salary: <span className="text-slate-800">{salary}</span>
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      
+                      {/* Technical Skills - Show all skills from database */}
+                      {(() => {
+                        // Get skills from multiple possible sources
+                        const candidateAny = candidate as any;
+                        const skills = candidate.keySkills || 
+                                      (candidateAny?.skills && Array.isArray(candidateAny.skills) ? candidateAny.skills : []) ||
+                                      (candidateAny?.skills && typeof candidateAny.skills === 'string' ? candidateAny.skills.split(',').map((s: string) => s.trim()) : []) ||
+                                      [];
+                        
+                        return skills.length > 0 ? (
+                          <div className="mb-3">
+                            <p className="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Technical Skills</p>
                             <div className="flex flex-wrap gap-1.5">
-                              {candidate.matchReasons.map((reason: string, index: number) => (
-                                <Badge key={index} variant="outline" className="text-xs bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200">
-                                  ✓ {reason}
+                              {skills.slice(0, 10).map((skill: string, idx: number) => (
+                                <Badge key={`${candidate.id}_skill_${idx}_${String(skill)}`} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                                  {String(skill).trim()}
                                 </Badge>
                               ))}
+                              {skills.length > 10 && (
+                                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">
+                                  +{skills.length - 10} more
+                                </Badge>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      )}
-                                </div>
-                    <div className="flex items-center space-x-2">
-                      {candidate.phoneVerified && (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                          Phone ✓
-                        </Badge>
-                      )}
-                      {candidate.emailVerified && (
-                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                          Email ✓
-                        </Badge>
-                      )}
-                          <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
-                            {candidate.profileCompletion}% Complete
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="flex flex-col items-end space-y-2 flex-shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 justify-end">
+                        {candidate.phoneVerified && (
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                            Phone Verified
                           </Badge>
+                        )}
+                        {candidate.emailVerified && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                            Email Verified
+                          </Badge>
+                        )}
+                      </div>
                           {/* ATS Score Badge */}
                           {(() => {
                             const atsScore = Number(candidate.atsScore);
@@ -853,63 +1291,165 @@ export default function CandidatesPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    <div className="flex items-center space-x-2">
-                      <Briefcase className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.experience}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.location}</span>
-                            </div>
-                    <div className="flex items-center space-x-2">
-                      <GraduationCap className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.education}</span>
-                          </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.noticePeriod}</span>
-                        </div>
-                      </div>
-
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {candidate.keySkills.slice(0, 6).map((skill) => (
-                        <Badge key={skill} variant="secondary" className="text-xs">
-                          {skill}
-                        </Badge>
-                  ))}
-                      {candidate.keySkills.length > 6 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{candidate.keySkills.length - 6} more
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-600">{candidate.additionalInfo}</p>
-                </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-xs text-slate-500">
-                      <span>Modified: {candidate.lastModified ? (() => {
-                        try {
-                          const date = new Date(candidate.lastModified);
-                          if (isNaN(date.getTime())) {
-                            return candidate.lastModified;
+                  {/* Action Buttons Row */}
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                      {/* Phone Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (revealedPhones.has(candidate.id)) {
+                            setRevealedPhones(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(candidate.id);
+                              return newSet;
+                            });
+                          } else {
+                            setRevealedPhones(prev => new Set(prev).add(candidate.id));
                           }
-                          return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-                        } catch (e) {
-                          return candidate.lastModified;
-                        }
-                      })() : 'N/A'}</span>
-                      <span>Active: {candidate.activeStatus || 'N/A'}</span>
-                      <span>Current: {candidate.currentSalary || 'N/A'}</span>
-                      <span>Expected: {candidate.expectedSalary || 'N/A'}</span>
+                        }}
+                        className="text-xs"
+                      >
+                        <Phone className="w-3 h-3 mr-1" />
+                        {revealedPhones.has(candidate.id) && candidate.phone ? (
+                          <span className="flex items-center gap-1">
+                            {candidate.phone}
+                            {candidate.phoneVerified && <span className="text-green-600 text-xs">(Verified)</span>}
+                          </span>
+                        ) : (
+                          'Phone Number'
+                        )}
+                      </Button>
+                      
+                      {/* Email/Time Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (revealedEmails.has(candidate.id)) {
+                            setRevealedEmails(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(candidate.id);
+                              return newSet;
+                            });
+                          } else {
+                            setRevealedEmails(prev => new Set(prev).add(candidate.id));
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        <Mail className="w-3 h-3 mr-1" />
+                        {revealedEmails.has(candidate.id) ? (
+                          <span className="flex flex-col items-start">
+                            <span className="flex items-center gap-1">
+                              {candidate.email}
+                              {candidate.emailVerified && <span className="text-blue-600 text-xs">(Verified)</span>}
+                            </span>
+                            {candidate.lastActive && (
+                              <span className="text-xs text-slate-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                Last active: {(() => {
+                                  try {
+                                    const date = new Date(candidate.lastActive);
+                                    const now = new Date();
+                                    const diffMs = now.getTime() - date.getTime();
+                                    const diffMins = Math.floor(diffMs / 60000);
+                                    const diffHours = Math.floor(diffMs / 3600000);
+                                    const diffDays = Math.floor(diffMs / 86400000);
+                                    
+                                    if (diffMins < 60) return `${diffMins}m ago`;
+                                    if (diffHours < 24) return `${diffHours}h ago`;
+                                    if (diffDays < 7) return `${diffDays}d ago`;
+                                    return date.toLocaleDateString();
+                                  } catch {
+                                    return candidate.activeStatus;
+                                  }
+                                })()}
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          'Email Address'
+                        )}
+                      </Button>
+                      
+                      {/* Contact Candidate Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCandidate(candidate)
+                          setContactDialogOpen(true)
+                        }}
+                        className="text-xs"
+                      >
+                        <Mail className="w-3 h-3 mr-1" />
+                        Contact Candidate
+                      </Button>
+                      
+                      {/* Save for Later Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            setSavingCandidate(candidate.id);
+                            if (candidate.isSaved) {
+                              // Unsave - remove like
+                              const res = await apiService.unlikeCandidate(candidate.id);
+                              if (res.success) {
+                                setCandidates(prev => prev.map(c => 
+                                  c.id === candidate.id ? { ...c, isSaved: false } : c
+                                ));
+                                toast.success('Removed from saved candidates');
+                              }
+                            } else {
+                              // Save - add like
+                              const res = await apiService.likeCandidate(candidate.id);
+                              if (res.success) {
+                                setCandidates(prev => prev.map(c => 
+                                  c.id === candidate.id ? { ...c, isSaved: true } : c
+                                ));
+                                toast.success('Saved candidate for later');
+                              }
+                            }
+                          } catch (err) {
+                            toast.error('Failed to update saved status');
+                          } finally {
+                            setSavingCandidate(null);
+                          }
+                        }}
+                        disabled={savingCandidate === candidate.id}
+                        className={`text-xs ${candidate.isSaved ? 'bg-green-50 text-green-700 border-green-200' : ''}`}
+                      >
+                        <Save className={`w-3 h-3 mr-1 ${candidate.isSaved ? 'fill-current' : ''}`} />
+                        {savingCandidate === candidate.id ? 'Saving...' : (candidate.isSaved ? 'Saved' : 'Save')}
+                      </Button>
                     </div>
-                    <Link href={`/employer-dashboard/requirements/${params.id}/candidates/${candidate.id}`}>
-                    <Button variant="outline" size="sm">
-                        View Profile
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          // Mark candidate as viewed immediately for better UX
+                          if (!candidate.isViewed) {
+                            setCandidates(prev => prev.map(c => 
+                              c.id === candidate.id ? { ...c, isViewed: true } : c
+                            ));
+                          }
+                          
+                          // Navigate to profile page - view tracking happens on backend
+                          window.location.href = `/employer-dashboard/requirements/${params.id}/candidates/${candidate.id}`;
+                        } catch (error) {
+                          console.error('Error navigating to profile:', error);
+                        }
+                      }}
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      View Profile
                     </Button>
-                    </Link>
                   </div>
                 </div>
               </div>
@@ -922,20 +1462,11 @@ export default function CandidatesPage() {
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-2">No candidates found</h3>
                 <p className="text-slate-600 mb-4">
-                  {searchQuery 
-                    ? `No candidates match "${searchQuery}". Try adjusting your search criteria.`
-                    : "No candidates match your requirement criteria. Try adjusting your filters or create a new requirement."
+                  {filters.saved
+                    ? "No saved candidates found. Save candidates to view them here."
+                    : "Try adjusting your filters or search criteria."
                   }
                 </p>
-                {searchQuery && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSearchQuery("")}
-                    className="mr-2"
-                  >
-                    Clear Search
-                  </Button>
-                )}
               </div>
             )}
         </div>
@@ -982,6 +1513,83 @@ export default function CandidatesPage() {
       </div>
 
       <EmployerDashboardFooter />
+
+      {/* Contact Candidate Dialog */}
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contact Candidate</DialogTitle>
+            <DialogDescription>
+              {selectedCandidate?.name ? `Get in touch with ${selectedCandidate.name}` : 'Contact information'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {/* Email Section */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Address
+              </Label>
+              {selectedCandidate?.email ? (
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                  <span className="text-sm font-medium">{selectedCandidate.email}</span>
+                  {selectedCandidate.emailVerified && (
+                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                      Verified
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No email available</p>
+              )}
+              {selectedCandidate?.email && (
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    window.location.href = `mailto:${selectedCandidate.email}`
+                  }}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Email
+                </Button>
+              )}
+            </div>
+
+            {/* Phone Section */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                Phone Number
+              </Label>
+              {selectedCandidate?.phone ? (
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                  <span className="text-sm font-medium">{selectedCandidate.phone}</span>
+                  {selectedCandidate.phoneVerified && (
+                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                      Verified
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No phone number available</p>
+              )}
+              {selectedCandidate?.phone && (
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    window.location.href = `tel:${selectedCandidate.phone}`
+                  }}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call Now
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
     </EmployerAuthGuard>
   )

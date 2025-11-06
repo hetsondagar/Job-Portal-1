@@ -440,7 +440,7 @@ export default function GulfCompaniesPage() {
                     <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                       Search
                     </h3>
-                    <Input
+            <Input
                       placeholder="Search companies..."
                       value={filters.search}
                       onChange={(e) => handleFilterChange("search", e.target.value)}
@@ -602,8 +602,8 @@ export default function GulfCompaniesPage() {
                     <SelectItem value="name">Company Name</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
+          </div>
+        </div>
 
             {/* Active Filters Summary */}
             {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.search) && (
@@ -651,11 +651,11 @@ export default function GulfCompaniesPage() {
 
             {/* Company Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {loading ? (
+        {loading ? (
                 <div className="col-span-2 flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-green-600" />
-                </div>
-              ) : error ? (
+          </div>
+        ) : error ? (
                 <div className="col-span-2 text-center text-red-600 py-8">{error}</div>
               ) : paginatedCompanies.length === 0 ? (
                 <div className="col-span-2 text-center py-12">
@@ -699,7 +699,7 @@ export default function GulfCompaniesPage() {
                                 Urgent Hiring
                               </Badge>
                             )}
-                          </div>
+                    </div>
                         )}
 
                         <div className={`absolute inset-0 bg-gradient-to-br ${industryColors.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
@@ -717,7 +717,7 @@ export default function GulfCompaniesPage() {
 
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 gap-3">
-                                <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-1">
                                     <h3 className="text-lg sm:text-xl font-bold transition-colors duration-300 text-slate-900 dark:text-white group-hover:text-green-600 line-clamp-2 flex-1">
                                       {company.name}
@@ -750,23 +750,23 @@ export default function GulfCompaniesPage() {
                                       <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                                       View ({company.activeJobsCount || company.activeJobs || 0})
                                     </Button>
-                                  </Link>
+                        </Link>
                                 </div>
-                              </div>
+                      </div>
 
                               <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
                                 <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                                   <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
                                   <span className="truncate">
                                     {company.activeJobsCount || company.activeJobs || 0} open positions
-                                  </span>
+                          </span>
                                 </div>
                                 <div className="flex items-center text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                                   <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
                                   <span className="truncate">
                                     {company.location || company.city || company.country || 'Gulf Region'}
-                                  </span>
-                                </div>
+                        </span>
+                      </div>
                               </div>
 
                               {company.description && (
@@ -774,17 +774,17 @@ export default function GulfCompaniesPage() {
                                   {company.description}
                                 </p>
                               )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
                     </motion.div>
                   )
                 })
               )}
-            </div>
+          </div>
 
-            {/* Pagination */}
+        {/* Pagination */}
             {totalFilteredPages > 1 && (
               <div className="flex flex-col sm:flex-row justify-center items-center mt-8 sm:mt-12 gap-4">
                 <div className="flex items-center space-x-2">
@@ -845,8 +845,8 @@ export default function GulfCompaniesPage() {
                     <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
                   </Button>
                 </div>
-              </div>
-            )}
+          </div>
+        )}
           </div>
         </div>
       </div>

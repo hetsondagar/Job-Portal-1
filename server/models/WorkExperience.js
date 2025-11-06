@@ -50,28 +50,22 @@ const WorkExperience = sequelize.define('WorkExperience', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  responsibilities: {
-    type: DataTypes.JSONB,
-    defaultValue: []
-  },
   achievements: {
     type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    allowNull: true
   },
   skills: {
     type: DataTypes.JSONB,
-    defaultValue: []
-  },
-  technologies: {
-    type: DataTypes.JSONB,
-    defaultValue: []
+    defaultValue: [],
+    allowNull: true
   },
   salary: {
-    type: DataTypes.DECIMAL(10, 2),
+    type: DataTypes.DECIMAL(12, 2),
     allowNull: true
   },
   salaryCurrency: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(3),
     allowNull: true,
     defaultValue: 'INR',
     field: 'salary_currency'
@@ -82,38 +76,32 @@ const WorkExperience = sequelize.define('WorkExperience', {
     defaultValue: 'full-time',
     field: 'employment_type'
   },
-  industry: {
+  reasonForLeaving: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'reason_for_leaving'
+  },
+  supervisorName: {
     type: DataTypes.STRING,
-    allowNull: true
-  },
-  companySize: {
-    type: DataTypes.ENUM('1-50', '51-200', '201-500', '500-1000', '1000+'),
     allowNull: true,
-    field: 'company_size'
+    field: 'supervisor_name'
   },
-  isVerified: {
+  supervisorContact: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'supervisor_contact'
+  },
+  canContactSupervisor: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  order: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  },
-  resumeId: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    references: {
-      model: 'resumes',
-      key: 'id'
-    }
+    defaultValue: false,
+    field: 'can_contact_supervisor'
   }
 }, {
   tableName: 'work_experiences',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  underscored: false,
   hooks: {
     beforeCreate: async (experience) => {
       if (experience.isCurrent) {

@@ -33,10 +33,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerDashboardFooter } from "@/components/employer-dashboard-footer"
 import { PDFViewer } from "@/components/pdf-viewer"
-import { apiService } from "@/lib/api"
+import { apiService, constructAvatarUrl } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 
@@ -101,6 +102,13 @@ export default function CandidateProfilePage() {
         if (response.success) {
           console.log('📄 Candidate data received:', response.data.candidate)
           console.log('📄 Resumes in candidate data:', response.data.candidate?.resumes)
+          console.log('💼 Work Experience in candidate data:', response.data.candidate?.workExperience)
+          console.log('💼 Work Experience length:', response.data.candidate?.workExperience?.length)
+          console.log('✅ Verification data:', {
+            phoneVerified: response.data.candidate?.phoneVerified,
+            emailVerified: response.data.candidate?.emailVerified,
+            profileCompletion: response.data.candidate?.profileCompletion
+          })
           setCandidate(response.data.candidate)
           setRequirement(response.data.requirement)
           setIsShortlisted(response.data.candidate?.isShortlisted || false)
@@ -548,10 +556,41 @@ export default function CandidateProfilePage() {
             {/* Profile Header */}
             <div className="flex-1">
               <div className="flex items-start space-x-6">
-                <Avatar className="w-24 h-24">
-                  <AvatarImage src={candidate.avatar} alt={candidate.name} />
-                  <AvatarFallback className="text-2xl font-bold">{candidate.name[0]}</AvatarFallback>
-                </Avatar>
+                <div className="flex flex-col items-center">
+                  <Avatar className="w-32 h-32 border-4 border-slate-200 shadow-lg">
+                    <AvatarImage 
+                      src={constructAvatarUrl(candidate.avatar)} 
+                      alt={candidate.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      {candidate.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  {/* Verification Badges Below Profile Photo */}
+                  <div className="flex flex-col items-center gap-2 mt-4">
+                    {(candidate.phoneVerified === true || (candidate as any).phoneVerified === true) && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                        <Phone className="w-3 h-3 mr-1" />
+                        Phone Verified
+                      </Badge>
+                    )}
+                    {(candidate.emailVerified === true || (candidate as any).emailVerified === true) && (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                        <Mail className="w-3 h-3 mr-1" />
+                        Email Verified
+                      </Badge>
+                    )}
+                    {((candidate.profileCompletion && candidate.profileCompletion >= 80) || 
+                      ((candidate as any).profileCompletion && (candidate as any).profileCompletion >= 80)) && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                        <Award className="w-3 h-3 mr-1" />
+                        Profile Complete ({candidate.profileCompletion || (candidate as any).profileCompletion}%)
+                      </Badge>
+                    )}
+                  </div>
+                </div>
                 
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-4">
@@ -565,51 +604,84 @@ export default function CandidateProfilePage() {
                       <p className="text-xl text-slate-600 mb-2">{candidate.designation}</p>
                       <p className="text-slate-500">{candidate.about}</p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {candidate.phoneVerified && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Phone ✓
-                        </Badge>
-                      )}
-                      {candidate.emailVerified && (
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          Email ✓
-                        </Badge>
-                      )}
-                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.location}</span>
+                  <TooltipProvider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2 cursor-help">
+                            <MapPin className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600">{candidate.location || 'Not specified'}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Current Location: The candidate's current geographical location</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {requirement && requirement.validTill && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center space-x-2 cursor-help">
+                              <Calendar className="w-4 h-4 text-slate-400" />
+                              <span className="text-sm text-slate-600">Requirement Deadline: {new Date(requirement.validTill).toLocaleDateString()}</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Requirement Deadline: The last date to fill this job requirement</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2 cursor-help">
+                            <Briefcase className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600">{candidate.experience || 'Not specified'}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Experience: Total years, months, and days of professional work experience</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2 cursor-help">
+                            <Clock className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600">{candidate.noticePeriod || 'Not specified'}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Notice Period: The duration the candidate needs to serve before joining a new role (typically in days)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2 cursor-help">
+                            <Calendar className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600">Active {candidate.activeStatus || 'Recently'}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Active Status: When the candidate was last active on the platform</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Briefcase className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.experience}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">{candidate.noticePeriod}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm text-slate-600">Active {candidate.activeStatus}</span>
-                    </div>
-                  </div>
+                  </TooltipProvider>
                   
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {candidate.keySkills.slice(0, 8).map((skill: string) => (
-                      <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-800">
-                        {skill}
-                      </Badge>
-                    ))}
-                    {candidate.keySkills.length > 8 && (
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-600">
-                        +{candidate.keySkills.length - 8} more
-                      </Badge>
-                    )}
-                  </div>
+                  {candidate.keySkills && Array.isArray(candidate.keySkills) && candidate.keySkills.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {candidate.keySkills.slice(0, 8).map((skill: string, idx: number) => (
+                        <Badge key={`candidate_skill_${idx}_${String(skill)}`} variant="secondary" className="bg-blue-100 text-blue-800">
+                          {skill}
+                        </Badge>
+                      ))}
+                      {candidate.keySkills.length > 8 && (
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                          +{candidate.keySkills.length - 8} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -691,10 +763,19 @@ export default function CandidateProfilePage() {
                     <MapPin className="w-4 h-4 text-slate-400" />
                     <span className="text-sm">{candidate.location}</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Globe className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm">{candidate.portfolio}</span>
-                  </div>
+                  {candidate.portfolio && (
+                    <div className="flex items-center space-x-3">
+                      <Globe className="w-4 h-4 text-slate-400" />
+                      <a
+                        href={candidate.portfolio.startsWith('http') ? candidate.portfolio : `https://${candidate.portfolio}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        {candidate.portfolio}
+                      </a>
+                    </div>
+                  )}
                   {candidate.linkedin && (
                     <div className="flex items-center space-x-3">
                       <Linkedin className="w-4 h-4 text-slate-400" />
@@ -733,28 +814,64 @@ export default function CandidateProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-slate-500">Current Salary</p>
-                    <p className="font-medium">{candidate.currentSalary}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Expected Salary</p>
-                    <p className="font-medium">{candidate.expectedSalary}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Notice Period</p>
-                    <p className="font-medium">{candidate.noticePeriod}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Preferred Locations</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {candidate.preferredLocations.map((location: string) => (
-                        <Badge key={location} variant="outline" className="text-xs">
-                          {location}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <p className="text-sm text-slate-500">Current Salary</p>
+                          <p className="font-medium">
+                            {candidate.currentSalary && candidate.currentSalary !== 'Not specified' && candidate.currentSalary !== 'null' && candidate.currentSalary !== null
+                              ? (typeof candidate.currentSalary === 'string' && (candidate.currentSalary.includes('LPA') || candidate.currentSalary.includes('INR'))
+                                  ? candidate.currentSalary 
+                                  : `${candidate.currentSalary} LPA`)
+                              : 'Not specified'}
+                          </p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Current Salary: The candidate's current annual compensation in LPA (Lakhs Per Annum)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <p className="text-sm text-slate-500">Expected Salary</p>
+                          <p className="font-medium">{candidate.expectedSalary}</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Expected Salary: The candidate's expected annual compensation in LPA (Lakhs Per Annum)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <p className="text-sm text-slate-500">Notice Period</p>
+                          <p className="font-medium">{candidate.noticePeriod}</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Notice Period: The duration the candidate needs to serve before joining a new role (typically in days)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <p className="text-sm text-slate-500">Preferred Locations</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {candidate.preferredLocations.map((location: string) => (
+                              <Badge key={location} variant="outline" className="text-xs">
+                                {location}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Preferred Locations: Geographic locations where the candidate is willing to work</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
 
@@ -769,24 +886,40 @@ export default function CandidateProfilePage() {
                 <CardContent className="space-y-4">
                   <div>
                     <p className="text-sm text-slate-500 mb-2">Technical Skills</p>
-                    <div className="flex flex-wrap gap-1">
-                      {candidate.keySkills.slice(0, 6).map((skill: string) => (
-                        <Badge key={skill} variant="secondary" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
+                    {candidate.keySkills && candidate.keySkills.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {candidate.keySkills.map((skill: string) => (
+                          <Badge key={skill} variant="secondary" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No skills listed</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-slate-500 mb-2">Languages</p>
-                    <div className="space-y-1">
-                      {candidate.languages.map((language: { name: string; proficiency: string }) => (
-                        <div key={language.name} className="flex justify-between text-sm">
-                          <span>{language.name}</span>
-                          <span className="text-slate-500">{language.proficiency}</span>
-                        </div>
-                      ))}
-                    </div>
+                    {candidate.languages && candidate.languages.length > 0 ? (
+                      <div className="space-y-1">
+                        {candidate.languages.map((language: any, index: number) => {
+                          // Handle both object format {name, proficiency} and string format
+                          const langName = typeof language === 'string' ? language : (language?.name || language);
+                          const langProficiency = typeof language === 'object' ? (language?.proficiency || 'Not specified') : 'Not specified';
+                          
+                          return (
+                            <div key={index} className="flex justify-between text-sm">
+                              <span>{langName}</span>
+                              {langProficiency !== 'Not specified' && (
+                                <span className="text-slate-500">{langProficiency}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">No languages listed</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -799,13 +932,19 @@ export default function CandidateProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {candidate.certifications.map((cert: { id: string; name: string; issuer: string; date: string }) => (
-                    <div key={cert.id} className="p-4 border rounded-lg">
+                  {candidate.certifications && candidate.certifications.length > 0 ? (
+                    candidate.certifications.map((cert: { id: string; name: string; issuer: string; date: string }, index: number) => (
+                    <div key={cert.id || `cert_${index}`} className="p-4 border rounded-lg">
                       <h4 className="font-medium mb-1">{cert.name}</h4>
                       <p className="text-sm text-slate-600 mb-2">{cert.issuer}</p>
                       <p className="text-xs text-slate-500">{cert.date}</p>
                     </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-500">No certifications available</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -819,25 +958,47 @@ export default function CandidateProfilePage() {
               <CardContent>
                 <div className="space-y-6">
                   {candidate.workExperience && candidate.workExperience.length > 0 ? (
-                    candidate.workExperience.map((exp: { id: string; title: string; company: string; duration: string; location: string; description?: string; skills?: string[] }) => (
-                      <div key={exp.id || `exp_${Math.random()}`} className="border-l-4 border-blue-500 pl-6">
+                    candidate.workExperience.map((exp: { id: string; title: string; company: string; currentDesignation?: string; duration: string; location: string; description?: string; skills?: string[]; isCurrent?: boolean }, index: number) => (
+                      <div key={exp.id || `exp_${index}_${exp.title || ''}`} className="border-l-4 border-blue-500 pl-6">
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <h3 className="font-semibold text-lg">{exp.title || 'Not specified'}</h3>
-                            <p className="text-slate-600">{exp.company || 'Not specified'}</p>
+                            {exp.currentDesignation && exp.currentDesignation !== exp.title && (
+                              <p className="text-sm text-slate-700 font-medium mt-1">Current Designation: {exp.currentDesignation}</p>
+                            )}
+                            <p className="text-slate-600 mt-1">{exp.company || 'Not specified'}</p>
+                            {exp.isCurrent && (
+                              <Badge className="mt-1 bg-green-100 text-green-800 text-xs">Current</Badge>
+                            )}
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-slate-500">{exp.duration || 'Not specified'}</p>
-                            <p className="text-sm text-slate-500">{exp.location || 'Not specified'}</p>
-                          </div>
+                          <TooltipProvider>
+                            <div className="text-right">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-sm text-slate-500 cursor-help">{exp.duration || 'Not specified'}</p>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Duration: The employment period for this role (start date to end date or present)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-sm text-slate-500 cursor-help">{exp.location || 'Not specified'}</p>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Location: The work location for this role</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </div>
                         {exp.description && (
                           <p className="text-slate-600 mb-3">{exp.description}</p>
                         )}
-                        {exp.skills && exp.skills.length > 0 && (
+                        {exp.skills && Array.isArray(exp.skills) && exp.skills.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {exp.skills.map((skill: string, idx: number) => (
-                              <Badge key={skill || idx} variant="outline" className="text-xs">
+                              <Badge key={`${exp.id}_skill_${idx}_${String(skill)}`} variant="outline" className="text-xs">
                                 {skill}
                               </Badge>
                             ))}
@@ -918,12 +1079,12 @@ export default function CandidateProfilePage() {
                       };
                       
                       const formattedDegree = formatDegreeName(edu.degree || '');
-                      const displayInstitution = edu.institution && edu.institution.toLowerCase() !== 'not specified' ? edu.institution : '';
-                      const displayFieldOfStudy = edu.fieldOfStudy && edu.fieldOfStudy.toLowerCase() !== 'not specified' ? edu.fieldOfStudy : '';
-                      const displayDuration = edu.duration && edu.duration.toLowerCase() !== 'not specified' ? edu.duration : '';
-                      const displayLocation = edu.location && edu.location.toLowerCase() !== 'not specified' ? edu.location : '';
+                      const displayInstitution = edu.institution && edu.institution.toLowerCase() !== 'not specified' && edu.institution.trim() !== '' ? edu.institution : '';
+                      const displayFieldOfStudy = edu.fieldOfStudy && edu.fieldOfStudy.toLowerCase() !== 'not specified' && edu.fieldOfStudy.trim() !== '' ? edu.fieldOfStudy : '';
+                      const displayDuration = edu.duration && edu.duration.toLowerCase() !== 'not specified' && edu.duration.trim() !== '' ? edu.duration : '';
+                      const displayLocation = edu.location && edu.location.toLowerCase() !== 'not specified' && edu.location.trim() !== '' ? edu.location : '';
                       
-                      // Skip if no meaningful data
+                      // Skip if no meaningful data - but show if we have degree OR institution
                       if (!formattedDegree && !displayInstitution) {
                         return null;
                       }
@@ -1217,11 +1378,82 @@ export default function CandidateProfilePage() {
                             View All CVs ({candidate.resumes.length})
                           </Button>
                         )}
-                        <Button variant="outline" className="w-full">
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={async () => {
+                            try {
+                              // Get the resume view URL
+                              const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                              const resumeId = primaryResume?.id;
+                              if (!resumeId) {
+                                toast({
+                                  title: "Error",
+                                  description: "Resume not available for sharing",
+                                  variant: "destructive"
+                                });
+                                return;
+                              }
+                              
+                              const shareUrl = `${window.location.origin}/employer-dashboard/requirements/${requirementId}/candidates/${candidateIdStr}?resume=${resumeId}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                              
+                              // Try Web Share API first (mobile)
+                              if (navigator.share) {
+                                try {
+                                  await navigator.share({
+                                    title: `${candidate.name}'s Resume`,
+                                    text: `Resume for ${candidate.name}`,
+                                    url: shareUrl
+                                  });
+                                  toast({
+                                    title: "Success",
+                                    description: "Resume shared successfully"
+                                  });
+                                  return;
+                                } catch (shareError: any) {
+                                  // User cancelled or error - fall through to clipboard
+                                  if (shareError.name !== 'AbortError') {
+                                    console.error('Share error:', shareError);
+                                  }
+                                }
+                              }
+                              
+                              // Fallback to clipboard
+                              await navigator.clipboard.writeText(shareUrl);
+                              toast({
+                                title: "Success",
+                                description: "Resume link copied to clipboard"
+                              });
+                            } catch (error) {
+                              console.error('Share error:', error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to share resume",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                        >
                           <Share2 className="w-4 h-4 mr-2" />
                           Share CV
                         </Button>
-                        <Button variant="outline" className="w-full">
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={() => {
+                            if (candidate?.email) {
+                              const subject = encodeURIComponent(`Resume for ${candidate.name}`);
+                              const body = encodeURIComponent(`Please find the resume for ${candidate.name} attached.`);
+                              window.location.href = `mailto:${candidate.email}?subject=${subject}&body=${body}`;
+                            } else {
+                              toast({
+                                title: "Error",
+                                description: "Candidate email not available",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                        >
                           <Mail className="w-4 h-4 mr-2" />
                           Email CV
                         </Button>
@@ -1549,7 +1781,7 @@ export default function CandidateProfilePage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Send Message to {candidate?.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Contact {candidate?.name}</h3>
               <button
                 onClick={() => {
                   setShowMessageModal(false)
@@ -1563,7 +1795,29 @@ export default function CandidateProfilePage() {
             </div>
             
             <div className="space-y-4">
-              <div>
+              {/* Contact Options */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {candidate?.email && (
+                  <a
+                    href={`mailto:${candidate.email}?subject=${encodeURIComponent(subject || `Job Opportunity: ${requirement?.title || ''}`)}&body=${encodeURIComponent(message || '')}`}
+                    className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Email
+                  </a>
+                )}
+                {candidate?.phone && (
+                  <a
+                    href={`tel:${candidate.phone}`}
+                    className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call Now
+                  </a>
+                )}
+              </div>
+              
+              <div className="border-t pt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Subject
                 </label>

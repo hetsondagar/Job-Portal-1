@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { 
   ArrowLeft,
   User, 
@@ -44,11 +45,11 @@ import {
 import { Navbar } from '@/components/navbar'
 import { ResumeManagement } from '@/components/resume-management'
 import { toast } from 'sonner'
-import { apiService } from '@/lib/api'
+import { apiService, WorkExperience } from '@/lib/api'
 import IndustryDropdown from '@/components/ui/industry-dropdown'
 
 export default function AccountPage() {
-  const { user, loading, logout, refreshUser } = useAuth()
+  const { user, loading, logout, refreshUser, updateUser } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('profile')
   const [resumeStats, setResumeStats] = useState<any>(null)
@@ -57,6 +58,8 @@ export default function AccountPage() {
   const [editingPersonal, setEditingPersonal] = useState(false)
   const [editingProfessional, setEditingProfessional] = useState(false)
   const [saving, setSaving] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   
   // Form data states
   const [personalData, setPersonalData] = useState({
@@ -73,13 +76,12 @@ export default function AccountPage() {
     currentLocation: '',
     summary: '',
     expectedSalary: '',
+    currentSalary: '',
     noticePeriod: '',
     willingToRelocate: false,
     experienceYears: '',
-    currentCompany: '',
-    currentRole: '',
-    highestEducation: '',
-    fieldOfStudy: '',
+    experienceMonths: '',
+    experienceDays: '',
     skills: [] as string[],
     languages: [] as string[],
     socialLinks: {
@@ -103,12 +105,49 @@ export default function AccountPage() {
     }
   })
   
+  // Education state
+  const [educations, setEducations] = useState<any[]>([])
+  const [loadingEducations, setLoadingEducations] = useState(false)
+  const [editingEducation, setEditingEducation] = useState<any | null>(null)
+  const [showEducationForm, setShowEducationForm] = useState(false)
+  const [educationForm, setEducationForm] = useState({
+    degree: '',
+    institution: '',
+    fieldOfStudy: '',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+    gpa: '',
+    percentage: '',
+    grade: '',
+    description: '',
+    location: '',
+    educationType: ''
+  })
+  
   const [newSkill, setNewSkill] = useState('')
   const [newLanguage, setNewLanguage] = useState('')
   const [newJobTitle, setNewJobTitle] = useState('')
   const [newLocation, setNewLocation] = useState('')
   const [newPreferredSkill, setNewPreferredSkill] = useState('')
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+
+  // Work Experience state
+  const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([])
+  const [loadingWorkExperiences, setLoadingWorkExperiences] = useState(false)
+  const [editingWorkExperience, setEditingWorkExperience] = useState<WorkExperience | null>(null)
+  const [showWorkExperienceForm, setShowWorkExperienceForm] = useState(false)
+  const [workExperienceForm, setWorkExperienceForm] = useState<Partial<WorkExperience>>({
+    companyName: '',
+    jobTitle: '',
+    currentDesignation: '',
+    location: '',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+    description: '',
+    employmentType: 'full-time'
+  })
 
   // Security-related state
   const [showChangeEmail, setShowChangeEmail] = useState(false)
@@ -141,10 +180,148 @@ export default function AccountPage() {
   useEffect(() => {
     if (user && !loading) {
       fetchResumeStats()
-      initializeFormData()
       fetchJobPreferences()
+      fetchWorkExperiences()
+      fetchEducations()
+      // Initialize form data after fetching work experiences
+      setTimeout(() => {
+        initializeFormData()
+      }, 100)
     }
   }, [user, loading])
+  
+  // Re-initialize professional data when work experiences are loaded
+  useEffect(() => {
+    if (workExperiences && workExperiences.length > 0 && user) {
+      // Recalculate experience from work experiences
+      let totalDays = 0;
+      workExperiences.forEach((exp: any) => {
+        const start = new Date(exp.startDate);
+        const end = exp.isCurrent ? new Date() : new Date(exp.endDate || new Date());
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          const diffTime = Math.abs(end.getTime() - start.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          totalDays += diffDays;
+        }
+      });
+      const years = Math.floor(totalDays / 365);
+      const remainingDays = totalDays % 365;
+      const months = Math.floor(remainingDays / 30);
+      const days = remainingDays % 30;
+      
+      setProfessionalData(prev => ({
+        ...prev,
+        experienceYears: years.toString(),
+        experienceMonths: months.toString(),
+        experienceDays: days.toString()
+      }))
+    }
+  }, [workExperiences])
+  
+  // Education functions
+  const fetchEducations = async () => {
+    try {
+      setLoadingEducations(true)
+      const response = await apiService.getEducations()
+      if (response.success && response.data) {
+        setEducations(response.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching educations:', error)
+      toast.error('Failed to load educations')
+    } finally {
+      setLoadingEducations(false)
+    }
+  }
+  
+  const handleAddEducation = () => {
+    setEditingEducation(null)
+    setEducationForm({
+      degree: '',
+      institution: '',
+      fieldOfStudy: '',
+      startDate: '',
+      endDate: '',
+      isCurrent: false,
+      gpa: '',
+      percentage: '',
+      grade: '',
+      description: '',
+      location: '',
+      educationType: ''
+    })
+    setShowEducationForm(true)
+  }
+  
+  const handleEditEducation = (edu: any) => {
+    setEditingEducation(edu)
+    setEducationForm({
+      degree: edu.degree || '',
+      institution: edu.institution || '',
+      fieldOfStudy: edu.fieldOfStudy || '',
+      startDate: edu.startDate ? edu.startDate.split('T')[0] : '',
+      endDate: edu.endDate ? edu.endDate.split('T')[0] : '',
+      isCurrent: edu.isCurrent || false,
+      gpa: edu.cgpa || edu.gpa || '',
+      percentage: edu.percentage || '',
+      grade: edu.grade || '',
+      description: edu.description || '',
+      location: edu.location || '',
+      educationType: edu.educationType || ''
+    })
+    setShowEducationForm(true)
+  }
+  
+  const handleSaveEducation = async () => {
+    if (!educationForm.degree || !educationForm.institution || !educationForm.startDate) {
+      toast.error('Degree, institution, and start date are required')
+      return
+    }
+    
+    try {
+      const data = {
+        degree: educationForm.degree,
+        institution: educationForm.institution,
+        fieldOfStudy: educationForm.fieldOfStudy || undefined,
+        startDate: educationForm.startDate,
+        endDate: educationForm.isCurrent ? undefined : (educationForm.endDate || undefined),
+        isCurrent: educationForm.isCurrent,
+        gpa: educationForm.gpa ? parseFloat(educationForm.gpa) : undefined,
+        percentage: educationForm.percentage ? parseFloat(educationForm.percentage) : undefined,
+        grade: educationForm.grade || undefined,
+        description: educationForm.description || undefined,
+        location: educationForm.location || undefined,
+        educationType: educationForm.educationType || undefined
+      }
+      
+      if (editingEducation) {
+        await apiService.updateEducation(editingEducation.id, data)
+        toast.success('Education updated successfully')
+      } else {
+        await apiService.createEducation(data)
+        toast.success('Education added successfully')
+      }
+      
+      setShowEducationForm(false)
+      fetchEducations()
+    } catch (error: any) {
+      console.error('Error saving education:', error)
+      toast.error(error.message || 'Failed to save education')
+    }
+  }
+  
+  const handleDeleteEducation = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this education?')) return
+    
+    try {
+      await apiService.deleteEducation(id)
+      toast.success('Education deleted successfully')
+      fetchEducations()
+    } catch (error: any) {
+      console.error('Error deleting education:', error)
+      toast.error(error.message || 'Failed to delete education')
+    }
+  }
 
   // Refresh user data on mount to ensure latest data is loaded
   useEffect(() => {
@@ -164,6 +341,41 @@ export default function AccountPage() {
         gender: (user as any).gender || ''
       })
       
+      // Convert experience_years back to years, months, days
+      // PRIORITY: Calculate from work experiences if available (most accurate)
+      let expYears = '';
+      let expMonths = '';
+      let expDays = '';
+      
+      if (workExperiences && workExperiences.length > 0) {
+        // Calculate total experience from work experiences
+        let totalDays = 0;
+        workExperiences.forEach((exp: any) => {
+          const start = new Date(exp.startDate);
+          const end = exp.isCurrent ? new Date() : new Date(exp.endDate || new Date());
+          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            totalDays += diffDays;
+          }
+        });
+        const years = Math.floor(totalDays / 365);
+        const remainingDays = totalDays % 365;
+        const months = Math.floor(remainingDays / 30);
+        const days = remainingDays % 30;
+        expYears = years.toString();
+        expMonths = months.toString();
+        expDays = days.toString();
+      } else if (user.experienceYears !== undefined && user.experienceYears !== null) {
+        // Fallback: Use experience_years field (but we lose precision due to INTEGER rounding)
+        const totalYears = Number(user.experienceYears);
+        expYears = Math.floor(totalYears).toString();
+        const remainingMonths = (totalYears - Math.floor(totalYears)) * 12;
+        expMonths = Math.floor(remainingMonths).toString();
+        const remainingDays = (remainingMonths - Math.floor(remainingMonths)) * 30;
+        expDays = Math.floor(remainingDays).toString();
+      }
+      
       setProfessionalData({
         headline: user.headline || '',
         currentLocation: user.currentLocation || '',
@@ -171,11 +383,10 @@ export default function AccountPage() {
         expectedSalary: user.expectedSalary?.toString() || '',
         noticePeriod: user.noticePeriod?.toString() || '',
         willingToRelocate: user.willingToRelocate || false,
-        experienceYears: user.experienceYears?.toString() || '',
-        currentCompany: user.currentCompany || (user as any).currentCompany || '',
-        currentRole: user.currentRole || (user as any).currentRole || '',
-        highestEducation: user.highestEducation || (user as any).highestEducation || '',
-        fieldOfStudy: user.fieldOfStudy || (user as any).fieldOfStudy || '',
+        experienceYears: expYears,
+        experienceMonths: expMonths,
+        experienceDays: expDays,
+        currentSalary: (user as any).currentSalary?.toString() || '',
         skills: Array.isArray(user.skills) ? user.skills : [],
         languages: Array.isArray(user.languages) ? user.languages : [],
         socialLinks: {
@@ -254,6 +465,111 @@ export default function AccountPage() {
       console.error('Error fetching job preferences:', error)
       // If API fails, keep the default empty preferences
       // This ensures the form still works even if the backend is not ready
+    }
+  }
+
+  // Work Experience functions
+  const fetchWorkExperiences = async () => {
+    try {
+      setLoadingWorkExperiences(true)
+      const response = await apiService.getWorkExperiences()
+      if (response.success && response.data) {
+        setWorkExperiences(response.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching work experiences:', error)
+      toast.error('Failed to load work experiences')
+    } finally {
+      setLoadingWorkExperiences(false)
+    }
+  }
+
+  const handleAddWorkExperience = () => {
+    setEditingWorkExperience(null)
+    setWorkExperienceForm({
+      companyName: '',
+      jobTitle: '',
+      currentDesignation: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      isCurrent: false,
+      description: '',
+      employmentType: 'full-time'
+    })
+    setShowWorkExperienceForm(true)
+  }
+
+  const handleEditWorkExperience = (exp: WorkExperience) => {
+    setEditingWorkExperience(exp)
+    setWorkExperienceForm({
+      companyName: exp.companyName || '',
+      jobTitle: exp.jobTitle || '',
+      currentDesignation: exp.currentDesignation || '',
+      location: exp.location || '',
+      startDate: exp.startDate ? exp.startDate.split('T')[0] : '',
+      endDate: exp.endDate ? exp.endDate.split('T')[0] : '',
+      isCurrent: exp.isCurrent || false,
+      description: exp.description || '',
+      employmentType: exp.employmentType || 'full-time'
+    })
+    setShowWorkExperienceForm(true)
+  }
+
+  const handleSaveWorkExperience = async () => {
+    if (!workExperienceForm.jobTitle || !workExperienceForm.startDate) {
+      toast.error('Job title and start date are required')
+      return
+    }
+
+    try {
+      setSaving(true)
+      if (editingWorkExperience?.id) {
+        const response = await apiService.updateWorkExperience(editingWorkExperience.id, workExperienceForm)
+        if (response.success) {
+          toast.success('Work experience updated successfully')
+          await fetchWorkExperiences()
+          setShowWorkExperienceForm(false)
+        } else {
+          toast.error(response.message || 'Failed to update work experience')
+        }
+      } else {
+        const response = await apiService.createWorkExperience(workExperienceForm as WorkExperience)
+        if (response.success) {
+          toast.success('Work experience added successfully')
+          await fetchWorkExperiences()
+          setShowWorkExperienceForm(false)
+        } else {
+          toast.error(response.message || 'Failed to add work experience')
+        }
+      }
+    } catch (error: any) {
+      console.error('Error saving work experience:', error)
+      toast.error(error.message || 'Failed to save work experience')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteWorkExperience = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this work experience?')) {
+      return
+    }
+
+    try {
+      setSaving(true)
+      const response = await apiService.deleteWorkExperience(id)
+      if (response.success) {
+        toast.success('Work experience deleted successfully')
+        await fetchWorkExperiences()
+      } else {
+        toast.error(response.message || 'Failed to delete work experience')
+      }
+    } catch (error: any) {
+      console.error('Error deleting work experience:', error)
+      toast.error(error.message || 'Failed to delete work experience')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -401,12 +717,25 @@ export default function AccountPage() {
     try {
       setSaving(true)
       
+      // Calculate total experience in years (convert months and days to years)
+      let totalExperienceYears = 0
+      if (professionalData.experienceYears) {
+        totalExperienceYears += Number(professionalData.experienceYears)
+      }
+      if (professionalData.experienceMonths) {
+        totalExperienceYears += Number(professionalData.experienceMonths) / 12
+      }
+      if (professionalData.experienceDays) {
+        totalExperienceYears += Number(professionalData.experienceDays) / 365
+      }
+      
       // Save professional data
       const response = await apiService.updateProfile({
         ...professionalData,
         expectedSalary: professionalData.expectedSalary ? Number(professionalData.expectedSalary) : undefined,
+        currentSalary: professionalData.currentSalary ? Number(professionalData.currentSalary) : undefined,
         noticePeriod: professionalData.noticePeriod ? Number(professionalData.noticePeriod) : undefined,
-        experienceYears: professionalData.experienceYears ? Number(professionalData.experienceYears) : undefined,
+        experienceYears: totalExperienceYears > 0 ? totalExperienceYears : undefined,
         preferredJobTitles: professionalData.jobPreferences?.preferredJobTitles || [],
         preferredIndustries: professionalData.jobPreferences?.preferredIndustries || [],
         preferredLocations: professionalData.jobPreferences?.preferredLocations || [],
@@ -416,6 +745,11 @@ export default function AccountPage() {
       })
       
       if (response.success) {
+        // Refresh user data to get updated values
+        await refreshUser()
+        // Re-fetch work experiences to ensure experience is recalculated
+        await fetchWorkExperiences()
+        
         // Save job preferences
         const preferencesResponse = await apiService.updateJobPreferences(professionalData.jobPreferences || {})
         
@@ -726,7 +1060,7 @@ export default function AccountPage() {
           <Card className="mb-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 relative">
                   <Avatar className="w-20 h-20 border-4 border-white dark:border-slate-700 shadow-lg">
                     <AvatarImage 
                       src={constructAvatarUrl(user.avatar)} 
@@ -736,6 +1070,51 @@ export default function AccountPage() {
                       {`${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="absolute -bottom-1 -right-1 rounded-full p-1 h-8 w-8 shadow-lg"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                  >
+                    <Camera className="w-4 h-4" />
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      
+                      try {
+                        setUploadingAvatar(true)
+                        const response = await apiService.uploadAvatar(file)
+                        
+                        if (response.success) {
+                          if (response.data?.user) {
+                            updateUser(response.data.user)
+                          }
+                          toast.success('Profile photo updated successfully')
+                          setTimeout(async () => {
+                            await refreshUser()
+                          }, 1000)
+                        } else {
+                          throw new Error(response.message || 'Upload failed')
+                        }
+                      } catch (error: any) {
+                        console.error('Error uploading avatar:', error)
+                        toast.error(error.message || 'Failed to upload profile photo')
+                      } finally {
+                        setUploadingAvatar(false)
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = ''
+                        }
+                      }
+                    }}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1030,72 +1409,92 @@ export default function AccountPage() {
                         </div>
 
                         {/* Professional Details */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor="experienceYears">Years of Experience</Label>
                             <Input
                               id="experienceYears"
                               type="number"
+                              min="0"
                               value={professionalData.experienceYears}
                               onChange={(e) => setProfessionalData(prev => ({ ...prev, experienceYears: e.target.value }))}
                               placeholder="e.g., 5"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="currentCompany">Current Company</Label>
+                            <Label htmlFor="experienceMonths">Months</Label>
                             <Input
-                              id="currentCompany"
-                              value={professionalData.currentCompany}
-                              onChange={(e) => setProfessionalData(prev => ({ ...prev, currentCompany: e.target.value }))}
-                              placeholder="e.g., Tech Solutions Inc."
+                              id="experienceMonths"
+                              type="number"
+                              min="0"
+                              max="11"
+                              value={professionalData.experienceMonths}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, experienceMonths: e.target.value }))}
+                              placeholder="e.g., 6"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="currentRole">Current Role</Label>
+                            <Label htmlFor="experienceDays">Days</Label>
                             <Input
-                              id="currentRole"
-                              value={professionalData.currentRole}
-                              onChange={(e) => setProfessionalData(prev => ({ ...prev, currentRole: e.target.value }))}
-                              placeholder="e.g., Senior Software Engineer"
+                              id="experienceDays"
+                              type="number"
+                              min="0"
+                              max="30"
+                              value={professionalData.experienceDays}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, experienceDays: e.target.value }))}
+                              placeholder="e.g., 15"
                             />
                           </div>
-                          <div>
-                            <Label htmlFor="highestEducation">Highest Education</Label>
-                            <Select value={professionalData.highestEducation || ''} onValueChange={(value) => setProfessionalData(prev => ({ ...prev, highestEducation: value }))}>
-                              <SelectTrigger id="highestEducation">
-                                <SelectValue placeholder="Select education level">
-                                  {professionalData.highestEducation ? (
-                                    professionalData.highestEducation === 'high_school' ? 'High School' :
-                                    professionalData.highestEducation === 'diploma' ? 'Diploma' :
-                                    professionalData.highestEducation === 'bachelors' ? "Bachelor's Degree" :
-                                    professionalData.highestEducation === 'masters' ? "Master's Degree" :
-                                    professionalData.highestEducation === 'phd' ? 'PhD/Doctorate' :
-                                    professionalData.highestEducation
-                                  ) : 'Select education level'}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="high_school">High School</SelectItem>
-                                <SelectItem value="diploma">Diploma</SelectItem>
-                                <SelectItem value="bachelors">Bachelor's Degree</SelectItem>
-                                <SelectItem value="masters">Master's Degree</SelectItem>
-                                <SelectItem value="phd">PhD/Doctorate</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="fieldOfStudy">Field of Study</Label>
-                            <Input
-                              id="fieldOfStudy"
-                              value={professionalData.fieldOfStudy}
-                              onChange={(e) => setProfessionalData(prev => ({ ...prev, fieldOfStudy: e.target.value }))}
-                              placeholder="e.g., Computer Science, Engineering"
-                            />
+                        </div>
+
+                        {/* Education Management */}
+                        <div>
+                          <Label>Education</Label>
+                          <div className="mt-2 space-y-2">
+                            {loadingEducations ? (
+                              <p className="text-sm text-slate-500">Loading educations...</p>
+                            ) : educations.length === 0 ? (
+                              <p className="text-sm text-slate-500">No education added yet</p>
+                            ) : (
+                              educations.map((edu) => (
+                                <div key={edu.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <div>
+                                    <p className="font-medium">{edu.degree} - {edu.institution}</p>
+                                    {edu.fieldOfStudy && <p className="text-sm text-slate-500">{edu.fieldOfStudy}</p>}
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => handleEditEducation(edu)}>
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => handleDeleteEducation(edu.id)}>
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                            <Button type="button" variant="outline" onClick={handleAddEducation} className="w-full">
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add Education
+                            </Button>
                           </div>
                         </div>
 
                         {/* Salary and Preferences */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="currentSalary">Current Salary (LPA)</Label>
+                            <Input
+                              id="currentSalary"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={professionalData.currentSalary}
+                              onChange={(e) => setProfessionalData(prev => ({ ...prev, currentSalary: e.target.value }))}
+                              placeholder="e.g., 10.5"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">Enter your current salary in LPA (Lakhs Per Annum)</p>
+                          </div>
                           <div>
                             <Label htmlFor="expectedSalary">Expected Salary (LPA)</Label>
                             <Input
@@ -1106,6 +1505,8 @@ export default function AccountPage() {
                               placeholder="e.g., 8"
                             />
                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <Label htmlFor="noticePeriod">Notice Period (days)</Label>
                             <Input
@@ -1184,6 +1585,321 @@ export default function AccountPage() {
                               <Plus className="w-4 h-4" />
                             </Button>
                           </div>
+                        </div>
+
+                        {/* Work Experience Management */}
+                        <div className="space-y-6 border-t pt-6 mt-6">
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="w-5 h-5" />
+                            <Label className="text-lg font-semibold">Work Experience</Label>
+                          </div>
+
+                          {loadingWorkExperiences ? (
+                            <div className="text-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                              <p className="text-sm text-slate-500 mt-2">Loading work experiences...</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-6">
+                              {/* Current Company Section */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900 dark:text-white">Current Company</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Your current employment details</p>
+                                  </div>
+                                  {(() => {
+                                    const currentExp = workExperiences.find(exp => exp.isCurrent);
+                                    return currentExp ? (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditWorkExperience(currentExp)}
+                                      >
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setWorkExperienceForm({
+                                            companyName: '',
+                                            jobTitle: '',
+                                            currentDesignation: '',
+                                            location: '',
+                                            startDate: '',
+                                            endDate: '',
+                                            isCurrent: true,
+                                            description: '',
+                                            employmentType: 'full-time'
+                                          });
+                                          setEditingWorkExperience(null);
+                                          setShowWorkExperienceForm(true);
+                                        }}
+                                      >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Current Company
+                                      </Button>
+                                    );
+                                  })()}
+                                </div>
+                                {(() => {
+                                  const currentExp = workExperiences.find(exp => exp.isCurrent);
+                                  if (!currentExp) {
+                                    return (
+                                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 dark:bg-slate-800/30">
+                                        <p className="text-sm text-slate-500 text-center">No current company added</p>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 dark:bg-slate-800/50">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <h4 className="font-semibold text-slate-900 dark:text-white">
+                                              {currentExp.jobTitle}
+                                            </h4>
+                                            <Badge className="bg-green-100 text-green-800 border-green-200">
+                                              Current
+                                            </Badge>
+                                          </div>
+                                          {currentExp.currentDesignation && (
+                                            <p className="text-slate-600 dark:text-slate-400 text-sm mb-1 italic">
+                                              Designation: {currentExp.currentDesignation}
+                                            </p>
+                                          )}
+                                          <p className="text-slate-700 dark:text-slate-300 mb-1">
+                                            {currentExp.companyName || 'Company not specified'}
+                                          </p>
+                                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            {currentExp.startDate ? new Date(currentExp.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''} - Present
+                                            {currentExp.location && ` • ${currentExp.location}`}
+                                          </p>
+                                          {currentExp.description && (
+                                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                                              {currentExp.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                              {/* Previous Company Section */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900 dark:text-white">Previous Company</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Your most recent past employment</p>
+                                  </div>
+                                  {(() => {
+                                    const previousExp = workExperiences
+                                      .filter(exp => !exp.isCurrent)
+                                      .sort((a, b) => {
+                                        const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                                        const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                                        return dateB - dateA;
+                                      })[0];
+                                    return previousExp ? (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditWorkExperience(previousExp)}
+                                      >
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setWorkExperienceForm({
+                                            companyName: '',
+                                            jobTitle: '',
+                                            currentDesignation: '',
+                                            location: '',
+                                            startDate: '',
+                                            endDate: '',
+                                            isCurrent: false,
+                                            description: '',
+                                            employmentType: 'full-time'
+                                          });
+                                          setEditingWorkExperience(null);
+                                          setShowWorkExperienceForm(true);
+                                        }}
+                                      >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Previous Company
+                                      </Button>
+                                    );
+                                  })()}
+                                </div>
+                                {(() => {
+                                  const previousExp = workExperiences
+                                    .filter(exp => !exp.isCurrent)
+                                    .sort((a, b) => {
+                                      const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                                      const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                                      return dateB - dateA;
+                                    })[0];
+                                  if (!previousExp) {
+                                    return (
+                                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 dark:bg-slate-800/30">
+                                        <p className="text-sm text-slate-500 text-center">No previous company added</p>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 dark:bg-slate-800/50">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <h4 className="font-semibold text-slate-900 dark:text-white mb-2">
+                                            {previousExp.jobTitle}
+                                          </h4>
+                                          {previousExp.currentDesignation && (
+                                            <p className="text-slate-600 dark:text-slate-400 text-sm mb-1 italic">
+                                              Designation: {previousExp.currentDesignation}
+                                            </p>
+                                          )}
+                                          <p className="text-slate-700 dark:text-slate-300 mb-1">
+                                            {previousExp.companyName || 'Company not specified'}
+                                          </p>
+                                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            {previousExp.startDate ? new Date(previousExp.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''} -{' '}
+                                            {previousExp.endDate ? new Date(previousExp.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''}
+                                            {previousExp.location && ` • ${previousExp.location}`}
+                                          </p>
+                                          {previousExp.description && (
+                                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                                              {previousExp.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                              {/* Other Companies Section */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900 dark:text-white">Other Companies</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Additional past employment (optional)</p>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setWorkExperienceForm({
+                                        companyName: '',
+                                        jobTitle: '',
+                                        currentDesignation: '',
+                                        location: '',
+                                        startDate: '',
+                                        endDate: '',
+                                        isCurrent: false,
+                                        description: '',
+                                        employmentType: 'full-time'
+                                      });
+                                      setEditingWorkExperience(null);
+                                      setShowWorkExperienceForm(true);
+                                    }}
+                                  >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Other Company
+                                  </Button>
+                                </div>
+                                {(() => {
+                                  const otherExps = workExperiences
+                                    .filter(exp => !exp.isCurrent)
+                                    .sort((a, b) => {
+                                      const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                                      const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                                      return dateB - dateA;
+                                    })
+                                    .slice(1); // Skip the first one (Previous Company)
+                                  
+                                  if (otherExps.length === 0) {
+                                    return (
+                                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 dark:bg-slate-800/30">
+                                        <p className="text-sm text-slate-500 text-center">No other companies added</p>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <div className="space-y-3">
+                                      {otherExps.map((exp) => (
+                                        <div
+                                          key={exp.id}
+                                          className="border border-slate-200 rounded-lg p-4 bg-slate-50 dark:bg-slate-800/50"
+                                        >
+                                          <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                              <h4 className="font-semibold text-slate-900 dark:text-white mb-2">
+                                                {exp.jobTitle}
+                                              </h4>
+                                              {exp.currentDesignation && (
+                                                <p className="text-slate-600 dark:text-slate-400 text-sm mb-1 italic">
+                                                  Designation: {exp.currentDesignation}
+                                                </p>
+                                              )}
+                                              <p className="text-slate-700 dark:text-slate-300 mb-1">
+                                                {exp.companyName || 'Company not specified'}
+                                              </p>
+                                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                                {exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''} -{' '}
+                                                {exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''}
+                                                {exp.location && ` • ${exp.location}`}
+                                              </p>
+                                              {exp.description && (
+                                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                                                  {exp.description}
+                                                </p>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-2 ml-4">
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleEditWorkExperience(exp)}
+                                              >
+                                                <Edit className="w-4 h-4" />
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => exp.id && handleDeleteWorkExperience(exp.id)}
+                                                className="text-red-600 hover:text-red-700"
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                            </div>
+                          )}
                         </div>
 
                         {/* Job Preferences Section */}
@@ -1651,24 +2367,49 @@ export default function AccountPage() {
                         </p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {(user.experienceYears !== undefined && user.experienceYears !== null) && (
-                          <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Experience</p>
-                            <p className="font-medium text-slate-900 dark:text-white">{user.experienceYears} years</p>
-                          </div>
-                        )}
-                        {(user.currentCompany || (user as any).currentCompany) && (
-                          <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Current Company</p>
-                            <p className="font-medium text-slate-900 dark:text-white">{user.currentCompany || (user as any).currentCompany}</p>
-                          </div>
-                        )}
-                        {(user.currentRole || (user as any).currentRole) && (
-                          <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Current Role</p>
-                            <p className="font-medium text-slate-900 dark:text-white">{user.currentRole || (user as any).currentRole}</p>
-                          </div>
-                        )}
+                        {(() => {
+                          // Calculate experience from work experiences (most accurate)
+                          let experienceDisplay = null;
+                          if (workExperiences && workExperiences.length > 0) {
+                            let totalDays = 0;
+                            workExperiences.forEach((exp: any) => {
+                              const start = new Date(exp.startDate);
+                              const end = exp.isCurrent ? new Date() : new Date(exp.endDate || new Date());
+                              if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                                const diffTime = Math.abs(end.getTime() - start.getTime());
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                totalDays += diffDays;
+                              }
+                            });
+                            const years = Math.floor(totalDays / 365);
+                            const remainingDays = totalDays % 365;
+                            const months = Math.floor(remainingDays / 30);
+                            const days = remainingDays % 30;
+                            const parts = [];
+                            if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+                            if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+                            if (days > 0 && years === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+                            experienceDisplay = parts.length > 0 ? parts.join(', ') : 'No experience';
+                          } else if (user.experienceYears !== undefined && user.experienceYears !== null) {
+                            // Fallback to experience_years field
+                            const totalYears = user.experienceYears || 0;
+                            const years = Math.floor(totalYears);
+                            const months = Math.floor((totalYears - years) * 12);
+                            const days = Math.floor(((totalYears - years) * 12 - months) * 30);
+                            const parts = [];
+                            if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+                            if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+                            if (days > 0 && years === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+                            experienceDisplay = parts.length > 0 ? parts.join(', ') : 'No experience';
+                          }
+                          
+                          return experienceDisplay ? (
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">Experience</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{experienceDisplay}</p>
+                            </div>
+                          ) : null;
+                        })()}
                         {(user.highestEducation || (user as any).highestEducation) && (
                           <div>
                             <p className="text-sm text-slate-500 dark:text-slate-400">Highest Education</p>
@@ -1679,6 +2420,12 @@ export default function AccountPage() {
                           <div>
                             <p className="text-sm text-slate-500 dark:text-slate-400">Field of Study</p>
                             <p className="font-medium text-slate-900 dark:text-white">{user.fieldOfStudy || (user as any).fieldOfStudy}</p>
+                          </div>
+                        )}
+                        {(user.currentSalary || (user as any).currentSalary) && (
+                          <div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Current Salary</p>
+                            <p className="font-medium text-slate-900 dark:text-white">₹{user.currentSalary || (user as any).currentSalary} LPA</p>
                           </div>
                         )}
                         {user.expectedSalary && (
@@ -1886,16 +2633,6 @@ export default function AccountPage() {
                           {resumeStats.totalResumes}
                         </div>
                         <div className="text-sm text-slate-600 dark:text-slate-300">Total Resumes</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                          {resumeStats.totalViews}
-                        </div>
-                        <div className="text-sm text-slate-600 dark:text-slate-300">Total Views</div>
                       </div>
                     </CardContent>
                   </Card>
@@ -2185,6 +2922,302 @@ export default function AccountPage() {
           onClose={() => setShowIndustryDropdown(false)}
         />
       )}
+
+      {/* Work Experience Dialog */}
+      <Dialog open={showWorkExperienceForm} onOpenChange={setShowWorkExperienceForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingWorkExperience ? 'Edit Work Experience' : 'Add Work Experience'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="jobTitle">Job Title *</Label>
+                <Input
+                  id="jobTitle"
+                  value={workExperienceForm.jobTitle || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, jobTitle: e.target.value }))}
+                  placeholder="e.g., Software Engineer"
+                />
+              </div>
+              <div>
+                <Label htmlFor="currentDesignation">Current Designation</Label>
+                <Input
+                  id="currentDesignation"
+                  value={workExperienceForm.currentDesignation || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, currentDesignation: e.target.value }))}
+                  placeholder="e.g., Senior Software Engineer"
+                />
+              </div>
+              <div>
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  value={workExperienceForm.companyName || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, companyName: e.target.value }))}
+                  placeholder="e.g., Tech Solutions Inc."
+                />
+              </div>
+              <div>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={workExperienceForm.startDate || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={workExperienceForm.endDate || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, endDate: e.target.value }))}
+                  disabled={workExperienceForm.isCurrent}
+                />
+              </div>
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={workExperienceForm.location || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="e.g., Mumbai, India"
+                />
+              </div>
+              <div>
+                <Label htmlFor="employmentType">Employment Type</Label>
+                <Select
+                  value={workExperienceForm.employmentType || 'full-time'}
+                  onValueChange={(value) => setWorkExperienceForm(prev => ({ ...prev, employmentType: value as any }))}
+                >
+                  <SelectTrigger id="employmentType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full-time">Full-time</SelectItem>
+                    <SelectItem value="part-time">Part-time</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="internship">Internship</SelectItem>
+                    <SelectItem value="freelance">Freelance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-2 flex items-center space-x-2">
+                <Checkbox
+                  id="isCurrent"
+                  checked={workExperienceForm.isCurrent || false}
+                  onCheckedChange={(checked) => {
+                    setWorkExperienceForm(prev => ({
+                      ...prev,
+                      isCurrent: !!checked,
+                      endDate: checked ? '' : prev.endDate
+                    }))
+                  }}
+                />
+                <Label htmlFor="isCurrent">This is my current job</Label>
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={workExperienceForm.description || ''}
+                  onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe your role and responsibilities..."
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowWorkExperienceForm(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveWorkExperience}
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingWorkExperience ? 'Update' : 'Add'} Experience
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Education Dialog */}
+      <Dialog open={showEducationForm} onOpenChange={setShowEducationForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingEducation ? 'Edit Education' : 'Add Education'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="degree">Degree *</Label>
+                <Input
+                  id="degree"
+                  value={educationForm.degree}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, degree: e.target.value }))}
+                  placeholder="e.g., Bachelor of Science"
+                />
+              </div>
+              <div>
+                <Label htmlFor="institution">Institution/University *</Label>
+                <Input
+                  id="institution"
+                  value={educationForm.institution}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, institution: e.target.value }))}
+                  placeholder="e.g., University of Mumbai"
+                />
+              </div>
+              <div>
+                <Label htmlFor="fieldOfStudy">Field of Study</Label>
+                <Input
+                  id="fieldOfStudy"
+                  value={educationForm.fieldOfStudy}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, fieldOfStudy: e.target.value }))}
+                  placeholder="e.g., Computer Science"
+                />
+              </div>
+              <div>
+                <Label htmlFor="educationType">Education Type</Label>
+                <Select
+                  value={educationForm.educationType}
+                  onValueChange={(value) => setEducationForm(prev => ({ ...prev, educationType: value }))}
+                >
+                  <SelectTrigger id="educationType">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bachelor">Bachelor's</SelectItem>
+                    <SelectItem value="master">Master's</SelectItem>
+                    <SelectItem value="phd">PhD</SelectItem>
+                    <SelectItem value="diploma">Diploma</SelectItem>
+                    <SelectItem value="certification">Certification</SelectItem>
+                    <SelectItem value="high-school">High School</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={educationForm.startDate}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={educationForm.endDate}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, endDate: e.target.value }))}
+                  disabled={educationForm.isCurrent}
+                />
+              </div>
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={educationForm.location}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="e.g., Mumbai, India"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isCurrent"
+                  checked={educationForm.isCurrent}
+                  onCheckedChange={(checked) => {
+                    setEducationForm(prev => ({
+                      ...prev,
+                      isCurrent: !!checked,
+                      endDate: checked ? '' : prev.endDate
+                    }))
+                  }}
+                />
+                <Label htmlFor="isCurrent">Currently studying</Label>
+              </div>
+              <div>
+                <Label htmlFor="gpa">GPA/CGPA</Label>
+                <Input
+                  id="gpa"
+                  type="number"
+                  step="0.01"
+                  value={educationForm.gpa}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, gpa: e.target.value }))}
+                  placeholder="e.g., 8.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="percentage">Percentage</Label>
+                <Input
+                  id="percentage"
+                  type="number"
+                  step="0.01"
+                  value={educationForm.percentage}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, percentage: e.target.value }))}
+                  placeholder="e.g., 85.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="grade">Grade</Label>
+                <Input
+                  id="grade"
+                  value={educationForm.grade}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, grade: e.target.value }))}
+                  placeholder="e.g., A, First Class"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={educationForm.description}
+                  onChange={(e) => setEducationForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Additional details about your education..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEducationForm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEducation}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {editingEducation ? 'Update' : 'Add'} Education
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

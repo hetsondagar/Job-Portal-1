@@ -1,15 +1,15 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { apiService, User } from '@/lib/api'
+import { apiService, User, WorkExperience } from '@/lib/api'
 import { toast } from 'sonner'
-import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar, Building2, ChevronDown, Upload, Image, Palette } from 'lucide-react'
+import { User as UserIcon, Briefcase, MapPin, DollarSign, Calendar, Building2, ChevronDown, Upload, Image, Palette, Plus, Edit, Trash2, X, Save, Mail, Phone, Award } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
@@ -42,8 +42,6 @@ export function JobseekerProfileCompletionDialog({
     willingToRelocate: false,
     preferredLocations: '',
     // Professional Details
-    currentCompany: '',
-    currentRole: '',
     highestEducation: '',
     fieldOfStudy: '',
     // Preferred Professional Details
@@ -55,6 +53,23 @@ export function JobseekerProfileCompletionDialog({
   })
   const [submitting, setSubmitting] = useState(false)
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+  
+  // Work Experience state
+  const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([])
+  const [loadingWorkExperiences, setLoadingWorkExperiences] = useState(false)
+  const [editingWorkExperience, setEditingWorkExperience] = useState<WorkExperience | null>(null)
+  const [showWorkExperienceForm, setShowWorkExperienceForm] = useState(false)
+  const [workExperienceForm, setWorkExperienceForm] = useState<Partial<WorkExperience>>({
+    companyName: '',
+    jobTitle: '',
+    currentDesignation: '',
+    location: '',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+    description: '',
+    employmentType: 'full-time'
+  })
 
   // Check if profile is incomplete - COMPREHENSIVE CHECK
   const isProfileIncomplete = () => {
@@ -91,8 +106,6 @@ export function JobseekerProfileCompletionDialog({
         willingToRelocate: user.willingToRelocate || false,
         preferredLocations: Array.isArray((user as any).preferredLocations) ? (user as any).preferredLocations.join(', ') : '',
         // Professional Details
-        currentCompany: (user as any).currentCompany || '',
-        currentRole: (user as any).currentRole || '',
         highestEducation: (user as any).highestEducation || '',
         fieldOfStudy: (user as any).fieldOfStudy || '',
         // Preferred Professional Details
@@ -102,8 +115,113 @@ export function JobseekerProfileCompletionDialog({
         preferredWorkMode: (user as any).preferredWorkMode || '',
         preferredEmploymentType: (user as any).preferredEmploymentType || ''
       })
+      fetchWorkExperiences()
     }
   }, [user])
+
+  // Work Experience functions
+  const fetchWorkExperiences = async () => {
+    try {
+      setLoadingWorkExperiences(true)
+      const response = await apiService.getWorkExperiences()
+      if (response.success && response.data) {
+        setWorkExperiences(response.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching work experiences:', error)
+    } finally {
+      setLoadingWorkExperiences(false)
+    }
+  }
+
+  const handleAddWorkExperience = (isCurrent: boolean) => {
+    setEditingWorkExperience(null)
+    setWorkExperienceForm({
+      companyName: '',
+      jobTitle: '',
+      currentDesignation: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      isCurrent: isCurrent,
+      description: '',
+      employmentType: 'full-time'
+    })
+    setShowWorkExperienceForm(true)
+  }
+
+  const handleEditWorkExperience = (exp: WorkExperience) => {
+    setEditingWorkExperience(exp)
+    setWorkExperienceForm({
+      companyName: exp.companyName || '',
+      jobTitle: exp.jobTitle || '',
+      currentDesignation: exp.currentDesignation || '',
+      location: exp.location || '',
+      startDate: exp.startDate ? exp.startDate.split('T')[0] : '',
+      endDate: exp.endDate ? exp.endDate.split('T')[0] : '',
+      isCurrent: exp.isCurrent || false,
+      description: exp.description || '',
+      employmentType: exp.employmentType || 'full-time'
+    })
+    setShowWorkExperienceForm(true)
+  }
+
+  const handleSaveWorkExperience = async () => {
+    if (!workExperienceForm.jobTitle || !workExperienceForm.startDate) {
+      toast.error('Job title and start date are required')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      if (editingWorkExperience?.id) {
+        const response = await apiService.updateWorkExperience(editingWorkExperience.id, workExperienceForm)
+        if (response.success) {
+          toast.success('Work experience updated successfully')
+          await fetchWorkExperiences()
+          setShowWorkExperienceForm(false)
+        } else {
+          toast.error(response.message || 'Failed to update work experience')
+        }
+      } else {
+        const response = await apiService.createWorkExperience(workExperienceForm as WorkExperience)
+        if (response.success) {
+          toast.success('Work experience added successfully')
+          await fetchWorkExperiences()
+          setShowWorkExperienceForm(false)
+        } else {
+          toast.error(response.message || 'Failed to add work experience')
+        }
+      }
+    } catch (error: any) {
+      console.error('Error saving work experience:', error)
+      toast.error(error.message || 'Failed to save work experience')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteWorkExperience = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this work experience?')) {
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      const response = await apiService.deleteWorkExperience(id)
+      if (response.success) {
+        toast.success('Work experience deleted successfully')
+        await fetchWorkExperiences()
+      } else {
+        toast.error(response.message || 'Failed to delete work experience')
+      }
+    } catch (error: any) {
+      console.error('Error deleting work experience:', error)
+      toast.error(error.message || 'Failed to delete work experience')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleSubmit = async () => {
     // Validate required fields
@@ -128,8 +246,6 @@ export function JobseekerProfileCompletionDialog({
         willingToRelocate: formData.willingToRelocate,
         preferredLocations: formData.preferredLocations ? formData.preferredLocations.split(',').map(s => s.trim()).filter(Boolean) : [],
         // Professional Details
-        currentCompany: formData.currentCompany || undefined,
-        currentRole: formData.currentRole || undefined,
         highestEducation: formData.highestEducation || undefined,
         fieldOfStudy: formData.fieldOfStudy || undefined,
         // Preferred Professional Details
@@ -213,6 +329,26 @@ export function JobseekerProfileCompletionDialog({
           <DialogDescription>
             Help employers find you! Complete your profile to increase your chances of getting hired.
           </DialogDescription>
+          <div className="flex items-center gap-2 mt-2">
+            {user.isEmailVerified && (
+              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                <Mail className="w-3 h-3 mr-1" />
+                Email Verified
+              </Badge>
+            )}
+            {user.isPhoneVerified && (
+              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                <Phone className="w-3 h-3 mr-1" />
+                Phone Verified
+              </Badge>
+            )}
+            {user.profileCompletion && user.profileCompletion >= 80 && (
+              <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                <Award className="w-3 h-3 mr-1" />
+                Profile {user.profileCompletion}% Complete
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
@@ -294,31 +430,214 @@ export function JobseekerProfileCompletionDialog({
             </div>
           </div>
 
+          {/* Work Experience */}
+          <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <h3 className="font-semibold text-sm text-green-900 dark:text-green-100">Work Experience</h3>
+            
+            <div className="space-y-4">
+              {/* Current Company Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Current Company</Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Your current employment details</p>
+                  </div>
+                  {(() => {
+                    const currentExp = workExperiences.find(exp => exp.isCurrent);
+                    return currentExp ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditWorkExperience(currentExp)}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddWorkExperience(true)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add
+                      </Button>
+                    );
+                  })()}
+                </div>
+                {(() => {
+                  const currentExp = workExperiences.find(exp => exp.isCurrent);
+                  if (!currentExp) {
+                    return (
+                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-white dark:bg-slate-800">
+                        <p className="text-sm text-slate-500 text-center">No current company added</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border border-slate-200 rounded-lg p-3 bg-white dark:bg-slate-800">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{currentExp.jobTitle}</span>
+                        <Badge className="bg-green-100 text-green-800 text-xs">Current</Badge>
+                      </div>
+                      {currentExp.currentDesignation && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 italic mb-1">
+                          Designation: {currentExp.currentDesignation}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{currentExp.companyName}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Previous Company Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Previous Company</Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Your most recent past employment</p>
+                  </div>
+                  {(() => {
+                    const previousExp = workExperiences
+                      .filter(exp => !exp.isCurrent)
+                      .sort((a, b) => {
+                        const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                        const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                        return dateB - dateA;
+                      })[0];
+                    return previousExp ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditWorkExperience(previousExp)}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddWorkExperience(false)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add
+                      </Button>
+                    );
+                  })()}
+                </div>
+                {(() => {
+                  const previousExp = workExperiences
+                    .filter(exp => !exp.isCurrent)
+                    .sort((a, b) => {
+                      const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                      const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                      return dateB - dateA;
+                    })[0];
+                  if (!previousExp) {
+                    return (
+                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-white dark:bg-slate-800">
+                        <p className="text-sm text-slate-500 text-center">No previous company added</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border border-slate-200 rounded-lg p-3 bg-white dark:bg-slate-800">
+                      <p className="font-medium text-sm mb-1">{previousExp.jobTitle}</p>
+                      {previousExp.currentDesignation && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 italic mb-1">
+                          Designation: {previousExp.currentDesignation}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{previousExp.companyName}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Other Companies Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Other Companies</Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Additional past employment (optional)</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddWorkExperience(false)}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
+                {(() => {
+                  const otherExps = workExperiences
+                    .filter(exp => !exp.isCurrent)
+                    .sort((a, b) => {
+                      const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+                      const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+                      return dateB - dateA;
+                    })
+                    .slice(1);
+                  
+                  if (otherExps.length === 0) {
+                    return (
+                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-white dark:bg-slate-800">
+                        <p className="text-sm text-slate-500 text-center">No other companies added</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="space-y-2">
+                      {otherExps.map((exp) => (
+                        <div key={exp.id} className="border border-slate-200 rounded-lg p-3 bg-white dark:bg-slate-800 flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{exp.jobTitle}</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">{exp.companyName}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditWorkExperience(exp)}
+                              className="h-7 w-7 p-0"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => exp.id && handleDeleteWorkExperience(exp.id)}
+                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+            </div>
+          </div>
+
           {/* Professional Details */}
           <div className="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <h3 className="font-semibold text-sm text-green-900 dark:text-green-100">Professional Details</h3>
+            <h3 className="font-semibold text-sm text-green-900 dark:text-green-100">Other Professional Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="currentCompany">Current Company</Label>
-                <Input
-                  id="currentCompany"
-                  placeholder="e.g., Tech Solutions Inc."
-                  value={formData.currentCompany}
-                  onChange={(e) => setFormData(prev => ({ ...prev, currentCompany: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="currentRole">Current Role/Position</Label>
-                <Input
-                  id="currentRole"
-                  placeholder="e.g., Senior Software Engineer"
-                  value={formData.currentRole}
-                  onChange={(e) => setFormData(prev => ({ ...prev, currentRole: e.target.value }))}
-                />
-              </div>
-
               <div>
                 <Label htmlFor="experienceYears">Years of Experience</Label>
                 <Input
@@ -538,6 +857,147 @@ export function JobseekerProfileCompletionDialog({
         onClose={() => setShowIndustryDropdown(false)}
       />
     )}
+
+    {/* Work Experience Dialog */}
+    <Dialog open={showWorkExperienceForm} onOpenChange={setShowWorkExperienceForm}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editingWorkExperience ? 'Edit Work Experience' : 'Add Work Experience'}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="jobTitle">Job Title *</Label>
+              <Input
+                id="jobTitle"
+                value={workExperienceForm.jobTitle || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, jobTitle: e.target.value }))}
+                placeholder="e.g., Software Engineer"
+              />
+            </div>
+            <div>
+              <Label htmlFor="currentDesignation">Current Designation</Label>
+              <Input
+                id="currentDesignation"
+                value={workExperienceForm.currentDesignation || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, currentDesignation: e.target.value }))}
+                placeholder="e.g., Senior Software Engineer"
+              />
+            </div>
+            <div>
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={workExperienceForm.companyName || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, companyName: e.target.value }))}
+                placeholder="e.g., Tech Solutions Inc."
+              />
+            </div>
+            <div>
+              <Label htmlFor="startDate">Start Date *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={workExperienceForm.startDate || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="endDate">End Date</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={workExperienceForm.endDate || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, endDate: e.target.value }))}
+                disabled={workExperienceForm.isCurrent}
+              />
+            </div>
+            <div>
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={workExperienceForm.location || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="e.g., Mumbai, India"
+              />
+            </div>
+            <div>
+              <Label htmlFor="employmentType">Employment Type</Label>
+              <Select
+                value={workExperienceForm.employmentType || 'full-time'}
+                onValueChange={(value) => setWorkExperienceForm(prev => ({ ...prev, employmentType: value as any }))}
+              >
+                <SelectTrigger id="employmentType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full-time">Full-time</SelectItem>
+                  <SelectItem value="part-time">Part-time</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="internship">Internship</SelectItem>
+                  <SelectItem value="freelance">Freelance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2 flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isCurrent"
+                checked={workExperienceForm.isCurrent || false}
+                onChange={(e) => {
+                  setWorkExperienceForm(prev => ({
+                    ...prev,
+                    isCurrent: e.target.checked,
+                    endDate: e.target.checked ? '' : prev.endDate
+                  }))
+                }}
+                className="rounded border-slate-300"
+              />
+              <Label htmlFor="isCurrent" className="cursor-pointer">
+                This is my current job
+              </Label>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={workExperienceForm.description || ''}
+                onChange={(e) => setWorkExperienceForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe your role and responsibilities..."
+                rows={4}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setShowWorkExperienceForm(false)}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveWorkExperience}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                {editingWorkExperience ? 'Update' : 'Add'} Experience
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   )
 }
