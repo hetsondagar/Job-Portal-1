@@ -262,11 +262,14 @@ export default function RequirementsPage() {
   
   // Periodically refresh requirement stats
   useEffect(() => {
+    // Initial refresh
+    refreshStats();
+    
     const interval = setInterval(() => {
       refreshStats();
     }, 3000); // Refresh every 3 seconds for faster updates
     
-    // Also refresh when page becomes visible
+    // Also refresh when page becomes visible (e.g., when returning from edit page)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         console.log('👁️ Page visible, refreshing stats...');
@@ -396,7 +399,6 @@ export default function RequirementsPage() {
 
   return (
     <EmployerAuthGuard>
-      return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-auto">
       <EmployerDashboardNavbar />
       

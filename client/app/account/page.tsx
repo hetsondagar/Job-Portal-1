@@ -757,10 +757,18 @@ export default function AccountPage() {
           // Re-fetch job preferences to update display
           await fetchJobPreferences()
           await refreshUser()
+          // Re-initialize form data with updated user data to ensure display is correct
+          setTimeout(() => {
+            initializeFormData()
+          }, 100)
           setEditingProfessional(false)
           toast.success('Professional details and job preferences updated successfully')
         } else {
           await refreshUser()
+          // Re-initialize form data with updated user data to ensure display is correct
+          setTimeout(() => {
+            initializeFormData()
+          }, 100)
           setEditingProfessional(false)
           toast.success('Professional details updated successfully, but job preferences failed to save')
         }
@@ -2368,9 +2376,19 @@ export default function AccountPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {(() => {
-                          // Calculate experience from work experiences (most accurate)
+                          // Priority 1: Use professionalData values if they exist (user just entered them)
                           let experienceDisplay = null;
-                          if (workExperiences && workExperiences.length > 0) {
+                          if (professionalData.experienceYears || professionalData.experienceMonths || professionalData.experienceDays) {
+                            const years = Number(professionalData.experienceYears) || 0;
+                            const months = Number(professionalData.experienceMonths) || 0;
+                            const days = Number(professionalData.experienceDays) || 0;
+                            const parts = [];
+                            if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+                            if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+                            if (days > 0 && years === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+                            experienceDisplay = parts.length > 0 ? parts.join(', ') : 'No experience';
+                          } else if (workExperiences && workExperiences.length > 0) {
+                            // Priority 2: Calculate experience from work experiences (most accurate)
                             let totalDays = 0;
                             workExperiences.forEach((exp: any) => {
                               const start = new Date(exp.startDate);
@@ -2391,7 +2409,7 @@ export default function AccountPage() {
                             if (days > 0 && years === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
                             experienceDisplay = parts.length > 0 ? parts.join(', ') : 'No experience';
                           } else if (user.experienceYears !== undefined && user.experienceYears !== null) {
-                            // Fallback to experience_years field
+                            // Priority 3: Fallback to experience_years field
                             const totalYears = user.experienceYears || 0;
                             const years = Math.floor(totalYears);
                             const months = Math.floor((totalYears - years) * 12);
@@ -2422,12 +2440,37 @@ export default function AccountPage() {
                             <p className="font-medium text-slate-900 dark:text-white">{user.fieldOfStudy || (user as any).fieldOfStudy}</p>
                           </div>
                         )}
-                        {(user.currentSalary || (user as any).currentSalary) && (
-                          <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Current Salary</p>
-                            <p className="font-medium text-slate-900 dark:text-white">₹{user.currentSalary || (user as any).currentSalary} LPA</p>
-                          </div>
-                        )}
+                        {(() => {
+                          // Priority: Use professionalData if available, otherwise use user.currentSalary
+                          const currentSalary = professionalData.currentSalary || user.currentSalary || (user as any).currentSalary;
+                          if (!currentSalary || currentSalary === '' || currentSalary === '0') return null;
+                          
+                          // Format the salary value
+                          let salaryValue = '';
+                          if (typeof currentSalary === 'number') {
+                            salaryValue = `₹${currentSalary} LPA`;
+                          } else {
+                            const salaryStr = currentSalary.toString().trim();
+                            if (salaryStr.includes('LPA') || salaryStr.includes('lpa')) {
+                              salaryValue = salaryStr.startsWith('₹') ? salaryStr : `₹${salaryStr}`;
+                            } else {
+                              // Try to parse as number
+                              const numValue = parseFloat(salaryStr);
+                              if (!isNaN(numValue)) {
+                                salaryValue = `₹${numValue} LPA`;
+                              } else {
+                                salaryValue = `₹${salaryStr} LPA`;
+                              }
+                            }
+                          }
+                          
+                          return (
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">Current Salary</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{salaryValue}</p>
+                            </div>
+                          );
+                        })()}
                         {user.expectedSalary && (
                           <div>
                             <p className="text-sm text-slate-500 dark:text-slate-400">Expected Salary</p>
