@@ -618,7 +618,7 @@ const startServer = async () => {
     // Job preferences table and admin seeding scripts removed during cleanup
     // These features are now handled by migrations and the admin-setup route
     
-    app.listen(PORT, () => {
+    app.listen(PORT, async () => {
       console.log(`🚀 Job Portal API server running on port: ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
@@ -627,16 +627,30 @@ const startServer = async () => {
       // Start contract expiry monitoring service
       try {
         const contractExpiryService = require('./services/contractExpiryService');
-        contractExpiryService.start();
-        console.log('✅ Contract expiry monitoring service started');
-        
-        // Start inactivity management cron jobs
-        InactivityCronService.start();
-        
-        // Start job alerts cron service
-        JobAlertCronService.start();
+        // Check if table exists before starting
+        const tableExists = await contractExpiryService.tableExists();
+        if (tableExists) {
+          contractExpiryService.start();
+          console.log('✅ Contract expiry monitoring service started');
+        } else {
+          console.log('ℹ️  Contract expiry service skipped: agency_client_authorizations table does not exist');
+        }
       } catch (error) {
         console.warn('⚠️ Failed to start contract expiry service:', error.message);
+      }
+      
+      // Start inactivity management cron jobs
+      try {
+        InactivityCronService.start();
+      } catch (error) {
+        console.warn('⚠️ Failed to start inactivity cron service:', error.message);
+      }
+      
+      // Start job alerts cron service
+      try {
+        JobAlertCronService.start();
+      } catch (error) {
+        console.warn('⚠️ Failed to start job alerts cron service:', error.message);
       }
     });
   } catch (error) {

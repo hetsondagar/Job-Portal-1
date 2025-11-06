@@ -85,14 +85,12 @@ export default function CandidateProfilePage() {
         setLoading(true)
         setError(null)
         
-        // Track profile view for quota consumption
-        try {
-          await apiService.trackProfileView(candidateIdStr)
-          console.log('✅ Profile view tracked successfully')
-        } catch (error) {
-          console.error('⚠️ Failed to track profile view:', error)
-          // Don't fail the profile load if tracking fails
-        }
+        // NOTE: Profile view tracking is handled by the backend API endpoint
+        // (/api/requirements/:id/candidates/:candidateId) which correctly includes
+        // the requirementId (jobId) in the view tracking. This ensures the "accessed"
+        // count on the requirements page is incremented correctly.
+        // Do NOT call trackProfileView here as it would create a duplicate view
+        // without the requirementId, preventing proper accessed count tracking.
         
         const response = await apiService.getCandidateProfile(
           requirementId,

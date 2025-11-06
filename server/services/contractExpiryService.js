@@ -1,7 +1,17 @@
 const cron = require('node-cron');
-const { AgencyClientAuthorization, Company, User } = require('../models');
 const { Op } = require('sequelize');
 const emailService = require('./emailService');
+
+// Lazy load models to avoid errors if table doesn't exist
+let AgencyClientAuthorization, Company, User;
+try {
+  const models = require('../models');
+  AgencyClientAuthorization = models.AgencyClientAuthorization;
+  Company = models.Company;
+  User = models.User;
+} catch (error) {
+  console.warn('⚠️ Could not load models for contract expiry service:', error.message);
+}
 
 class ContractExpiryService {
   constructor() {
@@ -17,10 +27,22 @@ class ContractExpiryService {
     this.cronJob = cron.schedule('0 0 * * *', async () => {
       console.log('🕐 Running contract expiry check...');
       try {
+        // Check if table exists before running
+        const tableExists = await this.tableExists();
+        if (!tableExists) {
+          console.log('ℹ️  Skipping contract expiry service: agency_client_authorizations table does not exist');
+          return;
+        }
+        
         await this.checkAndExpireContracts();
         await this.sendExpiryReminders();
       } catch (error) {
-        console.error('❌ Error in contract expiry service:', error);
+        // Only log errors that aren't about missing table
+        if (!(error.name === 'SequelizeDatabaseError' && error.original && error.original.code === '42P01')) {
+          console.error('❌ Error in contract expiry service:', error);
+        } else {
+          console.log('ℹ️  Contract expiry service skipped: agency_client_authorizations table does not exist');
+        }
       }
     });
 
@@ -38,10 +60,53 @@ class ContractExpiryService {
   }
 
   /**
+   * Check if the agency_client_authorizations table exists
+   */
+  async tableExists() {
+    try {
+      const { sequelize } = require('../config/sequelize');
+      const [results] = await sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'agency_client_authorizations'
+        );
+      `);
+      return results && results[0] && results[0].exists === true;
+    } catch (error) {
+      console.warn('⚠️ Error checking if agency_client_authorizations table exists:', error.message);
+      return false;
+    }
+  }
+
+  /**
    * Check for expired contracts and update their status
    */
   async checkAndExpireContracts() {
     try {
+      // Check if table exists before proceeding
+      const tableExists = await this.tableExists();
+      if (!tableExists) {
+        console.log('ℹ️  Skipping contract expiry check: agency_client_authorizations table does not exist');
+        return {
+          success: true,
+          expiredCount: 0,
+          skipped: true,
+          reason: 'Table does not exist'
+        };
+      }
+
+      // Ensure models are loaded
+      if (!AgencyClientAuthorization || !Company || !User) {
+        console.log('ℹ️  Skipping contract expiry check: Models not available');
+        return {
+          success: true,
+          expiredCount: 0,
+          skipped: true,
+          reason: 'Models not available'
+        };
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Start of day
 
@@ -92,6 +157,18 @@ class ContractExpiryService {
         expiredCount: expiredAuthorizations.length
       };
     } catch (error) {
+      // Handle database errors gracefully
+      if (error.name === 'SequelizeDatabaseError' && error.original && error.original.code === '42P01') {
+        // Table does not exist
+        console.log('ℹ️  Skipping contract expiry check: agency_client_authorizations table does not exist');
+        return {
+          success: true,
+          expiredCount: 0,
+          skipped: true,
+          reason: 'Table does not exist'
+        };
+      }
+      
       console.error('Error checking expired contracts:', error);
       return {
         success: false,
@@ -105,6 +182,29 @@ class ContractExpiryService {
    */
   async sendExpiryReminders() {
     try {
+      // Check if table exists before proceeding
+      const tableExists = await this.tableExists();
+      if (!tableExists) {
+        console.log('ℹ️  Skipping expiry reminders: agency_client_authorizations table does not exist');
+        return {
+          success: true,
+          remindersSent: 0,
+          skipped: true,
+          reason: 'Table does not exist'
+        };
+      }
+
+      // Ensure models are loaded
+      if (!AgencyClientAuthorization || !Company || !User) {
+        console.log('ℹ️  Skipping expiry reminders: Models not available');
+        return {
+          success: true,
+          remindersSent: 0,
+          skipped: true,
+          reason: 'Models not available'
+        };
+      }
+
       const today = new Date();
       const reminderDate = new Date();
       reminderDate.setDate(reminderDate.getDate() + 15); // 15 days from now
@@ -161,6 +261,18 @@ class ContractExpiryService {
         remindersSent: expiringSoon.length
       };
     } catch (error) {
+      // Handle database errors gracefully
+      if (error.name === 'SequelizeDatabaseError' && error.original && error.original.code === '42P01') {
+        // Table does not exist
+        console.log('ℹ️  Skipping expiry reminders: agency_client_authorizations table does not exist');
+        return {
+          success: true,
+          remindersSent: 0,
+          skipped: true,
+          reason: 'Table does not exist'
+        };
+      }
+      
       console.error('Error sending expiry reminders:', error);
       return {
         success: false,

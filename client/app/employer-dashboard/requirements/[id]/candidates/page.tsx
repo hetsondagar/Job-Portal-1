@@ -72,7 +72,7 @@ export default function CandidatesPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("relevance")
-  const [showCount, setShowCount] = useState("50")
+  const [showCount, setShowCount] = useState("20")
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -88,7 +88,7 @@ export default function CandidatesPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 50,
+    limit: 20,
     total: 0,
     pages: 0
   })
@@ -201,44 +201,53 @@ export default function CandidatesPage() {
   useEffect(() => {
     let refreshTimeout: NodeJS.Timeout | null = null;
     
+    const refreshCandidates = async () => {
+      if (params.id && !loading) {
+        console.log('👁️ Refreshing candidates to update viewed status...')
+        try {
+          const response = await apiService.getRequirementCandidates(params.id as string, {
+            page: pagination.page,
+            limit: parseInt(showCount),
+            search: searchQuery || undefined,
+            sortBy: sortBy
+          });
+          
+          if (response.success && response.data) {
+            setCandidates(response.data.candidates || []);
+            setRequirement(response.data.requirement);
+            console.log('✅ Refreshed candidates with updated viewed status');
+          }
+        } catch (error) {
+          console.error('❌ Error refreshing candidates:', error);
+        }
+      }
+    };
+    
     const handleVisibilityChange = () => {
       if (!document.hidden && params.id) {
-        console.log('👁️ Page visible, refreshing candidates to update viewed status...')
         // Debounce refresh to avoid multiple rapid refreshes
         if (refreshTimeout) clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          // Force a refresh by fetching candidates again
-          const fetchCandidates = async () => {
-            try {
-              const response = await apiService.getRequirementCandidates(params.id as string, {
-                page: pagination.page,
-                limit: parseInt(showCount),
-                search: searchQuery || undefined,
-                sortBy: sortBy
-              });
-              
-              if (response.success && response.data) {
-                setCandidates(response.data.candidates || []);
-                console.log('✅ Refreshed candidates with updated viewed status');
-              }
-            } catch (error) {
-              console.error('❌ Error refreshing candidates:', error);
-            }
-          };
-          fetchCandidates();
-        }, 500);
+        refreshTimeout = setTimeout(refreshCandidates, 300);
+      }
+    };
+    
+    const handleFocus = () => {
+      if (params.id) {
+        // Debounce refresh to avoid multiple rapid refreshes
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(refreshCandidates, 300);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
     
     return () => {
       if (refreshTimeout) clearTimeout(refreshTimeout);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, [params.id, pagination.page, showCount, searchQuery, sortBy])
+  }, [params.id, pagination.page, showCount, searchQuery, sortBy, loading])
 
   // Debounced search effect
   useEffect(() => {
@@ -508,91 +517,115 @@ export default function CandidatesPage() {
     try {
       setCalculatingATS(true)
       
-      const candidateCount = processAll ? 'all candidates' : candidates.length
-      toast.info('Starting STREAMING ATS calculation...', {
-        description: `Processing ${candidateCount} one by one for real-time updates.`
+      // For "Stream ATS (Current)", only process candidates on current page
+      // For "Stream ATS (All)", process all candidates with pagination
+      const candidateCount = processAll ? 'all candidates' : `current page (${candidates.length} candidates)`
+      
+      toast.info('Starting STREAMING ATS calculation with intelligent pooling...', {
+        description: `Processing ${candidateCount} with optimized batching.`
       })
       
       // Prepare request body based on processing mode
       const requestBody = processAll 
         ? { 
-            processAll: true 
-            // Don't send page/limit - backend will process ALL candidates for the requirement
+            processAll: true,
+            page: pagination.page,
+            limit: parseInt(showCount) || 20
+            // Backend will process ALL candidates for the requirement with pagination
           }
         : { 
-            candidateIds: filteredCandidates.map(c => c.id) 
-            // Only process candidates visible on current page (after filters)
+            candidateIds: candidates.map(c => c.id),
+            page: pagination.page,
+            limit: parseInt(showCount) || 20
+            // Only process candidates visible on current page
           }
       
-      console.log('🚀 STREAMING ATS calculation request:', { processAll, requestBody })
+      console.log('🚀 STREAMING ATS calculation request:', { processAll, requestBody, currentPage: pagination.page })
       
       // Start streaming ATS calculation
       const response = await apiService.calculateATSScores(params.id as string, requestBody)
       
       if (response.success && response.data.streaming) {
-        const { candidateIds: targetCandidateIds, totalCandidates } = response.data
+        const { candidateIds: targetCandidateIds, totalCandidates, pooling } = response.data
         
-        console.log('✅ Streaming ATS started:', { targetCandidateIds: targetCandidateIds.length, totalCandidates })
-        
-        toast.success('ATS streaming started!', {
-          description: `Processing ${targetCandidateIds.length} candidates one by one...`
+        console.log('✅ Streaming ATS started with pooling:', { 
+          targetCandidateIds: targetCandidateIds.length, 
+          totalCandidates,
+          maxConcurrent: pooling?.maxConcurrent,
+          estimatedTime: pooling?.estimatedTime
         })
         
-        // Process candidates one by one with streaming updates
+        toast.success('ATS streaming started!', {
+          description: `Processing ${targetCandidateIds.length} candidates with intelligent batching (${pooling?.maxConcurrent || 5} concurrent)...`
+        })
+        
+        // Process candidates with intelligent pooling
+        // Use Promise.all with limited concurrency for better performance
+        const maxConcurrent = pooling?.maxConcurrent || 5
         let completedCount = 0
         let failedCount = 0
         
-        for (let i = 0; i < targetCandidateIds.length; i++) {
-          const candidateId = targetCandidateIds[i]
+        // Process in batches to avoid overwhelming the system
+        for (let i = 0; i < targetCandidateIds.length; i += maxConcurrent) {
+          const batch = targetCandidateIds.slice(i, i + maxConcurrent)
           
-          try {
-            console.log(`🎯 Processing candidate ${i + 1}/${targetCandidateIds.length}: ${candidateId}`)
-            
-            // Calculate ATS for individual candidate
-            const individualResponse = await apiService.calculateIndividualATS(params.id as string, candidateId)
-            
-            if (individualResponse.success) {
-              const { atsScore, candidate } = individualResponse.data
-              completedCount++
+          console.log(`📦 Processing batch ${Math.floor(i / maxConcurrent) + 1}/${Math.ceil(targetCandidateIds.length / maxConcurrent)} (${batch.length} candidates)`)
+          
+          // Process batch in parallel
+          const batchPromises = batch.map(async (candidateId: string) => {
+            try {
+              // Calculate ATS for individual candidate
+              const individualResponse = await apiService.calculateIndividualATS(params.id as string, candidateId)
               
-              console.log(`✅ ATS score calculated for ${candidate.name}: ${atsScore}`)
-              
-              // Update the specific candidate in the current list
-              setCandidates(prevCandidates => {
-                const updatedCandidates = prevCandidates.map(c => 
-                  c.id === candidateId 
-                    ? { ...c, atsScore: atsScore, atsCalculatedAt: new Date().toISOString() }
-                    : c
-                )
+              if (individualResponse.success) {
+                const { atsScore, candidate } = individualResponse.data
+                completedCount++
                 
-                // Sort by ATS score (highest first) after each update
-                return updatedCandidates.sort((a, b) => {
-                  const scoreA = a.atsScore || 0
-                  const scoreB = b.atsScore || 0
-                  return scoreB - scoreA
+                console.log(`✅ ATS score calculated for ${candidate.name}: ${atsScore}`)
+                
+                // Update the specific candidate in the current list
+                setCandidates(prevCandidates => {
+                  const updatedCandidates = prevCandidates.map(c => 
+                    c.id === candidateId 
+                      ? { ...c, atsScore: atsScore, atsCalculatedAt: new Date().toISOString() }
+                      : c
+                  )
+                  
+                  // Sort by ATS score (highest first) after update
+                  return updatedCandidates.sort((a, b) => {
+                    const scoreA = a.atsScore || 0
+                    const scoreB = b.atsScore || 0
+                    return scoreB - scoreA
+                  })
                 })
-              })
-              
-              // Show progress toast for each completed candidate
-              if (completedCount % 2 === 0 || completedCount === targetCandidateIds.length) {
-                toast.success(`Progress: ${completedCount}/${targetCandidateIds.length} completed`, {
-                  description: `Latest: ${candidate.name} - ATS Score: ${atsScore}`
-                })
+                
+                return { success: true, candidateId, atsScore, candidate }
+              } else {
+                failedCount++
+                console.log(`❌ ATS calculation failed for candidate ${candidateId}: ${individualResponse.message}`)
+                return { success: false, candidateId, error: individualResponse.message }
               }
-              
-            } else {
+            } catch (error: any) {
               failedCount++
-              console.log(`❌ ATS calculation failed for candidate ${candidateId}: ${individualResponse.message}`)
+              console.error(`❌ Error processing candidate ${candidateId}:`, error)
+              return { success: false, candidateId, error: error.message }
             }
-            
-            // Small delay between candidates to avoid overwhelming the server
-            if (i < targetCandidateIds.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 800))
-            }
-            
-          } catch (error) {
-            failedCount++
-            console.error(`❌ Error processing candidate ${candidateId}:`, error)
+          })
+          
+          // Wait for batch to complete
+          await Promise.all(batchPromises)
+          
+          // Show progress toast after each batch
+          const progress = completedCount + failedCount
+          if (progress % 5 === 0 || progress === targetCandidateIds.length) {
+            toast.success(`Progress: ${completedCount}/${targetCandidateIds.length} completed`, {
+              description: failedCount > 0 ? `${failedCount} failed` : 'All successful so far!'
+            })
+          }
+          
+          // Small delay between batches to avoid overwhelming the server
+          if (i + maxConcurrent < targetCandidateIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 500))
           }
         }
         
@@ -603,6 +636,22 @@ export default function CandidatesPage() {
         
         // Set sort to ATS by default after completion
         setSortBy('ats')
+        
+        // Refresh candidates list to get updated ATS scores
+        if (processAll) {
+          // For "Stream ATS (All)", we might need to refresh to see all candidates
+          // But for now, just refresh current page
+          const refreshResponse = await apiService.getRequirementCandidates(params.id as string, {
+            page: pagination.page,
+            limit: parseInt(showCount) || 20,
+            search: searchQuery || undefined,
+            sortBy: 'ats'
+          })
+          
+          if (refreshResponse.success && refreshResponse.data) {
+            setCandidates(refreshResponse.data.candidates || [])
+          }
+        }
         
       } else {
         toast.error('Failed to start streaming ATS calculation', {
@@ -822,16 +871,32 @@ export default function CandidatesPage() {
                           </SelectContent>
                         </Select>
               
-                        <Select value={showCount} onValueChange={setShowCount}>
-                <SelectTrigger className="w-20">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                  <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-600">Per page:</span>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={showCount}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Validate: must be between 1 and 100
+                              if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 100)) {
+                                setShowCount(value);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Ensure value is within range on blur
+                              const value = parseInt(e.target.value) || 20;
+                              const clampedValue = Math.max(1, Math.min(100, value));
+                              setShowCount(clampedValue.toString());
+                              // Update pagination limit and reset to page 1
+                              setPagination(prev => ({ ...prev, limit: clampedValue, page: 1 }));
+                            }}
+                            className="w-16 text-center h-9"
+                            placeholder="20"
+                          />
+                        </div>
                       </div>
           </div>
 
