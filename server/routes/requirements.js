@@ -1608,24 +1608,23 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     
     console.log('🎯 Applied Filters:', appliedFilters.join(' | '));
     
-    // If we have matching conditions, apply them with OR logic (flexible matching)
-    // BUT: If requirement has a title, prioritize title-matched candidates
+    // CRITICAL FIX: Use AND logic to combine matching conditions
+    // This ensures candidates must match at least SOME of the specified criteria
+    // If skills are specified, candidate MUST have at least one of those skills
+    // If locations are specified, candidate MUST match at least one location
+    // These are combined with AND logic for stricter matching
     if (matchingConditions.length > 0) {
-      // Check if we should prioritize title matches
-      const hasTitleMatch = matchingConditions.some(condition => 
-        condition[Op.or]?.some(c => 
-          c.headline || c.designation || 
-          (sequelize.where && sequelize.cast && String(c).includes('headline'))
-        )
-      );
+      // Use AND logic to combine all matching conditions
+      // This ensures candidates must satisfy ALL specified criteria groups
+      // Example: (has skill1 OR skill2) AND (in location1 OR location2)
+      whereClause[Op.and] = whereClause[Op.and] || [];
+      whereClause[Op.and].push(...matchingConditions);
       
-      whereClause[Op.or] = matchingConditions;
-      
-      // If requirement has specific title, we'll filter results later to prioritize title matches
-      // The WHERE clause still uses OR logic for flexibility, but we'll sort/filter by relevance
+      console.log(`✅ Applied ${matchingConditions.length} matching condition groups with AND logic`);
     }
     
     // Add search query if provided (narrows down results further)
+    // Search should be combined with AND logic to further filter results
     if (search) {
       const searchConditions = [
         { first_name: { [Op.iLike]: `%${search}%` } },
@@ -1637,15 +1636,9 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${search}%` })
       ];
       
-      if (whereClause[Op.or]) {
-        whereClause[Op.and] = [
-          { [Op.or]: whereClause[Op.or] },
-          { [Op.or]: searchConditions }
-        ];
-        delete whereClause[Op.or];
-      } else {
-        whereClause[Op.or] = searchConditions;
-      }
+      // Add search as an AND condition
+      whereClause[Op.and] = whereClause[Op.and] || [];
+      whereClause[Op.and].push({ [Op.or]: searchConditions });
       appliedFilters.push(`Search: "${search}"`);
     }
     
@@ -1683,7 +1676,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'experience_years', 'preferred_locations', 'education', 'designation',
         'profile_completion', 'last_login_at', 'last_profile_update',
         'is_email_verified', 'is_phone_verified', 'created_at',
-        'preferences', 'certifications'
+        'preferences', 'certifications', 'highest_education', 'field_of_study'
       ]
     });
     
@@ -1809,8 +1802,9 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         where: relaxedWhereClause,
         order: [
           // Prioritize candidates with title matches in headline
-          [sequelize.literal(`CASE WHEN headline ILIKE '%${titleKeywords[0] || ''}%' THEN 0 ELSE 1 END`), 'ASC'],
-          [['profile_completion', 'DESC'], ['last_profile_update', 'DESC']]
+          [sequelize.literal(`CASE WHEN "User"."headline" ILIKE '%${titleKeywords[0] || ''}%' THEN 0 ELSE 1 END`), 'ASC'],
+          ['profile_completion', 'DESC'],
+          ['last_profile_update', 'DESC']
         ],
         limit: limitNum,
         offset,
@@ -2139,6 +2133,147 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
     }
     
+    // Helper function to convert values to arrays
+    const toArray = (value, fallback = []) => {
+      if (Array.isArray(value)) return value;
+      if (!value) return fallback;
+      try {
+        const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+        return Array.isArray(parsed) ? parsed : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    };
+    
+    // Fetch education details and work experience for all candidates
+    const allCandidateIds = filteredFinalCandidates.map(c => c.id);
+    const { Education } = require('../config/index');
+    let educationMap = new Map();
+    let workExperienceMap = new Map(); // Map of userId -> work experiences
+    
+    if (allCandidateIds.length > 0) {
+      try {
+        // Fetch education using raw query with snake_case column names
+        const educationResults = await sequelize.query(`
+          SELECT 
+            id,
+            user_id,
+            degree,
+            institution,
+            field_of_study,
+            start_date,
+            end_date,
+            is_current,
+            location,
+            gpa as cgpa,
+            percentage,
+            grade,
+            relevant_courses
+          FROM educations 
+          WHERE user_id IN (:allCandidateIds)
+          ORDER BY user_id, is_current DESC, end_date DESC NULLS LAST
+        `, {
+          replacements: { allCandidateIds },
+          type: QueryTypes.SELECT
+        });
+        
+        // Group education by user_id
+        educationResults.forEach((edu) => {
+          const userId = edu.user_id;
+          if (!educationMap.has(userId)) {
+            educationMap.set(userId, []);
+          }
+          // Parse relevant_courses if it's a JSON string
+          let relevantCourses = [];
+          if (edu.relevant_courses) {
+            if (typeof edu.relevant_courses === 'string') {
+              try {
+                relevantCourses = JSON.parse(edu.relevant_courses);
+              } catch (e) {
+                relevantCourses = [];
+              }
+            } else if (Array.isArray(edu.relevant_courses)) {
+              relevantCourses = edu.relevant_courses;
+            }
+          }
+          
+          educationMap.get(userId).push({
+            id: edu.id,
+            degree: edu.degree,
+            institution: edu.institution,
+            fieldOfStudy: edu.field_of_study,
+            startDate: edu.start_date,
+            endDate: edu.end_date,
+            isCurrent: edu.is_current || false,
+            location: edu.location,
+            cgpa: edu.cgpa,
+            percentage: edu.percentage,
+            grade: edu.grade,
+            relevantCourses: relevantCourses
+          });
+        });
+      } catch (eduError) {
+        console.warn('⚠️ Could not fetch education details:', eduError?.message || eduError);
+      }
+      
+      // Fetch work experience for all candidates to get current/previous company info
+      try {
+        const workExpResults = await sequelize.query(`
+          SELECT 
+            id,
+            user_id,
+            title,
+            company,
+            is_current,
+            start_date
+          FROM work_experiences 
+          WHERE user_id IN (:allCandidateIds)
+          ORDER BY is_current DESC, start_date DESC
+        `, {
+          replacements: { allCandidateIds },
+          type: QueryTypes.SELECT
+        });
+        
+        // Group work experience by user_id
+        workExpResults.forEach((exp) => {
+          const userId = exp.user_id;
+          if (!workExperienceMap.has(userId)) {
+            workExperienceMap.set(userId, []);
+          }
+          workExperienceMap.get(userId).push(exp);
+        });
+      } catch (weError) {
+        console.warn('⚠️ Could not fetch work experience for company info:', weError?.message || weError);
+      }
+    }
+    
+    // Helper function to format education
+    const formatEducation = (candidate) => {
+      const educations = educationMap.get(candidate.id) || [];
+      if (educations.length > 0) {
+        const firstEdu = educations[0];
+        const parts = [];
+        if (firstEdu.degree) parts.push(firstEdu.degree);
+        if (firstEdu.institution && firstEdu.institution !== 'Not specified') parts.push(firstEdu.institution);
+        return parts.length > 0 ? parts.join(' - ') : 'Not specified';
+      }
+      if (candidate.highest_education) {
+        return candidate.highest_education;
+      }
+      if (candidate.education && Array.isArray(candidate.education) && candidate.education.length > 0) {
+        return candidate.education.map((edu) => edu.degree || edu.course).join(', ');
+      }
+      return 'Not specified';
+    };
+    
+    // Helper function to combine skills
+    const combineSkills = (candidate) => {
+      const skills = toArray(candidate.skills, []);
+      const keySkills = toArray(candidate.key_skills, []);
+      const allSkills = [...new Set([...skills, ...keySkills])];
+      return allSkills.filter(s => s && String(s).trim() !== '');
+    };
+    
     // Transform candidates data for frontend with relevance scoring and ATS scores
     const transformedCandidates = filteredFinalCandidates.map(candidate => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, requirement);
@@ -2159,15 +2294,38 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         });
       }
       
+      // Get current and previous company from work experience
+      const candidateWorkExps = workExperienceMap.get(candidate.id) || [];
+      let currentCompany = candidate.current_company || null;
+      let currentDesignation = candidate.current_role || candidate.designation || candidate.headline || null;
+      let previousCompany = null;
+      
+      // Extract from work experience if available
+      if (candidateWorkExps.length > 0) {
+        const currentExp = candidateWorkExps.find(exp => exp.is_current) || candidateWorkExps[0];
+        if (currentExp) {
+          if (!currentCompany) currentCompany = currentExp.company;
+          if (!currentDesignation) currentDesignation = currentExp.title;
+        }
+        
+        // Get previous company (first non-current experience)
+        const previousExp = candidateWorkExps.find(exp => !exp.is_current);
+        if (previousExp) {
+          previousCompany = previousExp.company;
+        }
+      }
+      
       return {
         id: candidate.id,
         name: `${candidate.first_name} ${candidate.last_name}`,
         designation: candidate.designation || candidate.headline || 'Job Seeker',
+        currentDesignation: currentDesignation,
         experience: candidate.experience_years ? `${candidate.experience_years} years` : 'Not specified',
+        experienceYears: candidate.experience_years ? Number(candidate.experience_years) : null,
         location: candidate.current_location || 'Not specified',
-        education: candidate.education && candidate.education.length > 0 ? 
-          candidate.education.map(edu => edu.degree || edu.course).join(', ') : 'Not specified',
-        keySkills: candidate.key_skills || candidate.skills || [],
+        education: formatEducation(candidate),
+        educationDetails: educationMap.get(candidate.id) || [],
+        keySkills: combineSkills(candidate),
         preferredLocations: candidate.preferred_locations && candidate.preferred_locations.length > 0 ? 
           candidate.preferred_locations : 
           (candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location]),
@@ -2184,6 +2342,8 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
         noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
         profileCompletion: candidate.profile_completion || 0,
+        currentCompany: currentCompany,
+        previousCompany: previousCompany,
         relevanceScore: score,
         matchReasons: matchReasons,
         atsScore: validAtsData ? validAtsData.score : null,
@@ -2199,7 +2359,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
     });
 
-    // Enrich transformed candidates with like counts and current employer like status
+    // Enrich transformed candidates with like counts, current employer like status, and viewed status
     try {
       const candidateIds = transformedCandidates.map(c => c.id);
       if (candidateIds.length > 0) {
@@ -2216,13 +2376,28 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         });
         const likedSet = new Set(liked.map(r => r.get('candidate_id')));
 
+        // Check which candidates have been viewed by this employer
+        const { ViewTracking } = require('../config/index');
+        const viewedCandidates = await ViewTracking.findAll({
+          attributes: ['viewed_user_id'],
+          where: {
+            viewer_id: req.user.id,
+            viewed_user_id: candidateIds,
+            view_type: 'profile_view'
+          },
+          raw: true
+        });
+        const viewedSet = new Set(viewedCandidates.map(v => v.viewed_user_id));
+
         transformedCandidates.forEach(c => {
           c.likeCount = idToCount.get(c.id) || 0;
           c.likedByCurrent = likedSet.has(c.id);
+          c.isSaved = likedSet.has(c.id); // Alias for consistency
+          c.isViewed = viewedSet.has(c.id); // Mark as viewed if profile was viewed
         });
       }
     } catch (likeErr) {
-      console.warn('Failed to enrich candidates with like data:', likeErr?.message || likeErr);
+      console.warn('Failed to enrich candidates with like/viewed data:', likeErr?.message || likeErr);
     }
     
     // Sort candidates based on sortBy parameter from query
@@ -2354,12 +2529,13 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       },
       attributes: [
         'id', 'first_name', 'last_name', 'email', 'phone', 'avatar',
-        'current_location', 'headline', 'summary', 'skills', 'languages',
-        'expected_salary', 'notice_period', 'willing_to_relocate',
+        'current_location', 'headline', 'summary', 'skills', 'key_skills', 'languages',
+        'current_salary', 'expected_salary', 'notice_period', 'willing_to_relocate',
         'profile_completion', 'last_login_at', 'last_profile_update',
         'is_email_verified', 'is_phone_verified', 'created_at',
         'date_of_birth', 'gender', 'social_links', 'certifications',
-        'highest_education', 'field_of_study'
+        'highest_education', 'field_of_study', 'experience_years',
+        'current_company', 'current_role', 'designation'
       ]
     });
     
@@ -2372,75 +2548,83 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       });
     }
     
-    // Get work experience using raw query to avoid model field name issues
+    // Get work experience using raw query with correct column names
     let workExperience = [];
     try {
-      // Try with camelCase column names first
+      // Use snake_case column names (actual database columns)
       const workExpResults = await sequelize.query(`
-        SELECT * FROM work_experiences 
-        WHERE "userId" = :userId 
-        ORDER BY "startDate" DESC, "start_date" DESC
+        SELECT 
+          id,
+          user_id,
+          title,
+          company,
+          description,
+          start_date,
+          end_date,
+          is_current,
+          location,
+          employment_type,
+          skills,
+          achievements,
+          salary,
+          salary_currency
+        FROM work_experiences 
+        WHERE user_id = :userId 
+        ORDER BY is_current DESC, start_date DESC
       `, {
         replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       workExperience = workExpResults || [];
       
-      // If no results, try with snake_case
-      if (workExperience.length === 0) {
-        const workExpResultsAlt = await sequelize.query(`
-          SELECT * FROM work_experiences 
-          WHERE user_id = :userId 
-          ORDER BY start_date DESC
-        `, {
-          replacements: { userId: candidateId },
-          type: QueryTypes.SELECT
-        });
-        workExperience = workExpResultsAlt || [];
-      }
-      
       console.log(`💼 Found ${workExperience.length} work experience entries for candidate ${candidateId}`);
       if (workExperience.length > 0) {
         console.log('💼 Sample work experience:', JSON.stringify(workExperience[0], null, 2));
       }
     } catch (expError) {
-      console.log('⚠️ Could not fetch work experience:', expError.message);
+      console.error('⚠️ Could not fetch work experience:', expError);
+      console.error('⚠️ Work experience error details:', expError.message, expError.stack);
       workExperience = [];
     }
     
-    // Get education details using raw query
+    // Get education details using raw query with correct column names
     let education = [];
     try {
-      // Try with camelCase column names first
+      // Use snake_case column names (actual database columns)
       const eduResults = await sequelize.query(`
-        SELECT * FROM educations 
-        WHERE "userId" = :userId 
-        ORDER BY "endDate" DESC, "end_date" DESC
+        SELECT 
+          id,
+          user_id,
+          degree,
+          institution,
+          field_of_study,
+          start_date,
+          end_date,
+          is_current,
+          location,
+          grade,
+          percentage,
+          gpa as cgpa,
+          description,
+          relevant_courses,
+          achievements,
+          education_type
+        FROM educations 
+        WHERE user_id = :userId 
+        ORDER BY is_current DESC, end_date DESC
       `, {
         replacements: { userId: candidateId },
         type: QueryTypes.SELECT
       });
       education = eduResults || [];
       
-      // If no results, try with snake_case
-      if (education.length === 0) {
-        const eduResultsAlt = await sequelize.query(`
-          SELECT * FROM educations 
-          WHERE user_id = :userId 
-          ORDER BY end_date DESC
-        `, {
-          replacements: { userId: candidateId },
-          type: QueryTypes.SELECT
-        });
-        education = eduResultsAlt || [];
-      }
-      
       console.log(`🎓 Found ${education.length} education entries for candidate ${candidateId}`);
       if (education.length > 0) {
         console.log('🎓 Sample education:', JSON.stringify(education[0], null, 2));
       }
     } catch (eduError) {
-      console.log('⚠️ Could not fetch education:', eduError.message);
+      console.error('⚠️ Could not fetch education:', eduError);
+      console.error('⚠️ Education error details:', eduError.message, eduError.stack);
       education = [];
     }
     
@@ -2619,15 +2803,91 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     try {
       console.log(`🔄 Starting candidate transformation for ${candidate.first_name} ${candidate.last_name}`);
       console.log(`🔄 Resumes to transform: ${resumes.length}`);
+      // Calculate total experience from workExperience array or use experience_years
+      const calculateTotalExperience = () => {
+        // First try to use experience_years from database
+        if (candidate.experience_years !== null && candidate.experience_years !== undefined) {
+          const expYears = Number(candidate.experience_years);
+          if (!isNaN(expYears) && expYears >= 0) {
+            return expYears;
+          }
+        }
+        
+        // Fallback: Calculate from workExperience array
+        if (Array.isArray(workExperience) && workExperience.length > 0) {
+          let totalMonths = 0;
+          workExperience.forEach((exp) => {
+            const startDate = exp.start_date;
+            const endDate = exp.end_date;
+            const isCurrent = exp.is_current || false;
+            
+            if (startDate) {
+              try {
+                const start = new Date(startDate);
+                const end = isCurrent ? new Date() : (endDate ? new Date(endDate) : new Date());
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                  totalMonths += Math.max(0, months);
+                }
+              } catch (e) {
+                // Ignore invalid dates
+              }
+            }
+          });
+          return Math.round((totalMonths / 12) * 10) / 10; // Round to 1 decimal place
+        }
+        
+        return 0;
+      };
+      
+      const totalExperienceYears = calculateTotalExperience();
+      const experienceDisplay = totalExperienceYears > 0 
+        ? `${totalExperienceYears} ${totalExperienceYears === 1 ? 'year' : 'years'}`
+        : 'Fresher';
+      
+      // Format current salary properly
+      const formatCurrentSalary = () => {
+        if (candidate.current_salary !== null && candidate.current_salary !== undefined) {
+          const salary = Number(candidate.current_salary);
+          if (!isNaN(salary) && salary > 0) {
+            return `${salary} LPA`;
+          }
+        }
+        return 'Not specified';
+      };
+      
       transformedCandidate = {
       id: candidate.id,
       name: `${candidate.first_name} ${candidate.last_name}`,
-      designation: candidate.headline || 'Job Seeker',
-      experience: (Array.isArray(workExperience) && workExperience.length > 0) ? 'Experienced' : 'Fresher',
+      designation: candidate.headline || candidate.designation || 'Job Seeker',
+      experience: experienceDisplay,
+      experienceYears: totalExperienceYears, // Add numeric value for calculations and display
       location: candidate.current_location || 'Not specified',
-      education: (Array.isArray(education) && education.length > 0) ? (education[0].degree || 'Not specified') : 'Not specified',
-      keySkills: toArray(candidate.skills, []),
-      preferredLocations: candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location || 'Not specified'],
+      education: (() => {
+        // Get education from education array or highest_education field
+        if (Array.isArray(education) && education.length > 0) {
+          const firstEdu = education[0];
+          return firstEdu.degree || firstEdu.course || firstEdu.fieldOfStudy || 'Not specified';
+        }
+        if (candidate.highest_education) {
+          return candidate.highest_education;
+        }
+        return 'Not specified';
+      })(),
+      keySkills: (() => {
+        // Combine skills and key_skills arrays
+        const skills = toArray(candidate.skills, []);
+        const keySkills = toArray(candidate.key_skills, []);
+        // Merge and remove duplicates
+        const allSkills = [...new Set([...skills, ...keySkills])];
+        return allSkills.filter(s => s && String(s).trim() !== '');
+      })(),
+      preferredLocations: (() => {
+        const prefLocs = toArray(candidate.preferred_locations, []);
+        if (prefLocs.length > 0) return prefLocs;
+        if (candidate.willing_to_relocate) return ['Open to relocate'];
+        return [candidate.current_location || 'Not specified'];
+      })(),
       avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
       isAttached: true,
       lastModified: safeDateString(candidate.last_profile_update),
@@ -2635,7 +2895,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       additionalInfo: candidate.summary || 'No summary available',
       phoneVerified: candidate.is_phone_verified || false,
       emailVerified: candidate.is_email_verified || false,
-      currentSalary: 'Not specified',
+      currentSalary: formatCurrentSalary(),
       expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
       noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
       profileCompletion: candidate.profile_completion || 0,
@@ -2650,16 +2910,58 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       // Detailed information
       about: candidate.summary || 'No summary available',
       
-      // Work experience - handle both camelCase and snake_case field names
-      workExperience: toArray(workExperience, []).map(exp => ({
-        id: exp.id || `exp_${Math.random()}`,
-        title: exp.title || exp.job_title || 'Not specified',
-        company: exp.company || exp.company_name || 'Not specified',
-        duration: `${safeDateString(exp.start_date || exp.startDate)} - ${exp.end_date || exp.endDate ? safeDateString(exp.end_date || exp.endDate) : 'Present'}`,
-        location: exp.location || exp.work_location || 'Not specified',
-        description: exp.description || exp.job_description || '',
-        skills: toArray(exp.skills || exp.technologies || exp.tech_stack, [])
-      })),
+      // Work experience - use actual database column names from query
+      workExperience: toArray(workExperience, []).map(exp => {
+        const startDate = exp.start_date;
+        const endDate = exp.end_date;
+        const isCurrent = exp.is_current || false;
+        const startDateStr = startDate ? safeDateString(startDate) : 'Not specified';
+        const endDateStr = isCurrent ? 'Present' : (endDate ? safeDateString(endDate) : 'Not specified');
+        
+        // Parse skills if it's a JSON string
+        let skillsArray = [];
+        if (exp.skills) {
+          if (typeof exp.skills === 'string') {
+            try {
+              skillsArray = JSON.parse(exp.skills);
+            } catch (e) {
+              skillsArray = [exp.skills];
+            }
+          } else if (Array.isArray(exp.skills)) {
+            skillsArray = exp.skills;
+          }
+        }
+        
+        // Parse achievements if it's a JSON string
+        let achievementsArray = [];
+        if (exp.achievements) {
+          if (typeof exp.achievements === 'string') {
+            try {
+              achievementsArray = JSON.parse(exp.achievements);
+            } catch (e) {
+              achievementsArray = [];
+            }
+          } else if (Array.isArray(exp.achievements)) {
+            achievementsArray = exp.achievements;
+          }
+        }
+        
+        return {
+          id: exp.id || `exp_${Math.random()}`,
+          title: exp.title || 'Not specified',
+          company: exp.company || 'Not specified',
+          duration: `${startDateStr} - ${endDateStr}`,
+          startDate: startDate,
+          endDate: endDate,
+          isCurrent: isCurrent,
+          location: exp.location || 'Not specified',
+          description: exp.description || '',
+          skills: toArray(skillsArray, []),
+          employmentType: exp.employment_type || 'full-time',
+          salary: exp.salary ? `${exp.salary} ${exp.salary_currency || 'INR'}` : null,
+          achievements: toArray(achievementsArray, [])
+        };
+      }),
       
       // Education details - include highest_education and field_of_study from user profile
       educationDetails: (() => {
@@ -2732,16 +3034,52 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             ).join(' ');
           };
           
-          const degreeValue = edu.degree || edu.highest_education || candidate.highest_education || '';
+          const degreeValue = edu.degree || candidate.highest_education || '';
           const formattedDegree = formatDegree(degreeValue);
-          const institutionValue = edu.institution || edu.institute || '';
+          const institutionValue = edu.institution || '';
           const fieldOfStudyValue = edu.field_of_study || candidate.field_of_study || '';
           const locationValue = edu.location || '';
           
           // Build duration string
-          const startYear = edu.start_date || edu.startDate ? (new Date(edu.start_date || edu.startDate)).getFullYear?.() ? new Date(edu.start_date || edu.startDate).getFullYear() : '' : '';
-          const endYear = edu.end_date || edu.endDate ? (new Date(edu.end_date || edu.endDate)).getFullYear?.() ? new Date(edu.end_date || edu.endDate).getFullYear() : 'Present' : (startYear ? 'Present' : '');
+          let startYear = '';
+          let endYear = '';
+          if (edu.start_date) {
+            try {
+              const startDate = new Date(edu.start_date);
+              if (!isNaN(startDate.getTime())) {
+                startYear = startDate.getFullYear();
+              }
+            } catch (e) {
+              // Ignore invalid dates
+            }
+          }
+          if (edu.end_date) {
+            try {
+              const endDate = new Date(edu.end_date);
+              if (!isNaN(endDate.getTime())) {
+                endYear = endDate.getFullYear();
+              }
+            } catch (e) {
+              // Ignore invalid dates
+            }
+          } else if (edu.is_current) {
+            endYear = 'Present';
+          }
           const durationStr = startYear && endYear ? `${startYear} - ${endYear}` : (startYear ? `${startYear} - Present` : '');
+          
+          // Parse relevant courses if it's a JSON string
+          let relevantCourses = [];
+          if (edu.relevant_courses) {
+            if (typeof edu.relevant_courses === 'string') {
+              try {
+                relevantCourses = JSON.parse(edu.relevant_courses);
+              } catch (e) {
+                relevantCourses = [];
+              }
+            } else if (Array.isArray(edu.relevant_courses)) {
+              relevantCourses = edu.relevant_courses;
+            }
+          }
           
           return {
             id: edu.id || `edu_${Math.random()}`,
@@ -2752,7 +3090,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             location: locationValue,
             grade: edu.grade || null,
             percentage: edu.percentage || null,
-            cgpa: edu.gpa || edu.cgpa || null
+            cgpa: edu.cgpa || null,
+            relevantCourses: relevantCourses
           };
         });
       })(),
@@ -2980,6 +3319,30 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     
     // Add shortlist status to candidate data
     transformedCandidate.isShortlisted = isShortlisted;
+    
+    // Track profile view for this requirement (if not already tracked)
+    try {
+      const ViewTrackingService = require('../services/viewTrackingService');
+      await ViewTrackingService.trackView({
+        viewerId: req.user.id,
+        viewedUserId: candidateId,
+        jobId: requirementId, // Store requirementId in jobId field for tracking
+        viewType: 'profile_view',
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        sessionId: req.sessionID,
+        referrer: req.get('Referer'),
+        metadata: {
+          source: 'requirement_candidate_profile',
+          requirementId: requirementId,
+          requirementTitle: requirement.title
+        }
+      });
+      console.log(`✅ Profile view tracked for candidate ${candidateId} from requirement ${requirementId}`);
+    } catch (viewError) {
+      console.warn('⚠️ Failed to track profile view:', viewError?.message || viewError);
+      // Don't fail the request if view tracking fails
+    }
     
     return res.status(200).json({
       success: true,

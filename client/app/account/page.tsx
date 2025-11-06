@@ -2442,7 +2442,7 @@ export default function AccountPage() {
                         )}
                         {(() => {
                           // Priority: Use professionalData if available, otherwise use user.currentSalary
-                          const currentSalary = professionalData.currentSalary || user.currentSalary || (user as any).currentSalary;
+                          const currentSalary = professionalData.currentSalary || (user as any).currentSalary;
                           if (!currentSalary || currentSalary === '' || currentSalary === '0') return null;
                           
                           // Format the salary value

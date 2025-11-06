@@ -193,6 +193,7 @@ export interface ProfileUpdateData {
   preferredCompanySize?: string;
   preferredWorkMode?: string;
   preferredEmploymentType?: string;
+  currentSalary?: number;
 }
 
 export interface Job {

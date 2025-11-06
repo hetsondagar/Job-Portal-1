@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp, Brain, Phone, Mail, CheckCircle2, Save, Eye, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,6 +53,7 @@ interface Candidate {
   currentCompany?: string | null;
   previousCompany?: string | null;
   currentDesignation?: string | null;
+  experienceYears?: number;
   isViewed?: boolean;
   isSaved?: boolean;
   workExperiences?: any[];
@@ -68,6 +69,7 @@ interface Requirement {
 
 export default function CandidatesPage() {
   const params = useParams()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("relevance")
   const [showCount, setShowCount] = useState("50")
@@ -156,7 +158,8 @@ export default function CandidatesPage() {
           console.log('📊 New candidates data with ATS scores:', newCandidates.map((c: Candidate) => ({ 
             name: c.name, 
             atsScore: c.atsScore,
-            requirementId: params.id 
+            requirementId: params.id,
+            isViewed: c.isViewed
           })))
           
           // Verify no old ATS scores are persisting
@@ -192,6 +195,49 @@ export default function CandidatesPage() {
       setRequirement(null)
       fetchCandidates()
     }
+  }, [params.id, pagination.page, showCount, searchQuery, sortBy])
+
+  // Refresh candidates when page becomes visible (e.g., returning from profile view)
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    
+    const handleVisibilityChange = () => {
+      if (!document.hidden && params.id) {
+        console.log('👁️ Page visible, refreshing candidates to update viewed status...')
+        // Debounce refresh to avoid multiple rapid refreshes
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          // Force a refresh by fetching candidates again
+          const fetchCandidates = async () => {
+            try {
+              const response = await apiService.getRequirementCandidates(params.id as string, {
+                page: pagination.page,
+                limit: parseInt(showCount),
+                search: searchQuery || undefined,
+                sortBy: sortBy
+              });
+              
+              if (response.success && response.data) {
+                setCandidates(response.data.candidates || []);
+                console.log('✅ Refreshed candidates with updated viewed status');
+              }
+            } catch (error) {
+              console.error('❌ Error refreshing candidates:', error);
+            }
+          };
+          fetchCandidates();
+        }, 500);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+    
+    return () => {
+      if (refreshTimeout) clearTimeout(refreshTimeout);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [params.id, pagination.page, showCount, searchQuery, sortBy])
 
   // Debounced search effect
@@ -1148,11 +1194,24 @@ export default function CandidatesPage() {
                           </p>
                         )}
                         
-                        {candidate.experience && candidate.experience !== 'Not specified' && (
-                          <p className="text-sm text-slate-600">
-                            Experience: {candidate.experience}
-                          </p>
-                        )}
+                        {(() => {
+                          // Display experience years properly
+                          if (candidate.experienceYears !== undefined && candidate.experienceYears !== null) {
+                            return (
+                              <p className="text-sm text-slate-600 font-medium">
+                                Experience: {candidate.experienceYears} {candidate.experienceYears === 1 ? 'year' : 'years'}
+                              </p>
+                            );
+                          }
+                          if (candidate.experience && candidate.experience !== 'Not specified') {
+                            return (
+                              <p className="text-sm text-slate-600">
+                                Experience: {candidate.experience}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
                         
                         {(() => {
                           const salary = candidate.currentSalary;
@@ -1431,20 +1490,16 @@ export default function CandidatesPage() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={async () => {
-                        try {
-                          // Mark candidate as viewed immediately for better UX
-                          if (!candidate.isViewed) {
-                            setCandidates(prev => prev.map(c => 
-                              c.id === candidate.id ? { ...c, isViewed: true } : c
-                            ));
-                          }
-                          
-                          // Navigate to profile page - view tracking happens on backend
-                          window.location.href = `/employer-dashboard/requirements/${params.id}/candidates/${candidate.id}`;
-                        } catch (error) {
-                          console.error('Error navigating to profile:', error);
+                      onClick={() => {
+                        // Mark candidate as viewed immediately for better UX
+                        if (!candidate.isViewed) {
+                          setCandidates(prev => prev.map(c => 
+                            c.id === candidate.id ? { ...c, isViewed: true } : c
+                          ));
                         }
+                        
+                        // Navigate to profile page - view tracking happens on backend
+                        router.push(`/employer-dashboard/requirements/${params.id}/candidates/${candidate.id}`);
                       }}
                     >
                       <Eye className="w-3 h-3 mr-1" />

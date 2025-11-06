@@ -636,11 +636,15 @@ export default function CandidateProfilePage() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center space-x-2 cursor-help">
                             <Briefcase className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600">{candidate.experience || 'Not specified'}</span>
+                            <span className="text-sm text-slate-600 font-medium">
+                              {candidate.experienceYears !== undefined && candidate.experienceYears !== null
+                                ? `${candidate.experienceYears} ${candidate.experienceYears === 1 ? 'year' : 'years'}`
+                                : (candidate.experience || 'Not specified')}
+                            </span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Experience: Total years, months, and days of professional work experience</p>
+                          <p>Experience: Total years of professional work experience</p>
                         </TooltipContent>
                       </Tooltip>
                       <Tooltip>
