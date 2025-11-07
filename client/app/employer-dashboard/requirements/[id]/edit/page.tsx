@@ -83,7 +83,14 @@ export default function EditRequirementPage() {
               return validTypes.includes(capitalized) ? capitalized : "Full-time";
             })(),
             skills: Array.isArray(req.skills) ? req.skills : [],
-            includeSkills: Array.isArray((req as any).includeSkills) ? (req as any).includeSkills : [],
+            // IMPORTANT: Merge keySkills (Additional Skills) into includeSkills for display
+            // Backend already merges them, but we need to show them in the UI
+            includeSkills: (() => {
+              const includeSkillsFromApi = Array.isArray((req as any).includeSkills) ? (req as any).includeSkills : [];
+              const keySkillsFromApi = Array.isArray(req.keySkills) ? req.keySkills : [];
+              // Merge keySkills into includeSkills (all additional skills should be in include skills)
+              return [...new Set([...includeSkillsFromApi, ...keySkillsFromApi])].filter(Boolean);
+            })(),
             excludeSkills: Array.isArray((req as any).excludeSkills) ? (req as any).excludeSkills : [],
             education: (req.education && req.education.trim() !== '') ? req.education.trim() : "",
             industry: (req.industry && req.industry.trim() !== '') ? req.industry.trim() : "",
@@ -104,7 +111,7 @@ export default function EditRequirementPage() {
               if (tr === false) return "No";
               if (typeof tr === 'string') {
                 // Normalize string values
-                const lower = tr.toLowerCase();
+                const lower = String(tr).toLowerCase();
                 if (lower === 'no' || lower === 'false') return "No";
                 if (lower === 'occasionally' || lower === 'sometimes') return "Occasionally";
                 if (lower === 'frequently' || lower === 'yes' || lower === 'true') return "Frequently";
@@ -199,9 +206,12 @@ export default function EditRequirementPage() {
 
   const handleAddSkill = () => {
     if (currentSkill.trim() && !formData.keySkills.includes(currentSkill.trim())) {
+      const skillToAdd = currentSkill.trim();
       setFormData((prev: any) => ({
         ...prev,
-        keySkills: [...prev.keySkills, currentSkill.trim()]
+        keySkills: [...prev.keySkills, skillToAdd],
+        // IMPORTANT: Automatically add to includeSkills (all additional skills should be included)
+        includeSkills: [...new Set([...prev.includeSkills, skillToAdd])]
       }))
       setCurrentSkill("")
     }
@@ -211,6 +221,7 @@ export default function EditRequirementPage() {
     setFormData((prev: any) => ({
       ...prev,
       keySkills: prev.keySkills.filter((s: string) => s !== skill)
+      // Note: We don't remove from includeSkills automatically - user might have added it separately
     }))
   }
 
@@ -626,16 +637,17 @@ export default function EditRequirementPage() {
                     </div>
                   </div>
 
-                  {/* Legacy Skills (for backward compatibility) */}
+                  {/* Additional Skills - These are automatically included in Include Skills */}
                   <div>
                     <Label>Additional Skills</Label>
+                    <p className="text-xs text-slate-500 mb-2">These skills are automatically included in "Include Skills" above</p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.skills.map((skill: string) => (
+                      {formData.keySkills.map((skill: string) => (
                         <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
                           <span>{skill}</span>
                           <button
                             type="button"
-                            onClick={() => handleSkillChange(skill, 'remove')}
+                            onClick={() => handleRemoveSkill(skill)}
                             className="ml-1 hover:text-red-600"
                           >
                             <X className="w-3 h-3" />
@@ -643,14 +655,33 @@ export default function EditRequirementPage() {
                         </Badge>
                       ))}
                     </div>
+                    <div className="flex space-x-2 mt-2">
+                      <Input
+                        placeholder="Add skill"
+                        value={currentSkill}
+                        onChange={(e) => setCurrentSkill(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSkill())}
+                      />
+                      <Button type="button" onClick={handleAddSkill} size="sm" variant="outline">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {commonSkills.filter(skill => !formData.skills.includes(skill)).slice(0, 10).map((skill) => (
+                      {commonSkills.filter(skill => !formData.keySkills.includes(skill)).slice(0, 10).map((skill) => (
                         <Button
                           key={skill}
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSkillChange(skill, 'add')}
+                          onClick={() => {
+                            const skillToAdd = skill;
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              keySkills: [...prev.keySkills, skillToAdd],
+                              // Automatically add to includeSkills
+                              includeSkills: [...new Set([...prev.includeSkills, skillToAdd])]
+                            }))
+                          }}
                         >
                           + {skill}
                         </Button>

@@ -249,6 +249,7 @@ router.post('/', authenticateToken, async (req, res) => {
         shiftTiming: normalizedShiftTiming,
         benefits: Array.isArray(body.benefits) ? body.benefits : [],
         candidateLocations: Array.isArray(body.candidateLocations) ? body.candidateLocations : [],
+        excludeLocations: Array.isArray(body.excludeLocations) ? body.excludeLocations : (body.excludeLocations ? [body.excludeLocations] : []), // Locations to exclude
         candidateDesignations: Array.isArray(body.candidateDesignations) ? body.candidateDesignations : [],
         currentDesignation: body.currentDesignation || null, // Store current designation
         includeWillingToRelocate: !!body.includeWillingToRelocate,
@@ -267,7 +268,13 @@ router.post('/', authenticateToken, async (req, res) => {
         currentSalaryMin: body.currentSalaryMin || body.salaryMin || null,
         currentSalaryMax: body.currentSalaryMax || body.salaryMax || null,
         // CRITICAL: Store includeSkills and excludeSkills for matching
-        includeSkills: Array.isArray(body.includeSkills) ? body.includeSkills : (body.includeSkills ? [body.includeSkills] : []),
+        // IMPORTANT: Merge keySkills (Additional Skills) into includeSkills automatically
+        includeSkills: (() => {
+          const includeSkillsFromBody = Array.isArray(body.includeSkills) ? body.includeSkills : (body.includeSkills ? [body.includeSkills] : []);
+          const keySkillsArray = Array.isArray(body.keySkills) ? body.keySkills : [];
+          // Merge keySkills into includeSkills (all additional skills should be included)
+          return [...new Set([...includeSkillsFromBody, ...keySkillsArray])].filter(Boolean);
+        })(),
         excludeSkills: Array.isArray(body.excludeSkills) ? body.excludeSkills : (body.excludeSkills ? [body.excludeSkills] : []),
         diversityPreference: Array.isArray(body.diversityPreference) ? body.diversityPreference : (body.diversityPreference ? [body.diversityPreference] : null),
         lastActive: body.lastActive || null
@@ -575,6 +582,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       benefits: metadata?.benefits || requirementData.benefits || [],
       candidateDesignations: metadata?.candidateDesignations || metadata?.candidate_designations || requirementData.candidateDesignations || [],
       candidateLocations: metadata?.candidateLocations || metadata?.candidate_locations || requirementData.candidateLocations || [],
+      excludeLocations: Array.isArray(metadata?.excludeLocations) ? metadata.excludeLocations : (metadata?.excludeLocations ? [metadata.excludeLocations] : (metadata?.exclude_locations ? (Array.isArray(metadata.exclude_locations) ? metadata.exclude_locations : [metadata.exclude_locations]) : [])), // Locations to exclude
       includeWillingToRelocate: metadata?.includeWillingToRelocate !== undefined ? metadata.includeWillingToRelocate : (metadata?.include_willing_to_relocate !== undefined ? metadata.include_willing_to_relocate : (requirementData.includeWillingToRelocate !== undefined ? requirementData.includeWillingToRelocate : false)),
       includeNotMentioned: metadata?.includeNotMentioned !== undefined ? metadata.includeNotMentioned : (metadata?.include_not_mentioned !== undefined ? metadata.include_not_mentioned : (requirementData.includeNotMentioned !== undefined ? requirementData.includeNotMentioned : false)),
       institute: metadata?.institute || null,
@@ -755,6 +763,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       shiftTiming: normalizedShiftTiming !== undefined && normalizedShiftTiming !== null ? normalizedShiftTiming : (existingMetadata.shiftTiming || null),
       benefits: body.benefits !== undefined ? (Array.isArray(body.benefits) ? body.benefits : []) : (Array.isArray(existingMetadata.benefits) ? existingMetadata.benefits : []),
       candidateLocations: body.candidateLocations !== undefined ? (Array.isArray(body.candidateLocations) ? body.candidateLocations : []) : (Array.isArray(existingMetadata.candidateLocations) ? existingMetadata.candidateLocations : []),
+      excludeLocations: body.excludeLocations !== undefined ? (Array.isArray(body.excludeLocations) ? body.excludeLocations : (body.excludeLocations ? [body.excludeLocations] : [])) : (Array.isArray(existingMetadata.excludeLocations) ? existingMetadata.excludeLocations : (existingMetadata.excludeLocations ? [existingMetadata.excludeLocations] : [])), // Locations to exclude
       candidateDesignations: body.candidateDesignations !== undefined ? (Array.isArray(body.candidateDesignations) ? body.candidateDesignations : []) : (Array.isArray(existingMetadata.candidateDesignations) ? existingMetadata.candidateDesignations : []),
       includeWillingToRelocate: body.includeWillingToRelocate !== undefined ? !!body.includeWillingToRelocate : (existingMetadata.includeWillingToRelocate !== undefined ? existingMetadata.includeWillingToRelocate : false),
       includeNotMentioned: body.includeNotMentioned !== undefined ? !!body.includeNotMentioned : (existingMetadata.includeNotMentioned !== undefined ? existingMetadata.includeNotMentioned : false),
@@ -782,6 +791,21 @@ router.put('/:id', authenticateToken, async (req, res) => {
       lastActive: body.lastActive !== undefined 
         ? (body.lastActive || null) 
         : (existingMetadata.lastActive !== undefined ? existingMetadata.lastActive : null),
+      // CRITICAL: Store includeSkills and excludeSkills for matching
+      // IMPORTANT: Merge keySkills (Additional Skills) into includeSkills automatically
+      includeSkills: (() => {
+        const includeSkillsFromBody = body.includeSkills !== undefined 
+          ? (Array.isArray(body.includeSkills) ? body.includeSkills : (body.includeSkills ? [body.includeSkills] : []))
+          : (Array.isArray(existingMetadata.includeSkills) ? existingMetadata.includeSkills : []);
+        const keySkillsArray = body.keySkills !== undefined 
+          ? (Array.isArray(body.keySkills) ? body.keySkills : [])
+          : (Array.isArray(existingMetadata.keySkills) ? existingMetadata.keySkills : []);
+        // Merge keySkills into includeSkills (all additional skills should be included)
+        return [...new Set([...includeSkillsFromBody, ...keySkillsArray])].filter(Boolean);
+      })(),
+      excludeSkills: body.excludeSkills !== undefined 
+        ? (Array.isArray(body.excludeSkills) ? body.excludeSkills : (body.excludeSkills ? [body.excludeSkills] : []))
+        : (Array.isArray(existingMetadata.excludeSkills) ? existingMetadata.excludeSkills : []),
       location: body.location !== undefined ? String(body.location).trim() : (existingMetadata.location || rawRequirement?.location || null),
       experience: body.experience !== undefined ? (body.experience ? String(body.experience).trim() : null) : (existingMetadata.experience || rawRequirement?.experience || null),
       salary: body.salary !== undefined ? (body.salary ? String(body.salary).trim() : null) : (existingMetadata.salary || rawRequirement?.salary || null)
@@ -1079,7 +1103,15 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       // This is handled by not adding salary filter, so all candidates pass
     }
     
-    // 3. LOCATION MATCHING (candidateLocations + willing to relocate)
+    // 3. LOCATION MATCHING (candidateLocations + excludeLocations + willing to relocate)
+    // Extract exclude locations for stats endpoint
+    const statsExcludeLocations = Array.isArray(metadata.excludeLocations) ? metadata.excludeLocations : (metadata.excludeLocations ? [metadata.excludeLocations] : (metadata.exclude_locations ? (Array.isArray(metadata.exclude_locations) ? metadata.exclude_locations : [metadata.exclude_locations]) : []));
+    
+    // CRITICAL: If no candidateLocations specified, allow ANY location (don't filter)
+    // Only filter by location if candidateLocations array has values
+    // IMPORTANT: Exclude locations are applied AFTER include locations (they filter out candidates)
+    
+    // 3.1. LOCATION INCLUDE (candidateLocations)
     if (candidateLocations && candidateLocations.length > 0) {
       const locationConditions = candidateLocations.flatMap(location => ([
         // Match current location
@@ -1097,15 +1129,50 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         }
         
         matchingConditions.push({ [Op.or]: locationConditions });
+        appliedFilters.push(`Location (Include): ${candidateLocations.join(', ')}${includeWillingToRelocate ? ' (including willing to relocate)' : ''}`);
+    } else {
+      // No location filter specified - allow any location candidate
+      console.log('✅ No location include filter specified - allowing candidates from any location');
+    }
+    
+    // 3.2. LOCATION EXCLUDE (excludeLocations)
+    // CRITICAL: Exclude candidates from these locations (applied as NOT conditions)
+    if (statsExcludeLocations && statsExcludeLocations.length > 0) {
+      const excludeLocationConditions = statsExcludeLocations.flatMap(location => ([
+        // Exclude if current location matches
+        { current_location: { [Op.not]: { [Op.iLike]: `%${location}%` } } },
+        // Exclude if preferred locations match
+        sequelize.where(
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'), 
+          { [Op.not]: { [Op.iLike]: `%${location}%` } }
+        )
+      ]));
+      
+      // For exclude, we need ALL conditions to be true (candidate must NOT be in ANY excluded location)
+      // So we add them as AND conditions
+      allAndConditions.push({
+        [Op.and]: excludeLocationConditions
+      });
+      appliedFilters.push(`Location (Exclude): ${statsExcludeLocations.join(', ')}`);
+      console.log(`✅ Added location exclude filter in stats: ${statsExcludeLocations.join(', ')}`);
     }
     
     // 4. SKILLS & KEY SKILLS MATCHING (comprehensive)
     // CRITICAL: Include includeSkills from metadata (same as candidates endpoint)
+    // IMPORTANT: keySkills (Additional Skills) are automatically merged into includeSkills during create/update
     const statsIncludeSkills = metadata.includeSkills || requirement.includeSkills || [];
+    // Get keySkills separately for backward compatibility, but prioritize includeSkills
+    const statsKeySkills = requirement.keySkills || [];
+    // Merge includeSkills with keySkills (in case keySkills weren't merged yet in old requirements)
+    const allStatsIncludeSkills = [...new Set([
+      ...(Array.isArray(statsIncludeSkills) ? statsIncludeSkills : []),
+      ...(Array.isArray(statsKeySkills) ? statsKeySkills : [])
+    ])].filter(Boolean);
+    
     const statsRequiredSkills = [
       ...(requirement.skills || []),
-      ...(requirement.keySkills || []),
-      ...(Array.isArray(statsIncludeSkills) ? statsIncludeSkills : [])
+      ...allStatsIncludeSkills
+      // Note: keySkills are merged into includeSkills, but we also check requirement.keySkills for backward compatibility
     ].filter(Boolean);
     
     // CRITICAL: Exclude skills (same as candidates endpoint)
@@ -1810,7 +1877,12 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       appliedFilters.push(`Salary: Any (including not mentioned)`);
     }
     
-    // 3. LOCATION MATCHING (candidateLocations + willing to relocate)
+    // 3. LOCATION MATCHING (candidateLocations + excludeLocations + willing to relocate)
+    // CRITICAL: If no candidateLocations specified, allow ANY location (don't filter)
+    // Only filter by location if candidateLocations array has values
+    // IMPORTANT: Exclude locations are applied AFTER include locations (they filter out candidates)
+    
+    // 3.1. LOCATION INCLUDE (candidateLocations)
     if (candidateLocations && candidateLocations.length > 0) {
       const locationConditions = candidateLocations.flatMap(location => ([
         // Match current location
@@ -1828,16 +1900,50 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
       
       matchingConditions.push({ [Op.or]: locationConditions });
-      appliedFilters.push(`Location: ${candidateLocations.join(', ')}${includeWillingToRelocate ? ' (including willing to relocate)' : ''}`);
+      appliedFilters.push(`Location (Include): ${candidateLocations.join(', ')}${includeWillingToRelocate ? ' (including willing to relocate)' : ''}`);
+    } else {
+      // No location filter specified - allow any location candidate
+      console.log('✅ No location include filter specified - allowing candidates from any location');
+    }
+    
+    // 3.2. LOCATION EXCLUDE (excludeLocations)
+    // CRITICAL: Exclude candidates from these locations (applied as NOT conditions)
+    if (excludeLocations && excludeLocations.length > 0) {
+      const excludeLocationConditions = excludeLocations.flatMap(location => ([
+        // Exclude if current location matches
+        { current_location: { [Op.not]: { [Op.iLike]: `%${location}%` } } },
+        // Exclude if preferred locations match
+        sequelize.where(
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'), 
+          { [Op.not]: { [Op.iLike]: `%${location}%` } }
+        )
+      ]));
+      
+      // For exclude, we need ALL conditions to be true (candidate must NOT be in ANY excluded location)
+      // So we add them as AND conditions
+      allAndConditions.push({
+        [Op.and]: excludeLocationConditions
+      });
+      appliedFilters.push(`Location (Exclude): ${excludeLocations.join(', ')}`);
+      console.log(`✅ Added location exclude filter: ${excludeLocations.join(', ')}`);
     }
     
     // 4. SKILLS & KEY SKILLS MATCHING (comprehensive)
     // CRITICAL: Include includeSkills from metadata (frontend sends this as "must have" skills)
+    // IMPORTANT: keySkills (Additional Skills) are automatically merged into includeSkills during create/update
     const includeSkills = metadata.includeSkills || requirement.includeSkills || [];
+    // Get keySkills separately for backward compatibility, but prioritize includeSkills
+    const keySkillsFromRequirement = requirement.keySkills || [];
+    // Merge includeSkills with keySkills (in case keySkills weren't merged yet in old requirements)
+    const allIncludeSkills = [...new Set([
+      ...(Array.isArray(includeSkills) ? includeSkills : []),
+      ...(Array.isArray(keySkillsFromRequirement) ? keySkillsFromRequirement : [])
+    ])].filter(Boolean);
+    
     const allRequiredSkills = [
       ...(requirement.skills || []),
-      ...(requirement.keySkills || []),
-      ...(Array.isArray(includeSkills) ? includeSkills : [])
+      ...allIncludeSkills
+      // Note: keySkills are merged into includeSkills, but we also check requirement.keySkills for backward compatibility
     ].filter(Boolean);
     
     // CRITICAL: Exclude skills that should NOT be present
@@ -1948,9 +2054,12 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       console.log(`✅ Added exclude skills filter: ${excludeSkills.filter(s => s).join(', ')}`);
     }
     
-    // 4.5. CURRENT DESIGNATION MATCHING (from metadata)
+    // 4.5. CURRENT DESIGNATION MATCHING (from metadata) - LENIENT MATCHING
+    // Match against user table fields AND work experience titles (most accurate)
     const currentDesignation = metadata.currentDesignation || requirement.currentDesignation || null;
     if (currentDesignation) {
+      // Lenient matching: check user table fields (designation, headline, current_role)
+      // Work experience matching will be done in post-query filtering for accuracy
       matchingConditions.push({
         [Op.or]: [
           { designation: { [Op.iLike]: `%${currentDesignation}%` } },
@@ -1958,7 +2067,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           { current_role: { [Op.iLike]: `%${currentDesignation}%` } }
         ]
       });
-      appliedFilters.push(`Current Designation: ${currentDesignation}`);
+      appliedFilters.push(`Current Designation (lenient): ${currentDesignation}`);
     }
     
     // 5. REQUIREMENT TITLE MATCHING (OPTIONAL - only if no skills specified)
@@ -2702,6 +2811,16 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
     }
     
+    // CRITICAL: Apply CURRENT DESIGNATION matching with work experience (LENIENT)
+    // If currentDesignation is specified, match against work experience titles (most accurate)
+    const currentDesignationForFilter = metadata.currentDesignation || requirement.currentDesignation || null;
+    if (currentDesignationForFilter && filteredFinalCandidates.length > 0) {
+      // This will be applied after work experience is fetched
+      // For now, we'll do a lenient match on user table fields
+      // Work experience matching will happen after we fetch work experience data
+      console.log(`🔍 Current Designation filter will be applied with work experience matching: ${currentDesignationForFilter}`);
+    }
+    
     console.log(`✅ Final candidate count after all filters: ${filteredFinalCandidates.length}`);
     
     // Helper function to convert values to arrays
@@ -2819,6 +2938,66 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         console.log(`✅ Fetched work experience for ${workExperienceMap.size} candidates`);
       } catch (weError) {
         console.warn('⚠️ Could not fetch work experience for company info:', weError?.message || weError);
+      }
+    }
+    
+    // CRITICAL: Apply CURRENT DESIGNATION matching with work experience (LENIENT)
+    // Match against work experience titles where is_current = true (most accurate)
+    if (currentDesignationForFilter && filteredFinalCandidates.length > 0 && workExperienceMap.size > 0) {
+      const beforeCount = filteredFinalCandidates.length;
+      const designationLower = currentDesignationForFilter.toLowerCase().trim();
+      
+      filteredFinalCandidates = filteredFinalCandidates.filter(candidate => {
+        // First check user table fields (already done in query, but keep for safety)
+        const userFieldsMatch = 
+          (candidate.designation && candidate.designation.toLowerCase().includes(designationLower)) ||
+          (candidate.headline && candidate.headline.toLowerCase().includes(designationLower)) ||
+          (candidate.current_role && candidate.current_role.toLowerCase().includes(designationLower));
+        
+        if (userFieldsMatch) {
+          return true; // Already matched in query
+        }
+        
+        // Check work experience titles (most accurate - prioritize is_current = true)
+        const candidateWorkExps = workExperienceMap.get(candidate.id) || [];
+        if (candidateWorkExps.length > 0) {
+          // First check current work experience (is_current = true)
+          const currentExp = candidateWorkExps.find(exp => 
+            exp.is_current === true || 
+            exp.is_current === 'true' || 
+            exp.is_current === 1 ||
+            String(exp.is_current).toLowerCase() === 'true'
+          );
+          
+          if (currentExp && currentExp.title) {
+            const titleLower = currentExp.title.toLowerCase();
+            if (titleLower.includes(designationLower) || designationLower.includes(titleLower)) {
+              return true; // Match found in current work experience title
+            }
+          }
+          
+          // Also check all work experiences for lenient matching
+          const anyExpMatch = candidateWorkExps.some(exp => {
+            if (exp.title) {
+              const titleLower = exp.title.toLowerCase();
+              return titleLower.includes(designationLower) || designationLower.includes(titleLower);
+            }
+            return false;
+          });
+          
+          if (anyExpMatch) {
+            return true; // Match found in any work experience title
+          }
+        }
+        
+        return false; // No match found
+      });
+      
+      const removedCount = beforeCount - filteredFinalCandidates.length;
+      if (removedCount > 0) {
+        console.log(`🎯 Current Designation filter (work experience): Removed ${removedCount} candidates, kept ${filteredFinalCandidates.length} with matching designation`);
+      } else {
+        console.log(`✅ Current Designation filter (work experience): All ${filteredFinalCandidates.length} candidates match designation`);
       }
     }
     

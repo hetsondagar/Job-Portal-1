@@ -121,7 +121,9 @@ export default function CreateRequirementPage() {
     if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
       setFormData(prev => ({
         ...prev,
-        keySkills: [...prev.keySkills, formattedSkill]
+        keySkills: [...prev.keySkills, formattedSkill],
+        // IMPORTANT: Automatically add to includeSkills (all additional skills should be included)
+        includeSkills: [...new Set([...prev.includeSkills, formattedSkill])]
       }))
       setCurrentSkill("")
     }
@@ -131,6 +133,7 @@ export default function CreateRequirementPage() {
     setFormData(prev => ({
       ...prev,
       keySkills: prev.keySkills.filter(s => s !== skill)
+      // Note: We don't remove from includeSkills automatically - user might have added it separately
     }))
   }
 
@@ -499,16 +502,17 @@ export default function CreateRequirementPage() {
                     </div>
                   </div>
 
-                  {/* Legacy Skills (for backward compatibility) */}
+                  {/* Additional Skills - These are automatically included in Include Skills */}
                   <div>
                     <Label>Additional Skills</Label>
+                    <p className="text-xs text-slate-500 mb-2">These skills are automatically included in "Include Skills" above</p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.skills.map((skill) => (
+                      {formData.keySkills.map((skill) => (
                         <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
                           <span>{skill}</span>
                           <button
                             type="button"
-                            onClick={() => handleSkillChange(skill, 'remove')}
+                            onClick={() => handleRemoveSkill(skill)}
                             className="ml-1 hover:text-red-600"
                           >
                             <X className="w-3 h-3" />
@@ -516,14 +520,35 @@ export default function CreateRequirementPage() {
                         </Badge>
                       ))}
                     </div>
+                    <div className="flex space-x-2 mt-2">
+                      <Input
+                        placeholder="Add skill"
+                        value={currentSkill}
+                        onChange={(e) => setCurrentSkill(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSkill())}
+                      />
+                      <Button type="button" onClick={handleAddSkill} size="sm" variant="outline">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {commonSkills.filter(skill => !formData.skills.includes(skill)).slice(0, 10).map((skill) => (
+                      {commonSkills.filter(skill => !formData.keySkills.includes(skill)).slice(0, 10).map((skill) => (
                         <Button
                           key={skill}
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSkillChange(skill, 'add')}
+                          onClick={() => {
+                            const formattedSkill = formatSkillText(skill);
+                            if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
+                              setFormData(prev => ({
+                                ...prev,
+                                keySkills: [...prev.keySkills, formattedSkill],
+                                // Automatically add to includeSkills
+                                includeSkills: [...new Set([...prev.includeSkills, formattedSkill])]
+                              }))
+                            }
+                          }}
                         >
                           + {skill}
                         </Button>

@@ -44,6 +44,7 @@ export interface User {
   skills?: string[];
   languages?: string[];
   expectedSalary?: number;
+  currentSalary?: number;
   experienceYears?: number;
   noticePeriod?: number;
   willingToRelocate?: boolean;
