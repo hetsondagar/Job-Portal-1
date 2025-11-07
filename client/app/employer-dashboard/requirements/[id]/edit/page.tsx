@@ -98,25 +98,38 @@ export default function EditRequirementPage() {
               if (normalized === 'hybrid' || normalized === 'Hybrid') return 'Hybrid';
               return rw || "Hybrid";
             })(),
-            travelRequired: req.travelRequired === true ? "Frequently" : req.travelRequired === false ? "No" : (typeof req.travelRequired === 'string' ? req.travelRequired : "No"),
+            travelRequired: (() => {
+              const tr = req.travelRequired;
+              if (tr === true) return "Frequently";
+              if (tr === false) return "No";
+              if (typeof tr === 'string') {
+                // Normalize string values
+                const lower = tr.toLowerCase();
+                if (lower === 'no' || lower === 'false') return "No";
+                if (lower === 'occasionally' || lower === 'sometimes') return "Occasionally";
+                if (lower === 'frequently' || lower === 'yes' || lower === 'true') return "Frequently";
+                return tr; // Return as-is if it's a valid string
+              }
+              return "No";
+            })(),
             benefits: Array.isArray(req.benefits) ? req.benefits : [],
             keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
             candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
             currentDesignation: (req as any).currentDesignation || "",
             candidateLocations: Array.isArray(req.candidateLocations) ? req.candidateLocations : [],
             includeWillingToRelocate: req.includeWillingToRelocate || false,
-            workExperienceMin: req.experienceMin?.toString() || "",
-            workExperienceMax: req.experienceMax?.toString() || "",
-            currentSalaryMin: req.salaryMin?.toString() || req.currentSalaryMin?.toString() || "",
-            currentSalaryMax: req.salaryMax?.toString() || req.currentSalaryMax?.toString() || "",
+            workExperienceMin: (req.experienceMin !== undefined && req.experienceMin !== null) ? req.experienceMin.toString() : ((req as any).workExperienceMin !== undefined && (req as any).workExperienceMin !== null ? (req as any).workExperienceMin.toString() : ""),
+            workExperienceMax: (req.experienceMax !== undefined && req.experienceMax !== null) ? req.experienceMax.toString() : ((req as any).workExperienceMax !== undefined && (req as any).workExperienceMax !== null ? (req as any).workExperienceMax.toString() : ""),
+            currentSalaryMin: (req.currentSalaryMin !== undefined && req.currentSalaryMin !== null) ? req.currentSalaryMin.toString() : ((req.salaryMin !== undefined && req.salaryMin !== null) ? req.salaryMin.toString() : ""),
+            currentSalaryMax: (req.currentSalaryMax !== undefined && req.currentSalaryMax !== null) ? req.currentSalaryMax.toString() : ((req.salaryMax !== undefined && req.salaryMax !== null) ? req.salaryMax.toString() : ""),
             currency: req.currency || "INR",
             includeNotMentioned: req.includeNotMentioned || false,
             // Additional fields from create page
             institute: (req as any).institute || "",
             resumeFreshness: (req as any).resumeFreshness ? new Date((req as any).resumeFreshness).toISOString().split('T')[0] : "",
             currentCompany: (req as any).currentCompany || "",
-            lastActive: (req as any).lastActive?.toString() || "",
-            diversityPreference: Array.isArray((req as any).diversityPreference) ? (req as any).diversityPreference : [],
+            lastActive: (req as any).lastActive !== undefined && (req as any).lastActive !== null ? (req as any).lastActive.toString() : "",
+            diversityPreference: Array.isArray((req as any).diversityPreference) ? (req as any).diversityPreference : ((req as any).diversityPreference ? [(req as any).diversityPreference] : []),
           }
           console.log('📝 Normalized form data:', {
             industry: normalized.industry,

@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     skills: u.skills,
     languages: u.languages,
     expectedSalary: u.expected_salary ?? u.expectedSalary,
+    currentSalary: u.current_salary ?? u.currentSalary,
     noticePeriod: u.notice_period ?? u.noticePeriod,
     willingToRelocate: u.willing_to_relocate ?? u.willingToRelocate,
     gender: u.gender,

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp, Brain, Phone, Mail, CheckCircle2, Save, Eye, X } from "lucide-react"
+import { Filter, ChevronDown, Search, MapPin, Briefcase, GraduationCap, Star, Clock, Users, ArrowLeft, Loader2, ArrowUp, Brain, Phone, Mail, CheckCircle2, Save, Eye, X, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -480,14 +480,15 @@ export default function CandidatesPage() {
       result = result.filter(c => {
         const checks = [];
         if (filters.verification.includes('Phone Verified')) {
-          checks.push(c.phoneVerified === true);
+          checks.push(c.phoneVerified === true || (c as any).phoneVerified === true);
         }
         if (filters.verification.includes('Email Verified')) {
-          checks.push(c.emailVerified === true);
+          checks.push(c.emailVerified === true || (c as any).emailVerified === true);
         }
         if (filters.verification.includes('Profile Complete')) {
           // Consider profile complete if profileCompletion >= 80
-          const isComplete = (c.profileCompletion || 0) >= 80;
+          const profileComp = c.profileCompletion || (c as any).profileCompletion || 0;
+          const isComplete = profileComp >= 80;
           checks.push(isComplete);
         }
         // If multiple verification filters selected, candidate must match ALL selected
@@ -1119,75 +1120,24 @@ export default function CandidatesPage() {
               <div className="flex items-stretch">
                 {/* LEFT PARTITION - Profile Picture, Education & Summary */}
                 <div className="border-r border-slate-200 p-6 flex flex-col items-center w-40 flex-shrink-0 bg-gradient-to-b from-slate-50 to-white">
-                  <Avatar className="w-28 h-28 mb-4 border-2 border-slate-300 shadow-lg">
-                    <AvatarImage 
-                      src={constructAvatarUrl(candidate.avatar || null)} 
-                      alt={candidate.name}
-                      className="object-cover w-full h-full"
-                      onLoad={() => console.log('✅ Avatar loaded:', candidate.name)}
-                      onError={(e) => {
-                        console.log('❌ Avatar failed:', candidate.name);
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                    <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white w-full h-full flex items-center justify-center">
-                      {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  {/* Education */}
-                  <div className="text-center w-full mb-3">
-                    <p className="text-xs font-semibold text-slate-600 mb-1">Education</p>
-                    <p className="text-xs font-medium text-slate-700 line-clamp-2">
-                      {(() => {
-                        // Debug logging
-                        console.log('🔍 Education Debug for', candidate.name, ':', {
-                          educationDetails: candidate.educationDetails,
-                          educationString: candidate.education,
-                          hasEducationDetails: !!candidate.educationDetails,
-                          isArray: Array.isArray(candidate.educationDetails),
-                          length: candidate.educationDetails?.length
-                        });
-                        
-                        // Check educationDetails first (from database)
-                        if (candidate.educationDetails && Array.isArray(candidate.educationDetails) && candidate.educationDetails.length > 0) {
-                          const edu = candidate.educationDetails[0];
-                          // Format: "Degree - Institution" or "Degree - Field of Study - Institution"
-                          const degree = edu.degree || '';
-                          const institution = edu.institution || '';
-                          const fieldOfStudy = edu.fieldOfStudy || '';
-                          
-                          let result = '';
-                          if (degree && institution) {
-                            if (fieldOfStudy && fieldOfStudy !== institution) {
-                              result = `${degree} - ${fieldOfStudy} - ${institution}`;
-                            } else {
-                              result = `${degree} - ${institution}`;
-                            }
-                          } else if (degree) {
-                            result = degree;
-                          } else if (institution) {
-                            result = institution;
-                          } else if (fieldOfStudy) {
-                            result = fieldOfStudy;
-                          } else {
-                            result = 'Not specified';
-                          }
-                          
-                          console.log('✅ Using educationDetails:', result);
-                          return result;
-                        }
-                        
-                        // Fallback to education string field
-                        if (candidate.education && candidate.education !== 'Not specified' && candidate.education !== 'null' && candidate.education.trim() !== '') {
-                          console.log('✅ Using education string:', candidate.education);
-                          return candidate.education;
-                        }
-                        
-                        console.log('⚠️ No education data found');
-                        return 'Not specified';
-                      })()}
-                    </p>
+                  <div className="relative group mb-4">
+                    <div className="relative overflow-visible">
+                      <Avatar className="w-28 h-28 border-2 border-slate-300 shadow-lg transition-transform duration-300 group-hover:scale-150 group-hover:z-[100] cursor-pointer group-hover:shadow-2xl">
+                        <AvatarImage 
+                          src={constructAvatarUrl(candidate.avatar || null)} 
+                          alt={candidate.name}
+                          className="object-cover w-full h-full"
+                          onLoad={() => console.log('✅ Avatar loaded:', candidate.name)}
+                          onError={(e) => {
+                            console.log('❌ Avatar failed:', candidate.name);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white w-full h-full flex items-center justify-center">
+                          {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
                   </div>
                   
                   {/* Professional Summary */}
@@ -1221,25 +1171,24 @@ export default function CandidatesPage() {
                         {(candidate as any).headline || candidate.designation || 'Job Seeker'}
                       </p>
                       
-                      {/* Current Designation */}
-                      {candidate.currentDesignation && (
-                        <p className="text-sm text-slate-800 mb-2 font-semibold">
-                          Designation: {candidate.currentDesignation}
-                        </p>
-                      )}
-                      
-                      {/* Company Info */}
+                      {/* Company Info - From Work Experience */}
                       <div className="mb-3 space-y-1">
                         {candidate.currentCompany && (
                           <p className="text-sm text-slate-700">
-                            Current Company: <span className="font-semibold">{candidate.currentCompany}</span>
-                            {candidate.currentDesignation && ` (${candidate.currentDesignation})`}
+                            <span className="font-semibold">{candidate.currentCompany}</span>
+                          </p>
+                        )}
+                        
+                        {/* Show Current Designation */}
+                        {candidate.currentDesignation && (
+                          <p className="text-sm text-slate-600">
+                            Current Designation: <span className="font-medium">{candidate.currentDesignation}</span>
                           </p>
                         )}
                         
                         {candidate.previousCompany && (
                           <p className="text-sm text-slate-600">
-                            Previous Company: <span className="font-medium">{candidate.previousCompany}</span>
+                            Previous: <span className="font-medium">{candidate.previousCompany}</span>
                           </p>
                         )}
                       </div>
@@ -1278,12 +1227,53 @@ export default function CandidatesPage() {
                           return null;
                         })()}
                         
+                        {/* Education - Moved from left side to right side below experience */}
+                        <div className="mt-2">
+                          <p className="text-xs font-semibold text-slate-500 mb-1">Education</p>
+                          <p className="text-sm text-slate-700 font-medium">
+                            {(() => {
+                              // Check educationDetails first (from database)
+                              if (candidate.educationDetails && Array.isArray(candidate.educationDetails) && candidate.educationDetails.length > 0) {
+                                const edu = candidate.educationDetails[0];
+                                // Format: "Degree - Institution" or "Degree - Field of Study - Institution"
+                                const degree = edu.degree || '';
+                                const institution = edu.institution || '';
+                                const fieldOfStudy = edu.fieldOfStudy || '';
+                                
+                                let result = '';
+                                if (degree && institution) {
+                                  if (fieldOfStudy && fieldOfStudy !== institution) {
+                                    result = `${degree} - ${fieldOfStudy} - ${institution}`;
+                                  } else {
+                                    result = `${degree} - ${institution}`;
+                                  }
+                                } else if (degree) {
+                                  result = degree;
+                                } else if (institution) {
+                                  result = institution;
+                                } else if (fieldOfStudy) {
+                                  result = fieldOfStudy;
+                                } else {
+                                  result = 'Not specified';
+                                }
+                                return result;
+                              }
+                              
+                              // Fallback to education string field
+                              if (candidate.education && candidate.education !== 'Not specified' && candidate.education !== 'null' && candidate.education.trim() !== '') {
+                                return candidate.education;
+                              }
+                              
+                              return 'Not specified';
+                            })()}
+                          </p>
+                        </div>
+                        
                         {(() => {
                           const salary = candidate.currentSalary;
-                          console.log('🔍 Salary Debug for', candidate.name, ':', salary);
                           if (salary && salary !== 'Not specified' && salary !== 'null' && salary.trim() !== '') {
                             return (
-                              <p className="text-sm text-slate-600 font-medium">
+                              <p className="text-sm text-slate-600 font-medium mt-2">
                                 Current Salary: <span className="text-slate-800">{salary}</span>
                               </p>
                             );
@@ -1324,12 +1314,21 @@ export default function CandidatesPage() {
                       <div className="flex flex-wrap items-center gap-2 justify-end">
                         {candidate.phoneVerified && (
                           <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                            <Phone className="w-3 h-3 mr-1" />
                             Phone Verified
                           </Badge>
                         )}
                         {candidate.emailVerified && (
                           <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                            <Mail className="w-3 h-3 mr-1" />
                             Email Verified
+                          </Badge>
+                        )}
+                        {((candidate.profileCompletion && candidate.profileCompletion >= 80) || 
+                          ((candidate as any).profileCompletion && (candidate as any).profileCompletion >= 80)) && (
+                          <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                            <Award className="w-3 h-3 mr-1" />
+                            Complete Profile
                           </Badge>
                         )}
                       </div>

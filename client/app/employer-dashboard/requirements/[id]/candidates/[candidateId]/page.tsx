@@ -617,6 +617,79 @@ export default function CandidateProfilePage() {
                           <p>Current Location: The candidate's current geographical location</p>
                         </TooltipContent>
                       </Tooltip>
+                      {(() => {
+                        // Calculate experience from work experiences
+                        let totalDays = 0;
+                        if (candidate.workExperience && Array.isArray(candidate.workExperience) && candidate.workExperience.length > 0) {
+                          candidate.workExperience.forEach((exp: any) => {
+                            if (exp.startDate) {
+                              try {
+                                const start = new Date(exp.startDate);
+                                const end = exp.isCurrent ? new Date() : (exp.endDate ? new Date(exp.endDate) : new Date());
+                                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                                  const diffTime = Math.abs(end.getTime() - start.getTime());
+                                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                  totalDays += diffDays;
+                                }
+                              } catch (e) {
+                                // Ignore invalid dates
+                              }
+                            }
+                          });
+                        }
+                        
+                        let experienceDisplay = 'Not specified';
+                        if (totalDays > 0) {
+                          const years = Math.floor(totalDays / 365);
+                          const remainingDays = totalDays % 365;
+                          const months = Math.floor(remainingDays / 30);
+                          const days = remainingDays % 30;
+                          const parts = [];
+                          if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+                          if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+                          if (days > 0 && years === 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+                          experienceDisplay = parts.length > 0 ? parts.join(', ') : 'Fresher';
+                        } else if (candidate.experienceYears !== undefined && candidate.experienceYears !== null) {
+                          // Fallback to experienceYears if available
+                          const totalYears = Number(candidate.experienceYears);
+                          const years = Math.floor(totalYears);
+                          const fractionalPart = totalYears - years;
+                          const months = Math.floor(fractionalPart * 12);
+                          const days = Math.floor((fractionalPart * 12 - months) * 30);
+                          const parts = [];
+                          if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+                          if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+                          if (days > 0 && years === 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+                          experienceDisplay = parts.length > 0 ? parts.join(', ') : 'Fresher';
+                        } else if (candidate.experience) {
+                          experienceDisplay = candidate.experience;
+                        }
+                        
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center space-x-2 cursor-help">
+                                <Briefcase className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm text-slate-600 font-medium">{experienceDisplay}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Experience: Total professional work experience (calculated from work history)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2 cursor-help">
+                            <Clock className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600">{candidate.noticePeriod || 'Not specified'}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Notice Period: The duration the candidate needs to serve before joining a new role (typically in days)</p>
+                        </TooltipContent>
+                      </Tooltip>
                       {requirement && requirement.validTill && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -630,32 +703,6 @@ export default function CandidateProfilePage() {
                           </TooltipContent>
                         </Tooltip>
                       )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center space-x-2 cursor-help">
-                            <Briefcase className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600 font-medium">
-                              {candidate.experienceYears !== undefined && candidate.experienceYears !== null
-                                ? `${candidate.experienceYears} ${candidate.experienceYears === 1 ? 'year' : 'years'}`
-                                : (candidate.experience || 'Not specified')}
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Experience: Total years of professional work experience</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center space-x-2 cursor-help">
-                            <Clock className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600">{candidate.noticePeriod || 'Not specified'}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Notice Period: The duration the candidate needs to serve before joining a new role (typically in days)</p>
-                        </TooltipContent>
-                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center space-x-2 cursor-help">

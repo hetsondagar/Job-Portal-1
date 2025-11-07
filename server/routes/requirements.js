@@ -579,7 +579,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
       includeNotMentioned: metadata?.includeNotMentioned !== undefined ? metadata.includeNotMentioned : (metadata?.include_not_mentioned !== undefined ? metadata.include_not_mentioned : (requirementData.includeNotMentioned !== undefined ? requirementData.includeNotMentioned : false)),
       institute: metadata?.institute || null,
       resumeFreshness: metadata?.resumeFreshness || metadata?.resume_freshness ? new Date(metadata.resumeFreshness || metadata.resume_freshness) : null,
-      currentCompany: metadata?.currentCompany || metadata?.current_company || null
+      currentCompany: metadata?.currentCompany || metadata?.current_company || null,
+      // Additional fields from metadata
+      currentDesignation: metadata?.currentDesignation || metadata?.current_designation || null,
+      includeSkills: Array.isArray(metadata?.includeSkills) ? metadata.includeSkills : (metadata?.includeSkills ? [metadata.includeSkills] : []),
+      excludeSkills: Array.isArray(metadata?.excludeSkills) ? metadata.excludeSkills : (metadata?.excludeSkills ? [metadata.excludeSkills] : []),
+      diversityPreference: Array.isArray(metadata?.diversityPreference) ? metadata.diversityPreference : (metadata?.diversityPreference ? [metadata.diversityPreference] : []),
+      experienceMin: metadata?.experienceMin !== undefined ? metadata.experienceMin : (metadata?.workExperienceMin !== undefined ? metadata.workExperienceMin : (requirementData.experienceMin || rawRequirement?.experience_min || null)),
+      experienceMax: metadata?.experienceMax !== undefined ? metadata.experienceMax : (metadata?.workExperienceMax !== undefined ? metadata.workExperienceMax : (requirementData.experienceMax || rawRequirement?.experience_max || null)),
+      salaryMin: metadata?.salaryMin !== undefined ? metadata.salaryMin : (metadata?.currentSalaryMin !== undefined ? metadata.currentSalaryMin : (requirementData.salaryMin || rawRequirement?.salary_min || null)),
+      salaryMax: metadata?.salaryMax !== undefined ? metadata.salaryMax : (metadata?.currentSalaryMax !== undefined ? metadata.currentSalaryMax : (requirementData.salaryMax || rawRequirement?.salary_max || null)),
+      currentSalaryMin: metadata?.currentSalaryMin !== undefined ? metadata.currentSalaryMin : (metadata?.salaryMin !== undefined ? metadata.salaryMin : (requirementData.currentSalaryMin || requirementData.salaryMin || rawRequirement?.salary_min || null)),
+      currentSalaryMax: metadata?.currentSalaryMax !== undefined ? metadata.currentSalaryMax : (metadata?.salaryMax !== undefined ? metadata.salaryMax : (requirementData.currentSalaryMax || requirementData.salaryMax || rawRequirement?.salary_max || null)),
+      lastActive: metadata?.lastActive !== undefined ? metadata.lastActive : (metadata?.last_active !== undefined ? metadata.last_active : null)
     };
     
     console.log('📤 Transformed requirement fields:', {
@@ -2776,6 +2788,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
       
       // Fetch work experience for all candidates to get current/previous company info
+      // CRITICAL: Fetch ALL work experiences to accurately determine current/previous company
       try {
         const workExpResults = await sequelize.query(`
           SELECT 
@@ -2784,10 +2797,11 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             title,
             company,
             is_current,
-            start_date
+            start_date,
+            end_date
           FROM work_experiences 
           WHERE user_id IN (:allCandidateIds)
-          ORDER BY is_current DESC, start_date DESC
+          ORDER BY user_id, is_current DESC, start_date DESC
         `, {
           replacements: { allCandidateIds },
           type: QueryTypes.SELECT
@@ -2801,6 +2815,8 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           }
           workExperienceMap.get(userId).push(exp);
         });
+        
+        console.log(`✅ Fetched work experience for ${workExperienceMap.size} candidates`);
       } catch (weError) {
         console.warn('⚠️ Could not fetch work experience for company info:', weError?.message || weError);
       }
@@ -2872,24 +2888,62 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
       
       // Get current and previous company from work experience
+      // CRITICAL: Always prioritize work experience data (most accurate and up-to-date)
       const candidateWorkExps = workExperienceMap.get(candidate.id) || [];
-      let currentCompany = candidate.current_company || null;
-      let currentDesignation = candidate.current_role || candidate.designation || candidate.headline || null;
+      let currentCompany = null;
+      let currentDesignation = null;
       let previousCompany = null;
       
-      // Extract from work experience if available
+      // Extract from work experience - prioritize is_current = true
       if (candidateWorkExps.length > 0) {
-        const currentExp = candidateWorkExps.find(exp => exp.is_current) || candidateWorkExps[0];
-        if (currentExp) {
-          if (!currentCompany) currentCompany = currentExp.company;
-          if (!currentDesignation) currentDesignation = currentExp.title;
+        // First, try to find experience with is_current = true (boolean or string 'true')
+        const currentExp = candidateWorkExps.find(exp => 
+          exp.is_current === true || 
+          exp.is_current === 'true' || 
+          exp.is_current === 1 ||
+          String(exp.is_current).toLowerCase() === 'true'
+        );
+        
+        if (currentExp && currentExp.company) {
+          // Always use work experience data if current experience exists
+          currentCompany = currentExp.company;
+          currentDesignation = currentExp.title || null;
+          console.log(`✅ Candidate ${candidate.id}: Using work experience - Company: ${currentCompany}, Designation: ${currentDesignation}`);
+        } else {
+          // Fallback: use first experience if no current experience marked (sorted by start_date DESC)
+          const firstExp = candidateWorkExps[0];
+          if (firstExp && firstExp.company) {
+            currentCompany = firstExp.company;
+            currentDesignation = firstExp.title || null;
+            console.log(`⚠️ Candidate ${candidate.id}: No current experience marked, using first experience - Company: ${currentCompany}`);
+          }
         }
         
-        // Get previous company (first non-current experience)
-        const previousExp = candidateWorkExps.find(exp => !exp.is_current);
-        if (previousExp) {
-          previousCompany = previousExp.company;
+        // Get previous company (first non-current experience, sorted by start_date DESC)
+        const previousExps = candidateWorkExps.filter(exp => 
+          exp.is_current === false || 
+          exp.is_current === 'false' || 
+          exp.is_current === 0 ||
+          String(exp.is_current).toLowerCase() === 'false' ||
+          (exp.is_current !== true && exp.is_current !== 'true' && exp.is_current !== 1)
+        );
+        if (previousExps.length > 0) {
+          // Sort by start_date DESC to get most recent previous company
+          previousExps.sort((a, b) => {
+            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+            return dateB - dateA;
+          });
+          previousCompany = previousExps[0].company || null;
         }
+      }
+      
+      // Fallback to user table fields only if no work experience found
+      if (!currentCompany) {
+        currentCompany = candidate.current_company || null;
+      }
+      if (!currentDesignation) {
+        currentDesignation = candidate.current_role || candidate.designation || candidate.headline || null;
       }
       
       return {

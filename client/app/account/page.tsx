@@ -191,32 +191,52 @@ export default function AccountPage() {
   }, [user, loading])
   
   // Re-initialize professional data when work experiences are loaded
+  // This ensures experience is recalculated when work experiences are updated
   useEffect(() => {
-    if (workExperiences && workExperiences.length > 0 && user) {
+    if (workExperiences && user) {
       // Recalculate experience from work experiences
       let totalDays = 0;
       workExperiences.forEach((exp: any) => {
-        const start = new Date(exp.startDate);
-        const end = exp.isCurrent ? new Date() : new Date(exp.endDate || new Date());
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-          const diffTime = Math.abs(end.getTime() - start.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          totalDays += diffDays;
+        if (exp.startDate) {
+          const start = new Date(exp.startDate);
+          const end = exp.isCurrent ? new Date() : (exp.endDate ? new Date(exp.endDate) : new Date());
+          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            totalDays += diffDays;
+          }
         }
       });
-      const years = Math.floor(totalDays / 365);
-      const remainingDays = totalDays % 365;
-      const months = Math.floor(remainingDays / 30);
-      const days = remainingDays % 30;
       
-      setProfessionalData(prev => ({
-        ...prev,
-        experienceYears: years.toString(),
-        experienceMonths: months.toString(),
-        experienceDays: days.toString()
-      }))
+      if (totalDays > 0) {
+        const years = Math.floor(totalDays / 365);
+        const remainingDays = totalDays % 365;
+        const months = Math.floor(remainingDays / 30);
+        const days = remainingDays % 30;
+        
+        setProfessionalData(prev => ({
+          ...prev,
+          experienceYears: years.toString(),
+          experienceMonths: months.toString(),
+          experienceDays: days.toString()
+        }));
+      } else if (user.experienceYears !== undefined && user.experienceYears !== null) {
+        // Fallback to user.experienceYears if no work experiences or calculation failed
+        const totalYears = Number(user.experienceYears);
+        const years = Math.floor(totalYears);
+        const fractionalPart = totalYears - years;
+        const months = Math.floor(fractionalPart * 12);
+        const days = Math.floor((fractionalPart * 12 - months) * 30);
+        
+        setProfessionalData(prev => ({
+          ...prev,
+          experienceYears: years.toString(),
+          experienceMonths: months.toString(),
+          experienceDays: days.toString()
+        }));
+      }
     }
-  }, [workExperiences])
+  }, [workExperiences, user])
   
   // Education functions
   const fetchEducations = async () => {
@@ -347,33 +367,41 @@ export default function AccountPage() {
       let expMonths = '';
       let expDays = '';
       
+      // Check if workExperiences are already loaded and use them
       if (workExperiences && workExperiences.length > 0) {
         // Calculate total experience from work experiences
         let totalDays = 0;
         workExperiences.forEach((exp: any) => {
-          const start = new Date(exp.startDate);
-          const end = exp.isCurrent ? new Date() : new Date(exp.endDate || new Date());
-          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-            const diffTime = Math.abs(end.getTime() - start.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            totalDays += diffDays;
+          if (exp.startDate) {
+            const start = new Date(exp.startDate);
+            const end = exp.isCurrent ? new Date() : (exp.endDate ? new Date(exp.endDate) : new Date());
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+              const diffTime = Math.abs(end.getTime() - start.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              totalDays += diffDays;
+            }
           }
         });
-        const years = Math.floor(totalDays / 365);
-        const remainingDays = totalDays % 365;
-        const months = Math.floor(remainingDays / 30);
-        const days = remainingDays % 30;
-        expYears = years.toString();
-        expMonths = months.toString();
-        expDays = days.toString();
-      } else if (user.experienceYears !== undefined && user.experienceYears !== null) {
-        // Fallback: Use experience_years field (but we lose precision due to INTEGER rounding)
+        if (totalDays > 0) {
+          const years = Math.floor(totalDays / 365);
+          const remainingDays = totalDays % 365;
+          const months = Math.floor(remainingDays / 30);
+          const days = remainingDays % 30;
+          expYears = years.toString();
+          expMonths = months.toString();
+          expDays = days.toString();
+        }
+      }
+      
+      // Fallback: Use experience_years field if work experiences not available or no experience calculated
+      if (!expYears && user.experienceYears !== undefined && user.experienceYears !== null) {
         const totalYears = Number(user.experienceYears);
         expYears = Math.floor(totalYears).toString();
-        const remainingMonths = (totalYears - Math.floor(totalYears)) * 12;
-        expMonths = Math.floor(remainingMonths).toString();
-        const remainingDays = (remainingMonths - Math.floor(remainingMonths)) * 30;
-        expDays = Math.floor(remainingDays).toString();
+        const fractionalPart = totalYears - Math.floor(totalYears);
+        const remainingMonths = Math.floor(fractionalPart * 12);
+        expMonths = remainingMonths.toString();
+        const remainingDays = Math.floor((fractionalPart * 12 - remainingMonths) * 30);
+        expDays = remainingDays.toString();
       }
       
       setProfessionalData({
@@ -386,7 +414,13 @@ export default function AccountPage() {
         experienceYears: expYears,
         experienceMonths: expMonths,
         experienceDays: expDays,
-        currentSalary: (user as any).currentSalary?.toString() || '',
+        // Get current salary from user object (check multiple possible sources)
+        // Priority: user.currentSalary (from API) > (user as any).currentSalary > empty string
+        currentSalary: (user.currentSalary !== undefined && user.currentSalary !== null)
+          ? user.currentSalary.toString()
+          : ((user as any).currentSalary !== undefined && (user as any).currentSalary !== null) 
+            ? ((user as any).currentSalary).toString() 
+            : '',
         skills: Array.isArray(user.skills) ? user.skills : [],
         languages: Array.isArray(user.languages) ? user.languages : [],
         socialLinks: {
@@ -745,13 +779,19 @@ export default function AccountPage() {
       })
       
       if (response.success) {
-        // Refresh user data to get updated values
-        await refreshUser()
         // Re-fetch work experiences to ensure experience is recalculated
         await fetchWorkExperiences()
         
         // Save job preferences
         const preferencesResponse = await apiService.updateJobPreferences(professionalData.jobPreferences || {})
+        
+        // Refresh user data AFTER work experiences are fetched (so experience can be recalculated)
+        await refreshUser()
+        
+        // Re-initialize form data with latest user data after refresh
+        setTimeout(() => {
+          initializeFormData()
+        }, 200)
         
         if (preferencesResponse.success) {
           // Re-fetch job preferences to update display
@@ -1369,10 +1409,17 @@ export default function AccountPage() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => {
-                            // Re-initialize form data from latest user data when entering edit mode
-                            initializeFormData()
-                            setEditingProfessional(true)
+                          onClick={async () => {
+                            // Refresh user data first to get latest values
+                            await refreshUser()
+                            // Re-fetch work experiences to ensure we have latest data
+                            await fetchWorkExperiences()
+                            // Wait a bit for state to update
+                            setTimeout(() => {
+                              // Re-initialize form data from latest user data when entering edit mode
+                              initializeFormData()
+                              setEditingProfessional(true)
+                            }, 100)
                           }}
                         >
                           <Edit className="w-4 h-4 mr-2" />
@@ -2441,27 +2488,38 @@ export default function AccountPage() {
                           </div>
                         )}
                         {(() => {
-                          // Priority: Use professionalData if available, otherwise use user.currentSalary
-                          const currentSalary = professionalData.currentSalary || (user as any).currentSalary;
-                          if (!currentSalary || currentSalary === '' || currentSalary === '0') return null;
+                          // Get current salary - check user object first (database value), then professionalData
+                          const userSalary = (user as any).currentSalary !== undefined && (user as any).currentSalary !== null 
+                            ? (user as any).currentSalary 
+                            : (user.currentSalary !== undefined && user.currentSalary !== null ? user.currentSalary : null);
+                          const currentSalary = userSalary || (professionalData.currentSalary || null);
+                          
+                          // Check if salary exists and is valid
+                          if (currentSalary === null || currentSalary === undefined || currentSalary === '' || currentSalary === '0') {
+                            return null;
+                          }
                           
                           // Format the salary value
                           let salaryValue = '';
-                          if (typeof currentSalary === 'number') {
+                          if (typeof currentSalary === 'number' && currentSalary > 0) {
                             salaryValue = `₹${currentSalary} LPA`;
-                          } else {
+                          } else if (typeof currentSalary === 'string') {
                             const salaryStr = currentSalary.toString().trim();
+                            if (salaryStr === '' || salaryStr === '0') return null;
+                            
                             if (salaryStr.includes('LPA') || salaryStr.includes('lpa')) {
                               salaryValue = salaryStr.startsWith('₹') ? salaryStr : `₹${salaryStr}`;
                             } else {
                               // Try to parse as number
                               const numValue = parseFloat(salaryStr);
-                              if (!isNaN(numValue)) {
+                              if (!isNaN(numValue) && numValue > 0) {
                                 salaryValue = `₹${numValue} LPA`;
                               } else {
                                 salaryValue = `₹${salaryStr} LPA`;
                               }
                             }
+                          } else {
+                            return null;
                           }
                           
                           return (
