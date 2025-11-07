@@ -404,7 +404,7 @@ exports.getHotVacanciesByEmployer = async (req, res, next) => {
       include: [{
         model: Company,
         as: 'company',
-        attributes: ['id', 'name', 'industry', 'companySize', 'website']
+        attributes: ['id', 'name', 'industries', 'companySize', 'website']
       }],
       order: [['created_at', 'DESC']],
       limit: parseInt(limit),
@@ -449,7 +449,7 @@ exports.getHotVacancyById = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'industry', 'companySize', 'website', 'email', 'phone']
+          attributes: ['id', 'name', 'industries', 'companySize', 'website', 'email', 'phone']
         },
         {
           model: User,

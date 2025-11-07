@@ -38,7 +38,6 @@ export default function GulfCreateRequirementPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    location: "",
     experience: "",
     salary: "",
     jobType: "Full-time",
@@ -187,7 +186,6 @@ export default function GulfCreateRequirementPage() {
     const missing: string[] = []
     if (!formData.title.trim()) missing.push('Job Title')
     if (!formData.description.trim()) missing.push('Job Description')
-    if (!formData.location.trim()) missing.push('Location')
     if (missing.length > 0) {
       toast({
         title: 'Missing required fields',
@@ -203,7 +201,7 @@ export default function GulfCreateRequirementPage() {
       const payload: any = {
         title: formData.title,
         description: formData.description,
-        location: formData.location,
+        location: null,
         workExperienceMin: formData.workExperienceMin && String(formData.workExperienceMin).trim() !== '' ? Number(formData.workExperienceMin) : undefined,
         workExperienceMax: formData.workExperienceMax && String(formData.workExperienceMax).trim() !== '' ? Number(formData.workExperienceMax) : undefined,
         currentSalaryMin: formData.currentSalaryMin && String(formData.currentSalaryMin).trim() !== '' ? Number(formData.currentSalaryMin) : undefined,
@@ -348,17 +346,6 @@ export default function GulfCreateRequirementPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="location">Location *</Label>
-                        <Input
-                          id="location"
-                          value={formData.location}
-                          onChange={(e) => handleInputChange('location', e.target.value)}
-                          placeholder="e.g., Dubai, UAE"
-                          required
-                        />
-                      </div>
-                      
                       <div>
                         <Label htmlFor="jobType">Job Type</Label>
                         <Select value={formData.jobType} onValueChange={(value) => handleInputChange('jobType', value)}>
@@ -923,4 +910,4 @@ export default function GulfCreateRequirementPage() {
       </GulfEmployerAuthGuard>
     </EmployerAuthGuard>
   )
-}
+}

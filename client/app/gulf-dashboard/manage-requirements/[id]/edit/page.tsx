@@ -32,12 +32,29 @@ export default function GulfEditRequirementPage() {
   const [currentSkill, setCurrentSkill] = useState("")
   const [currentIncludeSkill, setCurrentIncludeSkill] = useState("")
   const [currentExcludeSkill, setCurrentExcludeSkill] = useState("")
+  const [currentIncludeLocation, setCurrentIncludeLocation] = useState("")
+  const [currentExcludeLocation, setCurrentExcludeLocation] = useState("")
   const [currentBenefit, setCurrentBenefit] = useState("")
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
 
   const [requirement, setRequirement] = useState<any>(null)
   const [formData, setFormData] = useState<any>(null)
+
+  const normalizeLocations = (value: any): string[] => {
+    if (value === undefined || value === null) return []
+    const list = Array.isArray(value) ? value : [value]
+    const seen = new Set<string>()
+    return list
+      .map((loc) => (typeof loc === "string" ? loc.trim() : ""))
+      .filter((loc) => {
+        if (!loc) return false
+        const key = loc.toLowerCase()
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+  }
 
   // Fetch requirement data from API
   useEffect(() => {
@@ -104,8 +121,15 @@ export default function GulfEditRequirementPage() {
             keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
             candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
             currentDesignation: (req as any).currentDesignation || "",
-            candidateLocations: Array.isArray(req.candidateLocations) ? req.candidateLocations : [],
-            includeWillingToRelocate: req.includeWillingToRelocate || false,
+            candidateLocations: normalizeLocations((req as any).candidateLocations ?? (req as any).candidate_locations ?? req.candidateLocations ?? []),
+            excludeLocations: normalizeLocations((req as any).excludeLocations ?? (req as any).exclude_locations ?? []),
+            includeWillingToRelocate: (() => {
+              const value = (req as any).includeWillingToRelocate ?? (req as any).include_willing_to_relocate ?? req.includeWillingToRelocate ?? false
+              if (typeof value === "string") {
+                return value.toLowerCase() === "true"
+              }
+              return Boolean(value)
+            })(),
             workExperienceMin: req.experienceMin?.toString() || "",
             workExperienceMax: req.experienceMax?.toString() || "",
             currentSalaryMin: req.salaryMin?.toString() || req.currentSalaryMin?.toString() || "",
@@ -236,6 +260,54 @@ export default function GulfEditRequirementPage() {
     }))
   }
 
+  const handleAddIncludeLocation = () => {
+    const location = currentIncludeLocation.trim()
+    if (!location) return
+    setFormData((prev: any) => {
+      if (!prev) return prev
+      const updatedIncludes = normalizeLocations([...(prev.candidateLocations || []), location])
+      const locationKey = location.toLowerCase()
+      const updatedExcludes = (prev.excludeLocations || []).filter((loc: string) => loc?.toLowerCase() !== locationKey)
+      return {
+        ...prev,
+        candidateLocations: updatedIncludes,
+        excludeLocations: updatedExcludes
+      }
+    })
+    setCurrentIncludeLocation("")
+  }
+
+  const handleRemoveIncludeLocation = (location: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      candidateLocations: (prev.candidateLocations || []).filter((loc: string) => loc?.toLowerCase() !== location.toLowerCase())
+    }))
+  }
+
+  const handleAddExcludeLocation = () => {
+    const location = currentExcludeLocation.trim()
+    if (!location) return
+    setFormData((prev: any) => {
+      if (!prev) return prev
+      const updatedExcludes = normalizeLocations([...(prev.excludeLocations || []), location])
+      const locationKey = location.toLowerCase()
+      const updatedIncludes = (prev.candidateLocations || []).filter((loc: string) => loc?.toLowerCase() !== locationKey)
+      return {
+        ...prev,
+        excludeLocations: updatedExcludes,
+        candidateLocations: updatedIncludes
+      }
+    })
+    setCurrentExcludeLocation("")
+  }
+
+  const handleRemoveExcludeLocation = (location: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      excludeLocations: (prev.excludeLocations || []).filter((loc: string) => loc?.toLowerCase() !== location.toLowerCase())
+    }))
+  }
+
   const handleAddBenefit = () => {
     if (currentBenefit.trim() && !formData.benefits.includes(currentBenefit.trim())) {
       setFormData((prev: any) => ({
@@ -256,16 +328,19 @@ export default function GulfEditRequirementPage() {
       console.log('📤 Submitting update with formData:', {
         industry: formData.industry,
         department: formData.department,
-        location: formData.location,
+        location: null,
         jobType: formData.jobType,
         education: formData.education
       })
+      const includeLocations = normalizeLocations(formData.candidateLocations)
+      const excludeLocations = normalizeLocations(formData.excludeLocations)
+
       // Prepare update data - include all fields
       const updateData = {
         region: "gulf",
         title: formData.title,
         description: formData.description,
-        location: formData.location,
+        location: null,
         jobType: formData.jobType,
         skills: formData.skills,
         keySkills: formData.keySkills,
@@ -281,8 +356,9 @@ export default function GulfEditRequirementPage() {
         benefits: formData.benefits,
         candidateDesignations: formData.candidateDesignations,
         currentDesignation: formData.currentDesignation || null,
-        candidateLocations: formData.candidateLocations,
-        includeWillingToRelocate: formData.includeWillingToRelocate,
+        candidateLocations: includeLocations,
+        excludeLocations: excludeLocations,
+        includeWillingToRelocate: Boolean(formData.includeWillingToRelocate),
         workExperienceMin: formData.workExperienceMin ? Number(formData.workExperienceMin) : null,
         workExperienceMax: formData.workExperienceMax ? Number(formData.workExperienceMax) : null,
         currentSalaryMin: formData.currentSalaryMin ? Number(formData.currentSalaryMin) : null,
@@ -311,7 +387,7 @@ export default function GulfEditRequirementPage() {
             id: req.id,
             title: req.title || "",
             description: req.description || "",
-            location: (req.location && req.location.trim() !== '') ? req.location.trim() : "",
+            location: null,
             experience: req.experience || "",
             salary: req.salary || "",
             jobType: (() => {
@@ -342,8 +418,15 @@ export default function GulfEditRequirementPage() {
             benefits: Array.isArray(req.benefits) ? req.benefits : [],
             keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
             candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
-            candidateLocations: Array.isArray(req.candidateLocations) ? req.candidateLocations : [],
-            includeWillingToRelocate: req.includeWillingToRelocate || false,
+            candidateLocations: normalizeLocations((req as any).candidateLocations ?? (req as any).candidate_locations ?? req.candidateLocations ?? []),
+            excludeLocations: normalizeLocations((req as any).excludeLocations ?? (req as any).exclude_locations ?? []),
+            includeWillingToRelocate: (() => {
+              const value = (req as any).includeWillingToRelocate ?? (req as any).include_willing_to_relocate ?? req.includeWillingToRelocate ?? false
+              if (typeof value === "string") {
+                return value.toLowerCase() === "true"
+              }
+              return Boolean(value)
+            })(),
             workExperienceMin: req.experienceMin?.toString() || "",
             workExperienceMax: req.experienceMax?.toString() || "",
             currentSalaryMin: req.salaryMin?.toString() || "",
@@ -462,17 +545,6 @@ export default function GulfEditRequirementPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="location">Location *</Label>
-                      <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange('location', e.target.value)}
-                        placeholder="e.g., Bangalore, Karnataka"
-                        required
-                      />
-                    </div>
-                    
                     <div>
                       <Label htmlFor="jobType">Job Type</Label>
                       <Select 
@@ -649,6 +721,107 @@ export default function GulfEditRequirementPage() {
                       ))}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Location Preferences */}
+              <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(16,185,129,0.08)] hover:shadow-[0_18px_60px_rgba(16,185,129,0.16)]">
+                <CardHeader>
+                  <CardTitle>Location Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-slate-700 font-semibold">Include Locations</Label>
+                    <p className="text-xs text-slate-500 mb-2">Candidates must currently be in one of these locations.</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(formData.candidateLocations || []).map((location: string) => (
+                        <Badge key={location} variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200 flex items-center space-x-1">
+                          <span>{location}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIncludeLocation(location)}
+                            className="ml-1 hover:text-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex space-x-2 mt-2">
+                      <Input
+                        placeholder="Add location to include"
+                        value={currentIncludeLocation}
+                        onChange={(e) => setCurrentIncludeLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            handleAddIncludeLocation()
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleAddIncludeLocation} size="sm" variant="outline">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-slate-700 font-semibold">Exclude Locations</Label>
+                    <p className="text-xs text-slate-500 mb-2">Candidates from these locations will be filtered out.</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(formData.excludeLocations || []).map((location: string) => (
+                        <Badge key={location} variant="secondary" className="bg-rose-100 text-rose-800 border-rose-200 flex items-center space-x-1">
+                          <span>{location}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExcludeLocation(location)}
+                            className="ml-1 hover:text-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex space-x-2 mt-2">
+                      <Input
+                        placeholder="Add location to exclude"
+                        value={currentExcludeLocation}
+                        onChange={(e) => setCurrentExcludeLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            handleAddExcludeLocation()
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleAddExcludeLocation} size="sm" variant="outline">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="include-willing-to-relocate"
+                      checked={formData.includeWillingToRelocate === true}
+                      onCheckedChange={(checked) => setFormData((prev: any) => ({
+                        ...prev,
+                        includeWillingToRelocate: checked === true
+                      }))}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="include-willing-to-relocate" className="text-slate-700">
+                        Include candidates willing to relocate
+                      </Label>
+                      <p className="text-xs text-slate-500">
+                        When enabled, candidates who are open to relocation will be included even if they are not currently in the included locations.
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-500">
+                    Leave the include list empty to allow candidates from any location. Excluded locations are always respected.
+                  </p>
                 </CardContent>
               </Card>
 

@@ -21,6 +21,7 @@ import {
   Crown,
   Flame,
   Target,
+  Building2,
   MapPin,
   Calendar,
   Loader2
@@ -69,6 +70,10 @@ interface HotVacancy {
   company?: {
     name: string;
     logo?: string;
+    industry?: string;
+    industries?: string[];
+    companySize?: string;
+    website?: string;
   };
   companyName?: string;
 }
@@ -100,7 +105,30 @@ export default function HotVacanciesPage() {
       })
       
       if (response.success) {
-        setHotVacancies(response.data || [])
+        const vacancies = Array.isArray(response.data) ? response.data : []
+        const sanitizedVacancies = vacancies.map((vacancy: any) => {
+          const locationValue = typeof vacancy.location === "string" ? vacancy.location.trim() : ""
+          const normalizedLocation = locationValue && locationValue.toLowerCase() !== "null" && locationValue.toLowerCase() !== "undefined"
+            ? locationValue
+            : "Location not specified"
+
+          const company = vacancy.company ? {
+            ...vacancy.company,
+            industry: vacancy.company.industry ?? (
+              Array.isArray(vacancy.company.industries)
+                ? vacancy.company.industries.filter(Boolean).join(', ')
+                : undefined
+            )
+          } : undefined
+
+          return {
+            ...vacancy,
+            location: normalizedLocation,
+            company,
+          }
+        })
+
+        setHotVacancies(sanitizedVacancies as HotVacancy[])
       } else {
         toast.error(response.message || "Failed to load hot vacancies")
       }
@@ -212,9 +240,9 @@ export default function HotVacanciesPage() {
   return (
     <EmployerAuthGuard>
       <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      <EmployerNavbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <EmployerNavbar />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 w-full">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
@@ -398,11 +426,23 @@ export default function HotVacanciesPage() {
                           </Badge>
                         )}
                       </div>
+
+                      {vacancy.company?.name && (
+                        <div className="flex items-center flex-wrap gap-2 mb-4 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-4 w-4" />
+                            {vacancy.company.name}
+                          </span>
+                          {vacancy.company.industry && (
+                            <span className="text-xs text-gray-400">• {vacancy.company.industry}</span>
+                          )}
+                        </div>
+                      )}
                       
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <MapPin className="h-4 w-4" />
-                          {vacancy.location}
+                          {vacancy.location || 'Location not specified'}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Clock className="h-4 w-4" />
@@ -498,9 +538,9 @@ export default function HotVacanciesPage() {
             </div>
           )}
         </div>
-      
-      <EmployerFooter />
-    </div>
+        
+        <EmployerFooter />
+      </div>
     </EmployerAuthGuard>
   )
 }

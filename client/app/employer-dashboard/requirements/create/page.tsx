@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Plus, X, MapPin, Briefcase } from "lucide-react"
+import { ArrowLeft, Plus, X, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,10 +21,10 @@ export default function CreateRequirementPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     jobDesignation: "",
-    jobLocation: "",
     keySkills: [] as string[],
     candidateDesignations: [] as string[],
     candidateLocations: [] as string[],
+    excludeLocations: [] as string[],
     includeWillingToRelocate: false,
     workExperienceMin: "",
     workExperienceMax: "",
@@ -37,6 +37,20 @@ export default function CreateRequirementPage() {
   const [currentSkill, setCurrentSkill] = useState("")
   const [currentDesignation, setCurrentDesignation] = useState("")
   const [currentLocation, setCurrentLocation] = useState("")
+  const [currentExcludeLocation, setCurrentExcludeLocation] = useState("")
+
+  const normalizeLocations = (values: string[]): string[] => {
+    const seen = new Set<string>()
+    return values
+      .map((value) => value.trim())
+      .filter((value) => {
+        if (!value) return false
+        const key = value.toLowerCase()
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+  }
 
   const handleAddSkill = () => {
     if (currentSkill.trim() && !formData.keySkills.includes(currentSkill.trim())) {
@@ -73,19 +87,48 @@ export default function CreateRequirementPage() {
   }
 
   const handleAddLocation = () => {
-    if (currentLocation.trim() && !formData.candidateLocations.includes(currentLocation.trim())) {
-      setFormData((prev) => ({
+    const value = currentLocation.trim()
+    if (!value) return
+    setFormData((prev) => {
+      const updatedIncludes = normalizeLocations([...(prev.candidateLocations || []), value])
+      const locationKey = value.toLowerCase()
+      const updatedExcludes = (prev.excludeLocations || []).filter((loc) => loc.toLowerCase() !== locationKey)
+      return {
         ...prev,
-        candidateLocations: [...prev.candidateLocations, currentLocation.trim()],
-      }))
-      setCurrentLocation("")
-    }
+        candidateLocations: updatedIncludes,
+        excludeLocations: updatedExcludes,
+      }
+    })
+    setCurrentLocation("")
   }
 
   const handleRemoveLocation = (location: string) => {
     setFormData((prev) => ({
       ...prev,
-      candidateLocations: prev.candidateLocations.filter((l) => l !== location),
+      candidateLocations: prev.candidateLocations.filter((l) => l.toLowerCase() !== location.toLowerCase()),
+    }))
+  }
+
+  const handleAddExcludeLocation = () => {
+    const value = currentExcludeLocation.trim()
+    if (!value) return
+    setFormData((prev) => {
+      const updatedExcludes = normalizeLocations([...(prev.excludeLocations || []), value])
+      const locationKey = value.toLowerCase()
+      const updatedIncludes = (prev.candidateLocations || []).filter((loc) => loc.toLowerCase() !== locationKey)
+      return {
+        ...prev,
+        excludeLocations: updatedExcludes,
+        candidateLocations: updatedIncludes,
+      }
+    })
+    setCurrentExcludeLocation("")
+  }
+
+  const handleRemoveExcludeLocation = (location: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      excludeLocations: prev.excludeLocations.filter((l) => l.toLowerCase() !== location.toLowerCase()),
     }))
   }
 
@@ -155,22 +198,6 @@ export default function CreateRequirementPage() {
                         />
                       </div>
 
-                      <div>
-                        <Label htmlFor="job-location" className="text-slate-700">
-                          Job location *
-                        </Label>
-                        <div className="relative mt-2">
-                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                          <Input
-                            id="job-location"
-                            placeholder="Specify the location for this requirement"
-                            value={formData.jobLocation}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, jobLocation: e.target.value }))}
-                            className="pl-10 bg-white border-slate-200"
-                            required
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
 
@@ -258,51 +285,109 @@ export default function CreateRequirementPage() {
 
                       <div>
                         <Label className="text-slate-700">Candidate locations *</Label>
-                        <div className="mt-2 space-y-3">
-                          <div className="flex space-x-2">
-                            <Input
-                              placeholder="Add up to 3 of your preferred candidate locations"
-                              value={currentLocation}
-                              onChange={(e) => setCurrentLocation(e.target.value)}
-                              onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddLocation())}
-                              className="bg-white border-slate-200"
-                            />
-                            <Button type="button" onClick={handleAddLocation} size="sm">
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          {formData.candidateLocations.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {formData.candidateLocations.map((location) => (
-                                <Badge
-                                  key={location}
-                                  variant="secondary"
-                                  className="bg-purple-100 text-purple-800 border-purple-200"
-                                >
-                                  {location}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveLocation(location)}
-                                    className="ml-2 hover:text-red-600"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </Badge>
-                              ))}
+                        <div className="mt-2 space-y-4">
+                          <div>
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Add preferred candidate locations"
+                                value={currentLocation}
+                                onChange={(e) => setCurrentLocation(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault()
+                                    handleAddLocation()
+                                  }
+                                }}
+                                className="bg-white border-slate-200"
+                              />
+                              <Button type="button" onClick={handleAddLocation} size="sm">
+                                <Plus className="w-4 h-4" />
+                              </Button>
                             </div>
-                          )}
-                          <div className="flex items-center space-x-2">
+                            {formData.candidateLocations.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {formData.candidateLocations.map((location) => (
+                                  <Badge
+                                    key={location}
+                                    variant="secondary"
+                                    className="bg-purple-100 text-purple-800 border-purple-200"
+                                  >
+                                    {location}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveLocation(location)}
+                                      className="ml-2 hover:text-red-600"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <Label className="text-sm text-slate-600">Exclude locations (optional)</Label>
+                            <div className="flex space-x-2 mt-2">
+                              <Input
+                                placeholder="Add locations to exclude"
+                                value={currentExcludeLocation}
+                                onChange={(e) => setCurrentExcludeLocation(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault()
+                                    handleAddExcludeLocation()
+                                  }
+                                }}
+                                className="bg-white border-slate-200"
+                              />
+                              <Button type="button" onClick={handleAddExcludeLocation} size="sm" variant="outline">
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {formData.excludeLocations.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {formData.excludeLocations.map((location) => (
+                                  <Badge
+                                    key={location}
+                                    variant="secondary"
+                                    className="bg-red-100 text-red-800 border-red-200"
+                                  >
+                                    {location}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExcludeLocation(location)}
+                                      className="ml-2 hover:text-red-600"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-start space-x-2">
                             <Checkbox
                               id="include-willing"
                               checked={formData.includeWillingToRelocate}
                               onCheckedChange={(checked) =>
-                                setFormData((prev) => ({ ...prev, includeWillingToRelocate: checked as boolean }))
+                                setFormData((prev) => ({ ...prev, includeWillingToRelocate: checked === true }))
                               }
                             />
-                            <Label htmlFor="include-willing" className="text-sm text-slate-600">
-                              Include candidates willing to relocate to the above locations
-                            </Label>
+                            <div className="space-y-1">
+                              <Label htmlFor="include-willing" className="text-sm text-slate-600">
+                                Include candidates willing to relocate to the included locations
+                              </Label>
+                              <p className="text-xs text-slate-500">
+                                When enabled, we will also consider candidates who have marked themselves as willing to relocate.
+                              </p>
+                            </div>
                           </div>
+
+                          <p className="text-xs text-slate-500">
+                            Leave the include list empty to allow candidates from any location. Excluded locations are always filtered out.
+                          </p>
                         </div>
                       </div>
 

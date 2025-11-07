@@ -212,10 +212,14 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     }
 
+    const normalizedLocation = (body.location !== undefined && body.location !== null)
+      ? String(body.location).trim() || null
+      : null;
+
     const requirement = await Requirement.create({
       title: String(body.title).trim(),
       description: String(body.description).trim(),
-      location: String(body.location).trim(),
+      location: normalizedLocation,
       companyId: companyId,
       createdBy: req.user.id,
       experience: body.experience || null,
@@ -259,7 +263,7 @@ router.post('/', authenticateToken, async (req, res) => {
         institute: body.institute || null,
         resumeFreshness: body.resumeFreshness ? new Date(body.resumeFreshness) : null,
         currentCompany: body.currentCompany || null,
-        location: String(body.location).trim(), // Also store in metadata for redundancy
+        location: normalizedLocation, // Also store in metadata for redundancy
         experience: body.experience ? String(body.experience).trim() : null,
         salary: body.salary ? String(body.salary).trim() : null,
         // CRITICAL: Store salary and experience fields in metadata for matching
@@ -715,7 +719,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const updateData = {};
     if (body.title !== undefined) updateData.title = String(body.title).trim();
     if (body.description !== undefined) updateData.description = String(body.description).trim();
-    if (body.location !== undefined) updateData.location = String(body.location).trim();
+    if (body.location !== undefined) {
+      const rawLocationValue = body.location === null ? '' : String(body.location);
+      const normalizedLocationUpdate = rawLocationValue.trim();
+      if (!normalizedLocationUpdate || normalizedLocationUpdate.toLowerCase() === 'undefined' || normalizedLocationUpdate.toLowerCase() === 'null') {
+        updateData.location = null;
+      } else {
+        updateData.location = normalizedLocationUpdate;
+      }
+    }
     if (body.experience !== undefined) updateData.experience = body.experience || null;
     if (body.workExperienceMin !== undefined || body.experienceMin !== undefined) {
       updateData.experienceMin = body.workExperienceMin || body.experienceMin || null;
@@ -806,7 +818,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
       excludeSkills: body.excludeSkills !== undefined 
         ? (Array.isArray(body.excludeSkills) ? body.excludeSkills : (body.excludeSkills ? [body.excludeSkills] : []))
         : (Array.isArray(existingMetadata.excludeSkills) ? existingMetadata.excludeSkills : []),
-      location: body.location !== undefined ? String(body.location).trim() : (existingMetadata.location || rawRequirement?.location || null),
+      location: (() => {
+        if (body.location !== undefined) {
+          const rawLocationValue = body.location === null ? '' : String(body.location);
+          const normalizedLocationValue = rawLocationValue.trim();
+          if (!normalizedLocationValue || normalizedLocationValue.toLowerCase() === 'undefined' || normalizedLocationValue.toLowerCase() === 'null') {
+            return null;
+          }
+          return normalizedLocationValue;
+        }
+        return existingMetadata.location || rawRequirement?.location || null;
+      })(),
       experience: body.experience !== undefined ? (body.experience ? String(body.experience).trim() : null) : (existingMetadata.experience || rawRequirement?.experience || null),
       salary: body.salary !== undefined ? (body.salary ? String(body.salary).trim() : null) : (existingMetadata.salary || rawRequirement?.salary || null)
     };

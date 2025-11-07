@@ -139,16 +139,19 @@ export default function JobDetailPage() {
                   ? metadata.hiringCompany?.description || 'Company description not available'
                   : res.data.company?.description || res.data.employer?.description || res.data.company?.about || res.data.employer?.about || 'Company description not available',
                 photos: res.data.photos || [],
-              // Hot Vacancy Premium Features
-              isHotVacancy: res.data.isHotVacancy || false,
-              externalApplyUrl: res.data.externalApplyUrl || '',
-              whyWorkWithUs: res.data.whyWorkWithUs || '',
-              videoBanner: res.data.videoBanner || '',
-              companyProfile: res.data.companyProfile || '',
-              officeImages: res.data.officeImages || [],
-              attachmentFiles: res.data.attachmentFiles || [],
-              // Branding Media from customBranding
-              brandingMedia: res.data.customBranding?.brandingMedia || []
+                // Hot Vacancy Premium Features
+                isHotVacancy: res.data.isHotVacancy || false,
+                externalApplyUrl: res.data.externalApplyUrl || '',
+                whyWorkWithUs: res.data.whyWorkWithUs || '',
+                videoBanner: res.data.videoBanner || '',
+                companyProfile: res.data.companyProfile || '',
+                officeImages: res.data.officeImages || [],
+                attachmentFiles: res.data.attachmentFiles || [],
+                // Branding Media from customBranding
+                brandingMedia: res.data.customBranding?.brandingMedia || [],
+                // Application timelines
+                validTill: res.data.validTill || res.data.valid_till || metadata.validTill || metadata.valid_till || null,
+                applicationDeadline: res.data.applicationDeadline || res.data.application_deadline || metadata.applicationDeadline || metadata.application_deadline || null
               }
               
               console.log('✅ Transformed job data:', transformedJob)
@@ -216,13 +219,15 @@ export default function JobDetailPage() {
               officeImages: res.data.officeImages || [],
               attachmentFiles: res.data.attachmentFiles || [],
               // Branding Media from customBranding
-              brandingMedia: res.data.customBranding?.brandingMedia || []
+              brandingMedia: res.data.customBranding?.brandingMedia || [],
+              // Application timelines
+              validTill: res.data.validTill || res.data.valid_till || null,
+              applicationDeadline: res.data.applicationDeadline || res.data.application_deadline || null
             }
             
             console.log('✅ Transformed job data (fallback):', transformedJob)
             console.log('📸 Job photos for jobseeker (fallback):', res.data.photos)
-            setJob({ ...transformedJob, validTill: res.data.validTill })
-            setJob({ ...transformedJob, validTill: (res.data as any).validTill })
+            setJob(transformedJob)
             setJobLoading(false)
             return
           } else {

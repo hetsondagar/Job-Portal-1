@@ -507,6 +507,7 @@ export interface Requirement {
   benefits?: string[];
   candidateDesignations?: string[];
   candidateLocations?: string[];
+  excludeLocations?: string[];
   includeWillingToRelocate?: boolean;
   currentSalaryMin?: number;
   currentSalaryMax?: number;
