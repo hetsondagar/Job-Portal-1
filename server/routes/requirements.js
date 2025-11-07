@@ -1784,6 +1784,10 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     const candidateLocations = (metadata.candidateLocations && metadata.candidateLocations.length > 0)
       ? metadata.candidateLocations
       : ((requirement.candidateLocations && requirement.candidateLocations.length > 0) ? requirement.candidateLocations : []);
+    
+    // Extract exclude locations from metadata
+    const excludeLocations = Array.isArray(metadata.excludeLocations) ? metadata.excludeLocations : (metadata.excludeLocations ? [metadata.excludeLocations] : (metadata.exclude_locations ? (Array.isArray(metadata.exclude_locations) ? metadata.exclude_locations : [metadata.exclude_locations]) : []));
+    
     const candidateDesignations = (metadata.candidateDesignations && metadata.candidateDesignations.length > 0)
       ? metadata.candidateDesignations
       : ((requirement.candidateDesignations && requirement.candidateDesignations.length > 0) ? requirement.candidateDesignations : []);
@@ -2917,7 +2921,8 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             company,
             is_current,
             start_date,
-            end_date
+            end_date,
+            description
           FROM work_experiences 
           WHERE user_id IN (:allCandidateIds)
           ORDER BY user_id, is_current DESC, start_date DESC
@@ -2926,13 +2931,31 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           type: QueryTypes.SELECT
         });
         
-        // Group work experience by user_id
+        // Group work experience by user_id and extract currentDesignation from description
         workExpResults.forEach((exp) => {
           const userId = exp.user_id;
           if (!workExperienceMap.has(userId)) {
             workExperienceMap.set(userId, []);
           }
-          workExperienceMap.get(userId).push(exp);
+          
+          // Extract currentDesignation from description if present
+          // Format: "Designation: {currentDesignation}\n\n{description}"
+          let currentDesignation = null;
+          let description = exp.description || '';
+          
+          if (description && description.startsWith('Designation: ')) {
+            const lines = description.split('\n\n');
+            const designationLine = lines[0];
+            currentDesignation = designationLine.replace('Designation: ', '').trim();
+            // Keep the rest of description for potential future use
+            description = lines.slice(1).join('\n\n');
+          }
+          
+          workExperienceMap.get(userId).push({
+            ...exp,
+            currentDesignation: currentDesignation || null,
+            description: description || null
+          });
         });
         
         console.log(`✅ Fetched work experience for ${workExperienceMap.size} candidates`);
@@ -3086,15 +3109,22 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         if (currentExp && currentExp.company) {
           // Always use work experience data if current experience exists
           currentCompany = currentExp.company;
-          currentDesignation = currentExp.title || null;
-          console.log(`✅ Candidate ${candidate.id}: Using work experience - Company: ${currentCompany}, Designation: ${currentDesignation}`);
+          // CRITICAL: Use currentDesignation from description if available, otherwise use title
+          // currentDesignation is extracted from description field in the format "Designation: {currentDesignation}\n\n{description}"
+          currentDesignation = (currentExp.currentDesignation && currentExp.currentDesignation.trim()) 
+            ? currentExp.currentDesignation.trim() 
+            : (currentExp.title || null);
+          console.log(`✅ Candidate ${candidate.id}: Using work experience - Company: ${currentCompany}, Designation: ${currentDesignation} (from ${currentExp.currentDesignation ? 'currentDesignation field' : 'title'})`);
         } else {
           // Fallback: use first experience if no current experience marked (sorted by start_date DESC)
           const firstExp = candidateWorkExps[0];
           if (firstExp && firstExp.company) {
             currentCompany = firstExp.company;
-            currentDesignation = firstExp.title || null;
-            console.log(`⚠️ Candidate ${candidate.id}: No current experience marked, using first experience - Company: ${currentCompany}`);
+            // CRITICAL: Use currentDesignation from description if available, otherwise use title
+            currentDesignation = (firstExp.currentDesignation && firstExp.currentDesignation.trim()) 
+              ? firstExp.currentDesignation.trim() 
+              : (firstExp.title || null);
+            console.log(`⚠️ Candidate ${candidate.id}: No current experience marked, using first experience - Company: ${currentCompany}, Designation: ${currentDesignation}`);
           }
         }
         
