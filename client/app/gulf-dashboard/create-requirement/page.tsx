@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, X, Plus, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { motion } from "framer-motion"
 import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { useToast } from "@/hooks/use-toast"
@@ -22,8 +20,41 @@ import DepartmentDropdown from "@/components/ui/department-dropdown"
 import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 import { GulfEmployerAuthGuard } from "@/components/gulf-employer-auth-guard"
 
+const commonSkills = [
+  "React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "PHP", "Ruby", "Go", "Swift", "Kotlin",
+  "HTML", "CSS", "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch",
+  "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Jenkins", "Git", "GitLab", "GitHub",
+  "Machine Learning", "Data Science", "Analytics", "Business Intelligence", "Project Management", "Agile", "Scrum",
+  "Communication", "Leadership", "Problem Solving", "Teamwork", "Time Management", "Critical Thinking",
+  "Sales", "Marketing", "Customer Service", "Finance", "Accounting", "HR", "Operations", "Strategy"
+]
+
+const commonBenefits = [
+  "Competitive salary", "Health insurance", "Flexible working hours", "Professional development",
+  "Remote work", "Stock options", "Gym membership", "Free lunch"
+]
+
+const formatSkillText = (text: string) =>
+  text
+    .trim()
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ")
+
+const normalizeLocations = (values: string[]): string[] => {
+  const seen = new Set<string>()
+  return values
+    .map(value => value.trim())
+    .filter(value => {
+      if (!value) return false
+      const key = value.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
 export default function GulfCreateRequirementPage() {
-  const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -31,13 +62,16 @@ export default function GulfCreateRequirementPage() {
   const [currentIncludeSkill, setCurrentIncludeSkill] = useState("")
   const [currentExcludeSkill, setCurrentExcludeSkill] = useState("")
   const [currentBenefit, setCurrentBenefit] = useState("")
+  const [currentCandidateDesignation, setCurrentCandidateDesignation] = useState("")
+  const [currentLocation, setCurrentLocation] = useState("")
+  const [currentExcludeLocation, setCurrentExcludeLocation] = useState("")
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
 
-  // Initialize form data - same structure as employer-dashboard
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    location: "",
     experience: "",
     salary: "",
     jobType: "Full-time",
@@ -52,24 +86,22 @@ export default function GulfCreateRequirementPage() {
     remoteWork: "Hybrid",
     travelRequired: "No",
     benefits: [] as string[],
-    // Additional fields for create form
     keySkills: [] as string[],
     candidateDesignations: [] as string[],
-    currentDesignation: "",
     candidateLocations: [] as string[],
+    excludeLocations: [] as string[],
     includeWillingToRelocate: false,
     workExperienceMin: "",
     workExperienceMax: "",
     currentSalaryMin: "",
     currentSalaryMax: "",
-    currency: "AED", // Gulf default currency
+    currency: "AED",
     includeNotMentioned: false,
-    // Newly added fields
     institute: "",
     resumeFreshness: "",
     currentCompany: "",
     lastActive: "",
-    diversityPreference: [] as string[], // ['all', 'male', 'female', 'other']
+    diversityPreference: [] as string[],
   })
 
   const handleInputChange = (field: string, value: string | string[] | boolean) => {
@@ -77,20 +109,6 @@ export default function GulfCreateRequirementPage() {
       ...prev,
       [field]: value
     }))
-  }
-
-  const handleSkillChange = (skill: string, action: 'add' | 'remove') => {
-    if (action === 'add' && !formData.skills.includes(skill)) {
-      setFormData(prev => ({
-        ...prev,
-        skills: [...prev.skills, skill]
-      }))
-    } else if (action === 'remove') {
-      setFormData(prev => ({
-        ...prev,
-        skills: prev.skills.filter(s => s !== skill)
-      }))
-    }
   }
 
   const handleBenefitChange = (benefit: string, action: 'add' | 'remove') => {
@@ -107,21 +125,13 @@ export default function GulfCreateRequirementPage() {
     }
   }
 
-  // Function to format skill text to proper case
-  const formatSkillText = (text: string) => {
-    return text
-      .trim()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ')
-  }
-
   const handleAddSkill = () => {
     const formattedSkill = formatSkillText(currentSkill)
     if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
       setFormData(prev => ({
         ...prev,
-        keySkills: [...prev.keySkills, formattedSkill]
+        keySkills: [...prev.keySkills, formattedSkill],
+        includeSkills: [...new Set([...(prev.includeSkills || []), formattedSkill])]
       }))
       setCurrentSkill("")
     }
@@ -180,12 +190,76 @@ export default function GulfCreateRequirementPage() {
     }
   }
 
+  const handleAddDesignation = () => {
+    const designation = formatSkillText(currentCandidateDesignation)
+    if (designation && !formData.candidateDesignations.includes(designation)) {
+      setFormData(prev => ({
+        ...prev,
+        candidateDesignations: [...prev.candidateDesignations, designation]
+      }))
+      setCurrentCandidateDesignation("")
+    }
+  }
+
+  const handleRemoveDesignation = (designation: string) => {
+    setFormData(prev => ({
+      ...prev,
+      candidateDesignations: prev.candidateDesignations.filter(d => d !== designation)
+    }))
+  }
+
+  const handleAddLocation = () => {
+    const location = currentLocation.trim()
+    if (!location) return
+    setFormData(prev => {
+      const updatedIncludes = normalizeLocations([...(prev.candidateLocations || []), location])
+      const locationKey = location.toLowerCase()
+      const updatedExcludes = (prev.excludeLocations || []).filter(loc => loc?.toLowerCase() !== locationKey)
+      return {
+        ...prev,
+        candidateLocations: updatedIncludes,
+        excludeLocations: updatedExcludes
+      }
+    })
+    setCurrentLocation("")
+  }
+
+  const handleRemoveLocation = (location: string) => {
+    setFormData(prev => ({
+      ...prev,
+      candidateLocations: (prev.candidateLocations || []).filter(loc => loc?.toLowerCase() !== location.toLowerCase())
+    }))
+  }
+
+  const handleAddExcludeLocation = () => {
+    const location = currentExcludeLocation.trim()
+    if (!location) return
+    setFormData(prev => {
+      const updatedExcludes = normalizeLocations([...(prev.excludeLocations || []), location])
+      const locationKey = location.toLowerCase()
+      const updatedIncludes = (prev.candidateLocations || []).filter(loc => loc?.toLowerCase() !== locationKey)
+      return {
+        ...prev,
+        excludeLocations: updatedExcludes,
+        candidateLocations: updatedIncludes
+      }
+    })
+    setCurrentExcludeLocation("")
+  }
+
+  const handleRemoveExcludeLocation = (location: string) => {
+    setFormData(prev => ({
+      ...prev,
+      excludeLocations: (prev.excludeLocations || []).filter(loc => loc?.toLowerCase() !== location.toLowerCase())
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Front-end validation for required fields
     const missing: string[] = []
     if (!formData.title.trim()) missing.push('Job Title')
     if (!formData.description.trim()) missing.push('Job Description')
+    if (!formData.location.trim()) missing.push('Location')
     if (missing.length > 0) {
       toast({
         title: 'Missing required fields',
@@ -198,10 +272,19 @@ export default function GulfCreateRequirementPage() {
     setIsLoading(true)
 
     try {
+      const jobLocation = formData.location.trim()
+      let includeLocations = normalizeLocations(formData.candidateLocations || [])
+      const excludeLocations = normalizeLocations(formData.excludeLocations || [])
+      const includeSkills = Array.from(new Set([...(formData.includeSkills || []), ...(formData.keySkills || [])]))
+
+      if (jobLocation) {
+        includeLocations = normalizeLocations([...(includeLocations || []), jobLocation])
+      }
+
       const payload: any = {
         title: formData.title,
         description: formData.description,
-        location: null,
+        location: jobLocation,
         workExperienceMin: formData.workExperienceMin && String(formData.workExperienceMin).trim() !== '' ? Number(formData.workExperienceMin) : undefined,
         workExperienceMax: formData.workExperienceMax && String(formData.workExperienceMax).trim() !== '' ? Number(formData.workExperienceMax) : undefined,
         currentSalaryMin: formData.currentSalaryMin && String(formData.currentSalaryMin).trim() !== '' ? Number(formData.currentSalaryMin) : undefined,
@@ -210,7 +293,7 @@ export default function GulfCreateRequirementPage() {
         jobType: formData.jobType,
         skills: formData.skills,
         keySkills: formData.keySkills,
-        includeSkills: formData.includeSkills,
+        includeSkills,
         excludeSkills: formData.excludeSkills,
         education: formData.education,
         industry: formData.industry,
@@ -219,9 +302,9 @@ export default function GulfCreateRequirementPage() {
         noticePeriod: formData.noticePeriod,
         remoteWork: formData.remoteWork,
         travelRequired: formData.travelRequired === 'Yes' ? true : (formData.travelRequired === 'No' ? false : undefined),
-        candidateLocations: formData.candidateLocations,
+        candidateLocations: includeLocations,
+        excludeLocations,
         candidateDesignations: formData.candidateDesignations,
-        currentDesignation: formData.currentDesignation || undefined,
         includeWillingToRelocate: !!formData.includeWillingToRelocate,
         includeNotMentioned: !!formData.includeNotMentioned,
         benefits: formData.benefits,
@@ -230,7 +313,7 @@ export default function GulfCreateRequirementPage() {
         currentCompany: formData.currentCompany || undefined,
         lastActive: formData.lastActive && String(formData.lastActive).trim() !== '' ? Number(formData.lastActive) : undefined,
         diversityPreference: formData.diversityPreference.length > 0 ? formData.diversityPreference : undefined,
-        region: "gulf", // Ensure Gulf region
+        region: "gulf",
       }
 
       console.log('🔍 Submitting Gulf requirement payload:', payload)
@@ -238,25 +321,16 @@ export default function GulfCreateRequirementPage() {
       console.log('✅ Gulf requirement API response:', response)
       if (!response.success) {
         console.error('❌ Gulf requirement creation failed:', response)
-        console.error('❌ Response details:', {
-          success: response.success,
-          message: response.message,
-          errors: (response as any).errors,
-          data: response.data
-        })
         throw new Error(response.message || 'Failed to create requirement')
       }
-      
+
       const createdId = response.data?.id || response.data?.data?.id || ''
-      // End loading before navigating so the toast renders instantly
       setIsLoading(false)
       toast({
         title: "Requirement Created",
         description: createdId ? `Your Gulf requirement has been created successfully. ID: ${createdId}` : 'Your Gulf requirement has been created successfully.',
       })
-      router.push(createdId 
-        ? `/gulf-dashboard/requirements/${createdId}/candidates`
-        : '/gulf-dashboard/requirements')
+      router.push(createdId ? `/gulf-dashboard/requirements/${createdId}/candidates` : '/gulf-dashboard/requirements')
     } catch (error: any) {
       console.error('❌ Error creating Gulf requirement:', error?.message || error)
       toast({
@@ -265,20 +339,9 @@ export default function GulfCreateRequirementPage() {
         variant: "destructive",
       })
     } finally {
-      // Keep as a safeguard; if we navigated above, this is harmless
       setIsLoading(false)
     }
   }
-
-  const commonSkills = [
-    "React", "Node.js", "JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "PHP", "Ruby", "Go", "Swift", "Kotlin",
-    "HTML", "CSS", "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch",
-    "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Jenkins", "Git", "GitLab", "GitHub",
-    "Machine Learning", "Data Science", "Analytics", "Business Intelligence", "Project Management", "Agile", "Scrum",
-    "Communication", "Leadership", "Problem Solving", "Teamwork", "Time Management", "Critical Thinking",
-    "Sales", "Marketing", "Customer Service", "Finance", "Accounting", "HR", "Operations", "Strategy"
-  ]
-  const commonBenefits = ["Competitive salary", "Health insurance", "Flexible working hours", "Professional development", "Remote work", "Stock options", "Gym membership", "Free lunch"]
 
   return (
     <EmployerAuthGuard>
@@ -359,6 +422,16 @@ export default function GulfCreateRequirementPage() {
                             <SelectItem value="Internship">Internship</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="location">Job Location *</Label>
+                        <Input
+                          id="location"
+                          value={formData.location}
+                          onChange={(e) => handleInputChange('location', e.target.value)}
+                          placeholder="e.g., Dubai, UAE"
+                          required
+                        />
                       </div>
                     </div>
 
@@ -505,16 +578,19 @@ export default function GulfCreateRequirementPage() {
                       </div>
                     </div>
 
-                    {/* Legacy Skills (for backward compatibility) */}
+                    {/* Additional Skills */}
                     <div>
                       <Label>Additional Skills</Label>
+                      <p className="text-xs text-slate-500 mb-2">
+                        These skills are automatically included in &quot;Include Skills&quot; above
+                      </p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {formData.skills.map((skill) => (
+                        {formData.keySkills.map((skill) => (
                           <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
                             <span>{skill}</span>
                             <button
                               type="button"
-                              onClick={() => handleSkillChange(skill, 'remove')}
+                              onClick={() => handleRemoveSkill(skill)}
                               className="ml-1 hover:text-red-600"
                             >
                               <X className="w-3 h-3" />
@@ -522,18 +598,198 @@ export default function GulfCreateRequirementPage() {
                           </Badge>
                         ))}
                       </div>
+                      <div className="flex space-x-2 mt-2">
+                        <Input
+                          placeholder="Add skill"
+                          value={currentSkill}
+                          onChange={(e) => setCurrentSkill(e.target.value)}
+                          onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSkill())}
+                        />
+                        <Button type="button" onClick={handleAddSkill} size="sm" variant="outline">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {commonSkills.filter(skill => !formData.skills.includes(skill)).slice(0, 10).map((skill) => (
-                          <Button
-                            key={skill}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSkillChange(skill, 'add')}
-                          >
-                            + {skill}
+                        {commonSkills
+                          .filter(skill => !formData.keySkills.includes(skill))
+                          .slice(0, 10)
+                          .map((skill) => (
+                            <Button
+                              key={skill}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const formattedSkill = formatSkillText(skill)
+                                if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    keySkills: [...prev.keySkills, formattedSkill],
+                                    includeSkills: [...new Set([...(prev.includeSkills || []), formattedSkill])]
+                                  }))
+                                }
+                              }}
+                            >
+                              + {skill}
+                            </Button>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Candidate Profile Preferences */}
+                <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_30px_rgba(16,185,129,0.06)]">
+                  <CardHeader>
+                    <CardTitle>Candidate Profile Preferences</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <Label className="text-slate-700">Candidate designations</Label>
+                      <div className="mt-2 space-y-3">
+                        <div className="flex space-x-2">
+                          <Input
+                            placeholder="Add designations similar to the role you're hiring for"
+                            value={currentCandidateDesignation}
+                            onChange={(e) => setCurrentCandidateDesignation(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                handleAddDesignation()
+                              }
+                            }}
+                            className="bg-white border-slate-200"
+                          />
+                          <Button type="button" onClick={handleAddDesignation} size="sm">
+                            <Plus className="w-4 h-4" />
                           </Button>
-                        ))}
+                        </div>
+                        {formData.candidateDesignations.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.candidateDesignations.map((designation) => (
+                              <Badge
+                                key={designation}
+                                variant="secondary"
+                                className="bg-emerald-100 text-emerald-800 border-emerald-200 flex items-center space-x-1"
+                              >
+                                <span>{designation}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDesignation(designation)}
+                                  className="ml-1 hover:text-red-600"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-6 space-y-4">
+                        <Label className="text-slate-700">Candidate locations *</Label>
+                        <div className="space-y-3">
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Add preferred candidate locations (e.g., Dubai, Riyadh)"
+                              value={currentLocation}
+                              onChange={(e) => setCurrentLocation(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  handleAddLocation()
+                                }
+                              }}
+                              className="bg-white border-slate-200"
+                            />
+                            <Button type="button" onClick={handleAddLocation} size="sm">
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          {formData.candidateLocations.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {formData.candidateLocations.map((location) => (
+                                <Badge
+                                  key={location}
+                                  variant="secondary"
+                                  className="bg-purple-100 text-purple-800 border-purple-200 flex items-center space-x-1"
+                                >
+                                  <span>{location}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveLocation(location)}
+                                    className="ml-1 hover:text-red-600"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm text-slate-600">Exclude locations (optional)</Label>
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Add locations to exclude"
+                              value={currentExcludeLocation}
+                              onChange={(e) => setCurrentExcludeLocation(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  handleAddExcludeLocation()
+                                }
+                              }}
+                              className="bg-white border-slate-200"
+                            />
+                            <Button type="button" onClick={handleAddExcludeLocation} size="sm" variant="outline">
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          {formData.excludeLocations.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {formData.excludeLocations.map((location) => (
+                                <Badge
+                                  key={location}
+                                  variant="secondary"
+                                  className="bg-red-100 text-red-800 border-red-200 flex items-center space-x-1"
+                                >
+                                  <span>{location}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveExcludeLocation(location)}
+                                    className="ml-1 hover:text-red-600"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-start space-x-2">
+                          <Checkbox
+                            id="include-willing"
+                            checked={formData.includeWillingToRelocate}
+                            onCheckedChange={(checked) =>
+                              setFormData(prev => ({ ...prev, includeWillingToRelocate: checked === true }))
+                            }
+                          />
+                          <div className="space-y-1">
+                            <Label htmlFor="include-willing" className="text-sm text-slate-600">
+                              Include candidates willing to relocate to the included locations
+                            </Label>
+                            <p className="text-xs text-slate-500">
+                              When enabled, candidates who marked themselves as willing to relocate will also be included.
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-500">
+                          Leave the include list empty to allow candidates from any location. Excluded locations are always applied.
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -746,15 +1002,6 @@ export default function GulfCreateRequirementPage() {
                       />
                     </div>
 
-                    <div>
-                      <Label htmlFor="currentDesignation">Current Designation</Label>
-                      <Input
-                        id="currentDesignation"
-                        value={formData.currentDesignation}
-                        onChange={(e) => handleInputChange('currentDesignation', e.target.value)}
-                        placeholder="e.g., Software Engineer, Product Manager"
-                      />
-                    </div>
 
                     <div>
                       <Label htmlFor="lastActive">Last Active (Days Ago)</Label>

@@ -120,7 +120,6 @@ export default function GulfEditRequirementPage() {
             benefits: Array.isArray(req.benefits) ? req.benefits : [],
             keySkills: Array.isArray(req.keySkills) ? req.keySkills : [],
             candidateDesignations: Array.isArray(req.candidateDesignations) ? req.candidateDesignations : [],
-            currentDesignation: (req as any).currentDesignation || "",
             candidateLocations: normalizeLocations((req as any).candidateLocations ?? (req as any).candidate_locations ?? req.candidateLocations ?? []),
             excludeLocations: normalizeLocations((req as any).excludeLocations ?? (req as any).exclude_locations ?? []),
             includeWillingToRelocate: (() => {
@@ -321,6 +320,20 @@ export default function GulfEditRequirementPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData || !params.id || typeof params.id !== 'string') return
+
+    const missingFields: string[] = []
+    if (!formData.title || String(formData.title).trim() === '') missingFields.push('Job Title')
+    if (!formData.description || String(formData.description).trim() === '') missingFields.push('Job Description')
+    if (!formData.location || String(formData.location).trim() === '') missingFields.push('Location')
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing required information",
+        description: `Please provide: ${missingFields.join(', ')}`,
+        variant: "destructive",
+      })
+      return
+    }
     
     setIsLoading(true)
 
@@ -328,19 +341,24 @@ export default function GulfEditRequirementPage() {
       console.log('📤 Submitting update with formData:', {
         industry: formData.industry,
         department: formData.department,
-        location: null,
+        location: String(formData.location || '').trim() || null,
         jobType: formData.jobType,
         education: formData.education
       })
-      const includeLocations = normalizeLocations(formData.candidateLocations)
+      const jobLocation = String(formData.location || '').trim()
+      let includeLocations = normalizeLocations(formData.candidateLocations)
       const excludeLocations = normalizeLocations(formData.excludeLocations)
+
+      if (jobLocation) {
+        includeLocations = normalizeLocations([...(includeLocations || []), jobLocation])
+      }
 
       // Prepare update data - include all fields
       const updateData = {
         region: "gulf",
         title: formData.title,
         description: formData.description,
-        location: null,
+        location: jobLocation || null,
         jobType: formData.jobType,
         skills: formData.skills,
         keySkills: formData.keySkills,
@@ -355,7 +373,6 @@ export default function GulfEditRequirementPage() {
         travelRequired: formData.travelRequired,
         benefits: formData.benefits,
         candidateDesignations: formData.candidateDesignations,
-        currentDesignation: formData.currentDesignation || null,
         candidateLocations: includeLocations,
         excludeLocations: excludeLocations,
         includeWillingToRelocate: Boolean(formData.includeWillingToRelocate),
@@ -561,6 +578,16 @@ export default function GulfEditRequirementPage() {
                           <SelectItem value="Internship">Internship</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="location">Job Location *</Label>
+                      <Input
+                        id="location"
+                        value={formData.location || ""}
+                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        placeholder="e.g., Dubai, UAE"
+                        required
+                      />
                     </div>
                   </div>
 
@@ -1036,15 +1063,6 @@ export default function GulfEditRequirementPage() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="currentDesignation">Current Designation</Label>
-                    <Input
-                      id="currentDesignation"
-                      value={formData.currentDesignation || ""}
-                      onChange={(e) => handleInputChange('currentDesignation', e.target.value)}
-                      placeholder="e.g., Software Engineer, Product Manager"
-                    />
-                  </div>
 
                   <div>
                     <Label htmlFor="lastActive">Last Active (Days Ago)</Label>

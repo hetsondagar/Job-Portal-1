@@ -32,7 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { EmployerNavbar } from "@/components/employer-navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
 import { apiService } from "@/lib/api"
 import { toast } from "sonner"
@@ -240,7 +240,7 @@ export default function HotVacanciesPage() {
   return (
     <EmployerAuthGuard>
       <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-        <EmployerNavbar />
+        <EmployerDashboardNavbar />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 w-full">
           {/* Header */}

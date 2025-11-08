@@ -245,6 +245,7 @@ router.post('/', authenticateToken, async (req, res) => {
       benefits: Array.isArray(body.benefits) ? body.benefits : [],
       metadata: {
         ...(body.metadata || {}),
+        region: body.region || 'india',
         // Store virtual fields in metadata so they persist
         jobType: normalizedJobType,
         education: body.education || null,
@@ -767,6 +768,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // This ensures that when user explicitly clears a field, it gets cleared in metadata too
     const updatedMetadata = {
       ...existingMetadata,
+      region: body.region !== undefined && body.region !== null
+        ? String(body.region).trim() || 'india'
+        : (existingMetadata.region || 'india'),
       // Store virtual fields in metadata so they persist
       jobType: normalizedJobType !== undefined && normalizedJobType !== null ? normalizedJobType : (existingMetadata.jobType || null),
       education: body.education !== undefined ? (body.education || null) : (existingMetadata.education || null),

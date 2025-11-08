@@ -935,7 +935,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { 
       name, industries, companySize, website, description, address, city, state, country, 
-      whyJoinUs, natureOfBusiness, companyTypes, phone, email, about 
+      whyJoinUs, natureOfBusiness, companyTypes, phone, email, about, region 
     } = req.body;
     
     // Check if the user has access to this company
@@ -972,7 +972,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
       state: state || company.state,
       country: country || company.country,
       phone: phone || company.phone,
-      email: email || company.email
+      email: email || company.email,
+      region: region || company.region
     };
 
     // Add new fields if provided (arrays)
