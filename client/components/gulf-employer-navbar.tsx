@@ -122,7 +122,7 @@ export function GulfEmployerNavbar() {
     },
     {
       name: "Manage Requirements",
-      href: "/gulf-dashboard/requirements",
+      href: "/gulf-dashboard/manage-requirements",
       icon: FileText,
       description: "View and manage all your hiring requirements",
     },

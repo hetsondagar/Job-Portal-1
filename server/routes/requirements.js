@@ -1082,6 +1082,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     
     const matchingConditions = [];
     const allAndConditions = []; // For combining all top-level AND conditions (same as candidates endpoint)
+    const appliedFilters = [];
     
     // 1. EXPERIENCE RANGE MATCHING (add to allAndConditions, same as candidates endpoint)
       if (workExperienceMin !== null && workExperienceMin !== undefined) {
