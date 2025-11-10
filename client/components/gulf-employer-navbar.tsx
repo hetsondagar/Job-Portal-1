@@ -20,6 +20,7 @@ export function GulfEmployerNavbar() {
   const { theme, setTheme } = useTheme()
   const { user, logout, refreshUser } = useAuth()
   const [company, setCompany] = useState<any>(null)
+  const [unseenNotifications, setUnseenNotifications] = useState(0)
   const isAdmin = (user?.userType === 'admin') || (user?.preferences?.employerRole === 'admin')
   
 
@@ -35,6 +36,37 @@ export function GulfEmployerNavbar() {
       refreshUser()
     }
   }, [mounted, user, refreshUser])
+
+  // Fetch unseen notifications count
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (user?.id) {
+        try {
+          const response = await apiService.getEmployerNotifications(1, 50, { unread: true })
+          if (response.success && Array.isArray(response.data)) {
+            setUnseenNotifications(response.data.length)
+          }
+        } catch (error) {
+          console.error('Failed to fetch Gulf notifications:', error)
+        }
+      } else {
+        setUnseenNotifications(0)
+      }
+    }
+
+    fetchNotifications()
+  }, [user])
+
+  const handleNotificationClick = async () => {
+    try {
+      const response = await apiService.getEmployerNotifications(1, 50, { unread: true })
+      if (response.success && Array.isArray(response.data)) {
+        setUnseenNotifications(response.data.length)
+      }
+    } catch (error) {
+      console.error('Failed to refresh Gulf notifications:', error)
+    }
+  }
 
   // Get company data if user is an employer
   useEffect(() => {
@@ -240,6 +272,22 @@ export function GulfEmployerNavbar() {
 
           {/* Right side buttons */}
           <div className="hidden lg:flex items-center space-x-3">
+            {/* Notifications */}
+            <Link href="/gulf-dashboard/notifications" onClick={handleNotificationClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-emerald-400"
+              >
+                <Bell className="w-4 h-4" />
+                {unseenNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                    {unseenNotifications > 9 ? '9+' : unseenNotifications}
+                  </span>
+                )}
+              </Button>
+            </Link>
+
             {/* Dark Theme Toggle */}
             <Button
               variant="ghost"

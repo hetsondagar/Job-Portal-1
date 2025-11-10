@@ -27,6 +27,7 @@ export function MultiSelectDropdown({
   maxHeight = "400px"
 }: MultiSelectDropdownProps) {
   const [localSelected, setLocalSelected] = useState<string[]>(selectedValues)
+  const resolvedMaxHeight = maxHeight || "60vh"
 
   // Prevent body scrolling when dropdown is open and focus the dropdown
   useEffect(() => {
@@ -97,7 +98,7 @@ export function MultiSelectDropdown({
       onKeyDown={handleKeyDown}
       tabIndex={-1}
       data-multiselect-overlay
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: "auto" }}
     >
       <Card 
         className="w-full max-w-2xl max-h-[90vh] flex flex-col"
@@ -124,8 +125,8 @@ export function MultiSelectDropdown({
         </CardHeader>
         
         <CardContent className="p-0 flex-1 overflow-hidden">
-          <ScrollArea className="h-full" style={{ maxHeight }}>
-            <div className="p-6 space-y-3">
+          <ScrollArea className="h-full overflow-y-auto" style={{ maxHeight: resolvedMaxHeight }}>
+            <div className="p-6 pb-4 space-y-3">
               {options.map((option) => (
                 <div
                   key={option}

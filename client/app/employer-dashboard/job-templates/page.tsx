@@ -280,7 +280,7 @@ export default function JobTemplatesPage() {
                 Create Template
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Create New Template</DialogTitle>
                 <DialogDescription>
