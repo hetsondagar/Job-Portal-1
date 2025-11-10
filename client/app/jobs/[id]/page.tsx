@@ -99,6 +99,8 @@ export default function JobDetailPage() {
                     : (metadata.companyName || res.data.company?.name || res.data.company || res.data.employer || 'Company Name'),
                 companyId: res.data.companyId || res.data.employerId || '',
                 companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
+                createdBy: res.data.createdBy || res.data.created_by || res.data.employerId || res.data.employer_id || metadata?.createdBy || '',
+                employerId: res.data.employerId || res.data.employer_id || res.data.createdBy || '',
                 // Consultancy-specific data
                 isConsultancy: isConsultancy,
                 consultancyName: metadata.consultancyName || null,
@@ -176,6 +178,8 @@ export default function JobDetailPage() {
               company: res.data.company || res.data.employer || 'Company Name',
               companyId: res.data.companyId || res.data.employerId || '',
               companyLogo: res.data.company?.logo || res.data.employer?.logo || "/placeholder.svg",
+              createdBy: res.data.createdBy || res.data.created_by || res.data.employerId || res.data.employer_id || '',
+              employerId: res.data.employerId || res.data.employer_id || res.data.createdBy || '',
               location: res.data.location || 'Location not specified',
               experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
               experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
@@ -466,9 +470,48 @@ export default function JobDetailPage() {
 
   const hasApplied = useMemo(() => sampleJobManager.hasApplied(jobIdFromParams), [jobIdFromParams, forceUpdate])
 
+  const isEmployerAccount = useMemo(() => {
+    if (!user) return false
+    return user.userType === 'employer' || user.userType === 'admin'
+  }, [user])
+
+  const isOwnJob = useMemo(() => {
+    if (!isEmployerAccount || !user || !job) return false
+
+    const userIdentifiers = [
+      user.id,
+      (user as any).userId,
+      (user as any).employerId,
+    ].filter(Boolean)
+
+    const jobOwnerIdentifiers = [
+      (job as any)?.createdBy,
+      (job as any)?.created_by,
+      (job as any)?.employerId,
+      (job as any)?.employer_id,
+      (job as any)?.postedBy,
+      (job as any)?.posted_by,
+    ].filter(Boolean)
+
+    if (userIdentifiers.length > 0 && jobOwnerIdentifiers.some((id) => userIdentifiers.includes(id))) {
+      return true
+    }
+
+    if (user.companyId && job.companyId && user.companyId === job.companyId) {
+      return true
+    }
+
+    return false
+  }, [isEmployerAccount, user, job])
+
   const handleApply = async () => {
     if (!user) {
       setShowAuthDialog(true)
+      return
+    }
+
+    if (isOwnJob) {
+      toast.error('You cannot apply to a job you posted.')
       return
     }
 
@@ -506,6 +549,21 @@ export default function JobDetailPage() {
 
     // For real jobs, open the application dialog
     setShowApplicationDialog(true)
+  }
+
+  const handleExternalApply = () => {
+    if (!job) {
+      return
+    }
+    if (isOwnJob) {
+      toast.error('You cannot apply to a job you posted.')
+      return
+    }
+    if (!user) {
+      setShowAuthDialog(true)
+      return
+    }
+    window.open(job.externalApplyUrl, '_blank')
   }
 
   const handleApplicationSuccess = () => {
@@ -836,28 +894,29 @@ export default function JobDetailPage() {
                       </div>
                     )}
                     <Button
-                      onClick={job?.externalApplyUrl ? () => {
-                        if (!user) {
-                          setShowAuthDialog(true)
-                          return
-                        }
-                        window.open(job.externalApplyUrl, '_blank')
-                      } : handleApply}
+                      onClick={job?.externalApplyUrl ? handleExternalApply : handleApply}
                       className={`w-full ${
                         hasApplied
                           ? 'bg-green-600 hover:bg-green-700 cursor-default'
+                          : isOwnJob
+                            ? 'bg-gray-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-not-allowed'
                           : isExpired
                             ? 'bg-gray-400 cursor-not-allowed'
                             : job?.isHotVacancy
                               ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700'
                               : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
                       }`}
-                      disabled={hasApplied || isExpired}
+                      disabled={hasApplied || isExpired || isOwnJob}
                     >
                       {hasApplied ? (
                         <>
                           <CheckCircle className="w-4 h-4 mr-2" />
                           Applied
+                        </>
+                      ) : isOwnJob ? (
+                        <>
+                          <AlertCircle className="w-4 h-4 mr-2" />
+                          You posted this job
                         </>
                       ) : job?.externalApplyUrl ? (
                         <>
@@ -890,6 +949,17 @@ export default function JobDetailPage() {
                           <div className="text-xs text-yellow-800 dark:text-yellow-200">
                             <strong className="font-semibold">Note:</strong> You'll be redirected to the company's external career portal. 
                             Your application will be managed by the employer on their platform.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isOwnJob && (
+                      <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-emerald-800 dark:text-emerald-200">
+                            This posting belongs to your employer account. To manage applications, go back to the employer dashboard.
                           </div>
                         </div>
                       </div>
