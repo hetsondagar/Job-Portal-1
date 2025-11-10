@@ -64,6 +64,32 @@ export default function GulfNavbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
   
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const handleOpenLogin = () => {
+      setIsMenuOpen(false)
+      setShowRegisterDialog(false)
+      setShowLoginDialog(true)
+    }
+
+    const handleOpenRegister = () => {
+      setIsMenuOpen(false)
+      setShowLoginDialog(false)
+      setShowRegisterDialog(true)
+    }
+
+    window.addEventListener('gulf-auth:open-login', handleOpenLogin)
+    window.addEventListener('gulf-auth:open-register', handleOpenRegister)
+
+    return () => {
+      window.removeEventListener('gulf-auth:open-login', handleOpenLogin)
+      window.removeEventListener('gulf-auth:open-register', handleOpenRegister)
+    }
+  }, [])
+  
 
   const handleLogout = async () => {
     try {

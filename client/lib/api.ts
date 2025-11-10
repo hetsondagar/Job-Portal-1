@@ -124,6 +124,9 @@ export interface SignupData {
   phone?: string;
   experience?: string;
   region?: 'india' | 'gulf' | 'other';
+  regions?: string[];
+  preferences?: any;
+  portalSource?: string;
   agreeToTerms: boolean;
   subscribeNewsletter?: boolean;
 }

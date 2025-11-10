@@ -32,7 +32,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion } from "framer-motion"
 import GulfNavbar from "@/components/gulf-navbar"
@@ -98,7 +97,6 @@ export default function GulfJobsPage() {
   const { user, loading } = useAuth()
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set())
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
   const [sortBy, setSortBy] = useState("recent")
@@ -109,6 +107,15 @@ export default function GulfJobsPage() {
   const [selectedJob, setSelectedJob] = useState<GulfJob | null>(null)
   const [preferredJobs, setPreferredJobs] = useState<GulfJob[]>([])
   const [preferredJobsLoading, setPreferredJobsLoading] = useState(false)
+
+  const openGulfAuthDialog = useCallback((mode: 'login' | 'register' = 'login') => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const eventName = mode === 'register' ? 'gulf-auth:open-register' : 'gulf-auth:open-login'
+    window.dispatchEvent(new Event(eventName))
+  }, [])
 
   // Check if user has access to Gulf pages
   const [accessDenied, setAccessDenied] = useState(false)
@@ -400,7 +407,8 @@ export default function GulfJobsPage() {
 
   const handleSaveJob = async (jobId: string) => {
     if (!user) {
-      setShowAuthDialog(true)
+      toast.info('Please sign in to Gulf portal to save jobs.')
+      openGulfAuthDialog('login')
       return
     }
 
@@ -429,7 +437,8 @@ export default function GulfJobsPage() {
 
   const handleApply = async (jobId: string) => {
     if (!user) {
-      setShowAuthDialog(true)
+      toast.info('Sign in to Gulf portal to apply for jobs.')
+      openGulfAuthDialog('login')
       return
     }
 
@@ -1377,30 +1386,6 @@ export default function GulfJobsPage() {
         </div>
       </div>
 
-      {/* Authentication Dialog */}
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Login Required</DialogTitle>
-            <DialogDescription>
-              You need to be logged in to save jobs and apply for positions. Please register or login to continue.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col space-y-3 mt-6">
-            <Link href="/register" className="w-full">
-              <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
-                Register Now
-              </Button>
-            </Link>
-            <Link href="/login" className="w-full">
-              <Button variant="outline" className="w-full bg-transparent">
-                Login
-              </Button>
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Footer */}
       <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Effects */}
@@ -1489,26 +1474,6 @@ export default function GulfJobsPage() {
           isGulfJob={true}
         />
       )}
-
-      {/* Auth Dialog */}
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign In Required</DialogTitle>
-            <DialogDescription>
-              You need to sign in to apply for Gulf jobs and access all features.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-3">
-            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => window.location.href = '/login'}>
-              Sign In
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

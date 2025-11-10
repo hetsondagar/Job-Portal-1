@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { apiService } from '@/lib/api'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,8 +55,9 @@ export function RegistrationChatbot({
   jobseekerCharacterSrc, 
   buttonCharacterSrc 
 }: ChatbotConfig = {}) {
-  const { user, loading, login } = useAuth()
+  const { user, loading, login, signup: authSignup, refreshUser } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [currentStep, setCurrentStep] = useState<'greeting' | 'purpose' | 'email' | 'checkAccount' | 'login' | 'name' | 'engaging' | 'registration' | 'complete' | 'goodbye'>('greeting')
@@ -74,6 +75,12 @@ export function RegistrationChatbot({
   const [currentField, setCurrentField] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const isHomePortal = pathname === '/'
+  const isGulfOpportunitiesPortal = pathname === '/gulf-opportunities'
+  const shouldEmphasizeDualAccess = isHomePortal || isGulfOpportunitiesPortal
+  const defaultPortalRegion = isGulfOpportunitiesPortal ? 'gulf' : 'india'
+  const dualAccessMessage = 'By registering from here you are eligible for Gulf jobs and Indian jobs.'
 
   // Don't show chatbot if user is authenticated
   useEffect(() => {
@@ -103,10 +110,15 @@ export function RegistrationChatbot({
       setTimeout(() => {
         addBotMessage("I'm here to help you with job opportunities in India and Gulf regions! 🌍")
       }, 2000)
+      if (shouldEmphasizeDualAccess) {
+        setTimeout(() => {
+          addBotMessage(dualAccessMessage)
+        }, 3200)
+      }
       setTimeout(() => {
         addBotMessage("Are you looking for a job, or are you here to get an employee?")
         setCurrentStep('purpose')
-      }, 3500)
+      }, shouldEmphasizeDualAccess ? 4800 : 3500)
     }
   }, [isOpen, isGoodbye])
 
@@ -168,6 +180,49 @@ export function RegistrationChatbot({
       timestamp: new Date()
     }
     setMessages(prev => [...prev, newMessage])
+  }
+
+  const renderTextWithLinks = (text: string) => {
+    const linkDefinitions = [
+      { token: '/employer-register', href: '/employer-register', label: 'Employer Register' },
+      { token: '/employer-login', href: '/employer-login', label: 'Employer Login' }
+    ]
+
+    const parts: ReactNode[] = []
+    let remaining = text
+    let linkKey = 0
+
+    while (remaining.length > 0) {
+      const nextToken = linkDefinitions
+        .map(def => ({ ...def, index: remaining.indexOf(def.token) }))
+        .filter(def => def.index >= 0)
+        .sort((a, b) => a.index - b.index)[0]
+
+      if (!nextToken) {
+        parts.push(remaining)
+        break
+      }
+
+      if (nextToken.index > 0) {
+        parts.push(remaining.slice(0, nextToken.index))
+      }
+
+      parts.push(
+        <Link
+          key={`link-${linkKey}`}
+          href={nextToken.href}
+          className="text-blue-600 hover:text-blue-700 underline font-semibold mx-1 inline-block"
+          onClick={() => setIsOpen(false)}
+        >
+          {nextToken.label}
+        </Link>
+      )
+
+      linkKey += 1
+      remaining = remaining.slice(nextToken.index + nextToken.token.length)
+    }
+
+    return parts
   }
 
   const getRandomQuestion = (): string => {
@@ -246,6 +301,60 @@ export function RegistrationChatbot({
   }
 
   // Handle login
+  const ensureDualRegionAccess = async (profileUser: User | undefined | null) => {
+    if (!profileUser) return
+
+    const collectedRegions: string[] = []
+    if (Array.isArray(profileUser.regions)) {
+      collectedRegions.push(...profileUser.regions)
+    }
+
+    let preferencePayload = profileUser.preferences
+    if (typeof preferencePayload === 'string') {
+      try {
+        preferencePayload = JSON.parse(preferencePayload)
+      } catch {
+        preferencePayload = {}
+      }
+    }
+
+    if (preferencePayload && Array.isArray(preferencePayload.regions)) {
+      collectedRegions.push(...preferencePayload.regions)
+    }
+
+    if (profileUser.region) {
+      collectedRegions.push(profileUser.region)
+    }
+
+    const normalizedExisting = new Set(
+      collectedRegions
+        .map(region => (typeof region === 'string' ? region.toLowerCase() : String(region || '').toLowerCase()))
+        .filter(Boolean)
+    )
+
+    const requiredRegions = ['india', 'gulf']
+    const alreadyComplete = requiredRegions.every(region => normalizedExisting.has(region))
+
+    if (!alreadyComplete) {
+      const mergedRegions = Array.from(new Set([...Array.from(normalizedExisting), ...requiredRegions]))
+      const mergedPreferences = {
+        ...(preferencePayload && typeof preferencePayload === 'object' ? preferencePayload : {}),
+        regions: mergedRegions
+      }
+
+      try {
+        await apiService.updateProfile({ preferences: mergedPreferences })
+        if (refreshUser) {
+          await refreshUser()
+        }
+        toast.success('Enabled access to both Gulf and Indian job portals on your profile.')
+      } catch (error) {
+        console.error('❌ Unable to ensure dual region access:', error)
+        toast.error('Logged in, but updating Gulf access failed. You may enable it later from your profile settings.')
+      }
+    }
+  }
+
   const handleLogin = async (email: string, password: string) => {
     try {
       setIsSubmitting(true)
@@ -254,16 +363,22 @@ export function RegistrationChatbot({
       if (result && result.user) {
         addBotMessage("🎉 Great! You're successfully logged in!")
         setTimeout(() => {
-          addBotMessage("Welcome back! Let me take you to your dashboard.")
+          if (shouldEmphasizeDualAccess) {
+            addBotMessage("Welcome back! You're all set to explore both Gulf and Indian job opportunities.")
+          } else {
+            addBotMessage("Welcome back! Let me take you to your dashboard.")
+          }
         }, 1500)
-        setTimeout(() => {
+        const nextRoute = isGulfOpportunitiesPortal ? '/jobseeker-gulf-dashboard' : '/dashboard'
+        setTimeout(async () => {
           setCurrentStep('complete')
           setIsSubmitting(false)
-          toast.success("Login successful!")
-          router.push('/dashboard')
+          await ensureDualRegionAccess(result.user)
+          toast.success("Login successful! You're ready to explore opportunities across Gulf and India.")
+          router.push(nextRoute)
           router.refresh()
           setIsOpen(false)
-        }, 2500)
+        }, 2800)
       } else {
         throw new Error('Login failed')
       }
@@ -421,8 +536,11 @@ export function RegistrationChatbot({
         addBotMessage("Perfect! I see you're looking to hire employees. For employer registration, please click the link below to create your employer account:")
         setTimeout(() => {
           addBotMessage("🔗 Click here to register as an employer: /employer-register")
-          setIsTyping(false)
         }, 1500)
+        setTimeout(() => {
+          addBotMessage("Already registered as an employer? Head over to /employer-login to sign in.")
+          setIsTyping(false)
+        }, 2800)
         return
       } else {
         // Check if response contains keywords that suggest employer intent
@@ -457,6 +575,7 @@ export function RegistrationChatbot({
       }
       
       setUserEmail(userText)
+      setRegistrationData(prev => ({ ...prev, email: userText.toLowerCase().trim() }))
       setIsTyping(true)
       addBotMessage("Let me check if you already have an account with us...")
       
@@ -468,18 +587,29 @@ export function RegistrationChatbot({
       
       if (emailExists) {
         addBotMessage("Great! I found an account with this email. Let's log you in!")
+        const passwordPromptDelay = shouldEmphasizeDualAccess ? 2800 : 1500
+        if (shouldEmphasizeDualAccess) {
+          setTimeout(() => {
+            addBotMessage("Sign in here and you'll instantly continue with both Gulf and Indian job portals.")
+          }, 1500)
+        }
         setTimeout(() => {
           addBotMessage("What's your password?")
           setCurrentStep('login')
           setIsTyping(false)
-        }, 1500)
+        }, passwordPromptDelay)
       } else {
         addBotMessage("I don't see an account with this email. No worries! Let's create a new account for you.")
+        if (shouldEmphasizeDualAccess) {
+          setTimeout(() => {
+            addBotMessage("Registering through this assistant unlocks both Gulf and Indian job opportunities for you automatically.")
+          }, 1500)
+        }
         setTimeout(() => {
           addBotMessage("What's your name?")
           setCurrentStep('name')
           setIsTyping(false)
-        }, 1500)
+        }, shouldEmphasizeDualAccess ? 3000 : 1500)
       }
     } else if (currentStep === 'login') {
       // Handle login
@@ -610,35 +740,55 @@ export function RegistrationChatbot({
 
   const handleRegistration = async () => {
     try {
-      const signupData = {
-        fullName: registrationData.fullName!,
-        email: registrationData.email!,
-        password: registrationData.password!,
-        phone: registrationData.phone || '',
-        experience: registrationData.experience || 'fresher',
-        region: (registrationData.region || 'india') as 'india' | 'gulf' | 'other',
-        agreeToTerms: true // User implicitly agrees by completing the chatbot registration
+      if (!userEmail) {
+        throw new Error('Email missing. Please restart the registration flow.')
       }
 
-      const response = await apiService.signup(signupData)
-      
-      if (response.success) {
+      const basePreferences =
+        typeof registrationData.preferences === 'object'
+          ? (registrationData.preferences as Record<string, unknown>)
+          : {}
+
+      const signupPayload = {
+        fullName: registrationData.fullName!,
+        email: userEmail.toLowerCase().trim(),
+        password: registrationData.password!,
+        phone: registrationData.phone || undefined,
+        experience: registrationData.experience || 'fresher',
+        region: defaultPortalRegion,
+        regions: ['india', 'gulf'],
+        preferences: {
+          ...basePreferences,
+          experience: registrationData.experience || 'fresher',
+          preferredRegion: registrationData.region || defaultPortalRegion,
+          regions: ['india', 'gulf'],
+          portalSource: isGulfOpportunitiesPortal ? 'gulf-opportunities-chatbot' : (isHomePortal ? 'home-chatbot' : 'jobseeker-chatbot')
+        },
+        portalSource: isGulfOpportunitiesPortal ? 'gulf-opportunities-chatbot' : (isHomePortal ? 'home-chatbot' : 'jobseeker-chatbot'),
+        agreeToTerms: true
+      }
+
+      const response = await authSignup(signupPayload)
+
+      if (response?.user) {
         addBotMessage("🎉 Congratulations! Your account has been created successfully!")
         setTimeout(() => {
           addBotMessage("You're all set! Let me take you to your dashboard where you can start exploring job opportunities.")
         }, 1500)
-        setTimeout(() => {
+        const nextRoute = isGulfOpportunitiesPortal ? '/jobseeker-gulf-dashboard' : '/dashboard'
+        setTimeout(async () => {
           setCurrentStep('complete')
           setIsSubmitting(false)
-          toast.success("Account created successfully!")
+          await ensureDualRegionAccess(response.user)
+          toast.success("Account created successfully! You now have access to Gulf and Indian jobs.")
           // Redirect after a moment
           setTimeout(() => {
-            router.push('/dashboard')
+            router.push(nextRoute)
             router.refresh()
           }, 2000)
         }, 3000)
       } else {
-        throw new Error(response.message || 'Registration failed')
+        throw new Error('Registration failed')
       }
     } catch (error: any) {
       console.error('Registration error:', error)
