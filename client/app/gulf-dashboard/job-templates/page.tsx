@@ -263,7 +263,7 @@ export default function GulfJobTemplatesPage() {
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
       template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.description.toLowerCase().includes(searchQuery.toLowerCase())
+                         template.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = selectedCategory === "all" || template.category === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -296,7 +296,7 @@ export default function GulfJobTemplatesPage() {
 
   const renderLoadingState = () => (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/40 to-teal-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
-      <GulfEmployerNavbar />
+            <GulfEmployerNavbar />
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/45 via-teal-200/35 to-amber-200/45"></div>
         <div className="absolute top-20 left-16 w-44 h-44 bg-gradient-to-br from-emerald-300/15 to-teal-300/10 rounded-full blur-3xl animate-pulse"></div>
@@ -304,13 +304,13 @@ export default function GulfJobTemplatesPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-52 h-52 bg-gradient-to-br from-teal-300/10 to-emerald-200/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading templates...</p>
-        </div>
-      </div>
-      <EmployerFooter />
-    </div>
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600 mx-auto"></div>
+                <p className="mt-4 text-slate-600">Loading templates...</p>
+              </div>
+            </div>
+            <EmployerFooter />
+          </div>
   )
 
   if (loading) {
@@ -335,222 +335,222 @@ export default function GulfJobTemplatesPage() {
           </div>
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">Gulf Job Templates</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Gulf Job Templates</h1>
                 <p className="text-slate-600">Create and manage reusable Gulf job posting templates</p>
-              </div>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Template
-                  </Button>
-                </DialogTrigger>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Template
+              </Button>
+            </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-                  <DialogHeader>
-                    <DialogTitle>Create New Template</DialogTitle>
+              <DialogHeader>
+                <DialogTitle>Create New Template</DialogTitle>
                     <DialogDescription>Create a reusable template for job postings</DialogDescription>
-                  </DialogHeader>
-                  <CreateTemplateForm onSubmit={handleCreateTemplate} loading={creating} />
-                </DialogContent>
-              </Dialog>
-            </div>
+              </DialogHeader>
+              <CreateTemplateForm onSubmit={handleCreateTemplate} loading={creating} />
+            </DialogContent>
+          </Dialog>
+        </div>
 
             <Card className="mb-6 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(16,185,129,0.12)] hover:shadow-[0_18px_60px_rgba(20,184,166,0.2)]">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Search Templates</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search templates..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Search Templates</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search templates..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Category</Label>
-                    <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        <SelectItem value="technical">Technical</SelectItem>
-                        <SelectItem value="non-technical">Non-Technical</SelectItem>
-                        <SelectItem value="management">Management</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button variant="outline" className="w-full" onClick={handleSearch}>
-                      <Filter className="w-4 h-4 mr-2" />
-                      Search
-                    </Button>
-                  </div>
+                    className="pl-10"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Category</Label>
+                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="non-technical">Non-Technical</SelectItem>
+                    <SelectItem value="management">Management</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button variant="outline" className="w-full" onClick={handleSearch}>
+                  <Filter className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTemplates.map((template) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTemplates.map((template) => (
                 <Card
                   key={template.id}
                   className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(16,185,129,0.12)] hover:shadow-[0_18px_60px_rgba(20,184,166,0.2)] transition-all duration-300"
                 >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-2">
-                        {getCategoryIcon(template.category)}
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-2">
+                    {getCategoryIcon(template.category)}
                         <Badge className={getCategoryColor(template.category)}>{template.category}</Badge>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {template.createdBy === user?.id ? (
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {template.createdBy === user?.id ? (
                           <Badge variant="outline" className="text-xs flex items-center bg-emerald-50 text-emerald-700 border-emerald-200">
-                            <User className="w-3 h-3 mr-1" />
-                            My Template
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs flex items-center bg-gray-50 text-gray-600 border-gray-200">
-                            <Users className="w-3 h-3 mr-1" />
-                            Shared
-                          </Badge>
-                        )}
-                        {template.isPublic ? (
-                          <Badge variant="outline" className="text-xs flex items-center">
-                            <Globe className="w-3 h-3 mr-1" />
-                            Public
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs flex items-center">
-                            <Lock className="w-3 h-3 mr-1" />
-                            Private
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
-                    <CardDescription>{template.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-sm text-slate-600">
-                        <span>Used {template.usageCount} times</span>
+                        <User className="w-3 h-3 mr-1" />
+                        My Template
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs flex items-center bg-gray-50 text-gray-600 border-gray-200">
+                        <Users className="w-3 h-3 mr-1" />
+                        Shared
+                      </Badge>
+                    )}
+                    {template.isPublic ? (
+                      <Badge variant="outline" className="text-xs flex items-center">
+                        <Globe className="w-3 h-3 mr-1" />
+                        Public
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs flex items-center">
+                        <Lock className="w-3 h-3 mr-1" />
+                        Private
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <CardTitle className="text-lg">{template.name}</CardTitle>
+                <CardDescription>{template.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-sm text-slate-600">
+                    <span>Used {template.usageCount} times</span>
                         <span>Last used: {template.lastUsedAt ? new Date(template.lastUsedAt).toLocaleDateString() : "Never"}</span>
-                      </div>
+                  </div>
 
-                      <div className="flex flex-wrap gap-1">
-                        {template.tags.slice(0, 3).map((tag, index) => (
+                  <div className="flex flex-wrap gap-1">
+                    {template.tags.slice(0, 3).map((tag, index) => (
                           <Badge key={index} variant="outline" className="text-xs">
                             {tag}
                           </Badge>
-                        ))}
-                        {template.tags.length > 3 && (
+                    ))}
+                    {template.tags.length > 3 && (
                           <Badge variant="outline" className="text-xs">
                             +{template.tags.length - 3} more
                           </Badge>
-                        )}
-                      </div>
+                    )}
+                  </div>
 
-                      <div className="space-y-3">
+                  <div className="space-y-3">
                         <Button
                           className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
                           onClick={() => handleCreateJobFromTemplate(template.id)}
                         >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Job from Template
-                        </Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Job from Template
+                    </Button>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex space-x-1">
-                            {template.createdBy === user?.id && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex space-x-1">
+                        {template.createdBy === user?.id && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleEditTemplate(template)}
                                 title="Edit Template"
                               >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            )}
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        )}
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleUseTemplate(template.id)}
                               title="Copy Template"
                             >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                            {template.createdBy === user?.id && (
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        {template.createdBy === user?.id && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleTogglePublic(template.id)}
                                 title={template.isPublic ? "Make Private" : "Make Public"}
                               >
-                                {template.isPublic ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
-                              </Button>
-                            )}
-                          </div>
-                          {template.createdBy === user?.id && (
+                            {template.isPublic ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                          </Button>
+                        )}
+                      </div>
+                      {template.createdBy === user?.id && (
                             <Button
                               size="sm"
                               variant="destructive"
                               onClick={() => handleDeleteTemplate(template.id)}
                               title="Delete Template"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-            {filteredTemplates.length === 0 && !loading && (
+        {filteredTemplates.length === 0 && !loading && (
               <Card className="text-center py-12 rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(16,185,129,0.12)]">
-                <CardContent>
-                  <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No templates found</h3>
+            <CardContent>
+              <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">No templates found</h3>
                   <p className="text-slate-600 mb-4">
                     {searchQuery || selectedCategory !== "all"
                       ? "Try adjusting your search criteria"
                       : "Create your first job template to get started"}
                   </p>
                   {!searchQuery && selectedCategory === "all" && (
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Template
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Template</DialogTitle>
-                <DialogDescription>Update your job template</DialogDescription>
-              </DialogHeader>
-              {editingTemplate && (
-                <EditTemplateForm
-                  template={editingTemplate}
-                  onSubmit={(data) => handleUpdateTemplate(editingTemplate.id, data)}
-                  loading={updating}
-                />
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Template
+                </Button>
               )}
-            </DialogContent>
-          </Dialog>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+            <DialogDescription>Update your job template</DialogDescription>
+          </DialogHeader>
+          {editingTemplate && (
+            <EditTemplateForm 
+              template={editingTemplate} 
+              onSubmit={(data) => handleUpdateTemplate(editingTemplate.id, data)}
+              loading={updating}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
           <EmployerFooter />
         </div>
@@ -708,9 +708,9 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
       <form onSubmit={handleSubmit} className="space-y-8 max-h-[80vh] overflow-y-auto">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-slate-900">Template Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">Template Name *</Label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">Template Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -718,10 +718,10 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
                 placeholder="e.g., Senior Software Engineer"
                 required
               />
-            </div>
+        </div>
           </div>
 
-          <div>
+        <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -854,18 +854,18 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
                   }))
                 }
               >
-                <SelectTrigger>
+            <SelectTrigger>
                   <SelectValue placeholder="Select job type" />
-                </SelectTrigger>
-                <SelectContent>
+            </SelectTrigger>
+            <SelectContent>
                   <SelectItem value="full-time">Full-time</SelectItem>
                   <SelectItem value="part-time">Part-time</SelectItem>
                   <SelectItem value="contract">Contract</SelectItem>
                   <SelectItem value="internship">Internship</SelectItem>
                   <SelectItem value="freelance">Freelance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            </SelectContent>
+          </Select>
+        </div>
             <div>
               <Label htmlFor="experience">Experience Level *</Label>
               <Select
@@ -893,8 +893,8 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
                   <SelectItem value="senior">Senior (5+ years)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+      </div>
+      <div>
               <Label htmlFor="salary">Salary Range</Label>
               <Input
                 id="salary"
@@ -907,8 +907,8 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
                 }
                 placeholder="e.g., 25,000 - 35,000 AED"
               />
-            </div>
-            <div>
+      </div>
+      <div>
               <Label htmlFor="employmentType">Employment Type</Label>
               <Select
                 value={formData.templateData.employmentType}
@@ -1006,7 +1006,7 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
 
           <div>
             <Label htmlFor="skills">Required Skills</Label>
-            <div className="flex space-x-2 mb-2">
+        <div className="flex space-x-2 mb-2">
               <Input
                 value={currentSkill}
                 onChange={(e) => setCurrentSkill(e.target.value)}
@@ -1016,18 +1016,18 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
               <Button type="button" variant="outline" onClick={handleAddSkill}>
                 Add
               </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
+        </div>
+        <div className="flex flex-wrap gap-2">
               {formData.templateData.skills.map((skill: string, index: number) => (
-                <Badge key={index} variant="outline" className="flex items-center">
+            <Badge key={index} variant="outline" className="flex items-center">
                   {skill}
                   <button type="button" onClick={() => handleRemoveSkill(skill)} className="ml-2 text-red-500 hover:text-red-700">
                     ×
                   </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
+            </Badge>
+          ))}
+        </div>
+      </div>
 
           <div>
             <Label htmlFor="keywords">Keywords</Label>
@@ -1041,7 +1041,7 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
               <Button type="button" variant="outline" onClick={handleAddKeyword}>
                 Add
               </Button>
-            </div>
+      </div>
             <div className="flex flex-wrap gap-2">
               {formData.templateData.keywords.map((keyword: string, index: number) => (
                 <Badge key={index} variant="outline" className="flex items-center">
@@ -1170,8 +1170,8 @@ function CreateTemplateForm({ onSubmit, loading }: { onSubmit: (data: any) => vo
           <Button type="submit" disabled={loading}>
             {loading ? "Creating..." : "Create Template"}
           </Button>
-        </div>
-      </form>
+      </div>
+    </form>
 
       {showDepartmentDropdown && (
         <DepartmentDropdown
@@ -1385,9 +1385,9 @@ function EditTemplateForm({
       <form onSubmit={handleSubmit} className="space-y-8 max-h-[80vh] overflow-y-auto">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-slate-900">Template Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">Template Name *</Label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">Template Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -1395,10 +1395,10 @@ function EditTemplateForm({
                 placeholder="e.g., Senior Software Engineer"
                 required
               />
-            </div>
+        </div>
           </div>
 
-          <div>
+        <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -1531,18 +1531,18 @@ function EditTemplateForm({
                   }))
                 }
               >
-                <SelectTrigger>
+            <SelectTrigger>
                   <SelectValue placeholder="Select job type" />
-                </SelectTrigger>
-                <SelectContent>
+            </SelectTrigger>
+            <SelectContent>
                   <SelectItem value="full-time">Full-time</SelectItem>
                   <SelectItem value="part-time">Part-time</SelectItem>
                   <SelectItem value="contract">Contract</SelectItem>
                   <SelectItem value="internship">Internship</SelectItem>
                   <SelectItem value="freelance">Freelance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            </SelectContent>
+          </Select>
+        </div>
             <div>
               <Label htmlFor="experience">Experience Level *</Label>
               <Select
@@ -1570,8 +1570,8 @@ function EditTemplateForm({
                   <SelectItem value="senior">Senior (5+ years)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+      </div>
+      <div>
               <Label htmlFor="salary">Salary Range</Label>
               <Input
                 id="salary"
@@ -1584,8 +1584,8 @@ function EditTemplateForm({
                 }
                 placeholder="e.g., 25,000 - 35,000 AED"
               />
-            </div>
-            <div>
+      </div>
+      <div>
               <Label htmlFor="employmentType">Employment Type</Label>
               <Select
                 value={formData.templateData.employmentType}
@@ -1682,7 +1682,7 @@ function EditTemplateForm({
           <h3 className="text-lg font-semibold text-slate-900">Skills & Keywords</h3>
           <div>
             <Label htmlFor="skills">Required Skills</Label>
-            <div className="flex space-x-2 mb-2">
+        <div className="flex space-x-2 mb-2">
               <Input
                 value={currentSkill}
                 onChange={(e) => setCurrentSkill(e.target.value)}
@@ -1692,18 +1692,18 @@ function EditTemplateForm({
               <Button type="button" variant="outline" onClick={handleAddSkill}>
                 Add
               </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
+        </div>
+        <div className="flex flex-wrap gap-2">
               {formData.templateData.skills.map((skill: string, index: number) => (
-                <Badge key={index} variant="outline" className="flex items-center">
+            <Badge key={index} variant="outline" className="flex items-center">
                   {skill}
                   <button type="button" onClick={() => handleRemoveSkill(skill)} className="ml-2 text-red-500 hover:text-red-700">
                     ×
                   </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
+            </Badge>
+          ))}
+        </div>
+      </div>
 
           <div>
             <Label htmlFor="keywords">Keywords</Label>
@@ -1717,7 +1717,7 @@ function EditTemplateForm({
               <Button type="button" variant="outline" onClick={handleAddKeyword}>
                 Add
               </Button>
-            </div>
+      </div>
             <div className="flex flex-wrap gap-2">
               {formData.templateData.keywords.map((keyword: string, index: number) => (
                 <Badge key={index} variant="outline" className="flex items-center">
@@ -1846,8 +1846,8 @@ function EditTemplateForm({
           <Button type="submit" disabled={loading}>
             {loading ? "Updating..." : "Update Template"}
           </Button>
-        </div>
-      </form>
+      </div>
+    </form>
 
       {showDepartmentDropdown && (
         <DepartmentDropdown

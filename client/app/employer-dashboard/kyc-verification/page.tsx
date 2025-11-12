@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { apiService } from '@/lib/api'
 import { EmployerAuthGuard } from '@/components/employer-auth-guard'
-import { EmployerNavbar } from '@/components/employer-navbar'
+import { EmployerDashboardNavbar } from '@/components/employer-dashboard-navbar'
+import { EmployerDashboardFooter } from '@/components/employer-dashboard-footer'
 
 export default function KYCVerificationPage() {
   return (
@@ -163,7 +164,7 @@ function KYCVerificationContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerNavbar />
+      <EmployerDashboardNavbar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -391,6 +392,8 @@ function KYCVerificationContent() {
           </Card>
         )}
       </div>
+      
+      <EmployerDashboardFooter />
     </div>
   )
 }

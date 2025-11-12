@@ -432,11 +432,11 @@ function GulfCompanyDetailPage() {
           // Check if this is a Gulf company and redirect
           // Already on Gulf page, no redirect needed
           setCompany(companyData)
-          return
-        }
+            return
+          }
         } catch (error: any) {
           console.log('Direct company endpoint failed, trying fallback methods:', error?.message || error)
-      }
+        }
       }
       
       // Fallback: fetch public companies list and find by id
@@ -444,13 +444,13 @@ function GulfCompanyDetailPage() {
       const list = await apiService.listCompanies({ limit: 1000, offset: 0, search: '' } as any)
         if (list && list.success && Array.isArray(list.data)) {
         const found = list.data.find((c: any) => String(c.id) === companyId)
-        if (found) {
+          if (found) {
           // Check if this is a Gulf company and redirect
           // Already on Gulf page, no redirect needed
-          setCompany(found)
-          return
+            setCompany(found)
+            return
+          }
         }
-      }
       } catch (error) {
         console.log('Companies list fallback failed:', error)
       }
@@ -459,12 +459,12 @@ function GulfCompanyDetailPage() {
       try {
         const jobsResp = await apiService.getCompanyJobs(companyId)
         if (jobsResp && jobsResp.success) {
-        const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
-        if (arr.length > 0) {
-          const name = arr[0]?.companyName || 'Company'
+          const arr = Array.isArray((jobsResp as any).data) ? (jobsResp as any).data : (Array.isArray((jobsResp as any).data?.rows) ? (jobsResp as any).data.rows : [])
+          if (arr.length > 0) {
+            const name = arr[0]?.companyName || 'Company'
           setCompany({ id: companyId, name, industries: [], companySize: '', website: '', description: '', city: '', state: '', country: '', activeJobsCount: arr.length, profileViews: undefined })
-          return
-        }
+            return
+          }
         }
       } catch (error) {
         console.log('Jobs fallback failed:', error)
@@ -487,7 +487,7 @@ function GulfCompanyDetailPage() {
       if (!isValidUuid) {
         setCompanyJobs([])
         setJobsError('Invalid company id')
-      } else {
+        } else {
         try {
           // Use apiService.getGulfJobs with companyId filter
           const params: any = {
@@ -530,8 +530,8 @@ function GulfCompanyDetailPage() {
             
             if (jobs.length === 0) {
               setJobsError('No jobs found for this company')
-            }
-          } else {
+        }
+      } else {
             setCompanyJobs([])
             setFilteredJobs([])
             setJobsError(response.message || 'Failed to load company jobs')
@@ -567,7 +567,7 @@ function GulfCompanyDetailPage() {
           }
           setCompanyJobs([])
           setFilteredJobs([])
-          setJobsError('Failed to load company jobs')
+        setJobsError('Failed to load company jobs')
         }
       }
     } catch (error) {
@@ -692,7 +692,7 @@ function GulfCompanyDetailPage() {
           toast.success('We will notify you when this job reopens')
         } else {
           toast.error(res.message || 'Failed to enable notifications')
-        }
+  }
       }
     } catch (e: any) {
       toast.error(e?.message || 'Failed to update notification preference')
@@ -746,15 +746,15 @@ function GulfCompanyDetailPage() {
     // Find the job details
     const job = companyJobs.find(j => j.id === jobId)
     if (job) {
-      setSelectedJob(job)
-      setShowApplicationDialog(true)
-    }
+    setSelectedJob(job)
+    setShowApplicationDialog(true)
+  }
   }, [user, companyJobs])
 
   const handleSubmitApplication = useCallback(async () => {
     if (!selectedJob) return
 
-    setSubmitting(true)
+      setSubmitting(true)
     try {
       const response = await apiService.applyJob(selectedJob.id.toString(), {
         coverLetter: applicationData.coverLetter,
@@ -762,7 +762,7 @@ function GulfCompanyDetailPage() {
         noticePeriod: applicationData.noticePeriod ? parseInt(applicationData.noticePeriod) : undefined,
         isWillingToRelocate: applicationData.willingToRelocate
       })
-      
+
       if (response.success) {
         toast.success(`Application submitted successfully for ${selectedJob.title}!`, {
           description: 'Your application has been submitted and is under review.',
@@ -896,12 +896,12 @@ function GulfCompanyDetailPage() {
                 <Link href="/gulf-companies">
                   <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-2xl">
                     Browse All Companies
-                  </Button>
+                </Button>
                 </Link>
                 <Link href="/">
                   <Button variant="outline" className="font-semibold px-8 py-3 rounded-2xl">
                     Go to Homepage
-                  </Button>
+                </Button>
                 </Link>
               </div>
             </div>
@@ -1118,20 +1118,20 @@ function GulfCompanyDetailPage() {
     <GulfCompanyErrorBoundary>
       <div className="min-h-screen bg-animated dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative">
       <GulfNavbar />
-
+      
       {/* Company Header - Full Width Banner (padded to avoid navbar overlap) */}
       <div className="relative w-full pt-16">
         {/* Back Button - Positioned absolutely */}
         <div className="absolute top-6 left-4 sm:left-6 z-10">
-          <Button
+              <Button
             variant="outline"
-            onClick={() => router.back()}
+                onClick={() => router.back()}
             className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 shadow-lg"
-          >
+              >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Companies
-          </Button>
-        </div>
+              </Button>
+            </div>
 
         {/* Full Width Banner */}
         <div className="relative w-full h-[35vh] min-h-[400px] overflow-hidden">
@@ -1185,9 +1185,9 @@ function GulfCompanyDetailPage() {
                       />
                       <AvatarFallback className="text-2xl font-bold bg-white/20 text-white">
                         {(company.name||'')[0]?.toUpperCase() || 'C'}
-                      </AvatarFallback>
-                    </Avatar>
-                    
+                  </AvatarFallback>
+                </Avatar>
+                
                     <div>
                       <h1 className="text-3xl lg:text-4xl font-bold mb-2">{toDisplayText(company.name) || 'Company'}</h1>
                       <div className="flex items-center space-x-4">
@@ -1204,7 +1204,7 @@ function GulfCompanyDetailPage() {
                           <div className="text-sm opacity-90">
                             {company.followers} followers
                           </div>
-                        )}
+                    )}
                       </div>
                     </div>
                   </div>
@@ -1247,14 +1247,14 @@ function GulfCompanyDetailPage() {
                   >
                     {isFollowing ? 'Following' : '+ Follow'}
                   </Button>
-                </div>
+                      </div>
                 
                 {/* Right side visual removed as requested */}
               </motion.div>
-            </div>
-          </div>
+                      </div>
+                      </div>
         </div>
-      </div>
+                  </div>
 
       {/* Company Details Tabs */}
       <div className="bg-white dark:bg-slate-900">
@@ -1298,8 +1298,8 @@ function GulfCompanyDetailPage() {
                                 {industry}
                               </Badge>
                             ))}
-                          </div>
-                        </div>
+                </div>
+              </div>
                       )}
                       
                       {/* Nature of Business */}
@@ -1326,11 +1326,11 @@ function GulfCompanyDetailPage() {
                                 {type}
                               </Badge>
                             ))}
-                          </div>
-                        </div>
+              </div>
+            </div>
                       )}
-                    </div>
-                    
+          </div>
+
                     <div className="grid grid-cols-2 gap-6">
                       <div className="flex items-center">
                         <TrendingUp className="w-5 h-5 mr-3 text-slate-400" />
@@ -1338,7 +1338,7 @@ function GulfCompanyDetailPage() {
                           <div className="font-medium">Open Positions</div>
                           <div className="text-slate-600 dark:text-slate-400">
                             {companyStats?.activeJobs ?? company.activeJobsCount ?? companyJobs.length}
-                          </div>
+                </div>
                         </div>
                       </div>
                       <div className="flex items-center">
@@ -1358,9 +1358,9 @@ function GulfCompanyDetailPage() {
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-
+              </CardContent>
+            </Card>
+            
                 {/* Departments Hiring */}
                 <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
                   <CardHeader>
@@ -1374,7 +1374,7 @@ function GulfCompanyDetailPage() {
                             <div className="flex-1">
                               <div className="font-medium text-slate-900 dark:text-white group-hover:text-green-600 transition-colors">
                                 {dept.name}
-                              </div>
+                </div>
                               <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Open roles in {dept.name}</div>
                               <div className="text-sm text-slate-500 mt-1">{dept.openings} openings</div>
                             </div>
@@ -1388,11 +1388,11 @@ function GulfCompanyDetailPage() {
                         </Link>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-
+              </CardContent>
+            </Card>
+            
                 {/* Employee Speak removed (mock) */}
-              </div>
+                </div>
 
               {/* Right Sidebar */}
               <div className="space-y-8">
@@ -1410,9 +1410,9 @@ function GulfCompanyDetailPage() {
                     >
                       Register now
                     </Button>
-                  </CardContent>
-                </Card>
-
+              </CardContent>
+            </Card>
+            
                 {/* Company Benefits */}
                 <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl">
                   <CardHeader>
@@ -1425,7 +1425,7 @@ function GulfCompanyDetailPage() {
                           {benefit}
                         </Badge>
                       ))}
-                    </div>
+                </div>
                     {safeBenefits.length > 8 && (
                       <div className="mt-3 text-center">
                         <Button variant="link" className="text-sm text-green-600">
@@ -1433,8 +1433,8 @@ function GulfCompanyDetailPage() {
                         </Button>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+              </CardContent>
+            </Card>
 
                 {/* Reviews by Job Profile removed (mock) */}
 
@@ -1447,7 +1447,7 @@ function GulfCompanyDetailPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Company Size</span>
                       <span className="font-medium">{toDisplayText(company.employees) || 'Not provided'}</span>
-                    </div>
+                </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-600 dark:text-slate-400">Headquarters</span>
                       <span className="font-medium">{toDisplayText(company.headquarters) || 'Not provided'}</span>
@@ -1458,7 +1458,7 @@ function GulfCompanyDetailPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+                    </div>
             </div>
           </TabsContent>
 
@@ -1492,7 +1492,7 @@ function GulfCompanyDetailPage() {
                     className={filters.department !== 'all' ? "bg-green-50 border-green-200 text-green-600" : ""}
                   >
                     Department ({filterOptions.departments.length})
-              </Button>
+                    </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleFilterChange('department', 'all')}>
@@ -1602,41 +1602,41 @@ function GulfCompanyDetailPage() {
                           <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-4"></div>
                           <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-4"></div>
                           <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3"></div>
-                        </CardContent>
-                      </Card>
+                  </CardContent>
+                </Card>
                     </div>
                   ))}
                 </div>
               ) : filteredJobs.length > 0 ? (
                 filteredJobs.map((job, index) => (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.6 }}
-                >
+                    <motion.div
+                      key={job.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1, duration: 0.6 }}
+                    >
                   <Link href={`/gulf-jobs/${String(job.id)}`}>
-                    <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl hover:shadow-xl transition-all duration-300 group cursor-pointer">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-4">
-                              <div>
+                      <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl hover:shadow-xl transition-all duration-300 group cursor-pointer">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-4">
+                                <div>
                                 <h3 className="text-xl font-semibold text-slate-900 dark:text-white group-hover:text-green-600 transition-colors mb-2">
-                                  {job.title}
-                                </h3>
+                                    {job.title}
+                                  </h3>
                                 <div className="text-slate-600 dark:text-slate-400 font-medium mb-2">
                                   {company.name}
-                                </div>
+                                    </div>
                                 <div className="flex items-center space-x-4 text-slate-600 dark:text-slate-400 mb-4">
                                   <div className="flex items-center">
                                     <MapPin className="w-4 h-4 mr-1" />
                                     {job.location || job.city || job.state || job.country || '—'}
-                                  </div>
+                                    </div>
                                   <div className="flex items-center">
                                     <Briefcase className="w-4 h-4 mr-1" />
                                     {job.experience || job.experienceLevel || '—'}
-                                  </div>
+                                    </div>
                                   <div className="flex items-center">
                                     <DollarSign className="w-4 h-4 mr-1" />
                                     {(job.salary || (job.salaryMin && job.salaryMax ? `${job.salaryMin}-${job.salaryMax}` : '—'))}{job.salary || job.salaryMin || job.salaryMax ? ' AED' : ''}
@@ -1644,7 +1644,7 @@ function GulfCompanyDetailPage() {
                                   <div className="flex items-center">
                                     <Clock className="w-4 h-4 mr-1" />
                                     {job.type || job.jobType || '—'}
-                                  </div>
+                                </div>
                                   {job.status === 'expired' && (
                                     <Badge className="bg-red-100 text-red-800 border-red-200">Expired</Badge>
                                   )}
@@ -1704,10 +1704,10 @@ function GulfCompanyDetailPage() {
                                       Login
                                     </Button>
                                   </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
-                            </div>
-
+                              
                             <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">{job.description || ''}</p>
 
                             <div className="flex flex-wrap gap-2 mb-4">
@@ -1724,9 +1724,9 @@ function GulfCompanyDetailPage() {
                                 ))
                               })()}
                             </div>
-
+                              
                             <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
-                              <div className="flex items-center space-x-4 text-sm text-slate-500">
+                                <div className="flex items-center space-x-4 text-sm text-slate-500">
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
                                   {job.postedDate || job.createdAt || ''}
@@ -1734,8 +1734,8 @@ function GulfCompanyDetailPage() {
                                 <Badge variant="outline" className="text-xs">
                                   {job.urgent ? "Urgent" : "Regular"}
                                 </Badge>
-                              </div>
-                              <div className="flex items-center space-x-2">
+                                </div>
+                                <div className="flex items-center space-x-2">
                                 <Button variant="outline" size="sm">
                                   Save
                                 </Button>
@@ -1784,20 +1784,20 @@ function GulfCompanyDetailPage() {
                                     {getIsWatching(job.id) ? 'Tracking' : 'Track this job'}
                                   </Button>
                                 )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
                   </Link>
-                </motion.div>
+                    </motion.div>
               ))
               ) : (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
                     <Briefcase className="w-8 h-8 text-slate-400" />
-                  </div>
+                </div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
                     {(filters.department !== 'all' || filters.location !== 'all' || filters.experience !== 'all' || filters.salary !== 'all') 
                       ? 'No Jobs Match Your Filters' 
@@ -1831,14 +1831,14 @@ function GulfCompanyDetailPage() {
 
             {/* Interview Questions */}
             <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl mt-8">
-              <CardHeader>
+                <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Interview Questions</span>
                   <Button variant="link" className="text-sm text-green-600 p-0">
                     View all
                   </Button>
-                </CardTitle>
-              </CardHeader>
+                  </CardTitle>
+                </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="text-sm py-1 px-3">
@@ -1853,7 +1853,7 @@ function GulfCompanyDetailPage() {
                   <Badge variant="outline" className="text-sm py-1 px-3">
                     Data Analyst (1)
                   </Badge>
-                </div>
+                          </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1872,20 +1872,20 @@ function GulfCompanyDetailPage() {
                 {company.whyJoinUs ? (
                   <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed text-lg">
                     {company.whyJoinUs}
-                  </div>
+                            </div>
                 ) : (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Building2 className="w-8 h-8 text-green-600 dark:text-blue-400" />
-                    </div>
+                            </div>
                     <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
                       Content Coming Soon
                     </h3>
                     <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
                       This employer is working on their "Why Join Us" content. Check back soon or explore their open roles below.
                     </p>
-                  </div>
-                )}
+                            </div>
+                          )}
               </CardContent>
             </Card>
 
@@ -1916,7 +1916,7 @@ function GulfCompanyDetailPage() {
                     {safeBenefits.length > 0 ? safeBenefits.slice(0, 4).join(', ') : 'Competitive compensation and perks.'}
                   </CardContent>
                 </Card>
-              </div>
+                        </div>
             )}
             
             {/* Workplace Photos - MOVED FROM OVERVIEW TAB */}
@@ -1956,23 +1956,23 @@ function GulfCompanyDetailPage() {
                             ×
                           </button>
                         )}
-                      </div>
+                            </div>
                     ))}
-                  </div>
+                            </div>
                 ) : (
                   <div className="text-slate-600 dark:text-slate-300 text-center py-8">
                     <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>No workplace photos available yet.</p>
                     <p className="text-sm mt-1">Check back later to see our office and culture!</p>
-                  </div>
-                )}
+                            </div>
+                          )}
               </CardContent>
             </Card>
           </TabsContent>
             </Tabs>
           </motion.div>
-        </div>
-      </div>
+                        </div>
+                      </div>
 
       {/* Authentication Dialog */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
@@ -1994,7 +1994,7 @@ function GulfCompanyDetailPage() {
                 Login
               </Button>
             </Link>
-          </div>
+                    </div>
         </DialogContent>
       </Dialog>
 
@@ -2027,13 +2027,13 @@ function GulfCompanyDetailPage() {
                   />
                 </button>
               ))}
-            </div>
+                    </div>
             {userRating && (
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 You rated this company {userRating} {userRating === 1 ? 'star' : 'stars'}
               </p>
-            )}
-          </div>
+                  )}
+        </div>
         </DialogContent>
       </Dialog>
 
@@ -2048,30 +2048,30 @@ function GulfCompanyDetailPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Expected Salary (AED)
                 </label>
                 <input
-                  type="number"
+                type="number"
                   placeholder="e.g., 8-12"
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  value={applicationData.expectedSalary}
+                value={applicationData.expectedSalary}
                   onChange={(e) => setApplicationData({...applicationData, expectedSalary: e.target.value})}
-                />
-              </div>
-              <div>
+              />
+            </div>
+            <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Notice Period (Days)
                 </label>
                 <input
-                  type="number"
+                type="number"
                   placeholder="e.g., 30"
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  value={applicationData.noticePeriod}
+                value={applicationData.noticePeriod}
                   onChange={(e) => setApplicationData({...applicationData, noticePeriod: e.target.value})}
-                />
-              </div>
+              />
+            </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -2102,15 +2102,15 @@ function GulfCompanyDetailPage() {
                 variant="outline"
                 onClick={() => setShowApplicationDialog(false)}
               >
-                Cancel
-              </Button>
-              <Button
+              Cancel
+            </Button>
+            <Button 
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-blue-700 hover:to-indigo-700"
                 onClick={handleSubmitApplication}
-                disabled={submitting}
-              >
-                {submitting ? 'Submitting...' : 'Submit Application'}
-              </Button>
+              disabled={submitting}
+            >
+              {submitting ? 'Submitting...' : 'Submit Application'}
+            </Button>
             </div>
           </div>
         </DialogContent>
@@ -2124,9 +2124,9 @@ function GulfCompanyDetailPage() {
               <div className="flex items-center space-x-2 mb-6">
                 <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center">
                   <Briefcase className="w-6 h-6 text-white" />
-                </div>
+          </div>
                 <span className="text-2xl font-bold">JobPortal</span>
-              </div>
+    </div>
               <p className="text-slate-400 mb-4">Gulf region's leading job portal connecting talent with opportunities.</p>
               <div className="flex space-x-4">
                 <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-green-600 transition-colors cursor-pointer">

@@ -219,7 +219,7 @@ export function CompanyJobsDisplay({ companyId, onJobUpdated }: CompanyJobsDispl
                     </p>
                     
                     <div className="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
-                      <span>Posted: {formatDate(job.createdAt)}</span>
+                      <span>Posted: {formatDate(job.createdAt || job.created_at || job.postedDate || job.posted_date)}</span>
                       {job.validTill && (
                         <span>
                           {new Date() > new Date(job.validTill)

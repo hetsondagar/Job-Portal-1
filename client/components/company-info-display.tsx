@@ -24,6 +24,7 @@ interface CompanyInfo {
   rating?: number
   totalReviews?: number
   isVerified?: boolean
+  logo?: string
 }
 
 interface CompanyInfoDisplayProps {
@@ -174,7 +175,20 @@ export function CompanyInfoDisplay({ companyId }: CompanyInfoDisplayProps) {
         {/* Company Header */}
         <div className="flex items-center space-x-4">
           <Avatar className="w-16 h-16 ring-1 ring-white/40 bg-white/60 backdrop-blur">
-            <AvatarImage src="/placeholder-logo.png" alt={company.name} />
+            <AvatarImage 
+              src={company.logo ? (company.logo.startsWith('http') ? company.logo : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${company.logo}`) : "/placeholder-logo.png"} 
+              alt={company.name}
+              onLoad={() => {
+                console.log('✅ Company logo loaded successfully:', company.logo);
+              }}
+              onError={(e) => {
+                console.error('❌ Company logo failed to load:', company.logo);
+                const img = e.target as HTMLImageElement;
+                if (company.logo && !company.logo.startsWith('http')) {
+                  img.src = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${company.logo}`;
+                }
+              }}
+            />
             <AvatarFallback className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-lime-600 text-white">
               {getInitials(company.name)}
             </AvatarFallback>

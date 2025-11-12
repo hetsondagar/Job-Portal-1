@@ -191,101 +191,101 @@ export default function GulfBulkImportPage() {
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">Gulf Bulk Job Import</h1>
-                <p className="text-slate-600">Import multiple Gulf-region job postings from CSV, Excel, or JSON files</p>
-              </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Gulf Bulk Job Import</h1>
+            <p className="text-slate-600">Import multiple Gulf-region job postings from CSV, Excel, or JSON files</p>
+          </div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-                  <DialogTrigger asChild>
+            <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+              <DialogTrigger asChild>
                     <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 w-full sm:w-auto">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload File
-                    </Button>
-                  </DialogTrigger>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload File
+                </Button>
+              </DialogTrigger>
                   <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
-                    <DialogHeader>
+                <DialogHeader>
                       <DialogTitle className="text-lg sm:text-xl">Upload Gulf Job Import File</DialogTitle>
                       <DialogDescription className="text-xs sm:text-sm">
-                        Upload a CSV, Excel, or JSON file with Gulf job data
-                      </DialogDescription>
-                    </DialogHeader>
+                    Upload a CSV, Excel, or JSON file with Gulf job data
+                  </DialogDescription>
+                </DialogHeader>
                     <UploadForm
                       onClose={() => setIsUploadDialogOpen(false)}
                       onSuccess={fetchBulkImports}
                     />
-                  </DialogContent>
-                </Dialog>
+              </DialogContent>
+            </Dialog>
                 <Button
                   variant="outline"
                   className="w-full sm:w-auto"
                   onClick={() => handleDownloadTemplate("csv")}
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Template
-                </Button>
-              </div>
-            </div>
+              <Download className="w-4 h-4 mr-2" />
+              Download Template
+            </Button>
+          </div>
+        </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              <Card>
+          <Card>
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
+              <div className="flex items-center justify-between">
+                <div>
                       <p className="text-xs sm:text-sm font-medium text-slate-600">Total Imports</p>
                       <p className="text-lg sm:text-2xl font-bold text-slate-900">{imports.length}</p>
-                    </div>
+                </div>
                     <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
+              <div className="flex items-center justify-between">
+                <div>
                       <p className="text-xs sm:text-sm font-medium text-slate-600">Successful</p>
                       <p className="text-lg sm:text-2xl font-bold text-green-600">
                         {imports.reduce((sum, imp) => sum + (imp.successfulImports || 0), 0)}
-                      </p>
-                    </div>
+                  </p>
+                </div>
                     <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
+              <div className="flex items-center justify-between">
+                <div>
                       <p className="text-xs sm:text-sm font-medium text-slate-600">Failed</p>
                       <p className="text-lg sm:text-2xl font-bold text-red-600">
                         {imports.reduce((sum, imp) => sum + (imp.failedImports || 0), 0)}
-                      </p>
-                    </div>
+                  </p>
+                </div>
                     <XCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
+              <div className="flex items-center justify-between">
+                <div>
                       <p className="text-xs sm:text-sm font-medium text-slate-600">Processing</p>
                       <p className="text-lg sm:text-2xl font-bold text-blue-600">
                         {imports.filter((imp) => imp.status === "processing").length}
-                      </p>
-                    </div>
+                  </p>
+                </div>
                     <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
             <Card className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 backdrop-blur-xl border-white/30 shadow-[0_8px_30px_rgba(16,185,129,0.08)]">
-              <CardHeader>
-                <CardTitle>Import History</CardTitle>
-                <CardDescription>Track your Gulf bulk import jobs and their status</CardDescription>
-              </CardHeader>
-              <CardContent>
+          <CardHeader>
+            <CardTitle>Import History</CardTitle>
+            <CardDescription>Track your Gulf bulk import jobs and their status</CardDescription>
+          </CardHeader>
+          <CardContent>
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
@@ -304,64 +304,64 @@ export default function GulfBulkImportPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {imports.map((importJob) => (
+            <div className="space-y-4">
+              {imports.map((importJob) => (
                       <div key={importJob.id} className="border border-slate-200 rounded-lg p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                           <div className="flex items-center space-x-3 mb-3 sm:mb-0">
-                            {getStatusIcon(importJob.status)}
-                            <div>
+                      {getStatusIcon(importJob.status)}
+                      <div>
                               <h3 className="font-semibold text-slate-900 text-sm sm:text-base">{importJob.importName}</h3>
                               <p className="text-xs sm:text-sm text-slate-600">
                                 {importJob.totalRecords || 0} records • {(importJob.importType || "unknown").toUpperCase()} file
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
                             <Badge className={`${getStatusColor(importJob.status)} text-xs`}>
-                              {importJob.status}
-                            </Badge>
+                        {importJob.status}
+                      </Badge>
                             <Button size="sm" variant="outline" className="hidden sm:flex">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
 
-                        <div className="space-y-3">
+                  <div className="space-y-3">
                           <div className="flex items-center justify-between text-xs sm:text-sm">
-                            <span>Progress</span>
+                      <span>Progress</span>
                             <span>{importJob.progress || 0}%</span>
-                          </div>
+                    </div>
                           <Progress value={importJob.progress || 0} className="w-full" />
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                             <div className="flex justify-between sm:block">
                               <span className="text-slate-600 sm:block">Total Records:</span>
                               <span className="font-medium sm:ml-1">{importJob.totalRecords || 0}</span>
-                            </div>
+                      </div>
                             <div className="flex justify-between sm:block">
                               <span className="text-slate-600 sm:block">Successful:</span>
                               <span className="font-medium text-green-600 sm:ml-1">{importJob.successfulImports || 0}</span>
-                            </div>
+                      </div>
                             <div className="flex justify-between sm:block">
                               <span className="text-slate-600 sm:block">Failed:</span>
                               <span className="font-medium text-red-600 sm:ml-1">{importJob.failedImports || 0}</span>
-                            </div>
+                      </div>
                             <div className="flex justify-between sm:block">
                               <span className="text-slate-600 sm:block">Started:</span>
                               <span className="font-medium sm:ml-1">
                                 {importJob.startedAt ? new Date(importJob.startedAt).toLocaleDateString() : "N/A"}
                               </span>
-                            </div>
-                          </div>
-                        </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
+                </div>
+              ))}
+            </div>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+          </CardContent>
+        </Card>
+      </div>
 
           <EmployerFooter />
         </div>

@@ -516,22 +516,22 @@ export default function GulfCompaniesPage() {
                     <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                       Industry
                     </h3>
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       {uniqueIndustries.slice(0, 8).map((industry) => (
-                        <div key={industry} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`industry-${industry}`}
-                            checked={filters.industries.includes(industry)}
-                            onCheckedChange={() => handleIndustryToggle(industry)}
-                          />
-                          <label
-                            htmlFor={`industry-${industry}`}
-                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                          >
-                            {industry}
-                          </label>
-                        </div>
-                      ))}
+                          <div key={industry} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`industry-${industry}`}
+                              checked={filters.industries.includes(industry)}
+                              onCheckedChange={() => handleIndustryToggle(industry)}
+                            />
+                            <label
+                              htmlFor={`industry-${industry}`}
+                              className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                            >
+                              {industry}
+                            </label>
+                          </div>
+                        ))}
                       {uniqueIndustries.length > 8 && (
                         <button
                           type="button"
@@ -541,7 +541,7 @@ export default function GulfCompaniesPage() {
                           Show more industries
                         </button>
                       )}
-                    </div>
+                      </div>
                   </div>
 
                   <Separator className="bg-slate-200 dark:bg-slate-700" />
@@ -577,7 +577,7 @@ export default function GulfCompaniesPage() {
                     <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
                       Company Size
                     </h3>
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       {['1-50 employees', '51-200 employees', '201-1000 employees', '1001-5000 employees', '5000+ employees'].map((size) => (
                         <div key={size} className="flex items-center space-x-2">
                           <Checkbox 
@@ -605,21 +605,21 @@ export default function GulfCompaniesPage() {
                     </h3>
                     <div className="space-y-2">
                       {uniqueLocations.map((location) => (
-                        <div key={location} className="flex items-center space-x-2">
-                          <Checkbox 
+                          <div key={location} className="flex items-center space-x-2">
+                            <Checkbox 
                             id={location} 
-                            checked={filters.locations.includes(location)}
-                            onCheckedChange={() => handleLocationToggle(location)}
-                          />
-                          <label
+                              checked={filters.locations.includes(location)}
+                              onCheckedChange={() => handleLocationToggle(location)}
+                            />
+                            <label
                             htmlFor={location}
-                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                          >
-                            {location}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
+                              className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                            >
+                              {location}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                   </div>
 
                   <Separator className="bg-slate-200 dark:bg-slate-700" />

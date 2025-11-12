@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiService } from '@/lib/api'
 import { EmployerAuthGuard } from '@/components/employer-auth-guard'
-import { EmployerNavbar } from '@/components/employer-navbar'
+import { EmployerDashboardNavbar } from '@/components/employer-dashboard-navbar'
+import { EmployerDashboardFooter } from '@/components/employer-dashboard-footer'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function ManageClientsPage() {
   return (
@@ -22,27 +24,69 @@ export default function ManageClientsPage() {
 
 function ManageClientsContent() {
   const router = useRouter()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [clients, setClients] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState('all')
+  const [isAgency, setIsAgency] = useState<boolean | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadClients()
-  }, [])
+    checkAgencyStatus()
+  }, [user])
+
+  const checkAgencyStatus = async () => {
+    try {
+      if (!user?.companyId) {
+        setIsAgency(false)
+        setError('You are not associated with a company')
+        setLoading(false)
+        return
+      }
+
+      const companyResponse = await apiService.getCompany(user.companyId)
+      if (companyResponse.success && companyResponse.data) {
+        const company = companyResponse.data
+        const agencyCheck = company.companyAccountType === 'recruiting_agency' || 
+                           company.companyAccountType === 'consulting_firm'
+        setIsAgency(agencyCheck)
+        
+        if (agencyCheck) {
+          loadClients()
+        } else {
+          setError('This page is only available for recruiting agencies and consulting firms')
+          setLoading(false)
+        }
+      } else {
+        setIsAgency(false)
+        setError('Failed to load company information')
+        setLoading(false)
+      }
+    } catch (error: any) {
+      console.error('Error checking agency status:', error)
+      setIsAgency(false)
+      setError('Failed to verify agency status')
+      setLoading(false)
+    }
+  }
 
   const loadClients = async () => {
     try {
       setLoading(true)
+      setError(null)
       const response = await apiService.getAgencyClients()
       
       if (response.success) {
         setClients(response.data || [])
       } else {
-        toast.error('Failed to load clients')
+        setError(response.message || 'Failed to load clients')
+        toast.error(response.message || 'Failed to load clients')
       }
     } catch (error: any) {
       console.error('Error loading clients:', error)
-      toast.error(error.message || 'Failed to load clients')
+      const errorMessage = error.message || 'Failed to load clients'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -90,7 +134,7 @@ function ManageClientsContent() {
       : null
 
     return (
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -187,50 +231,99 @@ function ManageClientsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900">
-      <EmployerNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50/40 to-indigo-50/40 dark:from-gray-900 dark:via-gray-800/50 dark:to-gray-900 relative overflow-hidden">
+      {/* Background Effects - Blue theme matching employer dashboard */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/45 via-cyan-200/35 to-indigo-200/45"></div>
+        <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-300/10 to-cyan-300/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-36 h-36 bg-gradient-to-br from-indigo-300/10 to-violet-300/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-br from-cyan-300/10 to-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 left-0 right-0 h-24 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-indigo-400/20"></div>
+      </div>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <EmployerDashboardNavbar />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-16 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
               <Building2 className="w-8 h-8 text-blue-600" />
               Manage Clients
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
               View and manage your authorized client companies
             </p>
           </div>
           
-          <Button
-            onClick={() => router.push('/employer-dashboard/add-client')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Client
-          </Button>
+          {isAgency && (
+            <Button
+              onClick={() => router.push('/employer-dashboard/add-client')}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Client
+            </Button>
+          )}
         </div>
+
+        {/* Error State - Not an Agency */}
+        {isAgency === false && (
+          <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)]">
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Agency Access Required
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                {error || 'This page is only available for recruiting agencies and consulting firms.'}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mb-6">
+                If you are a recruiting agency or consulting firm, please ensure your company account type is set correctly.
+              </p>
+              <Button
+                onClick={() => router.push('/employer-dashboard')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Back to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {loading && isAgency === null && (
+          <Card className="bg-white/50 backdrop-blur-xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)]">
+            <CardContent className="p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-slate-600 dark:text-slate-400">Loading client information...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Content - Only show if agency */}
+        {isAgency === true && (
+          <>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
+          <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Clients</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Total Clients</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
                 </div>
                 <Building2 className="w-8 h-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Active</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Active</p>
                   <p className="text-2xl font-bold text-green-600">{stats.active}</p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
@@ -238,11 +331,11 @@ function ManageClientsContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Pending</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Pending</p>
                   <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-600" />
@@ -250,11 +343,11 @@ function ManageClientsContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Expired</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Expired</p>
                   <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
                 </div>
                 <AlertTriangle className="w-8 h-8 text-red-600" />
@@ -264,9 +357,9 @@ function ManageClientsContent() {
         </div>
 
         {/* Clients List */}
-        <Card>
+        <Card className="rounded-3xl bg-white/50 backdrop-blur-2xl border-white/40 shadow-[0_8px_28px_rgba(59,130,246,0.08)] hover:shadow-[0_18px_60px_rgba(59,130,246,0.16)] transition-all duration-300">
           <CardHeader>
-            <CardTitle>Client Companies</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Client Companies</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -312,7 +405,11 @@ function ManageClientsContent() {
             </Tabs>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
+      
+      <EmployerDashboardFooter />
     </div>
   )
 }
