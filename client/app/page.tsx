@@ -689,6 +689,16 @@ export default function HomePage() {
     }
   }
 
+  // Helper function to get the correct company route based on region
+  const getCompanyRoute = (company: any) => {
+    if (!company) return '/companies'
+    // Check if company is a Gulf company
+    const isGulfCompany = company.region === 'gulf' || 
+                         company.region === 'Gulf' ||
+                         (company.country && ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'].includes(company.country))
+    return isGulfCompany ? `/gulf-companies/${company.id}` : `/companies/${company.id}`
+  }
+
   const getIndustryBackgroundGradient = (industry: string) => {
     switch (industry?.toLowerCase()) {
       case "technology":
@@ -779,7 +789,9 @@ export default function HomePage() {
             logo: c.logo || '/placeholder.svg?height=40&width=40',
             sector: (((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('tech')?'technology':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('fin')?'finance':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('health')?'healthcare':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('auto')?'automotive':((c.industries && Array.isArray(c.industries) && c.industries.length > 0 ? c.industries[0] : c.industry)||'').toLowerCase().includes('e-com')?'ecommerce':'technology'),
             natureOfBusiness: c.natureOfBusiness || [],
-            companyTypes: c.companyTypes || []
+            companyTypes: c.companyTypes || [],
+            region: c.region || null, // Include region field
+            country: c.country || null // Include country field for Gulf detection
           }))
           // Fetch openings count per company using public jobs-by-company endpoint
           const withCounts = await Promise.all(baseMapped.map(async (co: any) => {
@@ -1074,7 +1086,7 @@ export default function HomePage() {
                 transition={{ delay: index * 0.05, duration: 0.5 }}
               >
                 {company ? (
-                  <Link href={`/companies/${company.id}`}>
+                  <Link href={getCompanyRoute(company)}>
                     <Card className="w-full cursor-pointer border border-white/40 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden h-full">
                       <CardContent className="p-6 relative h-full">
                         <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
@@ -1383,7 +1395,7 @@ export default function HomePage() {
                 className="group transform transition-transform duration-300 hover:-translate-y-2"
               >
                 {company ? (
-                <Link href={`/companies/${company.id}`}>
+                <Link href={getCompanyRoute(company)}>
                     <Card className="cursor-pointer border border-white/40 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden h-full">
                     <CardContent className="p-6 text-center relative h-full flex flex-col justify-between">
                         <div className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
