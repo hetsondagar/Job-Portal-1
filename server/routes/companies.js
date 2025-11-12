@@ -541,7 +541,7 @@ router.post('/', authenticateToken, async (req, res) => {
       address,
       city,
       state,
-      country: country || 'India',
+      country: country || (region === 'gulf' ? 'UAE' : 'India'),
       region: region || 'india',
       contactPerson: `${req.user.first_name} ${req.user.last_name}`,
       contactEmail: req.user.email,
@@ -708,13 +708,10 @@ router.get('/:id', async (req, res) => {
       console.log('No valid token provided, allowing public access to company info');
     }
     
-    // Check if the user has access to this company (only for employers)
-    if (user && user.user_type === 'employer' && user.company_id !== id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
-    }
+    // Allow public access to company details for job seekers
+    // Only restrict access if user is an employer trying to edit/update (not view)
+    // For viewing company details, allow all users (public access)
+    // This check is moved to PUT/PATCH endpoints only
 
     const company = await Company.findByPk(id);
     
@@ -814,6 +811,7 @@ router.get('/:id', async (req, res) => {
       workCulture: company.culture || '',
       featured: company.isFeatured || false,
       isVerified: company.isVerified || false,
+      region: company.region || null, // Include region field
       createdAt: company.created_at,
       updatedAt: company.updatedAt
     };
@@ -836,7 +834,7 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/jobs', async (req, res) => {
   try {
     const { id } = req.params;
-    const { department, location, experience, salary } = req.query;
+    const { department, location, experience, salary, region } = req.query;
     const Job = require('../models/Job');
     const { Op } = require('sequelize');
     
@@ -850,6 +848,11 @@ router.get('/:id/jobs', async (req, res) => {
         { [Op.or]: [{ validTill: null }, { validTill: { [Op.gte]: now } }] }
       ]
     };
+
+    // Add region filter if provided
+    if (region) {
+      where.region = region;
+    }
 
     // Add department filter
     if (department && department !== 'all') {
@@ -904,7 +907,7 @@ router.get('/:id/jobs', async (req, res) => {
         'salaryMin', 'salaryMax', 'description', 'requirements',
         'created_at', 'isUrgent', 'department', 'category', 'city', 
         'state', 'country', 'salary', 'skills', 'applications',
-        'updated_at', 'status', 'remoteWork', 'experienceMin', 'experienceMax', 'validTill'
+        'updated_at', 'status', 'remoteWork', 'experienceMin', 'experienceMax', 'validTill', 'region'
       ]
     });
 

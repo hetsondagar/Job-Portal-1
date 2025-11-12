@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, MapPin, Briefcase, Clock, IndianRupee, Star, Building2, Users, Filter, CheckCircle } from "lucide-react"
+import { ArrowLeft, MapPin, Briefcase, Clock, DollarSign, Star, Building2, Users, Filter, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,14 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
-import { Navbar } from "@/components/navbar"
+import GulfNavbar from "@/components/gulf-navbar"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import Link from "next/link"
 import { apiService, Job, Company } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { toast } from "sonner"
 
-function DepartmentJobsPage() {
+function GulfDepartmentJobsPage() {
   const params = useParams()
   const router = useRouter()
   const [showAuthDialog, setShowAuthDialog] = useState(false)
@@ -59,11 +59,11 @@ function DepartmentJobsPage() {
           console.log('Company jobs endpoint failed, trying alternative:', e)
           // Try alternative endpoint
           try {
-            const altResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/jobs/company/${companyId}`)
+            const altResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/gulf/jobs?companyId=${companyId}`)
             if (altResponse.ok) {
               const altData = await altResponse.json()
               if (altData.success) {
-                const jobs = Array.isArray(altData.data) ? altData.data : []
+                const jobs = Array.isArray(altData.data) ? altData.data : (Array.isArray(altData.data?.rows) ? altData.data.rows : [])
                 setJobs(jobs)
               }
             }
@@ -83,13 +83,13 @@ function DepartmentJobsPage() {
 
   const getSectorColor = (sector: string) => {
     const colors = {
-      technology: "from-blue-500 to-cyan-500",
-      finance: "from-green-500 to-emerald-500",
-      automotive: "from-orange-500 to-red-500",
-      healthcare: "from-teal-500 to-cyan-500",
-      energy: "from-purple-500 to-pink-500",
+      technology: "from-green-500 to-emerald-500",
+      finance: "from-emerald-500 to-teal-500",
+      automotive: "from-teal-500 to-cyan-500",
+      healthcare: "from-green-600 to-emerald-600",
+      energy: "from-emerald-600 to-teal-600",
     }
-    return colors[sector as keyof typeof colors] || "from-gray-500 to-slate-500"
+    return colors[sector as keyof typeof colors] || "from-green-500 to-emerald-500"
   }
 
   const handleApply = async (jobId: number) => {
@@ -121,7 +121,7 @@ function DepartmentJobsPage() {
   }
 
   const handleBackNavigation = () => {
-    router.push(`/companies/${companyId}`)
+    router.push(`/gulf-companies/${companyId}`)
   }
 
   const companySector = (company?.industry || '').toLowerCase().includes('tech') ? 'technology'
@@ -158,7 +158,7 @@ function DepartmentJobsPage() {
         department: j.department || j.category || departmentName,
         location: j.location || j.city || j.state || j.country || '—',
         experience: j.experience || j.experienceLevel || '',
-        salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax}` : ''),
+        salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax} AED` : ''),
         skills: Array.isArray(j.skills) ? j.skills : [],
         posted: j.createdAt || '',
         applicants: j.applications || 0,
@@ -169,12 +169,12 @@ function DepartmentJobsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <GulfNavbar />
         <div className="pt-20 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="mt-4 text-slate-600 dark:text-slate-300">Loading department jobs...</p>
             </div>
           </div>
@@ -185,15 +185,15 @@ function DepartmentJobsPage() {
 
   if (!company) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <GulfNavbar />
         <div className="pt-20 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center py-16">
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Company Not Found</h1>
               <p className="text-slate-600 dark:text-slate-400">We couldn't load the company details. Please go back and try again.</p>
               <div className="mt-6">
-                <Button variant="outline" onClick={() => router.push(`/companies/${companyId}`)}>Back to Company</Button>
+                <Button variant="outline" onClick={() => router.push(`/gulf-companies/${companyId}`)}>Back to Company</Button>
               </div>
             </div>
           </div>
@@ -203,9 +203,9 @@ function DepartmentJobsPage() {
   }
 
   return (
-    <ErrorBoundary fallback={<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"><Navbar /><div className="pt-20 pb-12"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center py-16"><h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Something went wrong</h1><p className="text-slate-600 dark:text-slate-400">We couldn't load this department. Please go back and try again.</p><div className="mt-6"><Button variant="outline" onClick={() => router.push(`/companies/${companyId}`)}>Back to Company</Button></div></div></div></div></div>}>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Navbar />
+    <ErrorBoundary fallback={<div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"><GulfNavbar /><div className="pt-20 pb-12"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center py-16"><h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Something went wrong</h1><p className="text-slate-600 dark:text-slate-400">We couldn't load this department. Please go back and try again.</p><div className="mt-6"><Button variant="outline" onClick={() => router.push(`/gulf-companies/${companyId}`)}>Back to Company</Button></div></div></div></div></div>}>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <GulfNavbar />
 
       <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -218,7 +218,7 @@ function DepartmentJobsPage() {
           >
             <Button
               variant="ghost"
-              className="text-slate-600 dark:text-slate-400 hover:text-blue-600"
+              className="text-slate-600 dark:text-slate-400 hover:text-green-600"
               onClick={handleBackNavigation}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -233,7 +233,7 @@ function DepartmentJobsPage() {
                 <div className="flex items-center space-x-6">
                   <Avatar className="w-20 h-20 ring-2 ring-white/50">
                     <AvatarImage src={company.logo || "/placeholder.svg"} alt={company.name} />
-                    <AvatarFallback className="text-2xl font-bold text-blue-600">{(company.name||'')[0]}</AvatarFallback>
+                    <AvatarFallback className="text-2xl font-bold text-green-600">{(company.name||'')[0]}</AvatarFallback>
                   </Avatar>
                   <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
@@ -245,7 +245,7 @@ function DepartmentJobsPage() {
                         <span className="font-semibold">{company?.rating || 0}</span>
                         <span className="text-sm ml-1">({company?.reviews || 0} reviews)</span>
                       </div>
-                      <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge className="bg-green-50 text-green-700 border-green-200">
                         {departmentJobs.length} openings
                       </Badge>
                     </div>
@@ -291,7 +291,7 @@ function DepartmentJobsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
               >
-                <Link href={`/jobs/${job.id}`}>
+                <Link href={`/gulf-jobs/${job.id}`}>
                   <Card className="border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 group cursor-pointer overflow-hidden">
                     <div
                       className={`absolute inset-0 bg-gradient-to-br ${getSectorColor(company.sector)} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}
@@ -302,7 +302,7 @@ function DepartmentJobsPage() {
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-6">
                             <div>
-                              <h3 className="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors mb-2">
+                              <h3 className="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-green-600 transition-colors mb-2">
                                 {job.title}
                               </h3>
                               <div className="text-lg text-slate-600 dark:text-slate-400 font-medium mb-4">
@@ -342,10 +342,10 @@ function DepartmentJobsPage() {
                                   </div>
                                 </div>
                                 <div className="flex items-center text-slate-600 dark:text-slate-300">
-                                  <IndianRupee className="w-5 h-5 mr-2 text-slate-400" />
+                                  <DollarSign className="w-5 h-5 mr-2 text-slate-400" />
                                   <div>
                                     <div className="font-medium">
-                                      {job.salary ? (job.salary.includes('LPA') ? job.salary : `${job.salary} LPA`) : 'Salary not specified'}
+                                      {job.salary ? (job.salary.includes('AED') ? job.salary : `${job.salary} AED`) : 'Salary not specified'}
                                     </div>
                                     <div className="text-sm text-slate-500">Salary</div>
                                   </div>
@@ -413,7 +413,7 @@ function DepartmentJobsPage() {
                               <Badge
                                 key={skillIndex}
                                 variant="secondary"
-                                className="bg-blue-50 text-blue-700 border-blue-200"
+                                className="bg-green-50 text-green-700 border-green-200"
                               >
                                 {skill}
                               </Badge>
@@ -461,7 +461,7 @@ function DepartmentJobsPage() {
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
             <Link href="/register">
-              <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
                 Register Now
               </Button>
             </Link>
@@ -473,68 +473,19 @@ function DepartmentJobsPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Footer */}
-      <footer className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold">JobPortal</span>
-              </div>
-              <p className="text-slate-400 mb-6">India's leading job portal connecting talent with opportunities.</p>
-            </div>
-
-            {[
-              {
-                title: "For Job Seekers",
-                links: ["Browse Jobs", "Career Advice", "Resume Builder", "Salary Guide"],
-              },
-              {
-                title: "For Employers",
-                links: ["Post Jobs", "Search Resumes", "Recruitment Solutions", "Pricing"],
-              },
-              {
-                title: "Company",
-                links: ["About Us", "Contact", "Privacy Policy", "Terms of Service"],
-              },
-            ].map((section, index) => (
-              <div key={index}>
-                <h3 className="font-semibold mb-6 text-lg">{section.title}</h3>
-                <ul className="space-y-3">
-                  {section.links.map((link, linkIndex) => (
-                    <li key={linkIndex}>
-                      <Link href="#" className="text-slate-400 hover:text-white transition-colors hover:underline">
-                        {link}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
-            <p>&copy; 2025 JobPortal. All rights reserved. Made with ❤️ in India</p>
-          </div>
-        </div>
-      </footer>
     </div>
     </ErrorBoundary>
   )
 }
 
-export default dynamic(() => Promise.resolve(DepartmentJobsPage), { 
+export default dynamic(() => Promise.resolve(GulfDepartmentJobsPage), { 
   ssr: false,
   loading: () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/30 to-teal-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
             <p className="mt-4 text-slate-600 dark:text-slate-300">Loading department jobs...</p>
           </div>
         </div>
@@ -542,3 +493,4 @@ export default dynamic(() => Promise.resolve(DepartmentJobsPage), {
     </div>
   )
 })
+

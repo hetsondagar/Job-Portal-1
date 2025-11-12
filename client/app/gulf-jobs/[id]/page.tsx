@@ -8,7 +8,7 @@ import {
   MapPin,
   Briefcase,
   Clock,
-  IndianRupee,
+  DollarSign,
   Star,
   Share2,
   Bookmark,
@@ -35,7 +35,7 @@ import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
-import { Navbar } from "@/components/navbar"
+import GulfNavbar from "@/components/gulf-navbar"
 import { apiService } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { useAuth } from '@/hooks/useAuth'
@@ -49,7 +49,7 @@ interface SimilarJobsResponse {
   message?: string;
 }
 
-export default function JobDetailPage() {
+export default function GulfJobDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user, loading } = useAuth()
@@ -76,15 +76,11 @@ export default function JobDetailPage() {
           
           // Try to fetch job data using public API method
           try {
-            const res = await apiService.getJobByIdPublic(jobIdFromParams)
+            const res = await apiService.getGulfJobById(jobIdFromParams)
             console.log('📋 Job API response (public):', res)
             
             if (res.success && res.data) {
-              // Check if this is a Gulf job and redirect
-              if (res.data.region === 'gulf' || res.data.region === 'Gulf' || res.data.metadata?.region === 'gulf') {
-                router.replace(`/gulf-jobs/${jobIdFromParams}`)
-                return
-              }
+              // Gulf job - already on Gulf page, no redirect needed
               
               // Transform the job data to match the expected format
               const metadata = res.data.metadata || {};
@@ -122,7 +118,7 @@ export default function JobDetailPage() {
                 experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
                 experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
                 education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
+                salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} AED` : 'Not specified'),
                 skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
                 posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
                 applicants: res.data.applicationsCount || 0,
@@ -173,15 +169,11 @@ export default function JobDetailPage() {
           }
           
           // Fallback to API service with authentication
-          const res = await apiService.getJobById(jobIdFromParams)
+          const res = await apiService.getGulfJobById(jobIdFromParams)
           console.log('📋 Job API response (authenticated):', res)
           
           if (isMounted && res.success && res.data) {
-            // Check if this is a Gulf job and redirect
-            if (res.data.region === 'gulf' || res.data.region === 'Gulf' || res.data.metadata?.region === 'gulf') {
-              router.replace(`/gulf-jobs/${jobIdFromParams}`)
-              return
-            }
+            // Gulf job - already on Gulf page, no redirect needed
             // Transform the job data to match the expected format
             const transformedJob = {
               id: res.data.id,
@@ -195,7 +187,7 @@ export default function JobDetailPage() {
               experience: res.data.experienceLevel || res.data.experience || 'Experience not specified',
               experienceLevel: res.data.experienceLevel || res.data.experience || 'Not specified',
               education: Array.isArray(res.data.education) ? res.data.education : (res.data.education ? [res.data.education] : []),
-              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} LPA` : 'Not specified'),
+              salary: res.data.salary || (res.data.salaryMin && res.data.salaryMax ? `${(res.data.salaryMin / 100000).toFixed(0)}-${(res.data.salaryMax / 100000).toFixed(0)} AED` : 'Not specified'),
               skills: Array.isArray(res.data.skills) ? res.data.skills : (res.data.skills ? res.data.skills.split(',').map((s: string) => s.trim()) : []),
               posted: res.data.createdAt ? new Date(res.data.createdAt).toLocaleDateString() : 'Date not available',
               applicants: res.data.applicationsCount || 0,
@@ -351,7 +343,7 @@ export default function JobDetailPage() {
           timeoutId = setTimeout(() => reject(new Error('Request timeout')), 10000)
         })
         
-        const apiPromise = apiService.getSimilarJobs(jobIdFromParams, 3)
+        const apiPromise = apiService.getSimilarGulfJobs(jobIdFromParams, 3)
         
         const res = await Promise.race([apiPromise, timeoutPromise])
         
@@ -376,9 +368,11 @@ export default function JobDetailPage() {
               ...job,
               // Ensure all required fields have fallback values
               title: job.title?.trim() || 'Untitled Job',
-              company: job.company?.trim() || 'Company not specified',
-              location: job.location?.trim() || 'Location not specified',
-              salary: job.salary?.trim() || 'Salary not disclosed',
+              company: typeof job.company === 'string' 
+                ? job.company.trim() 
+                : (job.company?.name || typeof job.company === 'object' && job.company ? 'Company' : 'Company not specified'),
+              location: typeof job.location === 'string' ? job.location.trim() : (job.location || 'Location not specified'),
+              salary: typeof job.salary === 'string' ? job.salary.trim() : (job.salary || 'Salary not disclosed'),
               type: job.type || 'full-time',
               experienceLevel: job.experienceLevel || 'mid',
               department: job.department || 'General',
@@ -459,7 +453,7 @@ export default function JobDetailPage() {
   }, [jobIdFromParams, job, jobLoading])
 
   // Auth check - Allow employers/admins to view job details (removed redirect)
-  // Employers can now access /jobs/[id] page to preview their posted jobs
+  // Employers can now access /gulf-jobs/[id] page to preview their posted jobs
   useEffect(() => {
     // No redirect needed - employers can view their company's job details
     if (user && (user.userType === 'employer' || user.userType === 'admin')) {
@@ -472,7 +466,7 @@ export default function JobDetailPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
           <p className="mt-4 text-slate-600 dark:text-slate-400">Redirecting...</p>
         </div>
       </div>
@@ -535,7 +529,7 @@ export default function JobDetailPage() {
 
     // Prevent applying if job is expired by validTill
     try {
-      const publicJob = await apiService.getJobByIdPublic(jobIdFromParams)
+      const publicJob = await apiService.getGulfJobById(jobIdFromParams)
       const vt = (publicJob?.data as any)?.validTill
       if (vt && new Date() > new Date(vt)) {
         toast.error('Applications are closed for this job (expired)')
@@ -596,7 +590,7 @@ export default function JobDetailPage() {
   })()
 
   const handleShare = (platform: string) => {
-    const jobUrl = `${window.location.origin}/jobs/${jobIdFromParams}`
+    const jobUrl = `${window.location.origin}/gulf-jobs/${jobIdFromParams}`
     const shareText = `Check out this ${job?.title || 'job'} position${job?.company ? ` at ${typeof job.company === 'string' ? job.company : job.company?.name}` : ''}!`
 
     switch (platform) {
@@ -614,17 +608,17 @@ export default function JobDetailPage() {
 
   const handleBackNavigation = () => {
     const referrer = document.referrer
-    if (referrer.includes(`/companies/${job?.companyId}/departments/`)) {
+    if (referrer.includes(`/gulf-companies/${job?.companyId}/departments/`)) {
       router.back()
     } else {
-      router.push("/jobs")
+      router.push("/gulf-jobs")
     }
   }
 
   if (jobLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <Navbar />
+        <GulfNavbar />
         <div className="pt-16 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="h-40 animate-pulse bg-white/60 dark:bg-slate-800/60 rounded-xl" />
@@ -637,7 +631,7 @@ export default function JobDetailPage() {
   if (!job) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <Navbar />
+        <GulfNavbar />
         <div className="pt-16 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center py-16">
@@ -649,7 +643,7 @@ export default function JobDetailPage() {
                 The job you're looking for doesn't exist or has been removed.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button onClick={() => router.push('/jobs')} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => router.push('/jobs')} className="bg-emerald-600 hover:bg-emerald-700">
                   Browse All Jobs
                 </Button>
                 <Button variant="outline" onClick={() => router.back()}>
@@ -665,7 +659,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Navbar />
+      <GulfNavbar />
 
       <div className="pt-16 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -678,7 +672,7 @@ export default function JobDetailPage() {
           >
             <Button
               variant="ghost"
-              className="text-slate-600 dark:text-slate-400 hover:text-blue-600"
+              className="text-slate-600 dark:text-slate-400 hover:text-emerald-600"
               onClick={handleBackNavigation}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -697,15 +691,15 @@ export default function JobDetailPage() {
                       <div className="flex items-start space-x-4">
                         <Avatar className="w-16 h-16 ring-2 ring-white/50">
                           <AvatarImage src={job?.companyLogo || "/placeholder.svg"} alt={typeof job?.company === 'string' ? job?.company : (job?.company?.name || 'Company')} />
-                          <AvatarFallback className="text-xl font-bold text-blue-600">{(typeof job?.company === 'string' ? job?.company : job?.company?.name || 'C')[0]}</AvatarFallback>
+                          <AvatarFallback className="text-xl font-bold text-emerald-600">{(typeof job?.company === 'string' ? job?.company : job?.company?.name || 'C')[0]}</AvatarFallback>
                         </Avatar>
                         <div>
                           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{job?.title || 'Job'}</h1>
                           <div className="flex items-center gap-2 flex-wrap mb-3">
                           {job?.company && (
                             <Link
-                              href={`/companies/${job?.companyId || ''}`}
-                                className="text-xl text-blue-600 hover:text-blue-700 font-medium"
+                              href={`/gulf-companies/${job?.companyId || ''}`}
+                                className="text-xl text-emerald-600 hover:text-blue-700 font-medium"
                             >
                               {typeof job.company === 'string' ? job.company : job.company?.name}
                             </Link>
@@ -753,7 +747,7 @@ export default function JobDetailPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsBookmarked(!isBookmarked)}
-                          className={`${isBookmarked ? "bg-blue-50 border-blue-200 text-blue-600" : ""}`}
+                          className={`${isBookmarked ? "bg-blue-50 border-blue-200 text-emerald-600" : ""}`}
                         >
                           <Bookmark className={`w-4 h-4 mr-2 ${isBookmarked ? "fill-current" : ""}`} />
                           {isBookmarked ? "Saved" : "Save"}
@@ -799,10 +793,10 @@ export default function JobDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center text-slate-600 dark:text-slate-300">
-                        <IndianRupee className="w-5 h-5 mr-2 text-slate-400" />
+                        <DollarSign className="w-5 h-5 mr-2 text-slate-400" />
                         <div>
                           <div className="font-medium">{job?.salary || '—'}</div>
-                          <div className="text-sm text-slate-500">LPA</div>
+                          <div className="text-sm text-slate-500">AED</div>
                         </div>
                       </div>
                       <div className="flex items-center text-slate-600 dark:text-slate-300">
@@ -823,7 +817,7 @@ export default function JobDetailPage() {
                     {job?.type?.toLowerCase() === 'internship' && (job?.duration || job?.startDate || job?.workMode || job?.learningObjectives || job?.mentorship) && (
                       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
                         <div className="flex items-center space-x-2 mb-4">
-                          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
                             <Briefcase className="w-4 h-4 text-white" />
                           </div>
                           <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Internship Details</h3>
@@ -915,7 +909,7 @@ export default function JobDetailPage() {
                             ? 'bg-gray-400 cursor-not-allowed'
                             : job?.isHotVacancy
                               ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700'
-                              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                              : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-blue-700 hover:to-indigo-700'
                       }`}
                       disabled={hasApplied || isExpired || isOwnJob}
                     >
@@ -1013,7 +1007,7 @@ export default function JobDetailPage() {
                       <div className="space-y-4">
                         <div className="flex items-start space-x-3">
                           <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <Briefcase className="w-4 h-4 text-emerald-600 dark:text-blue-400" />
                           </div>
                           <div>
                             <div className="font-medium text-slate-900 dark:text-slate-100">Role</div>
@@ -1200,7 +1194,7 @@ export default function JobDetailPage() {
                             href={job.videoBanner} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-700 underline flex items-center justify-center gap-2"
+                            className="text-emerald-600 hover:text-blue-700 underline flex items-center justify-center gap-2"
                           >
                             <Video className="h-5 w-5" />
                             Watch Company Video
@@ -1396,7 +1390,7 @@ export default function JobDetailPage() {
                   <Card className="border-blue-200 bg-blue-50/80 dark:bg-blue-900/20 dark:border-blue-800 backdrop-blur-xl shadow-lg">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2 text-blue-900 dark:text-blue-100">
-                        <Building2 className="h-5 w-5 text-blue-600" />
+                        <Building2 className="h-5 w-5 text-emerald-600" />
                         Posted by Recruiting Agency
                       </CardTitle>
                     </CardHeader>
@@ -1412,7 +1406,7 @@ export default function JobDetailPage() {
                               />
                             ) : (
                               <div className="w-16 h-16 rounded-lg bg-blue-100 dark:bg-blue-800 flex items-center justify-center border-2 border-blue-200 dark:border-blue-700">
-                                <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                <Building2 className="w-8 h-8 text-emerald-600 dark:text-blue-400" />
                               </div>
                             )}
                           </div>
@@ -1459,7 +1453,7 @@ export default function JobDetailPage() {
                   <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-xl shadow-xl border-blue-200 dark:border-blue-800">
                     <CardHeader>
                       <CardTitle className="text-2xl flex items-center gap-2">
-                        <Building2 className="h-6 w-6 text-blue-600" />
+                        <Building2 className="h-6 w-6 text-emerald-600" />
                         {job?.isConsultancy && job?.showHiringCompanyDetails ? 'About the Hiring Company' : 'About the Company'}
                       </CardTitle>
                     </CardHeader>
@@ -1533,7 +1527,7 @@ export default function JobDetailPage() {
                           )}
                           {job?.boostedSearch && (
                             <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                              <Zap className="w-5 h-5 text-blue-600" />
+                              <Zap className="w-5 h-5 text-emerald-600" />
                               <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Boosted Search Visibility</span>
                             </div>
                           )}
@@ -1596,7 +1590,7 @@ export default function JobDetailPage() {
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {job.benefits.map((benefit: string, index: number) => (
                           <div key={index} className="flex items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                            <Award className="w-5 h-5 text-blue-600 mr-3" />
+                            <Award className="w-5 h-5 text-emerald-600 mr-3" />
                             <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
                           </div>
                         ))}
@@ -1678,12 +1672,12 @@ export default function JobDetailPage() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Website</span>
-                          <span className="font-medium text-blue-600">{job.website}</span>
+                          <span className="font-medium text-emerald-600">{job.website}</span>
                         </div>
                       </div>
                       {/* Only show View Company Profile for direct company jobs with existing company profiles */}
                       {!job?.isConsultancy && job?.companyId && (
-                      <Link href={`/companies/${job.companyId || ''}`}>
+                      <Link href={`/gulf-companies/${job.companyId || ''}`}>
                         <Button variant="outline" className="w-full bg-transparent">
                           <Building2 className="w-4 h-4 mr-2" />
                           View Company Profile
@@ -1718,19 +1712,19 @@ export default function JobDetailPage() {
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-emerald-600 mr-3 mt-0.5" />
                         <div className="text-sm text-blue-700 dark:text-blue-300">
                           Tailor your resume to highlight relevant experience
                         </div>
                       </div>
                       <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-emerald-600 mr-3 mt-0.5" />
                         <div className="text-sm text-blue-700 dark:text-blue-300">
                           Include a compelling cover letter
                         </div>
                       </div>
                       <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-emerald-600 mr-3 mt-0.5" />
                         <div className="text-sm text-blue-700 dark:text-blue-300">
                           Research the company culture and values
                         </div>
@@ -1783,17 +1777,19 @@ export default function JobDetailPage() {
                         {similarJobs.map((similarJob, index) => (
                           <Link 
                             key={`${similarJob.id}-${index}`} 
-                            href={`/jobs/${similarJob.id}`}
+                            href={`/gulf-jobs/${similarJob.id}`}
                             className="block group"
                           >
                             <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200 cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-600">
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-slate-900 dark:text-white mb-1 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                  <h4 className="font-semibold text-slate-900 dark:text-white mb-1 line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-blue-400 transition-colors">
                                     {similarJob.title}
                                   </h4>
                                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-1">
-                                    {similarJob.company}
+                                    {typeof similarJob.company === 'string' 
+                                      ? similarJob.company 
+                                      : (similarJob.company?.name || 'Company')}
                                   </p>
                                 </div>
                                 <div className="flex flex-col items-end space-y-1 ml-2">
@@ -1982,7 +1978,7 @@ export default function JobDetailPage() {
           </DialogHeader>
           <div className="flex flex-col space-y-3 mt-6">
             <Link href="/register" className="w-full">
-              <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-blue-700 hover:to-indigo-700">
                 Register Now
               </Button>
             </Link>
@@ -2009,7 +2005,7 @@ export default function JobDetailPage() {
             location: job.location
           }}
           onSuccess={handleApplicationSuccess}
-          isGulfJob={false}
+          isGulfJob={true}
         />
       )}
 
@@ -2019,20 +2015,20 @@ export default function JobDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center">
                   <Briefcase className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-2xl font-bold">JobPortal</span>
               </div>
               <p className="text-slate-400 mb-6">India's leading job portal connecting talent with opportunities.</p>
               <div className="flex space-x-4">
-                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors cursor-pointer">
                   <span className="text-sm">f</span>
                 </div>
-                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors cursor-pointer">
                   <span className="text-sm">t</span>
                 </div>
-                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors cursor-pointer">
                   <span className="text-sm">in</span>
                 </div>
               </div>

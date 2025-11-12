@@ -434,7 +434,7 @@ exports.createJob = async (req, res, next) => {
         error: 'REGION_MISMATCH'
       });
     }
-
+    
     // Ensure associated company is marked as Gulf region for Gulf job postings
     if (jobRegion === 'gulf' && userCompany && userCompany.region !== 'gulf') {
       try {

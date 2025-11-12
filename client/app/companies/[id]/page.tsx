@@ -428,7 +428,13 @@ function CompanyDetailPage() {
         try {
         const response = await apiService.getCompany(companyId)
           if (response && response.success && response.data) {
-          setCompany(response.data)
+          const companyData = response.data
+          // Check if this is a Gulf company and redirect
+          if (companyData.region === 'gulf' || companyData.region === 'Gulf') {
+            router.replace(`/gulf-companies/${companyId}`)
+            return
+          }
+          setCompany(companyData)
           return
         }
         } catch (error: any) {
@@ -442,6 +448,11 @@ function CompanyDetailPage() {
         if (list && list.success && Array.isArray(list.data)) {
         const found = list.data.find((c: any) => String(c.id) === companyId)
         if (found) {
+          // Check if this is a Gulf company and redirect
+          if (found.region === 'gulf' || found.region === 'Gulf') {
+            router.replace(`/gulf-companies/${companyId}`)
+            return
+          }
           setCompany(found)
           return
         }

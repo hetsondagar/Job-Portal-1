@@ -29,6 +29,7 @@ interface FilterState {
   companySizes: string[]
   locations: string[]
   minRating: string
+  salaryRange: string
 }
 
 // Industry-specific color schemes for Gulf theme
@@ -92,6 +93,7 @@ export default function GulfCompaniesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState("rating")
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -102,6 +104,7 @@ export default function GulfCompaniesPage() {
     companySizes: [],
     locations: [],
     minRating: "",
+    salaryRange: "",
   })
 
   // Check if user has access to Gulf pages
@@ -198,6 +201,16 @@ export default function GulfCompaniesPage() {
     setCurrentPage(1)
   }
 
+  const handleCompanySizeToggle = (size: string) => {
+    setFilters(prev => ({
+      ...prev,
+      companySizes: prev.companySizes.includes(size)
+        ? prev.companySizes.filter(s => s !== size)
+        : [...prev.companySizes, size]
+    }))
+    setCurrentPage(1)
+  }
+
   const clearAllFilters = () => {
     setFilters({
       search: "",
@@ -207,21 +220,57 @@ export default function GulfCompaniesPage() {
       companySizes: [],
       locations: [],
       minRating: "",
+      salaryRange: "",
     })
     setSearch("")
     setCurrentPage(1)
   }
 
-  // Get unique values for filters
+  // Industries list (matching /companies page)
+  const industries = [
+    "Technology",
+    "Fintech",
+    "Healthcare",
+    "EdTech",
+    "E-commerce",
+    "Manufacturing",
+    "Automotive",
+    "Banking & Finance",
+    "Consulting",
+    "Energy & Petrochemicals",
+    "Pharmaceuticals",
+    "Telecommunications",
+    "Media & Entertainment",
+    "Real Estate",
+    "Food & Beverage",
+    "Retail",
+    "Logistics",
+    "Government",
+    "Non-Profit",
+  ]
+
+  // Company types (matching /companies page)
+  const companyTypes = [
+    "Startup",
+    "MNC",
+    "Product Based",
+    "Fortune 500",
+    "Government",
+    "Non-Profit",
+    "Unicorn",
+    "Sponsored"
+  ]
+
+  // Get unique values for filters (combine with hardcoded list)
   const uniqueIndustries = useMemo(() => {
-    const industries = new Set<string>()
+    const industrySet = new Set<string>(industries)
     companies.forEach(c => {
-      if (c.industry) industries.add(c.industry)
+      if (c.industry) industrySet.add(c.industry)
       if (c.industries && Array.isArray(c.industries)) {
-        c.industries.forEach((ind: string) => industries.add(ind))
+        c.industries.forEach((ind: string) => industrySet.add(ind))
       }
     })
-    return Array.from(industries).sort()
+    return Array.from(industrySet).sort()
   }, [companies])
 
   const uniqueLocations = useMemo(() => {
@@ -284,6 +333,32 @@ export default function GulfCompaniesPage() {
     if (filters.minRating) {
       const minRating = parseFloat(filters.minRating)
       filtered = filtered.filter(c => (c.rating || 0) >= minRating)
+    }
+
+    // Company size filter
+    if (filters.companySizes.length > 0) {
+      filtered = filtered.filter(c => {
+        const companySize = c.companySize || c.employees || ''
+        return filters.companySizes.some(size => {
+          const sizeLower = size.toLowerCase()
+          const companySizeLower = companySize.toLowerCase()
+          return companySizeLower.includes(sizeLower) || sizeLower.includes(companySizeLower)
+        })
+      })
+    }
+
+    // Salary range filter
+    if (filters.salaryRange) {
+      filtered = filtered.filter(c => {
+        const salaryRange = c.salaryRange || ''
+        if (!salaryRange) return false
+        const range = filters.salaryRange
+        if (range === "0-10") return salaryRange.includes("5-") || salaryRange.includes("6-") || salaryRange.includes("7-") || salaryRange.includes("8-") || salaryRange.includes("9-") || salaryRange.includes("10")
+        if (range === "10-20") return salaryRange.includes("10-") || salaryRange.includes("12-") || salaryRange.includes("15-") || salaryRange.includes("18-") || salaryRange.includes("20")
+        if (range === "20-30") return salaryRange.includes("20-") || salaryRange.includes("22-") || salaryRange.includes("25-") || salaryRange.includes("28-") || salaryRange.includes("30")
+        if (range === "30+") return salaryRange.includes("30+") || salaryRange.includes("35") || salaryRange.includes("40")
+        return false
+      })
     }
 
     // Sort
@@ -434,46 +509,39 @@ export default function GulfCompaniesPage() {
                     </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Search */}
+                <CardContent className="space-y-4 sm:space-y-6">
+
+                  {/* Industry */}
                   <div>
                     <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
-                      Search
+                      Industry
                     </h3>
-            <Input
-                      placeholder="Search companies..."
-                      value={filters.search}
-                      onChange={(e) => handleFilterChange("search", e.target.value)}
-                      className="bg-white/70 dark:bg-slate-700/70"
-                    />
-                  </div>
-
-                  <Separator className="bg-slate-200 dark:bg-slate-700" />
-
-                  {/* Industries */}
-                  <div>
-                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
-                      Industries
-                    </h3>
-                    <ScrollArea className="h-48">
-                      <div className="space-y-2">
-                        {uniqueIndustries.map((industry) => (
-                          <div key={industry} className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={`industry-${industry}`}
-                              checked={filters.industries.includes(industry)}
-                              onCheckedChange={() => handleIndustryToggle(industry)}
-                            />
-                            <label
-                              htmlFor={`industry-${industry}`}
-                              className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                            >
-                              {industry}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                    <div className="space-y-2">
+                      {uniqueIndustries.slice(0, 8).map((industry) => (
+                        <div key={industry} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`industry-${industry}`}
+                            checked={filters.industries.includes(industry)}
+                            onCheckedChange={() => handleIndustryToggle(industry)}
+                          />
+                          <label
+                            htmlFor={`industry-${industry}`}
+                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                          >
+                            {industry}
+                          </label>
+                        </div>
+                      ))}
+                      {uniqueIndustries.length > 8 && (
+                        <button
+                          type="button"
+                          className="text-xs sm:text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 underline"
+                          onClick={() => setShowIndustryDropdown(true)}
+                        >
+                          Show more industries
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <Separator className="bg-slate-200 dark:bg-slate-700" />
@@ -484,7 +552,7 @@ export default function GulfCompaniesPage() {
                       Company Type
                     </h3>
                     <div className="space-y-2">
-                      {['Startup', 'MNC', 'Product Based', 'Fortune 500', 'Government', 'Non-Profit'].map((type) => (
+                      {companyTypes.map((type) => (
                         <div key={type} className="flex items-center space-x-2">
                           <Checkbox 
                             id={`type-${type}`}
@@ -504,30 +572,54 @@ export default function GulfCompaniesPage() {
 
                   <Separator className="bg-slate-200 dark:bg-slate-700" />
 
-                  {/* Locations */}
+                  {/* Company Size */}
                   <div>
                     <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
-                      Locations
+                      Company Size
                     </h3>
-                    <ScrollArea className="h-48">
-                      <div className="space-y-2">
-                        {uniqueLocations.slice(0, 20).map((location) => (
-                          <div key={location} className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={`location-${location}`}
-                              checked={filters.locations.includes(location)}
-                              onCheckedChange={() => handleLocationToggle(location)}
-                            />
-                            <label
-                              htmlFor={`location-${location}`}
-                              className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                            >
-                              {location}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                    <div className="space-y-2">
+                      {['1-50 employees', '51-200 employees', '201-1000 employees', '1001-5000 employees', '5000+ employees'].map((size) => (
+                        <div key={size} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`size-${size}`}
+                            checked={filters.companySizes.includes(size)}
+                            onCheckedChange={() => handleCompanySizeToggle(size)}
+                          />
+                          <label
+                            htmlFor={`size-${size}`}
+                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                          >
+                            {size}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator className="bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Location */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Location
+                    </h3>
+                    <div className="space-y-2">
+                      {uniqueLocations.map((location) => (
+                        <div key={location} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={location} 
+                            checked={filters.locations.includes(location)}
+                            onCheckedChange={() => handleLocationToggle(location)}
+                          />
+                          <label
+                            htmlFor={location}
+                            className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                          >
+                            {location}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <Separator className="bg-slate-200 dark:bg-slate-700" />
@@ -535,11 +627,11 @@ export default function GulfCompaniesPage() {
                   {/* Rating */}
                   <div>
                     <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
-                      Minimum Rating
+                      Rating
                     </h3>
                     <Select value={filters.minRating} onValueChange={(value) => handleFilterChange("minRating", value)}>
-                      <SelectTrigger className="bg-white/70 dark:bg-slate-700/70">
-                        <SelectValue placeholder="Select rating" />
+                      <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
+                        <SelectValue placeholder="Minimum rating" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="4.5">4.5+ stars</SelectItem>
@@ -550,16 +642,25 @@ export default function GulfCompaniesPage() {
                     </Select>
                   </div>
 
-                  {/* Clear Filters */}
-                  {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.search) && (
-                    <Button
-                      variant="outline"
-                      onClick={clearAllFilters}
-                      className="w-full bg-white/70 dark:bg-slate-700/70"
-                    >
-                      Clear All Filters
-                    </Button>
-                  )}
+                  <Separator className="bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Salary Range */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm sm:text-base text-slate-900 dark:text-white">
+                      Salary Range
+                    </h3>
+                    <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange("salaryRange", value)}>
+                      <SelectTrigger className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm">
+                        <SelectValue placeholder="Select range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0-10">0-10 LPA</SelectItem>
+                        <SelectItem value="10-20">10-20 LPA</SelectItem>
+                        <SelectItem value="20-30">20-30 LPA</SelectItem>
+                        <SelectItem value="30+">30+ LPA</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -606,7 +707,7 @@ export default function GulfCompaniesPage() {
         </div>
 
             {/* Active Filters Summary */}
-            {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.search) && (
+            {(filters.industries.length > 0 || filters.companyTypes.length > 0 || filters.companySizes.length > 0 || filters.locations.length > 0 || filters.minRating || filters.salaryRange || filters.search) && (
               <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-green-900 dark:text-green-100">Active Filters:</h3>
@@ -639,10 +740,22 @@ export default function GulfCompaniesPage() {
                       <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleLocationToggle(location)} />
                     </Badge>
                   ))}
+                  {filters.companySizes.map((size) => (
+                    <Badge key={size} variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      Size: {size}
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleCompanySizeToggle(size)} />
+                    </Badge>
+                  ))}
                   {filters.minRating && (
                     <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
                       Rating: {filters.minRating}+
                       <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("minRating", "")} />
+                    </Badge>
+                  )}
+                  {filters.salaryRange && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
+                      Salary: {filters.salaryRange} LPA
+                      <X className="w-3 h-3 ml-1 cursor-pointer" onClick={() => handleFilterChange("salaryRange", "")} />
                     </Badge>
                   )}
                 </div>
@@ -916,6 +1029,17 @@ export default function GulfCompaniesPage() {
           </div>
         </div>
       </footer>
+
+      {showIndustryDropdown && (
+        <IndustryDropdown
+          selectedIndustries={filters.industries}
+          onIndustryChange={(inds: string[]) => {
+            setFilters(prev => ({ ...prev, industries: inds }))
+            setCurrentPage(1)
+          }}
+          onClose={() => setShowIndustryDropdown(false)}
+        />
+      )}
     </div>
   )
 }
