@@ -533,7 +533,10 @@ export default function PostJobPage() {
               // Consultancy fields from metadata
               companyName: metadata.companyName || '',
               postingType: metadata.postingType || 'company',
-              consultancyName: metadata.consultancyName || '',
+              // CRITICAL: Ensure consultancyName is always the current employer's company name for consultancy jobs
+              consultancyName: metadata.postingType === 'consultancy' 
+                ? (metadata.consultancyName || companyData?.name || '')
+                : (metadata.consultancyName || ''),
               hiringCompanyName: metadata.hiringCompany?.name || '',
               hiringCompanyIndustry: metadata.hiringCompany?.industry || '',
               hiringCompanyDescription: metadata.hiringCompany?.description || '',

@@ -2,11 +2,11 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
-const { 
-  User, 
-  Company, 
-  Job, 
-  JobApplication, 
+const {
+  User,
+  Company,
+  Job,
+  JobApplication,
   JobBookmark,
   JobCategory,
   Resume,
@@ -52,40 +52,11 @@ router.get('/test-auth', async (req, res) => {
 router.use(authenticateToken);
 router.use(requireAdmin);
 
-// Test endpoint for raw SQL queries (after middleware)
-router.post('/test-raw-sql', async (req, res) => {
-  try {
-    console.log('🔍 [ADMIN-TEST] Testing raw SQL query');
-    const { query } = req.body;
-    
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        message: 'Query is required'
-      });
-    }
-    
-    const [results] = await sequelize.query(query);
-    res.json({
-      success: true,
-      message: 'Raw SQL query executed successfully',
-      data: results
-    });
-  } catch (error) {
-    console.error('❌ [ADMIN-TEST] Raw SQL Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Raw SQL query error',
-      error: error.message
-    });
-  }
-});
-
 // Test endpoint for Job count only
 router.get('/jobs/count', async (req, res) => {
   try {
     console.log('🔍 [ADMIN-TEST] Testing Job count query');
-    
+
     const count = await Job.count();
     res.json({
       success: true,
@@ -106,7 +77,7 @@ router.get('/jobs/count', async (req, res) => {
 router.get('/jobs/minimal-count', async (req, res) => {
   try {
     console.log('🔍 [ADMIN-TEST] Testing minimal Job count query');
-    
+
     const JobMinimal = require('../models/JobMinimal');
     const count = await JobMinimal.count();
     res.json({
@@ -354,7 +325,7 @@ router.get('/users/region/:region', async (req, res) => {
 router.get('/users/:userId/details', async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const user = await User.findByPk(userId, {
       include: [
         {
@@ -415,7 +386,7 @@ router.get('/users/:userId/details', async (req, res) => {
     // Get additional statistics
     const totalApplications = await JobApplication.count({ where: { userId } });
     const totalBookmarks = await JobBookmark.count({ where: { userId } });
-    
+
     // Get posted jobs for employers/admins/recruiters
     let postedJobs = [];
     let totalJobsPosted = 0;
@@ -431,7 +402,7 @@ router.get('/users/:userId/details', async (req, res) => {
           attributes: ['id']
         }]
       });
-      
+
       // Add application count to each job
       postedJobs = postedJobs.map(job => {
         const jobData = job.toJSON();
@@ -442,10 +413,10 @@ router.get('/users/:userId/details', async (req, res) => {
           jobApplications: undefined // Remove the full array, we only need the count
         };
       });
-      
+
       totalJobsPosted = postedJobs.length;
     }
-    
+
     // Get pricing/subscription information if available
     const subscription = await Subscription.findOne({
       where: { userId },
@@ -556,15 +527,15 @@ router.get('/verification-documents/:filename', authenticateToken, async (req, r
       // Try with different filename patterns
       path.join(__dirname, '../uploads/verification-documents', filename.replace(/^.*\//, '')), // Remove any path prefix
     ];
-    
+
     // Also try to find files that start with the same pattern
     const uploadDir = path.join(__dirname, '../uploads/verification-documents');
     if (fs.existsSync(uploadDir)) {
       try {
         const files = fs.readdirSync(uploadDir);
-        const matchingFile = files.find(file => 
-          file === filename || 
-          file.includes(filename) || 
+        const matchingFile = files.find(file =>
+          file === filename ||
+          file.includes(filename) ||
           filename.includes(file.split('-').pop()?.split('.')[0]) // Match by the random number part
         );
         if (matchingFile) {
@@ -574,12 +545,12 @@ router.get('/verification-documents/:filename', authenticateToken, async (req, r
         console.log('⚠️ Could not read upload directory:', error.message);
       }
     }
-    
+
     console.log(`📁 Looking for file: ${filename}`);
     console.log(`📁 Trying paths:`, possiblePaths);
-    
+
     let filePath = possiblePaths.find(p => fs.existsSync(p));
-    
+
     if (!filePath) {
       console.log(`❌ File not found in any of the expected locations`);
       return res.status(404).json({
@@ -592,7 +563,7 @@ router.get('/verification-documents/:filename', authenticateToken, async (req, r
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    
+
     console.log(`✅ Serving file: ${filePath}`);
     res.sendFile(filePath);
   } catch (error) {
@@ -620,7 +591,7 @@ router.get('/users/:userId/resumes/:resumeId/view', authenticateToken, async (re
     }
 
     const resume = await Resume.findOne({
-      where: { 
+      where: {
         id: resumeId,
         userId: userId
       }
@@ -640,7 +611,7 @@ router.get('/users/:userId/resumes/:resumeId/view', authenticateToken, async (re
 
     const metadata = resume.metadata || {};
     const filename = metadata.filename || resume.filePath;
-    
+
     // Try local storage first
     const fs = require('fs');
     if (filename && metadata.hasLocalFile) {
@@ -652,9 +623,9 @@ router.get('/users/:userId/resumes/:resumeId/view', authenticateToken, async (re
         path.join(process.cwd(), 'uploads', 'resumes', filename),
         metadata?.filePath ? metadata.filePath : null
       ].filter(Boolean);
-      
+
       const filePath = possiblePaths.find(p => fs.existsSync(p));
-      
+
       if (filePath && fs.existsSync(filePath)) {
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
@@ -662,11 +633,11 @@ router.get('/users/:userId/resumes/:resumeId/view', authenticateToken, async (re
         return;
       }
     }
-    
+
     // Fallback to Cloudinary
     if (metadata.cloudinaryUrl) {
       const https = require('https');
-      
+
       https.get(metadata.cloudinaryUrl, (response) => {
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
@@ -710,7 +681,7 @@ router.get('/users/:userId/resumes/:resumeId/download', authenticateToken, async
     }
 
     const resume = await Resume.findOne({
-      where: { 
+      where: {
         id: resumeId,
         userId: userId
       }
@@ -731,7 +702,7 @@ router.get('/users/:userId/resumes/:resumeId/download', authenticateToken, async
     const metadata = resume.metadata || {};
     const originalName = metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
     const filename = metadata.filename || resume.filePath;
-    
+
     // Try local storage first
     const fs = require('fs');
     if (filename && metadata.hasLocalFile) {
@@ -743,9 +714,9 @@ router.get('/users/:userId/resumes/:resumeId/download', authenticateToken, async
         path.join(process.cwd(), 'uploads', 'resumes', filename),
         metadata?.filePath ? metadata.filePath : null
       ].filter(Boolean);
-      
+
       const filePath = possiblePaths.find(p => fs.existsSync(p));
-      
+
       if (filePath && fs.existsSync(filePath)) {
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
@@ -753,11 +724,11 @@ router.get('/users/:userId/resumes/:resumeId/download', authenticateToken, async
         return;
       }
     }
-    
+
     // Fallback to Cloudinary
     if (metadata.cloudinaryUrl) {
       const https = require('https');
-      
+
       https.get(metadata.cloudinaryUrl, (response) => {
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
@@ -790,7 +761,7 @@ router.get('/users/:userId/resumes/:resumeId/download', authenticateToken, async
 router.get('/companies/:companyId/details', async (req, res) => {
   try {
     const { companyId } = req.params;
-    
+
     const company = await Company.findByPk(companyId);
 
     if (!company) {
@@ -805,7 +776,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
       'SELECT id, title, location, salary, job_type, status, created_at, valid_till FROM jobs WHERE company_id = :companyId ORDER BY created_at DESC',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
-    
+
     // Ensure validTill is included in each job
     const companyJobs = (companyJobsRows || []).map((job) => ({
       ...job,
@@ -816,8 +787,8 @@ router.get('/companies/:companyId/details', async (req, res) => {
     const jobIds = companyJobs.map(job => job.id);
     const jobApplications = jobIds.length > 0 ? await JobApplication.findAll({
       where: { jobId: jobIds },
-        attributes: ['id', 'jobId', 'status', 'created_at'],
-        order: [['created_at', 'DESC']]
+      attributes: ['id', 'jobId', 'status', 'created_at'],
+      order: [['created_at', 'DESC']]
     }) : [];
 
     // Get applicants separately to avoid complex includes
@@ -865,13 +836,13 @@ router.get('/companies/:companyId/details', async (req, res) => {
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
     );
     const totalJobs = totalJobsResult.count;
-    
+
     const [activeJobsResult] = await sequelize.query(
       'SELECT COUNT(*) as count FROM jobs WHERE company_id = :companyId AND status = :status',
       { replacements: { companyId: companyId, status: 'active' }, type: sequelize.QueryTypes.SELECT }
     );
     const activeJobs = activeJobsResult.count;
-    
+
     const [totalApplicationsResult] = await sequelize.query(
       'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j.company_id = :companyId',
       { replacements: { companyId: companyId }, type: sequelize.QueryTypes.SELECT }
@@ -890,7 +861,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
     // Get company subscription/pricing information - use first user's ID as a proxy
     const firstUserId = companyUsers.length > 0 ? companyUsers[0].id : null;
     const subscription = firstUserId ? await Subscription.findOne({
-      where: { 
+      where: {
         userId: firstUserId
       },
       include: [{
@@ -903,7 +874,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Get payment history - only if company has users
     const payments = firstUserId ? await Payment.findAll({
-      where: { 
+      where: {
         userId: firstUserId
       },
       attributes: ['id', 'amount', 'currency', 'status', 'paymentMethod', 'created_at', 'description'],
@@ -913,7 +884,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
 
     // Get company activity logs - only if company has users
     const activityLogs = firstUserId ? await UserActivityLog.findAll({
-      where: { 
+      where: {
         userId: firstUserId
       },
       attributes: ['id', 'activityType', 'details', 'timestamp'],
@@ -979,7 +950,7 @@ router.get('/companies/:companyId/details', async (req, res) => {
 router.get('/jobs/:jobId/details', async (req, res) => {
   try {
     const { jobId } = req.params;
-    
+
     const job = await Job.findByPk(jobId, {
       attributes: ['id', 'title', 'description', 'location', 'salary', 'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod', 'jobType', 'status', 'validTill', 'requirements', 'responsibilities', 'industryType', 'department', 'role', 'roleCategory', 'employmentType', 'skills', 'education', 'companyId', 'created_at', 'updated_at'],
       include: [
@@ -1047,7 +1018,7 @@ router.get('/jobs/:jobId/details', async (req, res) => {
 
     // Get job analytics - use Sequelize Op.in for array query
     const jobAnalytics = await Analytics.findAll({
-      where: { 
+      where: {
         jobId: jobId,
         eventType: { [Op.in]: ['job_view', 'job_apply', 'job_bookmark'] }
       },
@@ -1057,14 +1028,14 @@ router.get('/jobs/:jobId/details', async (req, res) => {
     });
 
     // Get job performance metrics - use eventType (model attribute name)
-    const viewCount = await Analytics.count({ 
-      where: { jobId: jobId, eventType: 'job_view' } 
+    const viewCount = await Analytics.count({
+      where: { jobId: jobId, eventType: 'job_view' }
     });
-    const applyCount = await Analytics.count({ 
-      where: { jobId: jobId, eventType: 'job_apply' } 
+    const applyCount = await Analytics.count({
+      where: { jobId: jobId, eventType: 'job_apply' }
     });
-    const bookmarkCount = await Analytics.count({ 
-      where: { jobId: jobId, eventType: 'job_bookmark' } 
+    const bookmarkCount = await Analytics.count({
+      where: { jobId: jobId, eventType: 'job_bookmark' }
     });
 
     // Calculate conversion rates
@@ -1075,9 +1046,9 @@ router.get('/jobs/:jobId/details', async (req, res) => {
     let similarJobs = [];
     const jobData = job.toJSON();
     const companyId = jobData.companyId || jobData.company_id || job.companyId || job.company_id;
-    
+
     console.log(`🔍 Fetching similar jobs for job ${jobId}, companyId: ${companyId}`);
-    
+
     if (companyId) {
       try {
         similarJobs = await Job.findAll({
@@ -1086,14 +1057,14 @@ router.get('/jobs/:jobId/details', async (req, res) => {
             companyId: companyId // Only show jobs from the same company
           },
           attributes: ['id', 'title', 'location', 'salary', 'salary_min', 'salary_max', 'salary_currency', 'job_type', 'status', 'created_at', 'valid_till'],
-      include: [{
-        model: Company,
-        as: 'company',
+          include: [{
+            model: Company,
+            as: 'company',
             attributes: ['id', 'name', 'industries', 'sector']
-      }],
-      limit: 5,
-      order: [['created_at', 'DESC']]
-    });
+          }],
+          limit: 5,
+          order: [['created_at', 'DESC']]
+        });
         console.log(`✅ Found ${similarJobs.length} similar jobs for company ${companyId}`);
       } catch (error) {
         console.error('❌ Error fetching similar jobs:', error);
@@ -1107,9 +1078,9 @@ router.get('/jobs/:jobId/details', async (req, res) => {
     const requirementsText = job.requirements || '';
     const requirementsLines = requirementsText ? requirementsText.split('\n').filter(line => line.trim()).length : 0;
     const requirementsAnalysis = {
-        totalRequirements: requirementsLines,
-        requiredRequirements: requirementsLines, // For now, all are considered required
-        optionalRequirements: 0
+      totalRequirements: requirementsLines,
+      requiredRequirements: requirementsLines, // For now, all are considered required
+      optionalRequirements: 0
     };
 
     // Ensure timestamps are properly mapped
@@ -1303,12 +1274,12 @@ router.patch('/users/:id/status', async (req, res) => {
       }
 
       updateData.account_status = status;
-      
+
       // Also update is_active based on status
       updateData.is_active = status === 'active';
-      
+
       // Track the status change in activity logs
-      const { trackAdminAction } = require('../middleware/activityTracker');
+      const { trackAdminAction } = require('../middlewares/activityTracker');
       await trackAdminAction(req.user.id, req, 'user_status_change', user.id, `${user.first_name} ${user.last_name}`);
 
       switch (status) {
@@ -1350,12 +1321,12 @@ router.patch('/users/:id/status', async (req, res) => {
     res.json({
       success: true,
       message,
-      data: { 
-        user: { 
-          id: user.id, 
+      data: {
+        user: {
+          id: user.id,
           is_active: user.is_active,
           account_status: user.account_status
-        } 
+        }
       }
     });
   } catch (error) {
@@ -1525,14 +1496,14 @@ router.get('/companies', async (req, res) => {
           { replacements: { companyId: company.id }, type: sequelize.QueryTypes.SELECT }
         );
         const totalJobsPosted = totalJobsResult?.count || 0;
-        
+
         // Get total applications for all jobs posted by this company
         const [totalApplicationsResult] = await sequelize.query(
           'SELECT COUNT(*) as count FROM job_applications ja JOIN jobs j ON ja.job_id = j.id WHERE j.company_id = :companyId',
           { replacements: { companyId: company.id }, type: sequelize.QueryTypes.SELECT }
         );
         const totalApplications = totalApplicationsResult?.count || 0;
-        
+
         return {
           ...company.toJSON(),
           totalJobsPosted: parseInt(totalJobsPosted) || 0,
@@ -1703,7 +1674,7 @@ router.patch('/companies/:id/verification', async (req, res) => {
 // Delete company
 router.delete('/companies/:id', async (req, res) => {
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { id } = req.params;
 
@@ -1724,7 +1695,7 @@ router.delete('/companies/:id', async (req, res) => {
     const userIds = companyUsers.map(u => u.id);
 
     // Delete all related data using raw SQL queries to avoid ORM mapping issues
-    
+
     // 1. Delete job applications first (they reference jobs and users)
     if (userIds.length > 0) {
       await sequelize.query(

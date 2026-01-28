@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { motion } from "framer-motion"
 import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
@@ -24,7 +24,6 @@ import { EmployerAuthGuard } from "@/components/employer-auth-guard"
 export default function CreateRequirementPage() {
   const params = useParams()
   const router = useRouter()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [currentSkill, setCurrentSkill] = useState("")
   const [currentIncludeSkill, setCurrentIncludeSkill] = useState("")
@@ -121,9 +120,7 @@ export default function CreateRequirementPage() {
     if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
       setFormData(prev => ({
         ...prev,
-        keySkills: [...prev.keySkills, formattedSkill],
-        // IMPORTANT: Automatically add to includeSkills (all additional skills should be included)
-        includeSkills: [...new Set([...prev.includeSkills, formattedSkill])]
+        keySkills: [...prev.keySkills, formattedSkill]
       }))
       setCurrentSkill("")
     }
@@ -133,7 +130,6 @@ export default function CreateRequirementPage() {
     setFormData(prev => ({
       ...prev,
       keySkills: prev.keySkills.filter(s => s !== skill)
-      // Note: We don't remove from includeSkills automatically - user might have added it separately
     }))
   }
 
@@ -190,11 +186,22 @@ export default function CreateRequirementPage() {
     if (!formData.title.trim()) missing.push('Job Title')
     if (!formData.description.trim()) missing.push('Job Description')
     if (!formData.location.trim()) missing.push('Location')
+    if (!formData.industry.trim()) missing.push('Industry')
+    if (!formData.department.trim()) missing.push('Department')
+    
+    // Validate salary ranges
+    if (formData.currentSalaryMin && formData.currentSalaryMax && Number(formData.currentSalaryMin) > Number(formData.currentSalaryMax)) {
+      missing.push('Minimum salary cannot be greater than maximum salary')
+    }
+    
+    // Validate experience ranges
+    if (formData.workExperienceMin && formData.workExperienceMax && Number(formData.workExperienceMin) > Number(formData.workExperienceMax)) {
+      missing.push('Minimum experience cannot be greater than maximum experience')
+    }
+    
     if (missing.length > 0) {
-      toast({
-        title: 'Missing required fields',
-        description: `Please fill: ${missing.join(', ')}`,
-        variant: 'destructive'
+      toast.error('Missing or invalid fields', {
+        description: `Please fix: ${missing.join(', ')}`
       })
       return
     }
@@ -247,14 +254,25 @@ export default function CreateRequirementPage() {
           errors: (response as any).errors,
           data: response.data
         })
-        throw new Error(response.message || 'Failed to create requirement')
+        
+        // Handle specific error messages
+        let errorMessage = response.message || 'Failed to create requirement. Please try again.'
+        
+        if (response.message?.includes('quota') || response.message?.includes('Quota')) {
+          errorMessage = '📊 Quota Limit Reached: You have reached your monthly requirement posting limit. Please contact support or upgrade your plan to create more requirements.'
+        } else if (response.message?.includes('unauthorized') || response.message?.includes('permission')) {
+          errorMessage = '🔒 Permission Denied: You do not have permission to create requirements. Please contact your administrator.'
+        } else if (response.message?.includes('already exists')) {
+          errorMessage = '⚠️ Duplicate: A similar requirement already exists. Please check your existing requirements.'
+        }
+        
+        throw new Error(errorMessage)
       }
       
       const createdId = response.data?.id || response.data?.data?.id || ''
       // End loading before navigating so the toast renders instantly
       setIsLoading(false)
-      toast({
-        title: "Requirement Created",
+      toast.success("✅ Requirement Created", {
         description: createdId ? `Your requirement has been created successfully. ID: ${createdId}` : 'Your requirement has been created successfully.',
       })
       router.push(createdId 
@@ -262,10 +280,25 @@ export default function CreateRequirementPage() {
         : '/employer-dashboard/requirements')
     } catch (error: any) {
       console.error('❌ Error creating requirement:', error?.message || error)
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to create requirement. Please try again.",
-        variant: "destructive",
+      
+      // Provide context-specific error messages
+      let displayMessage = error?.message || "Failed to create requirement. Please try again."
+      let displayTitle = "Creation Failed"
+      
+      // Add helpful suggestions based on error type
+      if (displayMessage.includes('Quota')) {
+        displayTitle = "📊 Quota Limit Reached"
+        displayMessage = "You have reached your monthly requirement posting limit. Upgrade your plan to post more requirements or contact support."
+      } else if (displayMessage.includes('Permission') || displayMessage.includes('unauthorized')) {
+        displayTitle = "🔒 Permission Denied"
+      } else if (displayMessage.includes('Duplicate') || displayMessage.includes('already exists')) {
+        displayTitle = "⚠️ Duplicate Requirement"
+      } else if (displayMessage.includes('Invalid') || displayMessage.includes('validation')) {
+        displayTitle = "⚠️ Invalid Input"
+      }
+      
+      toast.error(displayTitle, {
+        description: displayMessage,
       })
     } finally {
       // Keep as a safeguard; if we navigated above, this is harmless
@@ -502,11 +535,11 @@ export default function CreateRequirementPage() {
                     </div>
                   </div>
 
-                  {/* Additional Skills - These are automatically included in Include Skills */}
+                  {/* Additional Skills - Manual List */}
                   <div>
-                    <Label>Additional Skills</Label>
-                    <p className="text-xs text-slate-500 mb-2">These skills are automatically included in "Include Skills" above</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <Label>Key Skills (Optional)</Label>
+                    <p className="text-xs text-slate-500 mb-2">Add skills that you'd like to highlight for this position. Add them individually to "Include Skills" section if you want to use them for filtering.</p>
+                    <div className="flex flex-wrap gap-2 mt-2 mb-3">
                       {formData.keySkills.map((skill) => (
                         <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
                           <span>{skill}</span>
@@ -520,7 +553,7 @@ export default function CreateRequirementPage() {
                         </Badge>
                       ))}
                     </div>
-                    <div className="flex space-x-2 mt-2">
+                    <div className="flex space-x-2 mt-2 mb-3">
                       <Input
                         placeholder="Add skill"
                         value={currentSkill}
@@ -531,6 +564,7 @@ export default function CreateRequirementPage() {
                         <Plus className="w-4 h-4" />
                       </Button>
                     </div>
+                    <p className="text-xs text-slate-600 mb-2 font-medium">Popular Skills:</p>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {commonSkills.filter(skill => !formData.keySkills.includes(skill)).slice(0, 10).map((skill) => (
                         <Button
@@ -543,9 +577,7 @@ export default function CreateRequirementPage() {
                             if (formattedSkill && !formData.keySkills.includes(formattedSkill)) {
                               setFormData(prev => ({
                                 ...prev,
-                                keySkills: [...prev.keySkills, formattedSkill],
-                                // Automatically add to includeSkills
-                                includeSkills: [...new Set([...prev.includeSkills, formattedSkill])]
+                                keySkills: [...prev.keySkills, formattedSkill]
                               }))
                             }
                           }}

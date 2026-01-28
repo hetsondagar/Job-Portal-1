@@ -8,9 +8,10 @@ const axios = require('axios');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
 const CoverLetter = require('../models/CoverLetter');
-const { sequelize } = require('../config/sequelize');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/sequelize');
 const { uploadBufferToCloudinary, isConfigured: isCloudinaryConfigured, deleteFromCloudinary } = require('../config/cloudinary');
+const { authenticateToken } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -36,32 +37,32 @@ function findResumeFile(filename, metadata) {
   ].filter(Boolean);
 
   console.log('🔍 Trying possible file paths:', possiblePaths);
-  
+
   // Find the first existing file
   let filePath = possiblePaths.find(p => fs.existsSync(p));
-  
+
   if (!filePath) {
     console.log('❌ File does not exist in any of the expected locations');
     console.log('🔍 Checked paths:', possiblePaths);
-    
+
     // Try to find the file by searching common directories
-  const searchDirs = [
+    const searchDirs = [
       path.join(__dirname, '../uploads'),
       path.join(process.cwd(), 'uploads'),
       path.join(process.cwd(), 'server', 'uploads'),
       '/tmp/uploads',
       '/var/tmp/uploads',
       '/opt/render/project/src/uploads',
-    '/opt/render/project/src/server/uploads'
+      '/opt/render/project/src/server/uploads'
     ];
-    
+
     for (const searchDir of searchDirs) {
       try {
         if (fs.existsSync(searchDir)) {
           console.log(`🔍 Searching in directory: ${searchDir}`);
           const files = fs.readdirSync(searchDir, { recursive: true });
           console.log(`🔍 Found ${files.length} items in ${searchDir}`);
-          
+
           // Look for the specific filename
           const found = files.find(f => typeof f === 'string' && f.includes(filename));
           if (found) {
@@ -74,18 +75,18 @@ function findResumeFile(filename, metadata) {
         console.log(`🔍 Could not search in ${searchDir}:`, error.message);
       }
     }
-    
+
     // If still not found, check if this is a production environment issue
     if (!filePath && process.env.NODE_ENV === 'production') {
       console.log('⚠️ Production environment detected - files may have been lost during server restart');
       console.log('💡 Consider implementing cloud storage (S3, Cloudinary) for production');
     }
   }
-  
+
   if (filePath) {
     console.log('✅ File found at:', filePath);
   }
-  
+
   return filePath;
 }
 
@@ -130,7 +131,7 @@ function findCoverLetterFile(filename, metadata) {
             break;
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     }
   }
   return filePath;
@@ -188,16 +189,16 @@ const avatarUpload = multer({
   fileFilter: function (req, file, cb) {
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    
+
     const ext = path.extname(file.originalname).toLowerCase();
     const mimeType = file.mimetype ? file.mimetype.toLowerCase() : '';
-    
+
     console.log('🔍 File type check:', { ext, mimeType, originalname: file.originalname });
-    
+
     // Check both extension and MIME type for better compatibility
     const isValidExtension = allowedExtensions.includes(ext);
     const isValidMimeType = allowedMimeTypes.includes(mimeType);
-    
+
     if (isValidExtension || isValidMimeType) {
       cb(null, true);
     } else {
@@ -272,18 +273,18 @@ const brandingMediaUpload = multer({
     const ext = path.extname(file.originalname).toLowerCase();
     const isImage = allowedImageTypes.includes(ext);
     const isVideo = allowedVideoTypes.includes(ext);
-    
+
     // Also check MIME type as fallback
     const mimeIsImage = file.mimetype && file.mimetype.startsWith('image/');
     const mimeIsVideo = file.mimetype && file.mimetype.startsWith('video/');
-    
+
     console.log('🔍 Branding media file type check:', {
       extension: ext,
       mimetype: file.mimetype,
       isImage: isImage || mimeIsImage,
       isVideo: isVideo || mimeIsVideo
     });
-    
+
     if (isImage || isVideo || mimeIsImage || mimeIsVideo) {
       cb(null, true);
     } else {
@@ -291,106 +292,6 @@ const brandingMediaUpload = multer({
     }
   }
 });
-
-// Middleware to verify JWT token
-const authenticateToken = async (req, res, next) => {
-  try {
-    console.log('🔍 Authenticating token...');
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      console.log('❌ No token provided');
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    console.log('🔍 Verifying JWT token...');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    console.log('✅ JWT token verified, user ID:', decoded.id);
-    
-    console.log('🔍 Fetching user from database...');
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] }
-    });
-
-    if (!user) {
-      console.log('❌ User not found in database');
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (!user.is_active) {
-      console.log('❌ User account is inactive');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Account is deactivated' 
-      });
-    }
-
-    // Check account status for suspended users
-    if (user.account_status === 'suspended') {
-      console.log('❌ User account is suspended');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Your account has been suspended. Please contact support for assistance.',
-        status: 'suspended'
-      });
-    }
-
-    if (user.account_status === 'deleted') {
-      console.log('❌ User account is deleted');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Account not found or has been deleted.',
-        status: 'deleted'
-      });
-    }
-
-    if (user.account_status === 'inactive') {
-      console.log('❌ User account is inactive due to inactivity');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Your account has been marked as inactive due to prolonged inactivity. Please log in to reactivate your account.',
-        status: 'inactive'
-      });
-    }
-
-    console.log('✅ User authenticated successfully:', { id: user.id, type: user.user_type });
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('❌ Authentication error:', error);
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Error message:', error.message);
-    
-    if (error.name === 'JsonWebTokenError') {
-      console.log('❌ Invalid JWT token');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      console.log('❌ JWT token expired');
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired'
-      });
-    }
-    
-    console.error('❌ Unexpected authentication error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
-  }
-};
 
 // Validation middleware for profile updates
 const validateProfileUpdate = [
@@ -565,20 +466,20 @@ router.get('/profile', authenticateToken, async (req, res) => {
 router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
   try {
     const { candidateId } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only employers and admins can view candidate profiles.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers and admins can view candidate profiles.'
       });
     }
-    
+
     console.log('🔍 Fetching general candidate profile for:', candidateId);
-    
+
     // Get candidate details
     const candidate = await User.findOne({
-      where: { 
+      where: {
         id: candidateId,
         user_type: 'jobseeker',
         is_active: true,
@@ -593,49 +494,49 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
         'date_of_birth', 'gender', 'social_links', 'certifications'
       ]
     });
-    
+
     if (!candidate) {
       console.log(`❌ Candidate not found: ${candidateId}`);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Candidate not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Candidate not found'
       });
     }
-    
+
     // Fetch resumes for the candidate
     let resumes = [];
     try {
       console.log(`📄 Fetching resumes for candidate ${candidateId}`);
       const { Resume } = require('../config/index');
-      
+
       const resumeResults = await Resume.findAll({
         where: { userId: candidateId },
         order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
       });
-      
+
       resumes = resumeResults || [];
       console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId}`);
     } catch (resumeError) {
       console.log('⚠️ Could not fetch resumes:', resumeError.message);
     }
-    
+
     // Fetch cover letters for the candidate
     let coverLetters = [];
     try {
       console.log(`📝 Fetching cover letters for candidate ${candidateId}`);
       const { CoverLetter } = require('../config/index');
-      
+
       const coverLetterResults = await CoverLetter.findAll({
         where: { userId: candidateId },
         order: [['isDefault', 'DESC'], ['lastUpdated', 'DESC']]
       });
-      
+
       coverLetters = coverLetterResults || [];
       console.log(`📝 Found ${coverLetters.length} cover letters for candidate ${candidateId}`);
     } catch (coverLetterError) {
       console.log('⚠️ Could not fetch cover letters:', coverLetterError.message);
     }
-    
+
     // Build absolute URL helper for files served from /uploads
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const toAbsoluteUrl = (maybePath) => {
@@ -646,7 +547,7 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
       const pathStr = String(maybePath).startsWith('/') ? String(maybePath) : `/${String(maybePath)}`;
       return `${baseUrl}${pathStr}`;
     };
-    
+
     // Transform candidate data for frontend
     const transformedCandidate = {
       id: candidate.id,
@@ -673,14 +574,14 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
       profileCompletion: candidate.profile_completion || 0,
       lastModified: candidate.last_profile_update ? new Date(candidate.last_profile_update).toLocaleDateString() : 'Not specified',
       activeStatus: candidate.last_login_at ? new Date(candidate.last_login_at).toLocaleDateString() : 'Not specified',
-      
+
       // Resumes
       resumes: resumes.map(resume => {
         const metadata = resume.metadata || {};
         const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
         const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
         const filePath = metadata.filePath || `/uploads/resumes/${metadata.filename}`;
-        
+
         return {
           id: resume.id,
           title: resume.title || 'Resume',
@@ -693,14 +594,14 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
           metadata: metadata
         };
       }),
-      
+
       // Cover Letters
       coverLetters: coverLetters.map(coverLetter => {
         const metadata = coverLetter.metadata || {};
         const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
         const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
         const filePath = metadata.filePath || `/uploads/cover-letters/${metadata.filename}`;
-        
+
         return {
           id: coverLetter.id,
           title: coverLetter.title || 'Cover Letter',
@@ -717,15 +618,15 @@ router.get('/candidates/:candidateId', authenticateToken, async (req, res) => {
         };
       })
     };
-    
+
     console.log(`✅ Found general candidate profile: ${candidate.first_name} ${candidate.last_name}`);
     console.log(`📄 Resumes: ${resumes.length}, 📝 Cover letters: ${coverLetters.length}`);
-    
+
     return res.status(200).json({
       success: true,
       data: transformedCandidate
     });
-    
+
   } catch (error) {
     console.error('Get candidate profile error:', error);
     res.status(500).json({
@@ -843,7 +744,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
 
     // Update last profile update timestamp
     updateData.lastProfileUpdate = new Date();
-    
+
     // Debug: Log preferences update
     if (req.body.preferences) {
       console.log('🔍 Profile update - preferences received:', JSON.stringify(req.body.preferences, null, 2));
@@ -853,20 +754,20 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
     if (req.body.preferences) {
       const currentPreferences = req.user.preferences || {};
       const newPreferences = req.body.preferences;
-      
+
       // Merge preferences properly
       const mergedPreferences = {
         ...currentPreferences,
         ...newPreferences
       };
-      
+
       console.log('🔍 Profile update - current preferences:', JSON.stringify(currentPreferences, null, 2));
       console.log('🔍 Profile update - new preferences:', JSON.stringify(newPreferences, null, 2));
       console.log('🔍 Profile update - merged preferences:', JSON.stringify(mergedPreferences, null, 2));
-      
+
       updateData.preferences = mergedPreferences;
     }
-    
+
     // For first-time OAuth users completing profile setup, update last_login_at
     if (!req.user.last_login_at && req.user.oauth_provider && req.user.oauth_provider !== 'local') {
       updateData.last_login_at = new Date();
@@ -879,7 +780,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
       'headline', 'summary', 'skills', 'key_skills', 'languages', 'education',
       'experience_years', 'current_salary', 'expected_salary', 'designation'
     ];
-    
+
     let completedFields = 0;
     profileFields.forEach(field => {
       const fieldValue = req.user[field] || (req.body[fieldMapping[field]] && req.body[fieldMapping[field]].length > 0);
@@ -887,7 +788,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
         completedFields++;
       }
     });
-    
+
     updateData.profileCompletion = Math.round((completedFields / profileFields.length) * 100);
 
     // Debug: Log updateData to verify currentSalary is included
@@ -903,7 +804,7 @@ router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res
     const updatedUser = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
-    
+
     // Debug: Log the actual preferences stored in database
     console.log('🔍 Profile update - preferences in database:', JSON.stringify(updatedUser.preferences, null, 2));
 
@@ -1094,7 +995,7 @@ router.put('/change-email', authenticateToken, [
     }
 
     // Update email and reset email verification status
-    await req.user.update({ 
+    await req.user.update({
       email: newEmail,
       isEmailVerified: false,
       emailVerificationToken: null,
@@ -1184,15 +1085,15 @@ router.put('/change-phone', authenticateToken, [
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     const { Notification, JobApplication, User, Company, Job } = require('../config/index');
-    
+
     // Build where clause
     const whereClause = { userId: req.user.id };
-    
+
     // Filter by unread status if requested
     if (req.query.unread === 'true') {
       whereClause.isRead = false;
     }
-    
+
     // Correct field mapping: model uses camelCase userId
     let notifications = await Notification.findAll({
       where: whereClause,
@@ -1257,7 +1158,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
           const job = await Job.findByPk(app.jobId, { attributes: ['title'] });
           if (employer?.company?.name) companyName = employer.company.name;
           if (job?.title) jobTitle = job.title;
-        } catch {}
+        } catch { }
 
         const shortlistKey = `${app.id}|application_shortlisted`;
         const statusKey = `${app.id}|application_status`;
@@ -1296,7 +1197,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
             try {
               await existingShort.destroy();
               removedNotifIds.push(existingShort.id);
-            } catch {}
+            } catch { }
           }
           // Ensure a status notification exists reflecting current tag
           if (!hasStatusNotif) {
@@ -1481,7 +1382,7 @@ router.get('/employer/notifications', authenticateToken, async (req, res) => {
     // Get employer-specific notification types
     const employerNotificationTypes = [
       'job_application',
-      'application_status', 
+      'application_status',
       'company_update',
       'system',
       'marketing',
@@ -1495,7 +1396,7 @@ router.get('/employer/notifications', authenticateToken, async (req, res) => {
     ];
 
     // Build where clause - CRITICAL: Use Op.in for array filtering
-    const whereClause = { 
+    const whereClause = {
       userId: req.user.id,
       type: { [Op.in]: employerNotificationTypes }
     };
@@ -1537,11 +1438,11 @@ router.patch('/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
     const { id } = req.params;
-    
+
     const notification = await Notification.findOne({
-      where: { 
+      where: {
         id: id,
-        userId: req.user.id 
+        userId: req.user.id
       }
     });
 
@@ -1594,11 +1495,11 @@ router.delete('/notifications/:id', authenticateToken, async (req, res) => {
   try {
     const { Notification } = require('../config/index');
     const { id } = req.params;
-    
+
     const notification = await Notification.findOne({
-      where: { 
+      where: {
         id: id,
-        userId: req.user.id 
+        userId: req.user.id
       }
     });
 
@@ -1669,14 +1570,14 @@ router.put('/notifications', authenticateToken, [
     }
 
     const updateData = {};
-    
+
     if (req.body.emailNotifications) {
       updateData.emailNotifications = {
         ...req.user.emailNotifications,
         ...req.body.emailNotifications
       };
     }
-    
+
     if (req.body.pushNotifications) {
       updateData.pushNotifications = {
         ...req.user.pushNotifications,
@@ -1706,7 +1607,7 @@ router.put('/notifications', authenticateToken, [
 router.get('/applications', authenticateToken, async (req, res) => {
   try {
     const { JobApplication, Job, Company, User, Resume } = require('../config/index');
-    
+
     const applications = await JobApplication.findAll({
       where: { userId: req.user.id },
       include: [
@@ -1722,7 +1623,7 @@ router.get('/applications', authenticateToken, async (req, res) => {
             {
               model: User,
               as: 'employer',
-                             attributes: ['id', 'first_name', 'last_name', 'email']
+              attributes: ['id', 'first_name', 'last_name', 'email']
             }
           ]
         },
@@ -1753,7 +1654,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
   try {
     const { JobApplication, Job, User } = require('../config/index');
     const { jobId, coverLetter, expectedSalary, noticePeriod, availableFrom, isWillingToRelocate, preferredLocations, resumeId } = req.body;
-    
+
     // Validate required fields
     if (!jobId) {
       return res.status(400).json({
@@ -1762,7 +1663,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
       });
     }
 
-  // Check if job exists and get employer info
+    // Check if job exists and get employer info
     const job = await Job.findByPk(jobId, {
       include: [
         {
@@ -1773,28 +1674,28 @@ router.post('/applications', authenticateToken, async (req, res) => {
       ]
     });
 
-  if (!job) {
+    if (!job) {
       return res.status(404).json({
         success: false,
         message: 'Job not found'
       });
     }
 
-  // Prevent applying after deadline or expiry
-  const { isApplicationsClosed } = require('../utils/applicationDeadline');
-  const now = new Date();
-  if (isApplicationsClosed(job, now)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Applications are closed for this job (deadline passed)'
-    });
-  }
+    // Prevent applying after deadline or expiry
+    const { isApplicationsClosed } = require('../utils/applicationDeadline');
+    const now = new Date();
+    if (isApplicationsClosed(job, now)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Applications are closed for this job (deadline passed)'
+      });
+    }
 
     // Check if user already applied for this job
     const existingApplication = await JobApplication.findOne({
-      where: { 
-        jobId: jobId, 
-        userId: req.user.id 
+      where: {
+        jobId: jobId,
+        userId: req.user.id
       }
     });
 
@@ -1829,7 +1730,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
       const emailService = require('../services/emailService');
       const employer = await User.findByPk(job.employer.id);
       const applicant = await User.findByPk(req.user.id);
-      
+
       if (employer && applicant) {
         await emailService.sendApplicationNotification(
           employer.email,
@@ -1850,7 +1751,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
       const { Notification } = require('../config/index');
       const employer = await User.findByPk(job.employer.id);
       const applicant = await User.findByPk(req.user.id);
-      
+
       if (employer && applicant) {
         await Notification.create({
           userId: employer.id,
@@ -1896,7 +1797,7 @@ router.post('/applications', authenticateToken, async (req, res) => {
 router.get('/debug/applications', authenticateToken, async (req, res) => {
   try {
     const { JobApplication, Job, User } = require('../config/index');
-    
+
     // Get all applications with basic info
     const allApps = await JobApplication.findAll({
       attributes: ['id', 'job_id', 'user_id', 'status', 'applied_at'],
@@ -1914,7 +1815,7 @@ router.get('/debug/applications', authenticateToken, async (req, res) => {
       ],
       limit: 20
     });
-    
+
     res.json({
       success: true,
       data: allApps,
@@ -1935,16 +1836,16 @@ router.get('/employer/applications/test', authenticateToken, async (req, res) =>
   try {
     console.log('🧪 Testing employer applications endpoint...');
     console.log('🧪 User:', { id: req.user.id, type: req.user.user_type });
-    
+
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Only employers and admins can view job applications.'
       });
     }
-    
+
     const { JobApplication } = require('../config/index');
-    
+
     // Validate that employerId is a valid UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(req.user.id)) {
@@ -1954,14 +1855,14 @@ router.get('/employer/applications/test', authenticateToken, async (req, res) =>
         message: 'Invalid user ID format'
       });
     }
-    
+
     // Simple count query first
     const count = await JobApplication.count({
       where: { employerId: req.user.id }
     });
-    
+
     console.log('🧪 Found', count, 'applications for employer');
-    
+
     res.json({
       success: true,
       data: { count },
@@ -1983,7 +1884,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Fetching employer applications for user:', req.user?.id, 'type:', req.user?.user_type);
     console.log('🔍 Full user object:', req.user);
-    
+
     // Check if user object exists
     if (!req.user) {
       console.error('❌ No user object found in request');
@@ -1992,10 +1893,10 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         message: 'User not authenticated'
       });
     }
-    
+
     console.log('🔍 Importing models...');
     let JobApplication, Job, Company, User, Resume, CoverLetter, WorkExperience, Education;
-    
+
     try {
       const models = require('../config/index');
       JobApplication = models.JobApplication;
@@ -2011,7 +1912,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       console.error('❌ Model import error:', importError);
       throw new Error(`Failed to import models: ${importError.message}`);
     }
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       console.log('❌ Access denied - user is not an employer or admin:', req.user.user_type);
@@ -2020,9 +1921,9 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         message: 'Access denied. Only employers and admins can view job applications.'
       });
     }
-    
+
     console.log('🔍 Querying applications for employerId:', req.user.id);
-    
+
     // Validate that employerId is a valid UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(req.user.id)) {
@@ -2032,7 +1933,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         message: 'Invalid user ID format'
       });
     }
-    
+
     // Test database connection first
     try {
       console.log('🔍 Testing database connection...');
@@ -2042,7 +1943,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       console.error('❌ Database connection failed:', dbError);
       throw new Error(`Database connection failed: ${dbError.message}`);
     }
-    
+
     // First, let's check if there are any applications at all
     console.log('🔍 Fetching all applications...');
     const allApplications = await JobApplication.findAll({
@@ -2056,9 +1957,9 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       employerId: app.employerId,
       status: app.status
     })));
-    
+
     console.log('🔍 Starting Sequelize query for applications...');
-    
+
     let applications;
     try {
       const where = { employerId: req.user.id };
@@ -2130,10 +2031,10 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     }
 
     console.log('📋 Found applications:', applications.length);
-    console.log('📋 Applications data:', applications.map(app => ({ 
-      id: app.id, 
-      jobId: app.jobId, 
-      userId: app.userId, 
+    console.log('📋 Applications data:', applications.map(app => ({
+      id: app.id,
+      jobId: app.jobId,
+      userId: app.userId,
       employerId: app.employerId,
       status: app.status,
       appliedAt: app.appliedAt
@@ -2156,7 +2057,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     if (applicantIds.length > 0) {
       // Use Sequelize queries with Op.in to properly handle array parameters
       const { Op } = require('sequelize');
-      
+
       // CRITICAL: Only select columns that actually exist in the work_experiences table
       // Based on migration, the actual columns are:
       // id, user_id, title (jobTitle), company (companyName), description, start_date (startDate),
@@ -2192,7 +2093,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         arr.push(exp);
         experiencesByUser.set(userId, arr);
       });
-      
+
       // CRITICAL: Explicitly specify attributes to avoid selecting non-existent columns like 'scale', 'country', 'level', etc.
       const educations = await Education.findAll({
         where: {
@@ -2236,7 +2137,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
       const jobResume = application.jobResume;
       const applicantWorkExperiences = experiencesByUser.get(applicant?.id) || [];
       const applicantEducations = educationsByUser.get(applicant?.id) || [];
-      
+
       // Calculate total work experience
       const totalExperience = applicantWorkExperiences.reduce((total, exp) => {
         const start = new Date(exp.startDate);
@@ -2273,7 +2174,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
           fullName: `${applicant.first_name} ${applicant.last_name}`,
           totalExperienceYears: experienceYears,
           totalExperienceMonths: experienceMonths,
-          totalExperienceDisplay: experienceYears > 0 
+          totalExperienceDisplay: experienceYears > 0
             ? `${experienceYears} year${experienceYears > 1 ? 's' : ''} ${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`
             : `${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`,
           highestEducation: highestEducation ? {
@@ -2322,7 +2223,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
     console.error('❌ Error stack:', error.stack);
     console.error('❌ Error message:', error.message);
     console.error('❌ Error name:', error.name);
-    
+
     // Check if it's a Sequelize error
     if (error.name === 'SequelizeError') {
       console.error('❌ Sequelize error details:', {
@@ -2331,7 +2232,7 @@ router.get('/employer/applications', authenticateToken, async (req, res) => {
         parameters: error.parameters
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Failed to fetch applications',
@@ -2346,7 +2247,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
   try {
     const { JobApplication, Job, Company, User, Resume, CoverLetter, WorkExperience, Education } = require('../config/index');
     const { id } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
@@ -2354,11 +2255,11 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
         message: 'Access denied. Only employers and admins can view job applications.'
       });
     }
-    
+
     const application = await JobApplication.findOne({
-      where: { 
+      where: {
         id: id,
-        employerId: req.user.id 
+        employerId: req.user.id
       },
       include: [
         {
@@ -2444,7 +2345,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
     const applicant = application.applicant;
     const jobResume = application.jobResume;
     const jobCoverLetter = application.jobCoverLetter;
-    
+
     // Calculate total work experience
     const totalExperience = applicant.workExperiences?.reduce((total, exp) => {
       const start = new Date(exp.startDate);
@@ -2481,7 +2382,7 @@ router.get('/employer/applications/:id', authenticateToken, async (req, res) => 
         fullName: `${applicant.first_name} ${applicant.last_name}`,
         totalExperienceYears: experienceYears,
         totalExperienceMonths: experienceMonths,
-        totalExperienceDisplay: experienceYears > 0 
+        totalExperienceDisplay: experienceYears > 0
           ? `${experienceYears} year${experienceYears > 1 ? 's' : ''} ${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`
           : `${experienceMonths} month${experienceMonths > 1 ? 's' : ''}`,
         highestEducation: highestEducation ? {
@@ -2545,11 +2446,11 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
       userId: req.user?.id,
       userType: req.user?.user_type
     });
-    
+
     const { JobApplication } = require('../config/index');
     const { status } = req.body;
     const { id } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
@@ -2557,12 +2458,12 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
         message: 'Access denied. Only employers and admins can update application status.'
       });
     }
-    
+
     // Find the application and verify ownership
     const application = await JobApplication.findOne({
-      where: { 
-        id: id, 
-        employerId: req.user.id 
+      where: {
+        id: id,
+        employerId: req.user.id
       }
     });
 
@@ -2626,11 +2527,11 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
     // Send notification to employer about status change
     try {
       const { Notification, User, Job } = require('../config/index');
-      
+
       // Get applicant and job details for notification
       const applicant = await User.findByPk(application.userId);
       const job = await Job.findByPk(application.jobId);
-      
+
       if (applicant && job) {
         const statusMessages = {
           'reviewing': 'Application is being reviewed',
@@ -2642,9 +2543,9 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
           'rejected': 'Application has been rejected',
           'withdrawn': 'Application has been withdrawn'
         };
-        
+
         const statusMessage = statusMessages[status] || `Application status changed to ${status}`;
-        
+
         await Notification.create({
           userId: req.user.id,
           type: 'application_status',
@@ -2676,7 +2577,7 @@ router.put('/employer/applications/:id/status', authenticateToken, async (req, r
     // Handle notifications based on status change
     try {
       const NotificationService = require('../services/notificationService');
-      
+
       if (status === 'shortlisted' && oldStatus !== 'shortlisted') {
         // Send notification when shortlisting
         await NotificationService.sendApplicationStatusNotification(
@@ -2760,7 +2661,7 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
 
     const { JobApplication } = require('../config/index');
     const { status } = req.body;
-    
+
     // Validate status parameter
     if (!status) {
       console.log('❌ Status validation failed: status is required');
@@ -2778,16 +2679,16 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
         message: 'Invalid status value'
       });
     }
-    
+
     console.log('🔍 Looking up application:', {
       applicationId: req.params.id,
       userId: req.user.id
     });
 
     const application = await JobApplication.findOne({
-      where: { 
-        id: req.params.id, 
-        userId: req.user.id 
+      where: {
+        id: req.params.id,
+        userId: req.user.id
       }
     });
 
@@ -2835,7 +2736,7 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
     }
 
     // Update the application status and lastUpdatedAt
-    await application.update({ 
+    await application.update({
       status,
       lastUpdatedAt: new Date()
     });
@@ -2858,7 +2759,7 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
 router.get('/job-alerts', authenticateToken, async (req, res) => {
   try {
     const { JobAlert } = require('../config/index');
-    
+
     const alerts = await JobAlert.findAll({
       where: { userId: req.user.id },
       order: [['created_at', 'DESC']]
@@ -2880,7 +2781,7 @@ router.get('/job-alerts', authenticateToken, async (req, res) => {
 router.post('/job-alerts', authenticateToken, async (req, res) => {
   try {
     const { JobAlert } = require('../config/index');
-    
+
     const alertData = {
       ...req.body,
       userId: req.user.id
@@ -2904,7 +2805,7 @@ router.post('/job-alerts', authenticateToken, async (req, res) => {
 router.put('/job-alerts/:id', authenticateToken, async (req, res) => {
   try {
     const { JobAlert } = require('../config/index');
-    
+
     const alert = await JobAlert.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -2934,7 +2835,7 @@ router.put('/job-alerts/:id', authenticateToken, async (req, res) => {
 router.delete('/job-alerts/:id', authenticateToken, async (req, res) => {
   try {
     const { JobAlert } = require('../config/index');
-    
+
     const alert = await JobAlert.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -2965,7 +2866,7 @@ router.delete('/job-alerts/:id', authenticateToken, async (req, res) => {
 router.get('/bookmarks', authenticateToken, async (req, res) => {
   try {
     const { JobBookmark, Job, Company } = require('../config/index');
-    
+
     const bookmarks = await JobBookmark.findAll({
       where: { userId: req.user.id },
       include: [
@@ -2994,7 +2895,7 @@ router.get('/bookmarks', authenticateToken, async (req, res) => {
 router.post('/bookmarks', authenticateToken, async (req, res) => {
   try {
     const { JobBookmark } = require('../config/index');
-    
+
     const bookmarkData = {
       ...req.body,
       userId: req.user.id
@@ -3021,7 +2922,7 @@ router.post('/bookmarks', authenticateToken, async (req, res) => {
 router.put('/bookmarks/:id', authenticateToken, async (req, res) => {
   try {
     const { JobBookmark } = require('../config/index');
-    
+
     const bookmark = await JobBookmark.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -3051,7 +2952,7 @@ router.put('/bookmarks/:id', authenticateToken, async (req, res) => {
 router.delete('/bookmarks/:id', authenticateToken, async (req, res) => {
   try {
     const { JobBookmark } = require('../config/index');
-    
+
     const bookmark = await JobBookmark.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -3099,7 +3000,7 @@ router.post('/job-at-pace/activate', authenticateToken, async (req, res) => {
         premiumBadge: true,
         featuredPlacement: true
       },
-      tags: Array.from(new Set([ ...tags, 'premium' ]))
+      tags: Array.from(new Set([...tags, 'premium']))
     };
 
     // Update user record
@@ -3114,7 +3015,7 @@ router.post('/job-at-pace/activate', authenticateToken, async (req, res) => {
       if (EmployerActivityService?.recordUserActivity) {
         await EmployerActivityService.recordUserActivity(user.id, 'job_at_pace_activate', { planId: req.body?.planId || 'premium' });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     return res.json({ success: true, message: 'Job at Pace premium activated', data: { userId: user.id, preferences: mergedPrefs } });
   } catch (error) {
@@ -3127,9 +3028,9 @@ router.post('/job-at-pace/activate', authenticateToken, async (req, res) => {
 router.get('/search-history', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
-    
+
     const searchHistory = await DashboardService.getSearchHistory(req.user.id, 20);
-    
+
     res.json({
       success: true,
       data: searchHistory
@@ -3147,9 +3048,9 @@ router.get('/search-history', authenticateToken, async (req, res) => {
 router.get('/search-history/enhanced', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
-    
+
     const searchHistory = await DashboardService.getSearchHistory(req.user.id, 50);
-    
+
     res.json({
       success: true,
       data: searchHistory
@@ -3168,9 +3069,9 @@ router.post('/search-history/:id/save', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
     const { id } = req.params;
-    
+
     const savedSearch = await DashboardService.saveSearch(req.user.id, id);
-    
+
     res.json({
       success: true,
       data: savedSearch,
@@ -3190,9 +3091,9 @@ router.delete('/search-history/:id/save', authenticateToken, async (req, res) =>
   try {
     const DashboardService = require('../services/dashboardService');
     const { id } = req.params;
-    
+
     const removedSearch = await DashboardService.removeSavedSearch(req.user.id, id);
-    
+
     res.json({
       success: true,
       data: removedSearch,
@@ -3212,7 +3113,7 @@ router.post('/search-history', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
     const { searchQuery, filters, resultsCount, searchType } = req.body;
-    
+
     const searchData = {
       userId: req.user.id,
       searchQuery,
@@ -3222,9 +3123,9 @@ router.post('/search-history', authenticateToken, async (req, res) => {
       userAgent: req.headers['user-agent'],
       ipAddress: req.ip
     };
-    
+
     const recordedSearch = await DashboardService.recordSearch(searchData);
-    
+
     res.status(201).json({
       success: true,
       data: recordedSearch,
@@ -3243,14 +3144,14 @@ router.post('/search-history', authenticateToken, async (req, res) => {
 router.get('/dashboard-stats', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
-    
+
     console.log('📊 Fetching comprehensive dashboard data for user:', req.user.id);
-    
+
     // Get comprehensive dashboard data
     const dashboardData = await DashboardService.getDashboardData(req.user.id);
-    
+
     console.log('✅ Dashboard data fetched successfully');
-    
+
     res.json({
       success: true,
       data: dashboardData
@@ -3276,9 +3177,9 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
 router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
   try {
     const { Job, JobApplication, Company, User } = require('../config/index');
-    
+
     console.log('📊 Fetching employer dashboard data for user:', req.user.id, 'type:', req.user.user_type);
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       console.log('❌ Access denied - user is not an employer:', req.user.user_type);
@@ -3287,11 +3188,11 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
         message: 'Access denied. Only employers can access this endpoint.'
       });
     }
-    
+
     // Get employer's jobs - filter by user's region to ensure Gulf employers only see Gulf jobs
     console.log('🔍 Querying jobs for employerId:', req.user.id, 'region:', req.user.region);
     const whereClause = { employerId: req.user.id };
-    
+
     // Add region filtering to ensure Gulf employers only see Gulf jobs in normal dashboard
     if (req.user.region === 'gulf') {
       whereClause.region = 'gulf';
@@ -3301,12 +3202,12 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       whereClause.region = 'other';
     }
     // If user has no region set, show all jobs (backward compatibility)
-    
+
     const jobs = await Job.findAll({
       where: whereClause
     });
     console.log('✅ Found jobs:', jobs.length);
-    
+
     // Get applications for employer's jobs using raw query
     console.log('🔍 Querying applications for employer jobs:', req.user.id);
     const applications = await sequelize.query(`
@@ -3321,11 +3222,11 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       type: sequelize.QueryTypes.SELECT
     });
     console.log('✅ Found applications:', applications.length);
-    
+
     // Get hot vacancies for employer (now integrated in Job model)
     const hotVacancies = jobs.filter(job => job.isHotVacancy === true).slice(0, 5);
     console.log('✅ Found hot vacancies:', hotVacancies.length);
-    
+
     // Calculate stats - CRITICAL: Only count jobs that are active AND not expired
     const now = new Date();
     const activeJobs = jobs.filter(job => {
@@ -3339,23 +3240,23 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
     const reviewingApplications = applications.filter(app => app.status === 'reviewing').length;
     const shortlistedApplications = applications.filter(app => app.status === 'shortlisted').length;
     const interviewScheduledApplications = applications.filter(app => app.status === 'interview_scheduled').length;
-    
+
     // Get profile/job views from view tracking
     let profileViews = 0;
     try {
-    const { ViewTracking } = require('../config/index');
-    const { Op } = require('sequelize');
+      const { ViewTracking } = require('../config/index');
+      const { Op } = require('sequelize');
       profileViews = await ViewTracking.count({
-      where: { 
-        viewedUserId: req.user.id,
-        viewType: { [Op.in]: ['job_view', 'profile_view'] }
-      }
-    });
+        where: {
+          viewedUserId: req.user.id,
+          viewType: { [Op.in]: ['job_view', 'profile_view'] }
+        }
+      });
     } catch (viewError) {
       console.log('⚠️ Could not fetch profile views:', viewError.message);
       profileViews = 0;
     }
-    
+
     const employerStats = {
       activeJobs,
       totalApplications,
@@ -3369,7 +3270,7 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       recentJobs: jobs.slice(0, 5),
       recentHotVacancies: hotVacancies
     };
-    
+
     console.log('✅ Employer dashboard data fetched successfully:', {
       activeJobs,
       totalApplications,
@@ -3380,7 +3281,7 @@ router.get('/employer/dashboard-stats', authenticateToken, async (req, res) => {
       profileViews,
       totalJobs: jobs.length
     });
-    
+
     res.json({
       success: true,
       data: employerStats
@@ -3425,7 +3326,7 @@ router.get('/employer/analytics/export', authenticateToken, async (req, res) => 
     }
 
     const analytics = await DashboardService.getEmployerAnalytics(req.user.id, { range });
-    
+
     if (format === 'json') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="analytics-${range}.json"`);
@@ -3448,7 +3349,7 @@ router.post('/track-profile-view/:userId', authenticateToken, async (req, res) =
   try {
     const { userId } = req.params;
     const ViewTrackingService = require('../services/viewTrackingService');
-    
+
     // Check and consume quota for profile view (only for authenticated users)
     if (req.user && req.user.user_type === 'employer') {
       try {
@@ -3478,7 +3379,7 @@ router.post('/track-profile-view/:userId', authenticateToken, async (req, res) =
         // For other quota errors, continue with view but log the issue
       }
     }
-    
+
     const result = await ViewTrackingService.trackView({
       viewerId: req.user?.id || null,
       viewedUserId: userId,
@@ -3491,7 +3392,7 @@ router.post('/track-profile-view/:userId', authenticateToken, async (req, res) =
         source: 'profile_page'
       }
     });
-    
+
     if (result.success) {
       res.json({
         success: true,
@@ -3516,20 +3417,20 @@ router.post('/track-profile-view/:userId', authenticateToken, async (req, res) =
 router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
-    
+
     console.log('📊 Fetching full dashboard for user:', req.user.id);
-    
+
     // Get comprehensive dashboard data including search history
     const dashboardData = await DashboardService.getDashboardData(req.user.id);
-    
+
     // Record dashboard view activity
     await DashboardService.recordActivity(req.user.id, 'dashboard_view', {
       timestamp: new Date(),
       userAgent: req.headers['user-agent']
     });
-    
+
     console.log('✅ Full dashboard data fetched successfully');
-    
+
     res.json({
       success: true,
       data: dashboardData
@@ -3549,14 +3450,14 @@ router.put('/dashboard-stats', authenticateToken, async (req, res) => {
   try {
     const DashboardService = require('../services/dashboardService');
     const updates = req.body;
-    
+
     console.log('📊 Updating dashboard stats for user:', req.user.id, updates);
-    
+
     // Update dashboard stats
     const updatedDashboard = await DashboardService.updateDashboardStats(req.user.id, updates);
-    
+
     console.log('✅ Dashboard stats updated successfully');
-    
+
     res.json({
       success: true,
       data: updatedDashboard,
@@ -3767,7 +3668,7 @@ router.delete('/resumes/:id', authenticateToken, async (req, res) => {
 
     // Check if the deleted resume was the default one
     const wasDefault = resume.isDefault;
-    
+
     await resume.destroy();
 
     // If the deleted resume was default, set another resume as default
@@ -3824,27 +3725,27 @@ router.post('/resumes/upload', authenticateToken, upload.single('resume'), async
 
     let cloudinaryUrl = null;
     let cloudinaryPublicId = null;
-    
+
     // Always save to local storage first (primary storage)
     console.log('💾 Saving resume to local storage...');
     const uploadDir = path.join(__dirname, '../uploads/resumes');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    
+
     const filename = `resume-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(originalName)}`;
     const localPath = path.join(uploadDir, filename);
-    
+
     // Write buffer to disk
     fs.writeFileSync(localPath, req.file.buffer);
     console.log('✅ Resume saved to local storage:', localPath);
-    
+
     // Also try to upload to Cloudinary for backup/redundancy
     if (isCloudinaryConfigured()) {
       try {
         console.log('☁️ Also uploading resume to Cloudinary for backup...');
         const uploadResult = await uploadBufferToCloudinary(
-          req.file.buffer, 
+          req.file.buffer,
           'job-portal/resumes',
           {
             public_id: `resume-${req.user.id}-${Date.now()}`,
@@ -3853,7 +3754,7 @@ router.post('/resumes/upload', authenticateToken, upload.single('resume'), async
             type: 'upload' // Ensure it's a regular upload, not private
           }
         );
-        
+
         cloudinaryUrl = uploadResult.url;
         cloudinaryPublicId = uploadResult.publicId;
         console.log('✅ Resume also uploaded to Cloudinary:', cloudinaryUrl);
@@ -3862,7 +3763,7 @@ router.post('/resumes/upload', authenticateToken, upload.single('resume'), async
         // Continue with local storage only
       }
     }
-    
+
     // Create resume record
     const resume = await Resume.create({
       userId: req.user.id,
@@ -3954,7 +3855,7 @@ router.put('/resumes/:id/set-default', authenticateToken, async (req, res) => {
 router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Resume download request:', { resumeId: req.params.id, userId: req.user.id });
-    
+
     const resume = await Resume.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -3967,10 +3868,10 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
       });
     }
 
-    console.log('✅ Resume found:', { 
-      id: resume.id, 
-      title: resume.title, 
-      metadata: resume.metadata 
+    console.log('✅ Resume found:', {
+      id: resume.id,
+      title: resume.title,
+      metadata: resume.metadata
     });
 
     const metadata = resume.metadata || {};
@@ -3982,22 +3883,22 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
     const filename = metadata.filename;
     if (filename && metadata.hasLocalFile) {
       console.log('💾 Trying local storage first:', filename);
-      
+
       // Use utility function to find the file
       const filePath = findResumeFile(filename, metadata);
-      
+
       if (filePath && fs.existsSync(filePath)) {
         console.log('✅ File found in local storage:', filePath);
-        
+
         // Increment download count
         await resume.update({
           downloads: resume.downloads + 1
         });
-        
+
         // Set headers for file download
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename="' + metadata.originalName + '"');
-        
+
         // Send file
         res.sendFile(filePath);
         return;
@@ -4005,27 +3906,27 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
         console.log('❌ File not found in local storage, trying Cloudinary...');
       }
     }
-    
+
     // Fallback to Cloudinary if local file not found
     if (metadata.cloudinaryUrl && metadata.hasCloudinaryFile) {
       console.log('☁️ Trying Cloudinary as fallback:', metadata.cloudinaryUrl);
-      
+
       try {
         // Download file from Cloudinary and serve it
         const cloudinaryResponse = await axios.get(metadata.cloudinaryUrl, {
           responseType: 'stream'
         });
-        
+
         // Increment download count
         await resume.update({
           downloads: resume.downloads + 1
         });
-        
+
         // Set headers for file download
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename="' + metadata.originalName + '"');
         res.setHeader('Content-Length', cloudinaryResponse.headers['content-length']);
-        
+
         // Pipe the file to response
         cloudinaryResponse.data.pipe(res);
         return;
@@ -4047,7 +3948,7 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
 
     // Use utility function to find the file
     const filePath = findResumeFile(filename, metadata);
-    
+
     if (!filePath) {
       // Fallback: try redirecting to the stored public path if present
       if (metadata.filePath) {
@@ -4085,7 +3986,7 @@ router.get('/resumes/:id/download', authenticateToken, async (req, res) => {
 router.get('/resumes/:id/view', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Resume view request:', { resumeId: req.params.id, userId: req.user.id });
-    
+
     const resume = await Resume.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -4105,25 +4006,25 @@ router.get('/resumes/:id/view', authenticateToken, async (req, res) => {
     // Try local storage first (primary storage)
     const metadata = resume.metadata || {};
     const filename = metadata.filename || resume.filePath;
-    
+
     if (filename && metadata.hasLocalFile) {
       console.log('💾 Trying local storage first:', filename);
-      
+
       // Use utility function to find the file
       const filePath = findResumeFile(filename, metadata);
-      
+
       if (filePath && fs.existsSync(filePath)) {
         console.log('✅ File found in local storage:', filePath);
-        
+
         // Increment view count
         await resume.update({
           views: (resume.views || 0) + 1
         });
-        
+
         // Set headers for file view
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
-        
+
         // Send file
         res.sendFile(filePath);
         return;
@@ -4131,27 +4032,27 @@ router.get('/resumes/:id/view', authenticateToken, async (req, res) => {
         console.log('❌ File not found in local storage, trying Cloudinary...');
       }
     }
-    
+
     // Fallback to Cloudinary if local file not found
     if (metadata.cloudinaryUrl && metadata.hasCloudinaryFile) {
       console.log('☁️ Trying Cloudinary as fallback:', metadata.cloudinaryUrl);
-      
+
       try {
         // Download file from Cloudinary and serve it
         const cloudinaryResponse = await axios.get(metadata.cloudinaryUrl, {
           responseType: 'stream'
         });
-        
+
         // Increment view count
         await resume.update({
           views: (resume.views || 0) + 1
         });
-        
+
         // Set headers for file view
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
         res.setHeader('Content-Length', cloudinaryResponse.headers['content-length']);
-        
+
         // Pipe the file to response
         cloudinaryResponse.data.pipe(res);
         return;
@@ -4171,7 +4072,7 @@ router.get('/resumes/:id/view', authenticateToken, async (req, res) => {
 
     // Use utility function to find the file
     const filePath = findResumeFile(filename, metadata);
-    
+
     if (!filePath) {
       return res.status(404).json({
         success: false,
@@ -4352,7 +4253,7 @@ router.delete('/cover-letters/:id', authenticateToken, async (req, res) => {
     // If this was the default cover letter, make another one default
     if (coverLetter.isDefault) {
       const otherCoverLetter = await CoverLetter.findOne({
-        where: { 
+        where: {
           userId: req.user.id,
           id: { [sequelize.Op.ne]: req.params.id }
         },
@@ -4518,7 +4419,7 @@ router.get('/cover-letters/:id/download', attachTokenFromQuery, authenticateToke
     console.log('🔍 Cover letter download request:', { coverLetterId: req.params.id, userId: req.user.id });
     console.log('🔍 Cover letter download - Auth header:', req.headers?.authorization ? 'Present' : 'Missing');
     console.log('🔍 Cover letter download - Query token:', req.query?.token ? 'Present' : 'Missing');
-    
+
     const coverLetter = await CoverLetter.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
@@ -4531,10 +4432,10 @@ router.get('/cover-letters/:id/download', attachTokenFromQuery, authenticateToke
       });
     }
 
-    console.log('✅ Cover letter found:', { 
-      id: coverLetter.id, 
-      title: coverLetter.title, 
-      metadata: coverLetter.metadata 
+    console.log('✅ Cover letter found:', {
+      id: coverLetter.id,
+      title: coverLetter.title,
+      metadata: coverLetter.metadata
     });
 
     const metadata = coverLetter.metadata || {};
@@ -4598,7 +4499,7 @@ router.get('/employer/candidates/:candidateId/cover-letters/:coverLetterId/downl
 
     // Verify the candidate exists and is a jobseeker
     const candidate = await User.findOne({
-      where: { 
+      where: {
         id: candidateId,
         user_type: 'jobseeker',
         is_active: true,
@@ -4615,9 +4516,9 @@ router.get('/employer/candidates/:candidateId/cover-letters/:coverLetterId/downl
 
     // Find the cover letter
     const coverLetter = await CoverLetter.findOne({
-      where: { 
-        id: coverLetterId, 
-        userId: candidateId 
+      where: {
+        id: coverLetterId,
+        userId: candidateId
       }
     });
 
@@ -4640,7 +4541,7 @@ router.get('/employer/candidates/:candidateId/cover-letters/:coverLetterId/downl
     }
 
     const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
-    
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
@@ -4673,7 +4574,7 @@ router.get('/employer/candidates/:candidateId/cover-letters/:coverLetterId/downl
 router.get('/employer/applications/:applicationId/cover-letter/download', authenticateToken, async (req, res) => {
   try {
     const { applicationId } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
@@ -4684,9 +4585,9 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
 
     // Find the application and verify ownership
     const application = await JobApplication.findOne({
-      where: { 
-        id: applicationId, 
-        employerId: req.user.id 
+      where: {
+        id: applicationId,
+        employerId: req.user.id
       },
       include: [
         {
@@ -4724,7 +4625,7 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
     }
 
     const filePath = path.join(__dirname, '../uploads/cover-letters', filename);
-    
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
@@ -4757,10 +4658,10 @@ router.get('/employer/applications/:applicationId/cover-letter/download', authen
 router.get('/employer/applications/:applicationId/resume/view', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Employer resume view request:', { applicationId: req.params.applicationId, userId: req.user?.id, userType: req.user?.user_type });
-    
+
     const { JobApplication, Resume } = require('../config/index');
     const { applicationId } = req.params;
-    
+
     // Check if user is an employer
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       console.log('❌ Access denied - user is not an employer:', req.user.user_type);
@@ -4772,11 +4673,11 @@ router.get('/employer/applications/:applicationId/resume/view', authenticateToke
 
     // Find the application and verify ownership
     console.log('🔍 Looking for application:', { applicationId, employerId: req.user.id });
-    
+
     const application = await JobApplication.findOne({
-      where: { 
-        id: applicationId, 
-        employerId: req.user.id 
+      where: {
+        id: applicationId,
+        employerId: req.user.id
       },
       include: [
         {
@@ -4787,8 +4688,8 @@ router.get('/employer/applications/:applicationId/resume/view', authenticateToke
       ]
     });
 
-    console.log('🔍 Application found:', { 
-      found: !!application, 
+    console.log('🔍 Application found:', {
+      found: !!application,
       hasResume: !!application?.jobResume,
       resumeId: application?.jobResume?.id,
       resumeTitle: application?.jobResume?.title
@@ -4811,7 +4712,7 @@ router.get('/employer/applications/:applicationId/resume/view', authenticateToke
     }
 
     const resume = application.jobResume;
-    
+
     // Increment view count
     const currentViews = resume.views || 0;
     console.log('🔍 Current views:', currentViews);
@@ -4899,7 +4800,7 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
 
     // Employer jobs - filter by user's region to ensure Gulf employers only see Gulf jobs
     const whereClause = { employerId };
-    
+
     // Add region filtering to ensure Gulf employers only see Gulf jobs in normal dashboard
     if (req.user.region === 'gulf') {
       whereClause.region = 'gulf';
@@ -4909,7 +4810,7 @@ router.get('/employer/dashboard', authenticateToken, async (req, res) => {
       whereClause.region = 'other';
     }
     // If user has no region set, show all jobs (backward compatibility)
-    
+
     const jobs = await Job.findAll({
       where: whereClause,
       attributes: ['id', 'title', 'status', 'region', 'created_at'],
@@ -4963,17 +4864,17 @@ function attachTokenFromQuery(req, _res, next) {
     if (!req.headers?.authorization && qToken) {
       req.headers.authorization = `Bearer ${qToken}`;
     }
-  } catch (_) {}
+  } catch (_) { }
   next();
 }
 
 router.get('/employer/applications/:applicationId/resume/download', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Employer resume download request:', { applicationId: req.params.applicationId, userId: req.user?.id, userType: req.user?.user_type });
-    
+
     const { JobApplication, Resume } = require('../config/index');
     const { applicationId } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       console.log('❌ Access denied - user is not an employer or admin:', req.user.user_type);
@@ -4985,11 +4886,11 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
 
     // Find the application and verify ownership
     console.log('🔍 Looking for application:', { applicationId, employerId: req.user.id });
-    
+
     const application = await JobApplication.findOne({
-      where: { 
-        id: applicationId, 
-        employerId: req.user.id 
+      where: {
+        id: applicationId,
+        employerId: req.user.id
       },
       include: [
         {
@@ -5000,8 +4901,8 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
       ]
     });
 
-    console.log('🔍 Application found:', { 
-      found: !!application, 
+    console.log('🔍 Application found:', {
+      found: !!application,
       hasResume: !!application?.jobResume,
       resumeId: application?.jobResume?.id,
       resumeTitle: application?.jobResume?.title
@@ -5032,13 +4933,13 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
     // Check if file is stored in Cloudinary first (permanent storage)
     if (metadata.cloudinaryUrl) {
       console.log('☁️ Resume stored in Cloudinary, serving through proxy:', metadata.cloudinaryUrl);
-      
+
       // Increment download count
       const currentDownloads = resume.downloads || 0;
       await resume.update({
         downloads: currentDownloads + 1
       });
-      
+
       // Check and consume quota for resume download
       try {
         const EmployerQuotaService = require('../services/employerQuotaService');
@@ -5064,7 +4965,7 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
           });
         }
       }
-      
+
       // Log resume download activity
       try {
         const EmployerActivityService = require('../services/employerActivityService');
@@ -5081,23 +4982,23 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
       } catch (activityError) {
         console.error('Failed to log resume download activity:', activityError);
       }
-      
+
       // Download file from Cloudinary and serve it (don't redirect - Cloudinary URLs may require auth)
       try {
         console.log('☁️ Downloading from Cloudinary and serving:', metadata.cloudinaryUrl);
-        
+
         // Download file from Cloudinary and serve it
         const cloudinaryResponse = await axios.get(metadata.cloudinaryUrl, {
           responseType: 'stream'
         });
-        
+
         // Set headers for file download
         res.setHeader('Content-Type', metadata.mimeType || 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
         if (cloudinaryResponse.headers['content-length']) {
           res.setHeader('Content-Length', cloudinaryResponse.headers['content-length']);
         }
-        
+
         // Pipe the file to response
         cloudinaryResponse.data.pipe(res);
         return;
@@ -5106,7 +5007,7 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
         // Fall through to try local file
       }
     }
-    
+
     // Fallback to local file storage (ephemeral on Render)
     const filename = metadata.filename;
 
@@ -5173,7 +5074,7 @@ router.get('/employer/applications/:applicationId/resume/download', attachTokenF
 
     // Use utility function to find the file
     const filePath = findResumeFile(filename, metadata);
-    
+
     if (!filePath) {
       console.log('❌ File not found on filesystem - Render ephemeral storage issue');
       return res.status(404).json({
@@ -5238,13 +5139,13 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
     }
 
     let avatarUrl = null;
-    
+
     // Try to upload to Cloudinary if configured, otherwise fallback to local storage
     if (isCloudinaryConfigured()) {
       try {
         console.log('☁️ Uploading avatar to Cloudinary...');
         const uploadResult = await uploadBufferToCloudinary(
-          req.file.buffer, 
+          req.file.buffer,
           'job-portal/avatars',
           {
             public_id: `avatar-${req.user.id}-${Date.now()}`,
@@ -5255,7 +5156,7 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
             ]
           }
         );
-        
+
         avatarUrl = uploadResult.url;
         console.log('✅ Avatar uploaded to Cloudinary:', avatarUrl);
       } catch (cloudinaryError) {
@@ -5263,7 +5164,7 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
         // Fall through to local storage
       }
     }
-    
+
     // Fallback to local storage if Cloudinary not configured or upload failed
     if (!avatarUrl) {
       console.log('💾 Saving avatar to local storage (WARNING: Ephemeral on Render)');
@@ -5271,24 +5172,24 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
-      
+
       const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
       const localPath = path.join(uploadDir, filename);
-      
+
       // Write buffer to disk
       fs.writeFileSync(localPath, req.file.buffer);
       avatarUrl = `/uploads/avatars/${filename}`;
       console.log('✅ Avatar saved to local storage:', localPath);
     }
-    
+
     console.log('🔍 Generated avatar URL:', avatarUrl);
 
     // Update user's avatar in database
-    const updateResult = await req.user.update({ 
+    const updateResult = await req.user.update({
       avatar: avatarUrl,
       updatedAt: new Date()
     });
-    
+
     console.log('🔍 Database update result:', updateResult);
 
     // Fetch updated user data and transform to camelCase format
@@ -5326,9 +5227,9 @@ router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (
     res.status(200).json({
       success: true,
       message: 'Avatar uploaded successfully',
-      data: { 
-        avatarUrl, 
-        user: userData 
+      data: {
+        avatarUrl,
+        user: userData
       }
     });
   } catch (error) {
@@ -5357,7 +5258,7 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
     }
 
     const { jobId, altText, caption, isPrimary, displayOrder } = req.body;
-    
+
     if (!jobId) {
       return res.status(400).json({
         success: false,
@@ -5368,7 +5269,7 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
     // Check if user has permission to upload photos for this job
     const { Job } = require('../config/index');
     const job = await Job.findByPk(jobId);
-    
+
     if (!job) {
       return res.status(404).json({
         success: false,
@@ -5387,7 +5288,7 @@ router.post('/job-photos/upload', authenticateToken, jobPhotoUpload.single('phot
     const filename = req.file.filename;
     const filePath = `/uploads/job-photos/${filename}`;
     const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
-    
+
     console.log('🔍 Generated job photo URL:', fileUrl);
 
     // Create job photo record
@@ -5481,7 +5382,7 @@ router.post('/branding-media/upload', authenticateToken, (req, res, next) => {
     const filename = req.file.filename;
     const filePath = `/uploads/branding-media/${filename}`;
     const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:8000'}${filePath}`;
-    
+
     console.log('✅ Generated branding media URL:', fileUrl);
 
     // Determine file type
@@ -5515,11 +5416,11 @@ router.get('/jobs/:jobId/photos', async (req, res) => {
   try {
     const { jobId } = req.params;
     const { JobPhoto } = require('../config/index');
-    
+
     const photos = await JobPhoto.findAll({
-      where: { 
+      where: {
         jobId: jobId,
-        isActive: true 
+        isActive: true
       },
       order: [['displayOrder', 'ASC'], ['created_at', 'ASC']]
     });
@@ -5541,7 +5442,7 @@ router.get('/jobs/:jobId/photos', async (req, res) => {
 router.delete('/job-photos/:photoId', authenticateToken, async (req, res) => {
   try {
     const { photoId } = req.params;
-    
+
     // Validate photoId
     if (!photoId || photoId === 'undefined' || photoId === 'null') {
       return res.status(400).json({
@@ -5549,9 +5450,9 @@ router.delete('/job-photos/:photoId', authenticateToken, async (req, res) => {
         message: 'Invalid photo ID provided'
       });
     }
-    
+
     const { JobPhoto, Job } = require('../config/index');
-    
+
     // Find the photo
     const photo = await JobPhoto.findByPk(photoId, {
       include: [{
@@ -5560,7 +5461,7 @@ router.delete('/job-photos/:photoId', authenticateToken, async (req, res) => {
         attributes: ['id', 'employerId', 'title']
       }]
     });
-    
+
     if (!photo) {
       return res.status(404).json({
         success: false,
@@ -5622,7 +5523,7 @@ router.use((error, req, res, next) => {
 router.put('/preferences/notifications', authenticateToken, async (req, res) => {
   try {
     const { notifications } = req.body;
-    
+
     if (!notifications || typeof notifications !== 'object') {
       return res.status(400).json({
         success: false,
@@ -5738,12 +5639,12 @@ router.delete('/account', authenticateToken, [
       const companyMembers = await User.count({
         where: { companyId: user.companyId }
       });
-      
+
       if (companyMembers === 1) {
         // User is the only member - mark company as inactive
         const Company = require('../models/Company');
         await Company.update(
-          { 
+          {
             isActive: false,
             companyStatus: 'inactive',
             lastActivityAt: new Date()
@@ -5758,18 +5659,18 @@ router.delete('/account', authenticateToken, [
 
     // Delete account data (without transaction for now due to model compatibility issues)
     console.log('🔍 Starting account deletion process...');
-    
+
     try {
       // Phase 1: Anonymize shared data (preserve for business purposes)
       console.log('🔍 Phase 1: Starting anonymizeSharedData...');
       await anonymizeSharedData(userId, null);
       console.log('✅ Phase 1 completed');
-      
+
       // Phase 2: Delete user-specific data
       console.log('🔍 Phase 2: Starting deleteUserSpecificData...');
       await deleteUserSpecificData(userId, null);
       console.log('✅ Phase 2 completed');
-      
+
       // Phase 3: Soft delete user account (GDPR compliant)
       console.log('🔍 Phase 3: Starting user account soft delete...');
       await user.update({
@@ -5818,9 +5719,9 @@ router.delete('/account', authenticateToken, [
 async function anonymizeSharedData(userId, transaction) {
   try {
     const { JobApplication, Interview, Message, Payment, CompanyReview } = require('../models');
-    
+
     console.log('🔍 Starting anonymizeSharedData for user:', userId);
-    
+
     // Delete job applications where user is employer (using correct field name)
     try {
       const options = { where: { employerId: userId } };
@@ -5830,7 +5731,7 @@ async function anonymizeSharedData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete job applications (employer):', error.message);
     }
-    
+
     // Delete interviews where user is employer (using correct field name)
     try {
       const options = { where: { employerId: userId } };
@@ -5840,16 +5741,16 @@ async function anonymizeSharedData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete interviews (employer):', error.message);
     }
-    
+
     // Delete messages where user is sender or receiver (using correct field names)
     try {
-      const options = { 
-        where: { 
+      const options = {
+        where: {
           [require('sequelize').Op.or]: [
             { senderId: userId },
             { receiverId: userId }
           ]
-        } 
+        }
       };
       if (transaction) options.transaction = transaction;
       await Message.destroy(options);
@@ -5857,7 +5758,7 @@ async function anonymizeSharedData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete messages:', error.message);
     }
-    
+
     // Delete payment records (using correct field name)
     try {
       const options = { where: { userId: userId } };
@@ -5867,7 +5768,7 @@ async function anonymizeSharedData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete payments:', error.message);
     }
-    
+
     // Delete company reviews (using correct field name)
     try {
       const options = { where: { userId: userId } };
@@ -5877,7 +5778,7 @@ async function anonymizeSharedData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete company reviews:', error.message);
     }
-    
+
     console.log('✅ anonymizeSharedData completed');
   } catch (error) {
     console.error('❌ Error in anonymizeSharedData:', error);
@@ -5889,8 +5790,8 @@ async function anonymizeSharedData(userId, transaction) {
 async function deleteUserSpecificData(userId, transaction) {
   try {
     console.log('🔍 Starting deleteUserSpecificData for user:', userId);
-    
-    const { 
+
+    const {
       JobBookmark, JobAlert, Resume, CoverLetter, Education, WorkExperience,
       CompanyFollow, Notification, SearchHistory, UserSession, UserActivityLog,
       UserDashboard, Conversation, Subscription, EmployerQuota, FeaturedJob,
@@ -5898,7 +5799,7 @@ async function deleteUserSpecificData(userId, transaction) {
       ViewTracking, Requirement, Application, JobPreference, AgencyClientAuthorization,
       AdminNotification
     } = require('../models');
-    
+
     // Define models with their CORRECT field names for user ID
     const modelsWithFields = [
       { model: JobBookmark, field: 'userId' },
@@ -5919,7 +5820,7 @@ async function deleteUserSpecificData(userId, transaction) {
       { model: Analytics, field: 'userId' },
       { model: JobPreference, field: 'userId' }
     ];
-    
+
     // Delete user-specific data with correct field names
     for (const { model: Model, field } of modelsWithFields) {
       try {
@@ -5931,16 +5832,16 @@ async function deleteUserSpecificData(userId, transaction) {
         console.log(`⚠️ Warning: Could not delete from ${Model.name}:`, error.message);
       }
     }
-    
+
     // Handle Conversation model with correct field names (participant1Id and participant2Id)
     try {
-      const options = { 
-        where: { 
+      const options = {
+        where: {
           [require('sequelize').Op.or]: [
             { participant1Id: userId },
             { participant2Id: userId }
           ]
-        } 
+        }
       };
       if (transaction) options.transaction = transaction;
       await Conversation.destroy(options);
@@ -5948,7 +5849,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete conversations:', error.message);
     }
-    
+
     // Handle BulkJobImport with correct field name
     try {
       const options = { where: { createdBy: userId } };
@@ -5958,7 +5859,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete bulk job imports:', error.message);
     }
-    
+
     // Handle CandidateAnalytics with correct field name
     try {
       const options = { where: { employerId: userId } };
@@ -5968,16 +5869,16 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete candidate analytics:', error.message);
     }
-    
+
     // Handle CandidateLike with correct field names
     try {
-      const options = { 
-        where: { 
+      const options = {
+        where: {
           [require('sequelize').Op.or]: [
             { employerId: userId },
             { candidateId: userId }
           ]
-        } 
+        }
       };
       if (transaction) options.transaction = transaction;
       await CandidateLike.destroy(options);
@@ -5985,16 +5886,16 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete candidate likes:', error.message);
     }
-    
+
     // Handle ViewTracking with correct field names
     try {
-      const options = { 
-        where: { 
+      const options = {
+        where: {
           [require('sequelize').Op.or]: [
             { viewerId: userId },
             { viewedUserId: userId }
           ]
-        } 
+        }
       };
       if (transaction) options.transaction = transaction;
       await ViewTracking.destroy(options);
@@ -6002,7 +5903,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete view tracking:', error.message);
     }
-    
+
     // Handle Requirement with correct field name
     try {
       const options = { where: { createdBy: userId } };
@@ -6012,7 +5913,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete requirements:', error.message);
     }
-    
+
     // Handle AdminNotification with correct field name
     try {
       const options = { where: { relatedUserId: userId } };
@@ -6022,7 +5923,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete admin notifications:', error.message);
     }
-    
+
     // Delete job applications where user is applicant (using correct field name)
     try {
       const { JobApplication } = require('../models');
@@ -6033,7 +5934,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete job applications (applicant):', error.message);
     }
-    
+
     // Delete interviews where user is candidate (using correct field name)
     try {
       const { Interview } = require('../models');
@@ -6044,7 +5945,7 @@ async function deleteUserSpecificData(userId, transaction) {
     } catch (error) {
       console.log('⚠️ Could not delete interviews (candidate):', error.message);
     }
-    
+
     console.log('✅ deleteUserSpecificData completed');
   } catch (error) {
     console.error('❌ Error in deleteUserSpecificData:', error);
@@ -6060,14 +5961,14 @@ async function deleteUserSpecificData(userId, transaction) {
 router.get('/work-experiences', authenticateToken, async (req, res) => {
   try {
     const { WorkExperience } = require('../models');
-    
+
     // Only select columns that exist in the database
     // Note: createdAt and updatedAt are automatically included by Sequelize when timestamps: true
     const workExperiences = await WorkExperience.findAll({
       where: { userId: req.user.id },
       attributes: [
-        'id', 'userId', 'companyName', 'jobTitle', 'location', 'startDate', 'endDate', 
-        'isCurrent', 'description', 'employmentType', 'skills', 'achievements', 
+        'id', 'userId', 'companyName', 'jobTitle', 'location', 'startDate', 'endDate',
+        'isCurrent', 'description', 'employmentType', 'skills', 'achievements',
         'salary', 'salaryCurrency'
       ],
       order: [
@@ -6081,7 +5982,7 @@ router.get('/work-experiences', authenticateToken, async (req, res) => {
       const expData = exp.toJSON();
       let currentDesignation = '';
       let description = expData.description || '';
-      
+
       // Check if description starts with "Designation: "
       if (description && description.startsWith('Designation: ')) {
         const lines = description.split('\n\n');
@@ -6089,7 +5990,7 @@ router.get('/work-experiences', authenticateToken, async (req, res) => {
         currentDesignation = designationLine.replace('Designation: ', '');
         description = lines.slice(1).join('\n\n');
       }
-      
+
       return {
         ...expData,
         currentDesignation,
@@ -6170,7 +6071,7 @@ router.post('/work-experiences', authenticateToken, async (req, res) => {
     const expData = workExperience.toJSON();
     let extractedCurrentDesignation = '';
     let extractedDescription = expData.description || '';
-    
+
     if (extractedDescription && extractedDescription.startsWith('Designation: ')) {
       const lines = extractedDescription.split('\n\n');
       const designationLine = lines[0];
@@ -6266,7 +6167,7 @@ router.put('/work-experiences/:id', authenticateToken, async (req, res) => {
     const expData = workExperience.toJSON();
     let extractedCurrentDesignation = '';
     let extractedDescription = expData.description || '';
-    
+
     if (extractedDescription && extractedDescription.startsWith('Designation: ')) {
       const lines = extractedDescription.split('\n\n');
       const designationLine = lines[0];
@@ -6337,7 +6238,7 @@ router.delete('/work-experiences/:id', authenticateToken, async (req, res) => {
 router.get('/educations', authenticateToken, async (req, res) => {
   try {
     const { Education } = require('../models');
-    
+
     // Only select columns that exist in the database
     const educations = await Education.findAll({
       where: { userId: req.user.id },
@@ -6415,7 +6316,7 @@ router.post('/educations', authenticateToken, async (req, res) => {
       location: location || null,
       educationType: educationType || null
     };
-    
+
     // Explicitly exclude non-existent fields
     delete educationData.scale;
     delete educationData.country;
@@ -6423,7 +6324,7 @@ router.post('/educations', authenticateToken, async (req, res) => {
     delete educationData.order;
     delete educationData.metadata;
     delete educationData.resumeId;
-    
+
     const education = await Education.create(educationData, {
       fields: ['userId', 'degree', 'institution', 'fieldOfStudy', 'startDate', 'endDate', 'isCurrent', 'gpa', 'percentage', 'grade', 'description', 'location', 'educationType'],
       returning: true

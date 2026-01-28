@@ -159,11 +159,11 @@ WorkExperience.prototype.getFormattedPeriod = function() {
 };
 
 WorkExperience.prototype.getSkillsString = function() {
-  return this.skills.join(', ');
+  return this.skills && Array.isArray(this.skills) ? this.skills.join(', ') : '';
 };
 
 WorkExperience.prototype.getTechnologiesString = function() {
-  return this.technologies.join(', ');
+  return this.skills && Array.isArray(this.skills) ? this.skills.join(', ') : '';
 };
 
 module.exports = WorkExperience; 

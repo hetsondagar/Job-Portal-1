@@ -9,43 +9,7 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const Company = require('../models/Company');
 
-// Middleware to verify JWT token
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Access token required' 
-      });
-    }
-
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    // Tokens elsewhere use id
-    const uid = decoded.id || decoded.userId;
-    const User = require('../models/User');
-    const user = await User.findByPk(uid);
-    
-    if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid token' 
-      });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Invalid or expired token' 
-    });
-  }
-};
+const { authenticateToken } = require('../middlewares/auth');
 
 // Get all conversations for a user
 router.get('/conversations', authenticateToken, async (req, res) => {
@@ -78,10 +42,10 @@ router.get('/conversations', authenticateToken, async (req, res) => {
       const otherParticipant = conv.participant1Id === req.user.id ? conv.participant2 : conv.participant1;
       const unreadCount = conv.participant1Id === req.user.id ? conv.unreadCountParticipant1 : conv.unreadCountParticipant2;
       const isUnread = unreadCount > 0;
-      
+
       // Generate title from participant names
       const title = otherParticipant ? `${otherParticipant.first_name} ${otherParticipant.last_name}` : 'Unknown User';
-      
+
       return {
         id: conv.id,
         title: title,
@@ -128,12 +92,14 @@ router.get('/company-users', authenticateToken, async (req, res) => {
       },
       attributes: ['id', 'first_name', 'last_name', 'email', 'user_type']
     })
-    return res.json({ success: true, data: coworkers.map(u => ({
-      id: u.id,
-      name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
-      email: u.email,
-      userType: u.user_type
-    })) })
+    return res.json({
+      success: true, data: coworkers.map(u => ({
+        id: u.id,
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+        email: u.email,
+        userType: u.user_type
+      }))
+    })
   } catch (error) {
     console.error('Error listing company users:', error)
     return res.status(500).json({ success: false, message: 'Failed to list users' })
@@ -149,7 +115,7 @@ router.post('/start', authenticateToken, async (req, res) => {
     // Validate coworker and same company
     const receiver = await User.findByPk(receiverId)
     if (!receiver) return res.status(404).json({ success: false, message: 'User not found' })
-    
+
     // Use companyId (camelCase) as Sequelize model attribute maps to company_id in DB
     const userCompanyId = req.user.companyId || req.user.company_id
     const receiverCompanyId = receiver.companyId || receiver.company_id
@@ -177,12 +143,12 @@ router.post('/start', authenticateToken, async (req, res) => {
           isBlocked: false
         }
       })
-      
+
       // If conversation was blocked, unblock it since user is trying to start it
       if (!created && conversation.isBlocked) {
         await conversation.update({ isBlocked: false })
       }
-      
+
       return res.json({ success: true, data: { id: conversation.id } })
     } catch (createError) {
       // If creation fails due to unique constraint, try to find existing again
@@ -207,8 +173,8 @@ router.post('/start', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error('Error starting conversation:', error)
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: 'Failed to start conversation',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     })
@@ -253,12 +219,12 @@ router.get('/conversations/:conversationId/messages', authenticateToken, async (
     // Mark messages as read
     await Message.update(
       { isRead: true, readAt: new Date() },
-      { 
-        where: { 
-          conversationId, 
+      {
+        where: {
+          conversationId,
           receiverId: req.user.id,
-          isRead: false 
-        } 
+          isRead: false
+        }
       }
     );
 
@@ -353,14 +319,14 @@ router.post('/conversations/:conversationId/messages', authenticateToken, async 
     if (conversation) {
       conversation.lastMessageId = message.id;
       conversation.lastMessageAt = new Date();
-      
+
       // Update unread count for the receiver
       if (conversation.participant1Id === receiverId) {
         conversation.unreadCountParticipant1 = (conversation.unreadCountParticipant1 || 0) + 1;
       } else if (conversation.participant2Id === receiverId) {
         conversation.unreadCountParticipant2 = (conversation.unreadCountParticipant2 || 0) + 1;
       }
-      
+
       await conversation.save();
     }
 
@@ -414,12 +380,12 @@ router.put('/conversations/:conversationId/read', authenticateToken, async (req,
     // Mark all messages as read
     await Message.update(
       { isRead: true, readAt: new Date() },
-      { 
-        where: { 
-          conversationId, 
+      {
+        where: {
+          conversationId,
           receiverId: req.user.id,
-          isRead: false 
-        } 
+          isRead: false
+        }
       }
     );
 

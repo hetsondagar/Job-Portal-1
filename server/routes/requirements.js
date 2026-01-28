@@ -16,74 +16,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Resume = require('../models/Resume');
 
-// Middleware to verify JWT token
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    console.log('🔍 authenticateToken - Auth header:', authHeader ? 'Present' : 'Missing');
-    console.log('🔍 authenticateToken - Token:', token ? 'Present' : 'Missing');
-
-    if (!token) {
-      console.log('❌ authenticateToken - No token found');
-      return res.status(401).json({ success: false, message: 'Access token required' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    console.log('✅ authenticateToken - Token decoded for user:', decoded.id);
-    
-    const user = await User.findByPk(decoded.id);
-
-    if (!user) {
-      console.log('❌ authenticateToken - User not found:', decoded.id);
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    if (!user.is_active) {
-      console.log('❌ authenticateToken - User account is inactive');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Account is deactivated' 
-      });
-    }
-
-    // Check account status for suspended users
-    if (user.account_status === 'suspended') {
-      console.log('❌ authenticateToken - User account is suspended');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Your account has been suspended. Please contact support for assistance.',
-        status: 'suspended'
-      });
-    }
-
-    if (user.account_status === 'deleted') {
-      console.log('❌ authenticateToken - User account is deleted');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Account not found or has been deleted.',
-        status: 'deleted'
-      });
-    }
-
-    if (user.account_status === 'inactive') {
-      console.log('❌ authenticateToken - User account is inactive due to inactivity');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Your account has been marked as inactive due to prolonged inactivity. Please log in to reactivate your account.',
-        status: 'inactive'
-      });
-    }
-
-    console.log('✅ authenticateToken - User authenticated:', user.email, user.user_type);
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('❌ authenticateToken - Token verification error:', error);
-    return res.status(403).json({ success: false, message: 'Invalid or expired token' });
-  }
-};
+const { authenticateToken } = require('../middlewares/auth');
 
 // Create Requirement
 router.post('/', authenticateToken, async (req, res) => {
@@ -201,7 +134,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
 
         // Attach to user for future requests and set as admin with Hiring Manager designation
-        await req.user.update({ 
+        await req.user.update({
           companyId: companyRecord.id,
           user_type: 'admin', // User becomes admin when they create a company
           designation: 'Hiring Manager' // Set proper designation for company creators
@@ -294,7 +227,7 @@ router.post('/', authenticateToken, async (req, res) => {
     try {
       const { Notification } = require('../config/index');
       const { Company } = require('../config/index');
-      
+
       // Check if notification already exists for this requirement (prevent duplicates)
       const existingNotification = await Notification.findOne({
         where: {
@@ -306,29 +239,29 @@ router.post('/', authenticateToken, async (req, res) => {
       });
 
       if (!existingNotification) {
-      // Get company info for notification
-      const company = await Company.findByPk(requirement.companyId);
-      const companyName = company?.name || 'Your Company';
-      
-      await Notification.create({
-        userId: req.user.id,
-        type: 'company_update',
-        title: `✅ Requirement Posted Successfully!`,
-        message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
-        shortMessage: `Requirement posted: ${requirement.title}`,
-        priority: 'low',
-        actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
-        actionText: 'View Requirement',
-        icon: 'briefcase',
-        metadata: {
-          requirementId: requirement.id,
-          requirementTitle: requirement.title,
-          companyId: requirement.companyId,
-          companyName: companyName,
-          action: 'requirement_created'
-        }
-      });
-      console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
+        // Get company info for notification
+        const company = await Company.findByPk(requirement.companyId);
+        const companyName = company?.name || 'Your Company';
+
+        await Notification.create({
+          userId: req.user.id,
+          type: 'company_update',
+          title: `✅ Requirement Posted Successfully!`,
+          message: `Your requirement "${requirement.title}" has been posted. Start searching for candidates now!`,
+          shortMessage: `Requirement posted: ${requirement.title}`,
+          priority: 'low',
+          actionUrl: `/employer-dashboard/candidate-requirement/${requirement.id}`,
+          actionText: 'View Requirement',
+          icon: 'briefcase',
+          metadata: {
+            requirementId: requirement.id,
+            requirementTitle: requirement.title,
+            companyId: requirement.companyId,
+            companyName: companyName,
+            action: 'requirement_created'
+          }
+        });
+        console.log(`✅ Requirement creation notification sent to employer ${req.user.id}`);
       } else {
         console.log(`ℹ️ Notification already exists for requirement ${requirement.id}, skipping duplicate`);
       }
@@ -362,7 +295,14 @@ router.post('/', authenticateToken, async (req, res) => {
         await requirement.destroy();
         return res.status(429).json({
           success: false,
-          message: 'Requirements posting quota exceeded. Please contact your administrator.'
+          message: 'You have reached your monthly requirement posting limit. Please upgrade your plan or contact our support team for assistance.',
+          code: 'QUOTA_LIMIT_EXCEEDED',
+          quotaInfo: {
+            limit: quotaError.quotaInfo?.limit || 30,
+            used: quotaError.quotaInfo?.used || 0,
+            remaining: 0,
+            resetDate: quotaError.quotaInfo?.resetDate
+          }
         });
       }
       // For other quota errors, continue but log the issue
@@ -399,15 +339,30 @@ router.post('/', authenticateToken, async (req, res) => {
       stack: error?.stack,
       errors: error?.errors
     });
-    const statusCode = error?.name === 'SequelizeUniqueConstraintError' ? 409 : 500;
-    return res.status(statusCode).json({ 
-      success: false, 
-      message: 'Failed to create requirement', 
-      error: { 
-        name: error?.name, 
+
+    // Determine status code and message based on error type
+    let statusCode = 500;
+    let message = 'Failed to create requirement. Please try again.';
+
+    if (error?.name === 'SequelizeUniqueConstraintError') {
+      statusCode = 409;
+      message = 'A requirement with similar details already exists.';
+    } else if (error?.name === 'SequelizeValidationError') {
+      statusCode = 400;
+      message = 'Invalid data provided. Please check your inputs.';
+    } else if (error?.message?.includes('unauthorized') || error?.message?.includes('permission')) {
+      statusCode = 403;
+      message = 'You do not have permission to create requirements.';
+    }
+
+    return res.status(statusCode).json({
+      success: false,
+      message: message,
+      error: {
+        name: error?.name,
         message: error?.message,
-        details: error?.errors || error?.stack
-      } 
+        details: error?.errors ? error.errors.map(e => e.message || e) : undefined
+      }
     });
   }
 });
@@ -420,34 +375,34 @@ router.get('/', authenticateToken, async (req, res) => {
       user_type: req.user?.user_type,
       companyId: req.user?.companyId
     });
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       console.log('❌ Requirements API - User is not an employer or admin:', req.user.user_type);
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view requirements.' });
     }
-    
+
     // Admins can view another company's requirements via query.companyId
     const requestedCompanyId = req.query.companyId;
     const companyId = req.user.user_type === 'admin' ? (requestedCompanyId || req.user.companyId) : req.user.companyId;
     console.log('🔍 Requirements API - Company ID:', companyId);
-    
+
     if (!companyId) {
       console.log('⚠️ Requirements API - No company ID, returning empty array');
       return res.status(200).json({ success: true, data: [] });
     }
-    
+
     console.log('🔍 Requirements API - Fetching requirements for company:', companyId);
-    
+
     // Build where clause
     const whereClause = { companyId: companyId };
-    
+
     console.log('🔍 Requirements API - Where clause:', whereClause);
-    const rows = await Requirement.findAll({ 
-      where: whereClause, 
-      order: [['created_at', 'DESC']] 
+    const rows = await Requirement.findAll({
+      where: whereClause,
+      order: [['created_at', 'DESC']]
     });
-    
+
     console.log('✅ Requirements API - Found requirements:', rows.length);
     return res.status(200).json({ success: true, data: rows });
   } catch (error) {
@@ -457,8 +412,8 @@ router.get('/', authenticateToken, async (req, res) => {
       message: error?.message,
       stack: error?.stack
     });
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: 'Failed to fetch requirements',
       error: { name: error.name, message: error.message }
     });
@@ -469,36 +424,36 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only employers and admins can view requirements.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers and admins can view requirements.'
       });
     }
-    
+
     // Query requirement with raw SQL to get all fields
     // First try to get the requirement normally, then check for metadata
     const requirement = await Requirement.findOne({
       where: { id }
     });
-    
+
     if (!requirement) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Requirement not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Requirement not found'
       });
     }
-    
+
     // Check ownership
     if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. This requirement belongs to another company.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This requirement belongs to another company.'
       });
     }
-    
+
     // Get raw data to extract metadata if it exists
     const [results] = await sequelize.query(`
       SELECT * FROM requirements WHERE id = :id
@@ -506,10 +461,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
       replacements: { id },
       type: QueryTypes.SELECT
     });
-    
+
     // results is an array of rows, get the first row
     const rawRequirement = Array.isArray(results) && results.length > 0 ? results[0] : (results || null);
-    
+
     // Parse metadata if it exists
     let metadata = {};
     if (rawRequirement && rawRequirement.metadata) {
@@ -535,7 +490,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         metadata = {};
       }
     }
-    
+
     console.log('📦 Raw requirement from DB:', {
       hasMetadata: !!rawRequirement?.metadata,
       metadataType: typeof rawRequirement?.metadata,
@@ -551,7 +506,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       education: metadata?.education,
       noticePeriod: metadata?.noticePeriod
     });
-    
+
     // Transform requirement to include all fields, extracting from metadata where needed
     const requirementData = requirement.toJSON();
     const transformedRequirement = {
@@ -608,7 +563,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       currentSalaryMax: metadata?.currentSalaryMax !== undefined ? metadata.currentSalaryMax : (metadata?.salaryMax !== undefined ? metadata.salaryMax : (requirementData.currentSalaryMax || requirementData.salaryMax || rawRequirement?.salary_max || null)),
       lastActive: metadata?.lastActive !== undefined ? metadata.lastActive : (metadata?.last_active !== undefined ? metadata.last_active : null)
     };
-    
+
     console.log('📤 Transformed requirement fields:', {
       industry: transformedRequirement.industry,
       department: transformedRequirement.department,
@@ -616,12 +571,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
       jobType: transformedRequirement.jobType,
       education: transformedRequirement.education
     });
-    
+
     return res.status(200).json({ success: true, data: transformedRequirement });
   } catch (error) {
     console.error('❌ Get requirement error:', error);
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: 'Failed to retrieve requirement',
       details: error?.message || error?.stack
     });
@@ -633,30 +588,30 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const body = req.body || {};
-    
+
     console.log('📝 Update Requirement request by user:', req.user?.id, 'requirementId:', id);
     console.log('📝 Payload:', JSON.stringify(body, null, 2));
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Only employers can update requirements' });
     }
-    
+
     // Find requirement
     const requirement = await Requirement.findOne({ where: { id } });
-    
+
     if (!requirement) {
       return res.status(404).json({ success: false, message: 'Requirement not found' });
     }
-    
+
     // If not admin, enforce ownership
     if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. This requirement belongs to another company.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This requirement belongs to another company.'
       });
     }
-    
+
     // Get raw requirement to check existing metadata
     const [rawResults] = await sequelize.query(`
       SELECT * FROM requirements WHERE id = :id
@@ -665,7 +620,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       type: QueryTypes.SELECT
     });
     const rawRequirement = rawResults && rawResults.length > 0 ? rawResults[0] : null;
-    
+
     // Parse existing metadata
     let existingMetadata = {};
     if (rawRequirement && rawRequirement.metadata) {
@@ -679,7 +634,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         console.warn('Failed to parse existing metadata:', e);
       }
     }
-    
+
     // Normalize enums to backend values with safe fallbacks (same as create)
     const jobTypeAllowed = new Set(['full-time', 'part-time', 'contract', 'internship', 'freelance']);
     // Get existing jobType from metadata or requirement
@@ -688,7 +643,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (normalizedJobType && !jobTypeAllowed.has(normalizedJobType)) {
       normalizedJobType = existingJobType || 'full-time';
     }
-    
+
     const remoteWorkAllowed = new Set(['on-site', 'remote', 'hybrid']);
     // Get existing remoteWork from requirement (it's stored as location_type in DB)
     const existingRemoteWork = requirement.remoteWork || null;
@@ -696,14 +651,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (normalizedRemoteWork && !remoteWorkAllowed.has(normalizedRemoteWork)) {
       normalizedRemoteWork = existingRemoteWork || null;
     }
-    
+
     const shiftTimingAllowed = new Set(['day', 'night', 'rotational', 'flexible']);
     const existingShiftTiming = existingMetadata.shiftTiming || existingMetadata.shift_timing || null;
     let normalizedShiftTiming = body.shiftTiming ? body.shiftTiming.toString().toLowerCase().replace(/\s+/g, '-') : existingShiftTiming;
     if (normalizedShiftTiming && !shiftTimingAllowed.has(normalizedShiftTiming)) {
       normalizedShiftTiming = existingShiftTiming || null;
     }
-    
+
     // Normalize travelRequired
     const existingTravelRequired = existingMetadata.travelRequired !== undefined ? existingMetadata.travelRequired : (existingMetadata.travel_required !== undefined ? existingMetadata.travel_required : null);
     let normalizedTravelRequired = body.travelRequired;
@@ -717,7 +672,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     } else {
       normalizedTravelRequired = existingTravelRequired;
     }
-    
+
     // Build update data
     const updateData = {};
     if (body.title !== undefined) updateData.title = String(body.title).trim();
@@ -764,7 +719,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // if (body.includeWillingToRelocate !== undefined) updateData.includeWillingToRelocate = !!body.includeWillingToRelocate; // VIRTUAL - store in metadata
     // if (body.includeNotMentioned !== undefined) updateData.includeNotMentioned = !!body.includeNotMentioned; // VIRTUAL - store in metadata
     // if (body.benefits !== undefined) updateData.benefits = Array.isArray(body.benefits) ? body.benefits : []; // VIRTUAL - store in metadata
-    
+
     // Update metadata with virtual fields that need to persist
     // IMPORTANT: Always update metadata with the latest values, even if body field is undefined
     // This ensures that when user explicitly clears a field, it gets cleared in metadata too
@@ -791,37 +746,37 @@ router.put('/:id', authenticateToken, async (req, res) => {
       resumeFreshness: body.resumeFreshness !== undefined ? (body.resumeFreshness ? new Date(body.resumeFreshness).toISOString() : null) : (existingMetadata.resumeFreshness ? existingMetadata.resumeFreshness : null),
       currentCompany: body.currentCompany !== undefined ? (body.currentCompany ? String(body.currentCompany).trim() : null) : (existingMetadata.currentCompany || null),
       // CRITICAL: Store salary and experience fields in metadata for matching
-      workExperienceMin: (body.workExperienceMin !== undefined || body.experienceMin !== undefined) 
-        ? (body.workExperienceMin || body.experienceMin || null) 
+      workExperienceMin: (body.workExperienceMin !== undefined || body.experienceMin !== undefined)
+        ? (body.workExperienceMin || body.experienceMin || null)
         : (existingMetadata.workExperienceMin || existingMetadata.experienceMin || null),
-      workExperienceMax: (body.workExperienceMax !== undefined || body.experienceMax !== undefined) 
-        ? (body.workExperienceMax || body.experienceMax || null) 
+      workExperienceMax: (body.workExperienceMax !== undefined || body.experienceMax !== undefined)
+        ? (body.workExperienceMax || body.experienceMax || null)
         : (existingMetadata.workExperienceMax || existingMetadata.experienceMax || null),
-      currentSalaryMin: (body.currentSalaryMin !== undefined || body.salaryMin !== undefined) 
-        ? (body.currentSalaryMin || body.salaryMin || null) 
+      currentSalaryMin: (body.currentSalaryMin !== undefined || body.salaryMin !== undefined)
+        ? (body.currentSalaryMin || body.salaryMin || null)
         : (existingMetadata.currentSalaryMin || existingMetadata.salaryMin || null),
-      currentSalaryMax: (body.currentSalaryMax !== undefined || body.salaryMax !== undefined) 
-        ? (body.currentSalaryMax || body.salaryMax || null) 
+      currentSalaryMax: (body.currentSalaryMax !== undefined || body.salaryMax !== undefined)
+        ? (body.currentSalaryMax || body.salaryMax || null)
         : (existingMetadata.currentSalaryMax || existingMetadata.salaryMax || null),
-      diversityPreference: body.diversityPreference !== undefined 
+      diversityPreference: body.diversityPreference !== undefined
         ? (Array.isArray(body.diversityPreference) ? body.diversityPreference : (body.diversityPreference ? [body.diversityPreference] : null))
         : (existingMetadata.diversityPreference || null),
-      lastActive: body.lastActive !== undefined 
-        ? (body.lastActive || null) 
+      lastActive: body.lastActive !== undefined
+        ? (body.lastActive || null)
         : (existingMetadata.lastActive !== undefined ? existingMetadata.lastActive : null),
       // CRITICAL: Store includeSkills and excludeSkills for matching
       // IMPORTANT: Merge keySkills (Additional Skills) into includeSkills automatically
       includeSkills: (() => {
-        const includeSkillsFromBody = body.includeSkills !== undefined 
+        const includeSkillsFromBody = body.includeSkills !== undefined
           ? (Array.isArray(body.includeSkills) ? body.includeSkills : (body.includeSkills ? [body.includeSkills] : []))
           : (Array.isArray(existingMetadata.includeSkills) ? existingMetadata.includeSkills : []);
-        const keySkillsArray = body.keySkills !== undefined 
+        const keySkillsArray = body.keySkills !== undefined
           ? (Array.isArray(body.keySkills) ? body.keySkills : [])
           : (Array.isArray(existingMetadata.keySkills) ? existingMetadata.keySkills : []);
         // Merge keySkills into includeSkills (all additional skills should be included)
         return [...new Set([...includeSkillsFromBody, ...keySkillsArray])].filter(Boolean);
       })(),
-      excludeSkills: body.excludeSkills !== undefined 
+      excludeSkills: body.excludeSkills !== undefined
         ? (Array.isArray(body.excludeSkills) ? body.excludeSkills : (body.excludeSkills ? [body.excludeSkills] : []))
         : (Array.isArray(existingMetadata.excludeSkills) ? existingMetadata.excludeSkills : []),
       location: (() => {
@@ -838,18 +793,18 @@ router.put('/:id', authenticateToken, async (req, res) => {
       experience: body.experience !== undefined ? (body.experience ? String(body.experience).trim() : null) : (existingMetadata.experience || rawRequirement?.experience || null),
       salary: body.salary !== undefined ? (body.salary ? String(body.salary).trim() : null) : (existingMetadata.salary || rawRequirement?.salary || null)
     };
-    
+
     updateData.metadata = updatedMetadata;
-    
+
     console.log('📝 Update data metadata:', JSON.stringify(updatedMetadata, null, 2));
     console.log('📝 Update data:', JSON.stringify(updateData, null, 2));
-    
+
     // Update requirement
     await requirement.update(updateData);
-    
+
     console.log('✅ Requirement updated with id:', requirement.id);
     console.log('✅ Requirement metadata after update:', JSON.stringify(requirement.metadata, null, 2));
-    
+
     // Log activity
     try {
       const EmployerActivityService = require('../services/employerActivityService');
@@ -869,7 +824,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     } catch (activityError) {
       console.error('Failed to log requirement update activity:', activityError);
     }
-    
+
     return res.status(200).json({
       success: true,
       message: 'Requirement updated successfully',
@@ -889,29 +844,29 @@ router.put('/:id', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     console.log('🗑️ Delete Requirement request by user:', req.user?.id, 'requirementId:', id);
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Only employers can delete requirements' });
     }
-    
+
     // Find requirement
     const requirement = await Requirement.findOne({ where: { id } });
-    
+
     if (!requirement) {
       return res.status(404).json({ success: false, message: 'Requirement not found' });
     }
-    
+
     // If not admin, enforce ownership
     if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. This requirement belongs to another company.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This requirement belongs to another company.'
       });
     }
-    
+
     // Store requirement details for logging
     const requirementDetails = {
       id: requirement.id,
@@ -920,12 +875,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       jobType: requirement.jobType,
       companyId: requirement.companyId
     };
-    
+
     // Delete requirement
     await requirement.destroy();
-    
+
     console.log('✅ Requirement deleted:', id);
-    
+
     // Log activity
     try {
       const EmployerActivityService = require('../services/employerActivityService');
@@ -939,7 +894,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     } catch (activityError) {
       console.error('Failed to log requirement deletion activity:', activityError);
     }
-    
+
     return res.status(200).json({
       success: true,
       message: 'Requirement deleted successfully'
@@ -958,90 +913,90 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 router.get('/:id/stats', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only employers and admins can view requirement statistics.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers and admins can view requirement statistics.'
       });
     }
-    
+
     // Check if requirement exists and belongs to employer's company
     const requirement = await Requirement.findOne({
-      where: { 
+      where: {
         id: id
       }
     });
-    
+
     if (!requirement) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Requirement not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Requirement not found'
       });
     }
     // If not admin, enforce ownership
     if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     // Use the SAME candidate matching logic as the /requirements/:id/candidates endpoint
     // This ensures consistency between the stats count and the actual candidates shown
     const { User } = require('../config/index');
     const { sequelize } = require('../config/sequelize');
-    
+
     console.log(`📊 Fetching stats for requirement: ${requirement.id} (${requirement.title})`);
-    
+
     // ========== EXTRACT ALL FIELDS FROM METADATA (SAME AS CANDIDATES ENDPOINT) ==========
     // Many fields are stored in metadata JSONB, extract them first
-    const metadata = typeof requirement.metadata === 'string' 
-      ? JSON.parse(requirement.metadata) 
+    const metadata = typeof requirement.metadata === 'string'
+      ? JSON.parse(requirement.metadata)
       : (requirement.metadata || {});
-    
+
     // Extract all metadata fields that might be used for matching
     // CRITICAL: These are VIRTUAL fields, so they MUST come from metadata
     const currentCompany = metadata.currentCompany || requirement.currentCompany || null;
     const institute = metadata.institute || requirement.institute || null;
     const resumeFreshness = metadata.resumeFreshness ? new Date(metadata.resumeFreshness) : (requirement.resumeFreshness ? new Date(requirement.resumeFreshness) : null);
     const diversityPreference = metadata.diversityPreference || requirement.diversityPreference || null;
-    const lastActive = metadata.lastActive !== undefined && metadata.lastActive !== null 
-      ? metadata.lastActive 
+    const lastActive = metadata.lastActive !== undefined && metadata.lastActive !== null
+      ? metadata.lastActive
       : (requirement.lastActive !== undefined && requirement.lastActive !== null ? requirement.lastActive : null);
-    const includeWillingToRelocate = metadata.includeWillingToRelocate !== undefined 
-      ? metadata.includeWillingToRelocate 
+    const includeWillingToRelocate = metadata.includeWillingToRelocate !== undefined
+      ? metadata.includeWillingToRelocate
       : (requirement.includeWillingToRelocate !== undefined ? requirement.includeWillingToRelocate : false);
     const includeNotMentioned = metadata.includeNotMentioned !== undefined
       ? metadata.includeNotMentioned
       : (requirement.includeNotMentioned !== undefined ? requirement.includeNotMentioned : false);
-    
+
     // Extract experience from metadata - CRITICAL: Check multiple formats
     // Format 1: workExperienceMin/workExperienceMax (numeric)
     // Format 2: experienceMin/experienceMax (numeric)
     // Format 3: experience (string like "1", "3-5", "3 years", etc.)
     let workExperienceMin = metadata.workExperienceMin || metadata.experienceMin || requirement.workExperienceMin || requirement.experienceMin || null;
     let workExperienceMax = metadata.workExperienceMax || metadata.experienceMax || requirement.workExperienceMax || requirement.experienceMax || null;
-    
+
     // If not found, try parsing from experience string (CRITICAL: This is how old requirements store it)
     if ((workExperienceMin === null || workExperienceMin === undefined) && metadata.experience) {
-        const expStr = String(metadata.experience).trim();
+      const expStr = String(metadata.experience).trim();
       // Parse formats like "1", "3-5", "3 years", etc.
-        const expMatch = expStr.match(/(\d+)(?:\s*-\s*(\d+))?/);
-        if (expMatch) {
+      const expMatch = expStr.match(/(\d+)(?:\s*-\s*(\d+))?/);
+      if (expMatch) {
         workExperienceMin = parseInt(expMatch[1]);
-          if (expMatch[2]) {
+        if (expMatch[2]) {
           workExperienceMax = parseInt(expMatch[2]);
         }
         console.log(`📊 Parsed experience from metadata.experience (stats): ${workExperienceMin}${workExperienceMax ? '-' + workExperienceMax : '+'} years`);
       }
     }
-    
+
     // Extract salary from metadata - CRITICAL: Check multiple formats
     // Format 1: currentSalaryMin/currentSalaryMax (numeric)
     // Format 2: salaryMin/salaryMax (numeric)
     // Format 3: salary (string like "10-12", "10 LPA", etc.)
     let currentSalaryMin = metadata.currentSalaryMin || metadata.salaryMin || requirement.currentSalaryMin || requirement.salaryMin || null;
     let currentSalaryMax = metadata.currentSalaryMax || metadata.salaryMax || requirement.currentSalaryMax || requirement.salaryMax || null;
-    
+
     // If not found, try parsing from salary string (CRITICAL: This is how old requirements store it)
     if ((currentSalaryMin === null || currentSalaryMin === undefined) && metadata.salary) {
       const salStr = String(metadata.salary).trim();
@@ -1055,7 +1010,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         console.log(`📊 Parsed salary from metadata.salary (stats): ${currentSalaryMin}${currentSalaryMax ? '-' + currentSalaryMax : '+'} LPA`);
       }
     }
-    
+
     // Extract candidate locations and designations from metadata if not set
     // CRITICAL: These are VIRTUAL fields, prioritize metadata
     const candidateLocations = (metadata.candidateLocations && metadata.candidateLocations.length > 0)
@@ -1064,34 +1019,34 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     const candidateDesignations = (metadata.candidateDesignations && metadata.candidateDesignations.length > 0)
       ? metadata.candidateDesignations
       : ((requirement.candidateDesignations && requirement.candidateDesignations.length > 0) ? requirement.candidateDesignations : []);
-    
+
     // Extract education and notice period from metadata if not set
     // CRITICAL: These are VIRTUAL fields, prioritize metadata
     const education = metadata.education || requirement.education || null;
     const noticePeriod = metadata.noticePeriod || requirement.noticePeriod || null;
     const remoteWork = metadata.remoteWork || requirement.remoteWork || null;
-    
+
     // For backward compatibility, also set experienceMin/Max (used in some legacy code)
     const experienceMin = workExperienceMin;
     const experienceMax = workExperienceMax;
-    
+
     // Build the SAME matching logic as used in the candidates endpoint
     const whereClause = {
       user_type: 'jobseeker',
       is_active: true,
       account_status: 'active'
     };
-    
+
     const matchingConditions = [];
     const allAndConditions = []; // For combining all top-level AND conditions (same as candidates endpoint)
     const appliedFilters = [];
-    
+
     // 1. EXPERIENCE RANGE MATCHING (add to allAndConditions, same as candidates endpoint)
-      if (workExperienceMin !== null && workExperienceMin !== undefined) {
+    if (workExperienceMin !== null && workExperienceMin !== undefined) {
       const minExp = Number(workExperienceMin);
-      const maxExp = workExperienceMax !== null && workExperienceMax !== undefined 
+      const maxExp = workExperienceMax !== null && workExperienceMax !== undefined
         ? Number(workExperienceMax) : 50;
-      
+
       allAndConditions.push({
         experience_years: {
           [Op.and]: [
@@ -1102,7 +1057,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       });
       console.log(`✅ Added experience filter in stats: ${minExp}-${maxExp} years`);
     }
-    
+
     // 2. SALARY RANGE MATCHING (add to allAndConditions, same as candidates endpoint)
     // CRITICAL: Allow NULL salaries - candidates may not have salary info
     // If salary is specified, match candidates with salary in range OR NULL salary
@@ -1110,7 +1065,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       const minSalary = Number(currentSalaryMin);
       const maxSalary = currentSalaryMax !== null && currentSalaryMax !== undefined
         ? Number(currentSalaryMax) : 200; // Max 200 LPA
-      
+
       // Allow candidates with salary in range OR NULL salary (they may not have specified it)
       allAndConditions.push({
         [Op.or]: [
@@ -1131,52 +1086,52 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       // If includeNotMentioned is true, also include candidates with no salary specified
       // This is handled by not adding salary filter, so all candidates pass
     }
-    
+
     // 3. LOCATION MATCHING (candidateLocations + excludeLocations + willing to relocate)
     // Extract exclude locations for stats endpoint
     const statsExcludeLocations = Array.isArray(metadata.excludeLocations) ? metadata.excludeLocations : (metadata.excludeLocations ? [metadata.excludeLocations] : (metadata.exclude_locations ? (Array.isArray(metadata.exclude_locations) ? metadata.exclude_locations : [metadata.exclude_locations]) : []));
-    
+
     // CRITICAL: If no candidateLocations specified, allow ANY location (don't filter)
     // Only filter by location if candidateLocations array has values
     // IMPORTANT: Exclude locations are applied AFTER include locations (they filter out candidates)
-    
+
     // 3.1. LOCATION INCLUDE (candidateLocations)
     if (candidateLocations && candidateLocations.length > 0) {
       const locationConditions = candidateLocations.flatMap(location => ([
         // Match current location
         { current_location: { [Op.iLike]: `%${location}%` } },
         // Match preferred locations (JSONB array)
-            sequelize.where(
-              sequelize.cast(sequelize.col('preferred_locations'), 'text'), 
+        sequelize.where(
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'),
           { [Op.iLike]: `%${location}%` }
-            )
+        )
       ]));
-        
+
       // Include candidates willing to relocate if requirement allows
-        if (includeWillingToRelocate) {
-          locationConditions.push({ willing_to_relocate: true });
-        }
-        
-        matchingConditions.push({ [Op.or]: locationConditions });
-        appliedFilters.push(`Location (Include): ${candidateLocations.join(', ')}${includeWillingToRelocate ? ' (including willing to relocate)' : ''}`);
+      if (includeWillingToRelocate) {
+        locationConditions.push({ willing_to_relocate: true });
+      }
+
+      matchingConditions.push({ [Op.or]: locationConditions });
+      appliedFilters.push(`Location (Include): ${candidateLocations.join(', ')}${includeWillingToRelocate ? ' (including willing to relocate)' : ''}`);
     } else {
       // No location filter specified - allow any location candidate
       console.log('✅ No location include filter specified - allowing candidates from any location');
     }
-    
+
     // 3.2. LOCATION EXCLUDE (excludeLocations)
     // CRITICAL: Exclude candidates from these locations (applied as NOT conditions)
     if (statsExcludeLocations && statsExcludeLocations.length > 0) {
       const excludeLocationConditions = statsExcludeLocations.flatMap(location => ([
         // Exclude if current location matches
-        { current_location: { [Op.not]: { [Op.iLike]: `%${location}%` } } },
+        { current_location: { [Op.notILike]: `%${location}%` } },
         // Exclude if preferred locations match
         sequelize.where(
-          sequelize.cast(sequelize.col('preferred_locations'), 'text'), 
-          { [Op.not]: { [Op.iLike]: `%${location}%` } }
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'),
+          { [Op.notILike]: `%${location}%` }
         )
       ]));
-      
+
       // For exclude, we need ALL conditions to be true (candidate must NOT be in ANY excluded location)
       // So we add them as AND conditions
       allAndConditions.push({
@@ -1185,7 +1140,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       appliedFilters.push(`Location (Exclude): ${statsExcludeLocations.join(', ')}`);
       console.log(`✅ Added location exclude filter in stats: ${statsExcludeLocations.join(', ')}`);
     }
-    
+
     // 4. SKILLS & KEY SKILLS MATCHING (comprehensive)
     // CRITICAL: Include includeSkills from metadata (same as candidates endpoint)
     // IMPORTANT: keySkills (Additional Skills) are automatically merged into includeSkills during create/update
@@ -1197,27 +1152,27 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       ...(Array.isArray(statsIncludeSkills) ? statsIncludeSkills : []),
       ...(Array.isArray(statsKeySkills) ? statsKeySkills : [])
     ])].filter(Boolean);
-    
+
     const statsRequiredSkills = [
       ...(requirement.skills || []),
       ...allStatsIncludeSkills
       // Note: keySkills are merged into includeSkills, but we also check requirement.keySkills for backward compatibility
     ].filter(Boolean);
-    
+
     // CRITICAL: Exclude skills (same as candidates endpoint)
     const statsExcludeSkills = metadata.excludeSkills || requirement.excludeSkills || [];
-    
+
     // Check if requirement title strongly matches candidate title/headline
     // If title matches strongly, skills become optional (title is more important)
     const hasStrongTitleMatch = requirement.title && requirement.title.trim().length > 3;
     let titleMatchConditions = [];
-    
+
     if (hasStrongTitleMatch) {
       const titleWords = requirement.title
         .split(/\s+/)
         .filter(word => word.length > 2)
         .map(word => word.toLowerCase());
-      
+
       if (titleWords.length > 0) {
         // Create title matching conditions (used as alternative to skills)
         titleMatchConditions = titleWords.flatMap(word => [
@@ -1227,7 +1182,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         ]);
       }
     }
-    
+
     if (statsRequiredSkills.length > 0) {
       const skillConditions = statsRequiredSkills.flatMap(skill => ([
         // Match in skills array (exact and case-insensitive)
@@ -1241,7 +1196,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         // Match in summary
         { summary: { [Op.iLike]: `%${skill}%` } }
       ]));
-      
+
       // If we have title matching conditions, make skills OR title match (title can override skills)
       if (titleMatchConditions.length > 0) {
         matchingConditions.push({
@@ -1259,7 +1214,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       matchingConditions.push({ [Op.or]: titleMatchConditions });
       console.log(`✅ Added title-based matching (no skills specified)`);
     }
-    
+
     // CRITICAL: Exclude skills - candidates MUST NOT have these skills (add to allAndConditions)
     // Same logic as candidates endpoint
     if (Array.isArray(statsExcludeSkills) && statsExcludeSkills.length > 0 && statsExcludeSkills.filter(s => s).length > 0) {
@@ -1269,25 +1224,25 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
             {
               [Op.or]: [
                 { skills: null },
-                sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.not]: { [Op.iLike]: `%${excludeSkill}%` } })
+                sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.notILike]: `%${excludeSkill}%` })
               ]
             },
             {
               [Op.or]: [
                 { key_skills: null },
-                sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.not]: { [Op.iLike]: `%${excludeSkill}%` } })
+                sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.notILike]: `%${excludeSkill}%` })
               ]
             },
             {
               [Op.or]: [
                 { headline: null },
-                { headline: { [Op.not]: { [Op.iLike]: `%${excludeSkill}%` } } }
+                { headline: { [Op.notILike]: `%${excludeSkill}%` } }
               ]
             },
             {
               [Op.or]: [
                 { summary: null },
-                { summary: { [Op.not]: { [Op.iLike]: `%${excludeSkill}%` } } }
+                { summary: { [Op.notILike]: `%${excludeSkill}%` } }
               ]
             }
           ]
@@ -1295,7 +1250,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       }
       console.log(`✅ Added exclude skills filter in stats: ${statsExcludeSkills.filter(s => s).join(', ')}`);
     }
-    
+
     // 4.6. CURRENT DESIGNATION MATCHING (from metadata) - same as candidates endpoint
     const currentDesignationForStats = metadata.currentDesignation || requirement.currentDesignation || null;
     if (currentDesignationForStats) {
@@ -1308,14 +1263,14 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       });
       console.log(`✅ Added current designation filter in stats: ${currentDesignationForStats}`);
     }
-    
+
     // 5. REQUIREMENT TITLE MATCHING (OPTIONAL - only if no skills specified)
     // CRITICAL: Title is optional when skills are specified (skills are more important)
     // Title matching is handled in post-query filtering with lenient logic
     // DO NOT add title to query-level matchingConditions when skills are present
     // This matches the candidates endpoint logic
     // Title filtering happens later in post-query filtering and is lenient (skills override title)
-    
+
     // 6. DESIGNATION MATCHING (candidateDesignations)
     if (candidateDesignations && candidateDesignations.length > 0) {
       const designationConditions = candidateDesignations.flatMap(des => [
@@ -1323,16 +1278,16 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         { headline: { [Op.iLike]: `%${des}%` } },
         { current_role: { [Op.iLike]: `%${des}%` } }
       ]);
-      
+
       matchingConditions.push({ [Op.or]: designationConditions });
     }
-    
+
     // 6. EDUCATION MATCHING (OPTIONAL - only if no skills specified)
     // CRITICAL: Education is a nice-to-have, not a must-have
     // If skills are specified, education is optional (skills are more important)
     // Only filter by education if NO skills are specified
     const hasSkillsForEducationCheck = statsRequiredSkills && statsRequiredSkills.length > 0;
-    
+
     if ((education || institute) && !hasSkillsForEducationCheck) {
       // No skills specified - education is required filter
       if (education) {
@@ -1347,7 +1302,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         });
         console.log(`✅ Added education filter in stats: ${education} (no skills specified, so education is required)`);
       }
-      
+
       // 8. INSTITUTE MATCHING (only if no skills)
       if (institute) {
         matchingConditions.push({
@@ -1363,7 +1318,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       // Skills are specified - education is optional for scoring only
       console.log(`ℹ️ Education specified (${education || ''}) but skills also present (${statsRequiredSkills?.length || 0}), so Education is OPTIONAL for scoring only - NOT adding to query`);
     }
-    
+
     // 9. CURRENT COMPANY MATCHING
     if (currentCompany) {
       matchingConditions.push({
@@ -1374,7 +1329,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         ]
       });
     }
-    
+
     // 10. NOTICE PERIOD MATCHING - CRITICAL: <= logic (add to allAndConditions)
     if (noticePeriod && noticePeriod !== 'Any' && noticePeriod !== 'any') {
       const noticePeriodMap = {
@@ -1385,7 +1340,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         '60 days': 60,
         '90 days': 90
       };
-      
+
       const maxNoticeDays = noticePeriodMap[noticePeriod];
       if (maxNoticeDays !== undefined) {
         allAndConditions.push({
@@ -1394,14 +1349,14 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         console.log(`✅ Added notice period filter in stats: <= ${maxNoticeDays} days`);
       }
     }
-    
+
     // 11. RESUME FRESHNESS (if specified) - add to allAndConditions
     if (resumeFreshness) {
       allAndConditions.push({
         last_profile_update: { [Op.gte]: resumeFreshness }
       });
     }
-    
+
     // 12. DIVERSITY PREFERENCE (Gender) - CRITICAL (add to allAndConditions)
     if (diversityPreference && Array.isArray(diversityPreference) && diversityPreference.length > 0) {
       const validPreferences = diversityPreference.filter(p => p && p !== 'all' && ['male', 'female', 'other'].includes(p));
@@ -1412,7 +1367,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         console.log(`✅ Added gender filter in stats: ${validPreferences.join(', ')}`);
       }
     }
-    
+
     // 13. LAST ACTIVE (if specified) - add to allAndConditions
     if (lastActive !== null && lastActive !== undefined) {
       const daysAgo = Number(lastActive);
@@ -1424,27 +1379,27 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         });
       }
     }
-    
+
     // CRITICAL FIX: Combine matching conditions with AND logic (same as candidates endpoint)
     // Add matching conditions (skills, locations, designations) to allAndConditions
     if (matchingConditions.length > 0) {
       allAndConditions.push({ [Op.and]: matchingConditions });
     }
-    
+
     // Apply all AND conditions to whereClause
     if (allAndConditions.length > 0) {
       whereClause[Op.and] = allAndConditions;
     }
-    
+
     // Get the actual candidate IDs that match this requirement
     const matchingCandidates = await User.findAll({
       where: whereClause,
       attributes: ['id'],
       limit: 10000 // Reasonable limit to get all matching candidates
     });
-    
+
     const matchingCandidateIds = matchingCandidates.map(c => c.id);
-    
+
     // CRITICAL: Apply STRICT title filtering (same logic as candidates endpoint)
     // Check if we have strict criteria (same as candidates endpoint)
     const hasStrictCriteriaForStats = (
@@ -1461,9 +1416,9 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       (noticePeriod !== null && noticePeriod !== 'Any' && noticePeriod !== 'any') ||
       (diversityPreference && Array.isArray(diversityPreference) && diversityPreference.length > 0 && !diversityPreference.includes('all'))
     );
-    
+
     let finalCandidateIds = matchingCandidateIds;
-    
+
     // Apply lenient title filtering - skills override title
     const hasStatsSkills = statsRequiredSkills.length > 0;
     const hasMultipleStatsCriteria = (
@@ -1473,14 +1428,14 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       (workExperienceMin !== null ? 1 : 0) +
       (currentSalaryMin !== null ? 1 : 0)
     ) > 1;
-    
+
     // Only filter by title if we have multiple criteria AND no skills (skills override title)
     if (hasStrictCriteriaForStats && requirement.title && requirement.title.trim().length > 3 && matchingCandidateIds.length > 0 && hasMultipleStatsCriteria && !hasStatsSkills) {
       const titleWords = requirement.title
         .split(/\s+/)
         .filter(word => word.length > 2) // More lenient
         .map(word => word.toLowerCase());
-      
+
       if (titleWords.length > 0) {
         const titleMatchedCandidates = await User.findAll({
           where: {
@@ -1493,7 +1448,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
           },
           attributes: ['id']
         });
-        
+
         if (titleMatchedCandidates.length > 0) {
           finalCandidateIds = titleMatchedCandidates.map(c => c.id);
           console.log(`📊 TITLE FILTER (lenient): ${finalCandidateIds.length} candidates with title match`);
@@ -1513,17 +1468,17 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       // No title filtering
       finalCandidateIds = matchingCandidateIds;
     }
-    
+
     const totalCandidates = finalCandidateIds.length;
-    
+
     console.log(`✅ Total candidates matching requirement: ${totalCandidates}`);
-    
+
     // Get accessed candidates count - only count UNIQUE candidates that match this requirement
     const { ViewTracking } = require('../config/index');
-    
+
     // Initialize to 0 - will only increment if valid views are found
     let accessedCandidates = 0;
-    
+
     // CRITICAL: Only count if there are matching candidates
     if (finalCandidateIds.length === 0) {
       accessedCandidates = 0;
@@ -1535,10 +1490,10 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         // 2. The viewer is this employer
         // 3. View type is profile_view
         // IMPORTANT: Only count views of candidates that actually match this requirement
-        
+
         // Convert finalCandidateIds to strings for consistent comparison
         const matchingIdsStr = finalCandidateIds.map(id => String(id).trim()).filter(Boolean);
-        
+
         if (matchingIdsStr.length === 0) {
           accessedCandidates = 0;
           console.log(`✅ No valid candidate IDs to check, accessed count = 0`);
@@ -1550,17 +1505,17 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
           console.log(`   - Requirement created: ${requirement.created_at}`);
           console.log(`   - Matching candidate IDs: ${matchingIdsStr.length}`);
           console.log(`   - Checking for profile views by employer ${req.user.id}...`);
-          
+
           try {
             // Get requirement creation date
             // Use >= (not >) to count views from requirement creation onwards
             // But add 1 second buffer to exclude views that might have been created during redirect
             const requirementCreatedDate = new Date(requirement.created_at);
             const minViewDate = new Date(requirementCreatedDate.getTime() + 1000); // Add 1 second buffer to exclude redirect views
-            
+
             console.log(`   - Requirement created at: ${requirementCreatedDate.toISOString()}`);
             console.log(`   - Counting views AFTER: ${minViewDate.toISOString()} (1 second buffer to exclude redirect views)`);
-            
+
             // CRITICAL: Count views for this requirement
             // Only count views where:
             // 1. The viewed candidate is in finalCandidateIds (matches this requirement)
@@ -1599,14 +1554,14 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
               raw: true, // Returns snake_case column names
               order: [[sequelize.literal('"ViewTracking"."created_at"'), 'DESC']]
             });
-            
+
             console.log(`   - Found ${verifyViews.length} views for this requirement (including legacy views without jobId)`);
-            
+
             // Count unique candidates viewed
             // CRITICAL: Only count candidates that are in finalCandidateIds (they match the requirement)
             const viewedCandidateIds = new Set();
             const finalCandidateIdsStr = finalCandidateIds.map(id => String(id).trim());
-            
+
             if (Array.isArray(verifyViews) && verifyViews.length > 0) {
               verifyViews.forEach((view) => {
                 // Handle both snake_case (raw: true) and camelCase results
@@ -1617,16 +1572,16 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
                 }
               });
             }
-            
+
             accessedCandidates = viewedCandidateIds.size;
             console.log(`   - Found ${verifyViews.length} total views for this requirement`);
             console.log(`   - Unique candidates accessed: ${accessedCandidates} (only counting candidates that match requirement)`);
-            
+
           } catch (countError) {
             console.error('❌ Error in COUNT query:', countError);
             accessedCandidates = 0;
           }
-          
+
           console.log(`   - ✅ FINAL accessed count: ${accessedCandidates}`);
         }
       } catch (queryError) {
@@ -1636,23 +1591,23 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         console.log(`✅ Error occurred, setting accessed count to 0 for safety`);
       }
     }
-    
+
     // ABSOLUTE FINAL VALIDATION - Force to 0 if ANY doubt
     // Convert to integer and validate - MULTIPLE SAFETY CHECKS
     let finalAccessedCount = 0;
-    
+
     // Convert to number first
     const numValue = Number(accessedCandidates);
-    
+
     // Only accept if:
     // 1. It's a valid integer
     // 2. It's >= 0
     // 3. It's not NaN or Infinity
     // 4. We have matching candidates to check against
-    if (Number.isInteger(numValue) && 
-        numValue >= 0 && 
-        isFinite(numValue) &&
-        finalCandidateIds.length > 0) {
+    if (Number.isInteger(numValue) &&
+      numValue >= 0 &&
+      isFinite(numValue) &&
+      finalCandidateIds.length > 0) {
       finalAccessedCount = numValue;
     } else {
       finalAccessedCount = 0;
@@ -1660,39 +1615,39 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         console.log(`⚠️ Invalid accessed count value: ${accessedCandidates}, forcing to 0`);
       }
     }
-    
+
     // CRITICAL SAFETY: If no matching candidates, accessed MUST be 0
     if (finalCandidateIds.length === 0) {
       finalAccessedCount = 0;
       console.log(`⚠️ Safety check: No matching candidates, forcing accessed count to 0`);
     }
-    
+
     // DOUBLE SAFETY: If count > 0 but no matching candidates, force to 0
     if (finalAccessedCount > 0 && finalCandidateIds.length === 0) {
       console.log(`⚠️ CRITICAL: Found ${finalAccessedCount} accesses but no matching candidates - FORCING TO 0`);
       finalAccessedCount = 0;
     }
-    
+
     // TRIPLE SAFETY: Ensure it's never anything other than 0 for new requirements
     // If accessedCandidates is not explicitly a verified positive integer, it's 0
     if (!Number.isInteger(finalAccessedCount) || finalAccessedCount < 0) {
       finalAccessedCount = 0;
       console.log(`⚠️ Final safety: Invalid count ${finalAccessedCount}, forcing to 0`);
     }
-    
+
     accessedCandidates = finalAccessedCount;
-    
+
     // Log final result with full context
     console.log(`✅✅✅ FINAL accessed count for requirement "${requirement.title}" (${requirement.id}): ${accessedCandidates}`);
     console.log(`   - Matching candidates: ${finalCandidateIds.length}`);
     console.log(`   - Valid views found: ${accessedCandidates}`);
     console.log(`   - Employer ID: ${req.user.id}`);
     console.log(`   - Status: ${accessedCandidates === 0 ? 'NO ACCESSES (Correct for new requirements)' : accessedCandidates + ' candidates accessed'}`);
-    
+
     // Get CV access left (this would come from subscription/usage data)
     // For now, we'll use a placeholder - in real implementation this would be from subscription service
     const cvAccessLeft = 100; // This should be fetched from subscription/usage service
-    
+
     res.json({
       success: true,
       data: {
@@ -1706,7 +1661,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Error fetching requirement statistics:', error);
     res.status(500).json({
@@ -1722,78 +1677,78 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { page = 1, limit = 50, search, sortBy = 'relevance' } = req.query;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view candidates.' });
     }
-    
+
     // Get the requirement
     const requirement = await Requirement.findOne({
-      where: { 
+      where: {
         id
       }
     });
-    
+
     if (!requirement) {
       return res.status(404).json({ success: false, message: 'Requirement not found' });
     }
     if (req.user.user_type !== 'admin' && String(requirement.companyId) !== String(req.user.companyId)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     console.log('🔍 Searching candidates for requirement:', requirement.title);
-    
+
     // ========== EXTRACT ALL FIELDS FROM METADATA ==========
     // Many fields are stored in metadata JSONB, extract them first
-      const metadata = typeof requirement.metadata === 'string' 
-        ? JSON.parse(requirement.metadata) 
-        : (requirement.metadata || {});
-      
+    const metadata = typeof requirement.metadata === 'string'
+      ? JSON.parse(requirement.metadata)
+      : (requirement.metadata || {});
+
     // Extract all metadata fields that might be used for matching
     // CRITICAL: These are VIRTUAL fields, so they MUST come from metadata
     const currentCompany = metadata.currentCompany || requirement.currentCompany || null;
     const institute = metadata.institute || requirement.institute || null;
     const resumeFreshness = metadata.resumeFreshness ? new Date(metadata.resumeFreshness) : (requirement.resumeFreshness ? new Date(requirement.resumeFreshness) : null);
     const diversityPreference = metadata.diversityPreference || requirement.diversityPreference || null;
-    const lastActive = metadata.lastActive !== undefined && metadata.lastActive !== null 
-      ? metadata.lastActive 
+    const lastActive = metadata.lastActive !== undefined && metadata.lastActive !== null
+      ? metadata.lastActive
       : (requirement.lastActive !== undefined && requirement.lastActive !== null ? requirement.lastActive : null);
-    const includeWillingToRelocate = metadata.includeWillingToRelocate !== undefined 
-      ? metadata.includeWillingToRelocate 
+    const includeWillingToRelocate = metadata.includeWillingToRelocate !== undefined
+      ? metadata.includeWillingToRelocate
       : (requirement.includeWillingToRelocate !== undefined ? requirement.includeWillingToRelocate : false);
     const includeNotMentioned = metadata.includeNotMentioned !== undefined
       ? metadata.includeNotMentioned
       : (requirement.includeNotMentioned !== undefined ? requirement.includeNotMentioned : false);
-    
+
     // Extract experience from metadata - CRITICAL: Check multiple formats
     // Format 1: workExperienceMin/workExperienceMax (numeric)
     // Format 2: experienceMin/experienceMax (numeric)
     // Format 3: experience (string like "1", "3-5", "3 years", etc.)
     let workExperienceMin = metadata.workExperienceMin || metadata.experienceMin || requirement.workExperienceMin || requirement.experienceMin || null;
     let workExperienceMax = metadata.workExperienceMax || metadata.experienceMax || requirement.workExperienceMax || requirement.experienceMax || null;
-    
+
     // If not found, try parsing from experience string (CRITICAL: This is how old requirements store it)
     if ((workExperienceMin === null || workExperienceMin === undefined) && metadata.experience) {
-        const expStr = String(metadata.experience).trim();
+      const expStr = String(metadata.experience).trim();
       // Parse formats like "1", "3-5", "3 years", etc.
-        const expMatch = expStr.match(/(\d+)(?:\s*-\s*(\d+))?/);
-        if (expMatch) {
-          workExperienceMin = parseInt(expMatch[1]);
-          if (expMatch[2]) {
-            workExperienceMax = parseInt(expMatch[2]);
-          }
+      const expMatch = expStr.match(/(\d+)(?:\s*-\s*(\d+))?/);
+      if (expMatch) {
+        workExperienceMin = parseInt(expMatch[1]);
+        if (expMatch[2]) {
+          workExperienceMax = parseInt(expMatch[2]);
+        }
         console.log(`📊 Parsed experience from metadata.experience: ${workExperienceMin}${workExperienceMax ? '-' + workExperienceMax : '+'} years`);
       }
     }
-    
+
     // Extract salary from metadata - CRITICAL: Check multiple formats
     // Format 1: currentSalaryMin/currentSalaryMax (numeric)
     // Format 2: salaryMin/salaryMax (numeric)
     // Format 3: salary (string like "10-12", "10 LPA", etc.)
     let currentSalaryMin = metadata.currentSalaryMin || metadata.salaryMin || requirement.currentSalaryMin || requirement.salaryMin || null;
     let currentSalaryMax = metadata.currentSalaryMax || metadata.salaryMax || requirement.currentSalaryMax || requirement.salaryMax || null;
-    
+
     // If not found, try parsing from salary string (CRITICAL: This is how old requirements store it)
     if ((currentSalaryMin === null || currentSalaryMin === undefined) && metadata.salary) {
       const salStr = String(metadata.salary).trim();
@@ -1807,26 +1762,26 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         console.log(`📊 Parsed salary from metadata.salary: ${currentSalaryMin}${currentSalaryMax ? '-' + currentSalaryMax : '+'} LPA`);
       }
     }
-    
+
     // Extract candidate locations and designations from metadata if not set
     // CRITICAL: These are VIRTUAL fields, prioritize metadata
     const candidateLocations = (metadata.candidateLocations && metadata.candidateLocations.length > 0)
       ? metadata.candidateLocations
       : ((requirement.candidateLocations && requirement.candidateLocations.length > 0) ? requirement.candidateLocations : []);
-    
+
     // Extract exclude locations from metadata
     const excludeLocations = Array.isArray(metadata.excludeLocations) ? metadata.excludeLocations : (metadata.excludeLocations ? [metadata.excludeLocations] : (metadata.exclude_locations ? (Array.isArray(metadata.exclude_locations) ? metadata.exclude_locations : [metadata.exclude_locations]) : []));
-    
+
     const candidateDesignations = (metadata.candidateDesignations && metadata.candidateDesignations.length > 0)
       ? metadata.candidateDesignations
       : ((requirement.candidateDesignations && requirement.candidateDesignations.length > 0) ? requirement.candidateDesignations : []);
-    
+
     // Extract education and notice period from metadata if not set
     // CRITICAL: These are VIRTUAL fields, prioritize metadata
     const education = metadata.education || requirement.education || null;
     const noticePeriod = metadata.noticePeriod || requirement.noticePeriod || null;
     const remoteWork = metadata.remoteWork || requirement.remoteWork || null;
-    
+
     console.log('🔍 Requirement criteria:', {
       skills: requirement.skills,
       keySkills: requirement.keySkills,
@@ -1848,30 +1803,30 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       includeWillingToRelocate,
       includeNotMentioned
     });
-    
+
     // ========== IMPROVED CANDIDATE MATCHING ALGORITHM ==========
     // Build comprehensive search criteria based on ALL requirement fields
-    
+
     const whereClause = {
       user_type: 'jobseeker',
       is_active: true,
       account_status: 'active'
     };
-    
+
     // Track which filters are applied for better logging
     const appliedFilters = [];
-    
+
     // Build matching conditions - use OR for flexibility (candidates matching ANY criteria)
     const matchingConditions = [];
     // CRITICAL: Declare allAndConditions early - it's used for combining all AND conditions
     const allAndConditions = [];
-    
+
     // 1. EXPERIENCE RANGE MATCHING (workExperienceMin/Max)
-      if (workExperienceMin !== null && workExperienceMin !== undefined) {
+    if (workExperienceMin !== null && workExperienceMin !== undefined) {
       const minExp = Number(workExperienceMin);
-      const maxExp = workExperienceMax !== null && workExperienceMax !== undefined 
+      const maxExp = workExperienceMax !== null && workExperienceMax !== undefined
         ? Number(workExperienceMax) : 50;
-      
+
       whereClause.experience_years = {
         [Op.and]: [
           { [Op.gte]: minExp },
@@ -1880,14 +1835,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       };
       appliedFilters.push(`Experience: ${minExp}-${maxExp} years`);
     }
-    
+
     // 2. SALARY RANGE MATCHING (currentSalaryMin/Max)
     // CRITICAL: Allow NULL salaries - candidates may not have salary info
     if (currentSalaryMin !== null && currentSalaryMin !== undefined) {
       const minSalary = Number(currentSalaryMin);
       const maxSalary = currentSalaryMax !== null && currentSalaryMax !== undefined
         ? Number(currentSalaryMax) : 200; // Max 200 LPA
-      
+
       // Allow candidates with salary in range OR NULL salary
       matchingConditions.push({
         [Op.or]: [
@@ -1909,12 +1864,12 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       // This is handled by not adding salary filter, so all candidates pass
       appliedFilters.push(`Salary: Any (including not mentioned)`);
     }
-    
+
     // 3. LOCATION MATCHING (candidateLocations + excludeLocations + willing to relocate)
     // CRITICAL: If no candidateLocations specified, allow ANY location (don't filter)
     // Only filter by location if candidateLocations array has values
     // IMPORTANT: Exclude locations are applied AFTER include locations (they filter out candidates)
-    
+
     // 3.1. LOCATION INCLUDE (candidateLocations)
     if (candidateLocations && candidateLocations.length > 0) {
       const locationConditions = candidateLocations.flatMap(location => ([
@@ -1922,23 +1877,23 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         { current_location: { [Op.iLike]: `%${location}%` } },
         // Match preferred locations (JSONB array)
         sequelize.where(
-          sequelize.cast(sequelize.col('preferred_locations'), 'text'), 
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'),
           { [Op.iLike]: `%${location}%` }
         )
       ]));
-      
+
       // Include candidates willing to relocate if requirement allows
       if (includeWillingToRelocate) {
         locationConditions.push({ willing_to_relocate: true });
       }
-      
+
       matchingConditions.push({ [Op.or]: locationConditions });
       appliedFilters.push(`Location (Include): ${candidateLocations.join(', ')}${includeWillingToRelocate ? ' (including willing to relocate)' : ''}`);
     } else {
       // No location filter specified - allow any location candidate
       console.log('✅ No location include filter specified - allowing candidates from any location');
     }
-    
+
     // 3.2. LOCATION EXCLUDE (excludeLocations)
     // CRITICAL: Exclude candidates from these locations (applied as NOT conditions)
     if (excludeLocations && excludeLocations.length > 0) {
@@ -1947,11 +1902,11 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         { current_location: { [Op.not]: { [Op.iLike]: `%${location}%` } } },
         // Exclude if preferred locations match
         sequelize.where(
-          sequelize.cast(sequelize.col('preferred_locations'), 'text'), 
+          sequelize.cast(sequelize.col('preferred_locations'), 'text'),
           { [Op.not]: { [Op.iLike]: `%${location}%` } }
         )
       ]));
-      
+
       // For exclude, we need ALL conditions to be true (candidate must NOT be in ANY excluded location)
       // So we add them as AND conditions
       allAndConditions.push({
@@ -1960,7 +1915,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       appliedFilters.push(`Location (Exclude): ${excludeLocations.join(', ')}`);
       console.log(`✅ Added location exclude filter: ${excludeLocations.join(', ')}`);
     }
-    
+
     // 4. SKILLS & KEY SKILLS MATCHING (comprehensive)
     // CRITICAL: Include includeSkills from metadata (frontend sends this as "must have" skills)
     // IMPORTANT: keySkills (Additional Skills) are automatically merged into includeSkills during create/update
@@ -1972,27 +1927,27 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       ...(Array.isArray(includeSkills) ? includeSkills : []),
       ...(Array.isArray(keySkillsFromRequirement) ? keySkillsFromRequirement : [])
     ])].filter(Boolean);
-    
+
     const allRequiredSkills = [
       ...(requirement.skills || []),
       ...allIncludeSkills
       // Note: keySkills are merged into includeSkills, but we also check requirement.keySkills for backward compatibility
     ].filter(Boolean);
-    
+
     // CRITICAL: Exclude skills that should NOT be present
     const excludeSkills = metadata.excludeSkills || requirement.excludeSkills || [];
-    
+
     // Check if requirement title strongly matches candidate title/headline
     // If title matches strongly, skills become optional (title is more important)
     const hasStrongTitleMatch = requirement.title && requirement.title.trim().length > 3;
     let titleMatchConditions = [];
-    
+
     if (hasStrongTitleMatch) {
       const titleWords = requirement.title
         .split(/\s+/)
         .filter(word => word.length > 2)
         .map(word => word.toLowerCase());
-      
+
       if (titleWords.length > 0) {
         // Create title matching conditions (used as alternative to skills)
         titleMatchConditions = titleWords.flatMap(word => [
@@ -2002,21 +1957,21 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         ]);
       }
     }
-    
+
     if (allRequiredSkills.length > 0) {
       const skillConditions = allRequiredSkills.flatMap(skill => ([
-            // Match in skills array (exact and case-insensitive)
+        // Match in skills array (exact and case-insensitive)
         { skills: { [Op.contains]: [skill] } },
         sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
-            // Match in key_skills array
+        // Match in key_skills array
         { key_skills: { [Op.contains]: [skill] } },
         sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
-            // Match in headline (job title often mentions key skills)
+        // Match in headline (job title often mentions key skills)
         { headline: { [Op.iLike]: `%${skill}%` } },
-            // Match in summary
+        // Match in summary
         { summary: { [Op.iLike]: `%${skill}%` } }
       ]));
-      
+
       // If we have title matching conditions, make skills OR title match (title can override skills)
       if (titleMatchConditions.length > 0) {
         matchingConditions.push({
@@ -2035,7 +1990,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       matchingConditions.push({ [Op.or]: titleMatchConditions });
       appliedFilters.push(`Title Match: "${requirement.title}"`);
     }
-    
+
     // CRITICAL: Exclude skills - candidates MUST NOT have these skills in ANY field
     // If exclude skill is found in skills, key_skills, headline, or summary, exclude candidate
     // We use OR logic: if skill appears in ANY field, exclude the candidate
@@ -2086,7 +2041,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       appliedFilters.push(`Skills (Must NOT Have): ${excludeSkills.filter(s => s).slice(0, 3).join(', ')}${excludeSkills.filter(s => s).length > 3 ? '...' : ''}`);
       console.log(`✅ Added exclude skills filter: ${excludeSkills.filter(s => s).join(', ')}`);
     }
-    
+
     // 4.5. CURRENT DESIGNATION MATCHING (from metadata) - LENIENT MATCHING
     // Match against user table fields AND work experience titles (most accurate)
     const currentDesignation = metadata.currentDesignation || requirement.currentDesignation || null;
@@ -2102,7 +2057,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       });
       appliedFilters.push(`Current Designation (lenient): ${currentDesignation}`);
     }
-    
+
     // 5. REQUIREMENT TITLE MATCHING (OPTIONAL - only if no skills specified)
     // CRITICAL: If skills are specified, title is optional (skills are more important than title)
     // Only add title matching to query if no skills are specified
@@ -2110,7 +2065,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     // DO NOT add title to query-level matchingConditions - this makes it too strict
     // Title filtering happens later in post-query filtering and is lenient
     // Removed: Title matching from query-level conditions (was too strict)
-    
+
     // 5. DESIGNATION MATCHING (candidateDesignations)
     if (candidateDesignations && candidateDesignations.length > 0) {
       const designationConditions = candidateDesignations.flatMap(designation => ([
@@ -2119,11 +2074,11 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         { summary: { [Op.iLike]: `%${designation}%` } },
         { current_role: { [Op.iLike]: `%${designation}%` } }
       ]));
-        
-        matchingConditions.push({ [Op.or]: designationConditions });
+
+      matchingConditions.push({ [Op.or]: designationConditions });
       appliedFilters.push(`Designation: ${candidateDesignations.join(', ')}`);
     }
-    
+
     // 6. EDUCATION MATCHING (OPTIONAL - only if no skills specified)
     // CRITICAL: Education is a nice-to-have, not a must-have
     // If skills are specified, education is optional (skills are more important)
@@ -2131,7 +2086,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     // Education will still be used for relevance scoring
     if ((education || institute) && allRequiredSkills.length === 0) {
       const educationConditions = [];
-      
+
       if (education) {
         educationConditions.push(
           // Search in education JSONB array
@@ -2148,7 +2103,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           { summary: { [Op.iLike]: `%${education}%` } }
         );
       }
-      
+
       if (institute) {
         educationConditions.push(
           // Search for institute name in education JSONB
@@ -2160,7 +2115,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           { summary: { [Op.iLike]: `%${institute}%` } }
         );
       }
-      
+
       if (educationConditions.length > 0) {
         matchingConditions.push({ [Op.or]: educationConditions });
         appliedFilters.push(`Education: ${education || ''} ${institute || ''}`);
@@ -2169,7 +2124,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       // Education specified but skills also specified - mark as optional for scoring
       appliedFilters.push(`Education (optional): ${education || ''} ${institute || ''}`);
     }
-    
+
     // 7. CURRENT COMPANY MATCHING
     if (currentCompany) {
       matchingConditions.push({
@@ -2182,8 +2137,11 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       });
       appliedFilters.push(`Company: ${currentCompany}`);
     }
-    
+
     // 8. NOTICE PERIOD MATCHING
+    // CRITICAL: Notice period is OPTIONAL - should not exclude candidates
+    // If skills match, notice period is secondary to skills
+    // Only filter if NO skills are specified, otherwise make it optional for scoring
     if (noticePeriod && noticePeriod !== 'Any' && noticePeriod !== 'any') {
       // Convert notice period to days for comparison
       const noticePeriodMap = {
@@ -2194,25 +2152,31 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         '60 days': 60,
         '90 days': 90
       };
-      
+
       const maxNoticeDays = noticePeriodMap[noticePeriod];
       if (maxNoticeDays !== undefined) {
-        whereClause.notice_period = {
-          [Op.lte]: maxNoticeDays
-        };
-        appliedFilters.push(`Notice Period: ≤${noticePeriod}`);
+        // CRITICAL FIX: Don't add to whereClause - notice period should NOT exclude candidates
+        // Instead, apply as an optional matching condition that can be overridden by skills
+        // This ensures candidates with matching skills are not excluded just because of notice period
+        matchingConditions.push({
+          [Op.or]: [
+            { notice_period: { [Op.lte]: maxNoticeDays } },
+            { notice_period: null } // Include candidates who haven't specified notice period
+          ]
+        });
+        appliedFilters.push(`Notice Period (Optional): ≤${noticePeriod}`);
       }
     }
-    
+
     // 10. RESUME FRESHNESS (if specified)
     if (resumeFreshness) {
       const freshnessDate = new Date(resumeFreshness);
-          whereClause.last_profile_update = {
-            [Op.gte]: freshnessDate
-          };
-          appliedFilters.push(`Resume Updated After: ${freshnessDate.toLocaleDateString()}`);
+      whereClause.last_profile_update = {
+        [Op.gte]: freshnessDate
+      };
+      appliedFilters.push(`Resume Updated After: ${freshnessDate.toLocaleDateString()}`);
     }
-    
+
     // 11. REMOTE WORK PREFERENCE (OPTIONAL - only if no skills specified)
     // CRITICAL: Remote work is a nice-to-have, not a must-have
     // If skills are specified, remote work is optional (skills are more important)
@@ -2233,7 +2197,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       // Remote work specified but skills also specified - mark as optional for scoring
       appliedFilters.push(`Remote Work (optional): ${remoteWork}`);
     }
-    
+
     // 11. DIVERSITY PREFERENCE (Gender) - CRITICAL
     if (diversityPreference && Array.isArray(diversityPreference) && diversityPreference.length > 0) {
       // Filter out 'all' - if 'all' is selected, don't filter by gender
@@ -2248,7 +2212,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         console.log('ℹ️ Gender filter: All selected (no gender filter applied)');
       }
     }
-    
+
     // 13. LAST ACTIVE (if specified) - candidates who were active within last X days
     if (lastActive !== null && lastActive !== undefined) {
       const daysAgo = Number(lastActive);
@@ -2261,52 +2225,52 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         appliedFilters.push(`Last Active: Within ${daysAgo} days`);
       }
     }
-    
+
     console.log('🎯 Applied Filters:', appliedFilters.join(' | '));
-    
+
     // CRITICAL FIX: Use AND logic to combine ALL conditions including experience/salary
     // This ensures candidates must match ALL specified criteria
     // If skills are specified, candidate MUST have at least one of those skills
     // If locations are specified, candidate MUST match at least one location
     // Experience and salary filters are also part of the AND logic
     // NOTE: allAndConditions is already declared earlier (line 1754)
-    
+
     // Add experience filter if present
     if (whereClause.experience_years) {
       allAndConditions.push({ experience_years: whereClause.experience_years });
       delete whereClause.experience_years; // Remove from top level
     }
-    
+
     // Add salary filter if present
     if (whereClause.current_salary) {
       allAndConditions.push({ current_salary: whereClause.current_salary });
       delete whereClause.current_salary; // Remove from top level
     }
-    
+
     // Add notice period filter if present
     if (whereClause.notice_period) {
       allAndConditions.push({ notice_period: whereClause.notice_period });
       delete whereClause.notice_period; // Remove from top level
     }
-    
+
     // Add resume freshness filter if present
     if (whereClause.last_profile_update) {
       allAndConditions.push({ last_profile_update: whereClause.last_profile_update });
       delete whereClause.last_profile_update; // Remove from top level
     }
-    
+
     // Add last active filter if present
     if (whereClause.last_login_at) {
       allAndConditions.push({ last_login_at: whereClause.last_login_at });
       delete whereClause.last_login_at; // Remove from top level
     }
-    
+
     // Add gender filter if present (diversity preference)
     if (whereClause.gender) {
       allAndConditions.push({ gender: whereClause.gender });
       delete whereClause.gender; // Remove from top level
     }
-    
+
     // Add matching conditions (skills, locations, designations, etc.)
     // CRITICAL FIX: Wrap matchingConditions in Op.and to combine them properly
     // matchingConditions contains objects like { [Op.or]: [...] } for skills, locations, etc.
@@ -2314,14 +2278,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     if (matchingConditions.length > 0) {
       allAndConditions.push({ [Op.and]: matchingConditions });
     }
-    
+
     // Apply ALL conditions with AND logic
     if (allAndConditions.length > 0) {
       whereClause[Op.and] = allAndConditions;
       console.log(`✅ Applied ${allAndConditions.length} AND conditions (experience, salary, skills, locations, designations, etc.)`);
       console.log(`   This ensures candidates must match ALL specified criteria - NO irrelevant candidates`);
     }
-    
+
     // Add search query if provided (narrows down results further)
     // Search should be combined with AND logic to further filter results
     if (search) {
@@ -2334,13 +2298,13 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${search}%` }),
         sequelize.where(sequelize.cast(sequelize.col('key_skills'), 'text'), { [Op.iLike]: `%${search}%` })
       ];
-      
+
       // Add search as an AND condition
       whereClause[Op.and] = whereClause[Op.and] || [];
       whereClause[Op.and].push({ [Op.or]: searchConditions });
       appliedFilters.push(`Search: "${search}"`);
     }
-    
+
     console.log('🔍 Final where clause (simplified):', {
       baseFilters: {
         user_type: whereClause.user_type,
@@ -2355,7 +2319,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       searchApplied: whereClause[Op.and] ? true : false,
       allAndConditionsCount: whereClause[Op.and] ? whereClause[Op.and].length : 0
     });
-    
+
     // DEBUG: Log the actual query being executed
     console.log('🔍 DEBUG: Extracted values for this query:');
     console.log(`   workExperienceMin: ${workExperienceMin}, workExperienceMax: ${workExperienceMax}`);
@@ -2365,14 +2329,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     console.log(`   noticePeriod: ${noticePeriod}`);
     console.log(`   whereClause keys:`, Object.keys(whereClause));
     console.log(`   whereClause[Op.and] length:`, whereClause[Op.and] ? whereClause[Op.and].length : 0);
-    
+
     // Determine sort order - simplified
     let orderClause = [['last_profile_update', 'DESC']]; // Prioritize recent profiles
-    
+
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const offset = (isNaN(pageNum) ? 0 : (pageNum - 1)) * (isNaN(limitNum) ? 50 : limitNum);
-    
+
     // DEBUG: Test query without pagination first to see total count
     console.log('\n🔍 ========== DEBUG: QUERY CONSTRUCTION ==========');
     console.log('📊 Extracted Values:');
@@ -2384,36 +2348,36 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     console.log(`   whereClause structure:`, JSON.stringify(whereClause, null, 2).substring(0, 1000));
     console.log(`   allAndConditions count:`, allAndConditions.length);
     console.log(`   matchingConditions count:`, matchingConditions.length);
-    
+
     const testCount = await User.count({ where: whereClause });
     console.log(`🔍 DEBUG: Total count before pagination: ${testCount}`);
-    
+
     if (testCount === 0) {
       console.log('❌ PROBLEM: Query returns 0 candidates!');
       console.log('   Checking individual filters...');
-      
+
       // Test each filter individually
       const baseWhere = {
         user_type: 'jobseeker',
         is_active: true,
         account_status: 'active'
       };
-      
+
       const baseCount = await User.count({ where: baseWhere });
       console.log(`   Base count (no filters): ${baseCount}`);
-      
+
       if (workExperienceMin !== null) {
         const expWhere = { ...baseWhere, experience_years: { [Op.gte]: Number(workExperienceMin), [Op.lte]: Number(workExperienceMax || 50) } };
         const expCount = await User.count({ where: expWhere });
         console.log(`   With experience filter: ${expCount}`);
       }
-      
+
       if (currentSalaryMin !== null) {
         const salWhere = { ...baseWhere, current_salary: { [Op.gte]: Number(currentSalaryMin), [Op.lte]: Number(currentSalaryMax || 200) } };
         const salCount = await User.count({ where: salWhere });
         console.log(`   With salary filter: ${salCount}`);
       }
-      
+
       if (allRequiredSkills.length > 0) {
         const skillConditions = allRequiredSkills.flatMap(skill => [
           sequelize.where(sequelize.cast(sequelize.col('skills'), 'text'), { [Op.iLike]: `%${skill}%` }),
@@ -2425,7 +2389,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         console.log(`   With skills filter (any skill): ${skillCount}`);
       }
     }
-    
+
     // Fetch candidates with comprehensive attributes
     const { count, rows: candidates } = await User.findAndCountAll({
       where: whereClause,
@@ -2443,10 +2407,10 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         'current_role', 'current_company', 'gender'
       ]
     });
-    
+
     console.log(`✅ Found ${count} total candidates matching requirement criteria (page has ${candidates.length} candidates)`);
     console.log('🔍 ========== END DEBUG ==========\n');
-    
+
     if (count === 0 && testCount === 0) {
       console.log('⚠️  WARNING: Query returned 0 candidates. Checking if this is correct...');
       console.log('   If the database test found candidates, there might be a query construction issue.');
@@ -2457,11 +2421,11 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       try {
         const { Notification } = require('../config/index');
         const { Company } = require('../config/index');
-        
+
         // Get company info for notification
         const company = await Company.findByPk(requirement.companyId);
         const companyName = company?.name || 'Your Company';
-        
+
         // Check if we already sent a notification for this requirement recently (within 24 hours)
         const recentNotification = await Notification.findOne({
           where: {
@@ -2475,7 +2439,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             }
           }
         });
-        
+
         if (!recentNotification) {
           await Notification.create({
             userId: req.user.id,
@@ -2510,7 +2474,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     let finalCandidates = candidates;
     let finalCount = count;
     let fallbackApplied = false;
-    
+
     // Check if we have strict criteria
     const hasStrictCriteria = (
       (allRequiredSkills.length > 0) ||
@@ -2522,46 +2486,46 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       (currentCompany !== null) ||
       (institute !== null)
     );
-    
+
     // NEVER use fallback if we have strict criteria - this prevents irrelevant candidates
     if (finalCount === 0 && hasStrictCriteria) {
       console.log(`⚠️ No candidates matched strict criteria. Returning empty results (no fallback to prevent irrelevant candidates).`);
       finalCandidates = [];
       finalCount = 0;
     }
-    
+
     // ========== IMPROVED RELEVANCE SCORING ALGORITHM ==========
     // Calculate comprehensive relevance score for each candidate (max 100 points)
     // CRITICAL: Use extracted values from metadata, not VIRTUAL fields
     const calculateRelevanceScore = (candidate, reqData) => {
       let score = 0;
       let matchReasons = [];
-      
+
       // Helper function for case-insensitive array matching
       const matchSkill = (requiredSkill, candidateSkills = []) => {
-        return candidateSkills.some(cs => 
+        return candidateSkills.some(cs =>
           cs.toLowerCase() === requiredSkill.toLowerCase() ||
           cs.toLowerCase().includes(requiredSkill.toLowerCase()) ||
           requiredSkill.toLowerCase().includes(cs.toLowerCase())
         );
       };
-      
+
       // 1. SKILLS MATCHING (35 points max - high priority, but lower than title match)
       const allRequiredSkills = [
         ...(reqData.skills || []),
         ...(reqData.keySkills || [])
       ].filter(Boolean);
-      
+
       if (allRequiredSkills.length > 0) {
         const candidateSkills = [
           ...(candidate.skills || []),
           ...(candidate.key_skills || [])
         ];
-        
-        const matchingSkills = allRequiredSkills.filter(skill => 
+
+        const matchingSkills = allRequiredSkills.filter(skill =>
           matchSkill(skill, candidateSkills)
         );
-        
+
         if (matchingSkills.length > 0) {
           const matchPercentage = (matchingSkills.length / allRequiredSkills.length) * 100;
           const skillScore = Math.min(35, (matchPercentage / 100) * 35);
@@ -2569,17 +2533,17 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           matchReasons.push(`${matchingSkills.length}/${allRequiredSkills.length} skills match (${Math.round(matchPercentage)}%)`);
         }
       }
-      
+
       // 2. LOCATION MATCHING (15 points)
       if (reqData.candidateLocations && reqData.candidateLocations.length > 0) {
         const candidateLocation = (candidate.current_location || '').toLowerCase();
         const preferredLocs = (candidate.preferred_locations || []).map(l => l.toLowerCase());
-        
-        const hasExactLocationMatch = reqData.candidateLocations.some(loc => 
+
+        const hasExactLocationMatch = reqData.candidateLocations.some(loc =>
           candidateLocation.includes(loc.toLowerCase()) ||
           preferredLocs.some(pl => pl.includes(loc.toLowerCase()))
         );
-        
+
         if (hasExactLocationMatch) {
           score += 15;
           matchReasons.push('Preferred location');
@@ -2588,14 +2552,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           matchReasons.push('Open to relocate');
         }
       }
-      
+
       // 3. EXPERIENCE MATCHING (15 points)
       if (reqData.workExperienceMin !== null && reqData.workExperienceMin !== undefined) {
         const minExp = Number(reqData.workExperienceMin);
         const maxExp = reqData.workExperienceMax !== null && reqData.workExperienceMax !== undefined
           ? Number(reqData.workExperienceMax) : 50;
         const candidateExp = Number(candidate.experience_years) || 0;
-        
+
         if (candidateExp >= minExp && candidateExp <= maxExp) {
           // Perfect match - within range
           score += 15;
@@ -2610,13 +2574,13 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           matchReasons.push(`Experience: ${candidateExp} yrs (slightly under)`);
         }
       }
-      
+
       // 4. SALARY EXPECTATION MATCHING (10 points)
       if (reqData.currentSalaryMin !== null && reqData.currentSalaryMin !== undefined) {
         const minSalary = Number(reqData.currentSalaryMin);
         const maxSalary = reqData.currentSalaryMax || 200;
         const candidateSalary = Number(candidate.current_salary) || 0;
-        
+
         if (candidateSalary >= minSalary && candidateSalary <= maxSalary) {
           score += 10;
           matchReasons.push(`Salary: ${candidateSalary} LPA (fits ${minSalary}-${maxSalary} LPA)`);
@@ -2625,56 +2589,56 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           score += 3;
         }
       }
-      
+
       // 5. EDUCATION MATCHING (10 points)
       if (reqData.education || reqData.institute) {
         const candidateEducation = JSON.stringify(candidate.education || []).toLowerCase();
         const candidateText = `${candidate.headline || ''} ${candidate.summary || ''} ${candidate.highest_education || ''} ${candidate.field_of_study || ''}`.toLowerCase();
         let educationMatch = false;
-        
-        if (reqData.education && 
-            (candidateEducation.includes(reqData.education.toLowerCase()) ||
-             candidateText.includes(reqData.education.toLowerCase()))) {
+
+        if (reqData.education &&
+          (candidateEducation.includes(reqData.education.toLowerCase()) ||
+            candidateText.includes(reqData.education.toLowerCase()))) {
           educationMatch = true;
         }
-        
-        if (reqData.institute && 
-            (candidateEducation.includes(reqData.institute.toLowerCase()) ||
-             candidateText.includes(reqData.institute.toLowerCase()))) {
+
+        if (reqData.institute &&
+          (candidateEducation.includes(reqData.institute.toLowerCase()) ||
+            candidateText.includes(reqData.institute.toLowerCase()))) {
           score += 10;
           matchReasons.push(`Institute: ${reqData.institute}`);
           educationMatch = true;
         }
-        
+
         if (educationMatch && !matchReasons.some(r => r.includes('Institute'))) {
           score += 8;
           matchReasons.push('Education qualification match');
         }
       }
-      
+
       // 6. DESIGNATION MATCHING (8 points)
       if (reqData.candidateDesignations && reqData.candidateDesignations.length > 0) {
         const candidateTitle = `${candidate.designation || ''} ${candidate.headline || ''} ${candidate.current_role || ''}`.toLowerCase();
-        const hasDesignationMatch = reqData.candidateDesignations.some(des => 
+        const hasDesignationMatch = reqData.candidateDesignations.some(des =>
           candidateTitle.includes(des.toLowerCase())
         );
-        
+
         if (hasDesignationMatch) {
           score += 8;
           matchReasons.push('Designation match');
         }
       }
-      
+
       // 7. CURRENT COMPANY MATCHING (5 points - bonus for target company exp)
       if (reqData.currentCompany) {
         const candidateText = `${candidate.current_company || ''} ${candidate.headline || ''} ${candidate.summary || ''}`.toLowerCase();
-        
+
         if (candidateText.includes(reqData.currentCompany.toLowerCase())) {
           score += 5;
           matchReasons.push(`Worked at: ${reqData.currentCompany}`);
         }
       }
-      
+
       // 8. NOTICE PERIOD MATCHING (4 points)
       if (reqData.noticePeriod && reqData.noticePeriod !== 'Any' && reqData.noticePeriod !== 'any') {
         const noticePeriodMap = {
@@ -2685,16 +2649,16 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           '60 days': 60,
           '90 days': 90
         };
-        
+
         const maxNoticeDays = noticePeriodMap[reqData.noticePeriod];
         const candidateNoticeDays = Number(candidate.notice_period) || 90;
-        
+
         if (maxNoticeDays !== undefined && candidateNoticeDays <= maxNoticeDays) {
           score += 4;
           matchReasons.push(`Notice: ${candidateNoticeDays} days (≤${maxNoticeDays})`);
         }
       }
-      
+
       // 9. PROFILE QUALITY BONUSES (8 points max)
       // Profile completion
       if (candidate.profile_completion >= 90) {
@@ -2703,35 +2667,35 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       } else if (candidate.profile_completion >= 70) {
         score += 2;
       }
-      
+
       // Verification status
       if (candidate.is_email_verified && candidate.is_phone_verified) {
         score += 3;
         matchReasons.push('Verified contact');
       }
-      
+
       // Recent activity
-      const daysSinceUpdate = candidate.last_profile_update 
+      const daysSinceUpdate = candidate.last_profile_update
         ? Math.floor((Date.now() - new Date(candidate.last_profile_update).getTime()) / (1000 * 60 * 60 * 24))
         : 999;
-      
+
       if (daysSinceUpdate <= 30) {
         score += 1;
         matchReasons.push('Recently active');
       }
-      
+
       return { score: Math.min(100, Math.round(score)), matchReasons };
     };
-    
+
     // Fetch ATS scores for candidates
     const candidateIds = finalCandidates.map(c => c.id);
     let atsScoresMap = {};
-    
+
     if (candidateIds.length > 0) {
       try {
         console.log('🔍 Fetching ATS scores for requirement:', id);
         console.log('🔍 Candidate IDs:', candidateIds);
-        
+
         const atsScores = await sequelize.query(`
           SELECT 
             user_id as "userId",
@@ -2744,7 +2708,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           replacements: { candidateIds, requirementId: id },
           type: QueryTypes.SELECT
         });
-        
+
         // Create a map for quick lookup
         atsScores.forEach(score => {
           atsScoresMap[score.userId] = {
@@ -2753,35 +2717,35 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             requirementId: score.requirementId
           };
         });
-        
+
         console.log('🔍 ATS scores fetched for requirement', id, ':', {
           totalCandidates: candidateIds.length,
           atsScoresFound: atsScores.length,
           atsScoresMap: Object.keys(atsScoresMap).length
         });
-        
+
         // Debug: Log specific ATS scores for known candidates
         console.log('🔍 ATS scores details for debugging:');
         atsScores.forEach(score => {
           console.log(`  - User ${score.userId}: Score ${score.atsScore} for requirement ${score.requirementId} (${score.lastCalculated})`);
         });
-        
+
         // Verify all scores match the current requirement
         const mismatchedScores = atsScores.filter(score => score.requirementId !== id);
         if (mismatchedScores.length > 0) {
           console.log('⚠️ Found ATS scores for different requirements:', mismatchedScores);
         }
-        
+
       } catch (atsError) {
         console.log('⚠️ Could not fetch ATS scores:', atsError.message);
         console.log('🔍 ATS Error details:', atsError);
       }
     }
-    
+
     // CRITICAL: Apply LENIENT title filtering
     // If skills match, title is optional. Only filter if NO skills specified.
     let filteredFinalCandidates = finalCandidates;
-    
+
     const hasSkills = allRequiredSkills.length > 0;
     const hasMultipleCriteria = (
       (allRequiredSkills.length > 0 ? 1 : 0) +
@@ -2790,14 +2754,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       (workExperienceMin !== null ? 1 : 0) +
       (currentSalaryMin !== null ? 1 : 0)
     ) > 1;
-    
+
     // Only apply title filtering if we have multiple criteria AND no skills (skills override title)
     if (hasStrictCriteria && requirement.title && requirement.title.trim().length > 3 && hasMultipleCriteria && !hasSkills) {
       const titleWords = requirement.title
         .split(/\s+/)
         .filter(word => word.length > 2) // More lenient
         .map(word => word.toLowerCase());
-      
+
       if (titleWords.length > 0) {
         const titleMatched = finalCandidates.filter(candidate => {
           const headline = (candidate.headline || '').toLowerCase();
@@ -2806,7 +2770,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           const combined = `${headline} ${designation} ${currentRole}`;
           return titleWords.some(keyword => combined.includes(keyword));
         });
-        
+
         if (titleMatched.length > 0) {
           filteredFinalCandidates = titleMatched;
           console.log(`🎯 TITLE FILTER (lenient): ${titleMatched.length} candidates with title match`);
@@ -2819,7 +2783,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       // If skills are specified, title is optional - skills are the primary filter
       console.log(`✅ Skills specified - title matching is optional. Keeping ${finalCandidates.length} candidates with matching skills.`);
     }
-    
+
     // CRITICAL FIX: Don't double-validate - database query already filtered correctly
     // Only check exclude skills as a final safety net (database query might miss edge cases)
     const excludeSkillsForValidation = metadata.excludeSkills || requirement.excludeSkills || [];
@@ -2832,18 +2796,18 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           candidate.headline || '',
           candidate.summary || ''
         ].join(' ').toLowerCase();
-        
-        return !excludeSkillsForValidation.filter(s => s).some(skill => 
+
+        return !excludeSkillsForValidation.filter(s => s).some(skill =>
           candidateSkills.includes(skill.toLowerCase())
         );
       });
-      
+
       const removedCount = beforeCount - filteredFinalCandidates.length;
       if (removedCount > 0) {
         console.log(`⚠️  Removed ${removedCount} candidates with excluded skills (final safety check)`);
       }
     }
-    
+
     // CRITICAL: Apply CURRENT DESIGNATION matching with work experience (LENIENT)
     // If currentDesignation is specified, match against work experience titles (most accurate)
     const currentDesignationForFilter = metadata.currentDesignation || requirement.currentDesignation || null;
@@ -2853,9 +2817,9 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       // Work experience matching will happen after we fetch work experience data
       console.log(`🔍 Current Designation filter will be applied with work experience matching: ${currentDesignationForFilter}`);
     }
-    
+
     console.log(`✅ Final candidate count after all filters: ${filteredFinalCandidates.length}`);
-    
+
     // Helper function to convert values to arrays
     const toArray = (value, fallback = []) => {
       if (Array.isArray(value)) return value;
@@ -2867,13 +2831,13 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         return fallback;
       }
     };
-    
+
     // Fetch education details and work experience for all candidates
     const allCandidateIds = filteredFinalCandidates.map(c => c.id);
     const { Education } = require('../config/index');
     let educationMap = new Map();
     let workExperienceMap = new Map(); // Map of userId -> work experiences
-    
+
     if (allCandidateIds.length > 0) {
       try {
         // Fetch education using raw query with snake_case column names
@@ -2899,7 +2863,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           replacements: { allCandidateIds },
           type: QueryTypes.SELECT
         });
-        
+
         // Group education by user_id
         educationResults.forEach((edu) => {
           const userId = edu.user_id;
@@ -2919,7 +2883,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
               relevantCourses = edu.relevant_courses;
             }
           }
-          
+
           educationMap.get(userId).push({
             id: edu.id,
             degree: edu.degree,
@@ -2938,7 +2902,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       } catch (eduError) {
         console.warn('⚠️ Could not fetch education details:', eduError?.message || eduError);
       }
-      
+
       // Fetch work experience for all candidates to get current/previous company info
       // CRITICAL: Fetch ALL work experiences to accurately determine current/previous company
       try {
@@ -2959,19 +2923,19 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           replacements: { allCandidateIds },
           type: QueryTypes.SELECT
         });
-        
+
         // Group work experience by user_id and extract currentDesignation from description
         workExpResults.forEach((exp) => {
           const userId = exp.user_id;
           if (!workExperienceMap.has(userId)) {
             workExperienceMap.set(userId, []);
           }
-          
+
           // Extract currentDesignation from description if present
           // Format: "Designation: {currentDesignation}\n\n{description}"
           let currentDesignation = null;
           let description = exp.description || '';
-          
+
           if (description && description.startsWith('Designation: ')) {
             const lines = description.split('\n\n');
             const designationLine = lines[0];
@@ -2979,55 +2943,55 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             // Keep the rest of description for potential future use
             description = lines.slice(1).join('\n\n');
           }
-          
+
           workExperienceMap.get(userId).push({
             ...exp,
             currentDesignation: currentDesignation || null,
             description: description || null
           });
         });
-        
+
         console.log(`✅ Fetched work experience for ${workExperienceMap.size} candidates`);
       } catch (weError) {
         console.warn('⚠️ Could not fetch work experience for company info:', weError?.message || weError);
       }
     }
-    
+
     // CRITICAL: Apply CURRENT DESIGNATION matching with work experience (LENIENT)
     // Match against work experience titles where is_current = true (most accurate)
     if (currentDesignationForFilter && filteredFinalCandidates.length > 0 && workExperienceMap.size > 0) {
       const beforeCount = filteredFinalCandidates.length;
       const designationLower = currentDesignationForFilter.toLowerCase().trim();
-      
+
       filteredFinalCandidates = filteredFinalCandidates.filter(candidate => {
         // First check user table fields (already done in query, but keep for safety)
-        const userFieldsMatch = 
+        const userFieldsMatch =
           (candidate.designation && candidate.designation.toLowerCase().includes(designationLower)) ||
           (candidate.headline && candidate.headline.toLowerCase().includes(designationLower)) ||
           (candidate.current_role && candidate.current_role.toLowerCase().includes(designationLower));
-        
+
         if (userFieldsMatch) {
           return true; // Already matched in query
         }
-        
+
         // Check work experience titles (most accurate - prioritize is_current = true)
         const candidateWorkExps = workExperienceMap.get(candidate.id) || [];
         if (candidateWorkExps.length > 0) {
           // First check current work experience (is_current = true)
-          const currentExp = candidateWorkExps.find(exp => 
-            exp.is_current === true || 
-            exp.is_current === 'true' || 
+          const currentExp = candidateWorkExps.find(exp =>
+            exp.is_current === true ||
+            exp.is_current === 'true' ||
             exp.is_current === 1 ||
             String(exp.is_current).toLowerCase() === 'true'
           );
-          
+
           if (currentExp && currentExp.title) {
             const titleLower = currentExp.title.toLowerCase();
             if (titleLower.includes(designationLower) || designationLower.includes(titleLower)) {
               return true; // Match found in current work experience title
             }
           }
-          
+
           // Also check all work experiences for lenient matching
           const anyExpMatch = candidateWorkExps.some(exp => {
             if (exp.title) {
@@ -3036,15 +3000,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
             }
             return false;
           });
-          
+
           if (anyExpMatch) {
             return true; // Match found in any work experience title
           }
         }
-        
+
         return false; // No match found
       });
-      
+
       const removedCount = beforeCount - filteredFinalCandidates.length;
       if (removedCount > 0) {
         console.log(`🎯 Current Designation filter (work experience): Removed ${removedCount} candidates, kept ${filteredFinalCandidates.length} with matching designation`);
@@ -3052,7 +3016,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         console.log(`✅ Current Designation filter (work experience): All ${filteredFinalCandidates.length} candidates match designation`);
       }
     }
-    
+
     // Helper function to format education
     const formatEducation = (candidate) => {
       const educations = educationMap.get(candidate.id) || [];
@@ -3071,7 +3035,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       }
       return 'Not specified';
     };
-    
+
     // Helper function to combine skills
     const combineSkills = (candidate) => {
       const skills = toArray(candidate.skills, []);
@@ -3079,7 +3043,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       const allSkills = [...new Set([...skills, ...keySkills])];
       return allSkills.filter(s => s && String(s).trim() !== '');
     };
-    
+
     // Prepare requirement data for relevance scoring (use extracted values from metadata)
     const reqDataForScoring = {
       skills: requirement.skills || [],
@@ -3097,15 +3061,15 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       includeWillingToRelocate: includeWillingToRelocate,
       title: requirement.title
     };
-    
+
     // Transform candidates data for frontend with relevance scoring and ATS scores
     const transformedCandidates = filteredFinalCandidates.map(candidate => {
       const { score, matchReasons } = calculateRelevanceScore(candidate, reqDataForScoring);
       const atsData = atsScoresMap[candidate.id];
-      
+
       // Only include ATS score if it matches the current requirement
       const validAtsData = atsData && atsData.requirementId === id ? atsData : null;
-      
+
       // Debug: Log ATS data for specific candidates
       if (candidate.id === '4200f403-25dc-4aa6-bcc9-1363adf0ee7b' || candidate.id === '10994ba4-1e33-45c3-b522-2f56a873e1e2') {
         console.log(`🔍 Candidate ${candidate.id} (${candidate.first_name} ${candidate.last_name}) ATS data:`, {
@@ -3117,31 +3081,31 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           atsCalculatedAt: validAtsData ? validAtsData.lastCalculated : null
         });
       }
-      
+
       // Get current and previous company from work experience
       // CRITICAL: Always prioritize work experience data (most accurate and up-to-date)
       const candidateWorkExps = workExperienceMap.get(candidate.id) || [];
       let currentCompany = null;
       let currentDesignation = null;
       let previousCompany = null;
-      
+
       // Extract from work experience - prioritize is_current = true
       if (candidateWorkExps.length > 0) {
         // First, try to find experience with is_current = true (boolean or string 'true')
-        const currentExp = candidateWorkExps.find(exp => 
-          exp.is_current === true || 
-          exp.is_current === 'true' || 
+        const currentExp = candidateWorkExps.find(exp =>
+          exp.is_current === true ||
+          exp.is_current === 'true' ||
           exp.is_current === 1 ||
           String(exp.is_current).toLowerCase() === 'true'
         );
-        
+
         if (currentExp && currentExp.company) {
           // Always use work experience data if current experience exists
           currentCompany = currentExp.company;
           // CRITICAL: Use currentDesignation from description if available, otherwise use title
           // currentDesignation is extracted from description field in the format "Designation: {currentDesignation}\n\n{description}"
-          currentDesignation = (currentExp.currentDesignation && currentExp.currentDesignation.trim()) 
-            ? currentExp.currentDesignation.trim() 
+          currentDesignation = (currentExp.currentDesignation && currentExp.currentDesignation.trim())
+            ? currentExp.currentDesignation.trim()
             : (currentExp.title || null);
           console.log(`✅ Candidate ${candidate.id}: Using work experience - Company: ${currentCompany}, Designation: ${currentDesignation} (from ${currentExp.currentDesignation ? 'currentDesignation field' : 'title'})`);
         } else {
@@ -3150,17 +3114,17 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           if (firstExp && firstExp.company) {
             currentCompany = firstExp.company;
             // CRITICAL: Use currentDesignation from description if available, otherwise use title
-            currentDesignation = (firstExp.currentDesignation && firstExp.currentDesignation.trim()) 
-              ? firstExp.currentDesignation.trim() 
+            currentDesignation = (firstExp.currentDesignation && firstExp.currentDesignation.trim())
+              ? firstExp.currentDesignation.trim()
               : (firstExp.title || null);
             console.log(`⚠️ Candidate ${candidate.id}: No current experience marked, using first experience - Company: ${currentCompany}, Designation: ${currentDesignation}`);
           }
         }
-        
+
         // Get previous company (first non-current experience, sorted by start_date DESC)
-        const previousExps = candidateWorkExps.filter(exp => 
-          exp.is_current === false || 
-          exp.is_current === 'false' || 
+        const previousExps = candidateWorkExps.filter(exp =>
+          exp.is_current === false ||
+          exp.is_current === 'false' ||
           exp.is_current === 0 ||
           String(exp.is_current).toLowerCase() === 'false' ||
           (exp.is_current !== true && exp.is_current !== 'true' && exp.is_current !== 1)
@@ -3175,7 +3139,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           previousCompany = previousExps[0].company || null;
         }
       }
-      
+
       // Fallback to user table fields only if no work experience found
       if (!currentCompany) {
         currentCompany = candidate.current_company || null;
@@ -3183,7 +3147,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       if (!currentDesignation) {
         currentDesignation = candidate.current_role || candidate.designation || candidate.headline || null;
       }
-      
+
       return {
         id: candidate.id,
         name: `${candidate.first_name} ${candidate.last_name}`,
@@ -3195,14 +3159,14 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         education: formatEducation(candidate),
         educationDetails: educationMap.get(candidate.id) || [],
         keySkills: combineSkills(candidate),
-        preferredLocations: candidate.preferred_locations && candidate.preferred_locations.length > 0 ? 
-          candidate.preferred_locations : 
+        preferredLocations: candidate.preferred_locations && candidate.preferred_locations.length > 0 ?
+          candidate.preferred_locations :
           (candidate.willing_to_relocate ? ['Open to relocate'] : [candidate.current_location]),
         avatar: candidate.avatar || '/placeholder.svg?height=80&width=80',
         isAttached: true,
-        lastModified: candidate.last_profile_update ? 
+        lastModified: candidate.last_profile_update ?
           new Date(candidate.last_profile_update).toLocaleDateString() : 'Not specified',
-        activeStatus: candidate.last_login_at ? 
+        activeStatus: candidate.last_login_at ?
           new Date(candidate.last_login_at).toLocaleDateString() : 'Not specified',
         additionalInfo: candidate.summary || 'No summary available',
         phoneVerified: candidate.is_phone_verified || false,
@@ -3219,7 +3183,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         atsCalculatedAt: validAtsData ? validAtsData.lastCalculated : null
       };
     });
-    
+
     // Debug: Log final transformed candidates with ATS scores
     console.log('🔍 Final transformed candidates with ATS scores:');
     transformedCandidates.forEach(candidate => {
@@ -3244,6 +3208,13 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
           where: { employer_id: req.user.id, candidate_id: candidateIds }
         });
         const likedSet = new Set(liked.map(r => r.get('candidate_id')));
+
+        // Get requirement-specific saved candidates
+        const savedForRequirement = await CandidateLike.findAll({
+          attributes: ['candidate_id'],
+          where: { employer_id: req.user.id, candidate_id: candidateIds, requirement_id: id }
+        });
+        const savedSet = new Set(savedForRequirement.map(r => r.get('candidate_id')));
 
         // Check which candidates have been viewed by this employer FOR THIS REQUIREMENT
         // CRITICAL: Only mark as viewed if viewed from THIS requirement
@@ -3278,29 +3249,29 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         transformedCandidates.forEach(c => {
           c.likeCount = idToCount.get(c.id) || 0;
           c.likedByCurrent = likedSet.has(c.id);
-          c.isSaved = likedSet.has(c.id); // Alias for consistency
+          c.isSaved = savedSet.has(c.id); // Use requirement-specific saved state
           c.isViewed = viewedSet.has(c.id); // Mark as viewed if profile was viewed
         });
       }
     } catch (likeErr) {
       console.warn('Failed to enrich candidates with like/viewed data:', likeErr?.message || likeErr);
     }
-    
+
     // Sort candidates based on sortBy parameter from query
     const sortByOption = sortBy || 'relevance';
-    
+
     if (sortByOption === 'ats' || sortByOption === 'ats:desc') {
       // Sort by ATS score (highest first), nulls last
       console.log('🔄 Sorting by ATS score (descending)');
       console.log('📊 Candidates before ATS sort:', transformedCandidates.map(c => ({ name: c.name, atsScore: c.atsScore })));
-      
+
       transformedCandidates.sort((a, b) => {
         if (a.atsScore === null && b.atsScore === null) return 0;
         if (a.atsScore === null) return 1;
         if (b.atsScore === null) return -1;
         return b.atsScore - a.atsScore;
       });
-      
+
       console.log('📊 Candidates after ATS sort:', transformedCandidates.map(c => ({ name: c.name, atsScore: c.atsScore })));
     } else if (sortByOption === 'ats:asc') {
       // Sort by ATS score (lowest first), nulls last
@@ -3312,9 +3283,9 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       });
     } else {
       // Default: Sort by relevance score (highest first)
-    transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      transformedCandidates.sort((a, b) => b.relevanceScore - a.relevanceScore);
     }
-    
+
     // Log final results summary
     console.log('\n📊 ========== CANDIDATE MATCHING SUMMARY ==========');
     console.log(`📌 Requirement: ${requirement.title} (ID: ${requirement.id})`);
@@ -3329,7 +3300,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
       console.log(`   ${i + 1}. ${c.name} - Relevance: ${c.relevanceScore}% - ATS: ${c.atsScore || 'N/A'}`);
     });
     console.log('==================================================\n');
-    
+
     const finalCountForResponse = filteredFinalCandidates.length;
     return res.status(200).json({
       success: true,
@@ -3357,7 +3328,7 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Error fetching candidates for requirement:', error);
     console.error('❌ Error details:', {
@@ -3369,8 +3340,8 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch candidates',
-      error: { 
-        name: error?.name, 
+      error: {
+        name: error?.name,
         message: error?.message,
         details: error?.errors || error?.stack
       }
@@ -3382,34 +3353,34 @@ router.get('/:id/candidates', authenticateToken, async (req, res) => {
 router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can view candidate profiles.' });
     }
-    
+
     // Check if requirement exists (more flexible check)
     console.log(`🔍 Looking for requirement ${requirementId}`);
     const requirement = await Requirement.findOne({
       where: { id: requirementId }
     });
-    
+
     if (!requirement) {
       console.log(`❌ Requirement not found: ${requirementId}`);
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Requirement not found'
       });
     }
-    
+
     // Log requirement details for debugging
     console.log(`✅ Requirement found: ${requirement.title} (Company: ${requirement.companyId})`);
-    
+
     console.log('🔍 Fetching detailed profile for candidate:', candidateId);
-    
+
     // Get candidate details
     const candidate = await User.findOne({
-      where: { 
+      where: {
         id: candidateId,
         user_type: 'jobseeker',
         is_active: true,
@@ -3426,16 +3397,16 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         'current_company', 'current_role', 'designation'
       ]
     });
-    
+
     if (!candidate) {
       console.log(`❌ Candidate not found: ${candidateId}`);
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Candidate not found',
         details: 'The candidate either does not exist or is not active'
       });
     }
-    
+
     // Get work experience using raw query with correct column names
     let workExperience = [];
     try {
@@ -3464,7 +3435,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         type: QueryTypes.SELECT
       });
       workExperience = workExpResults || [];
-      
+
       console.log(`💼 Found ${workExperience.length} work experience entries for candidate ${candidateId}`);
       if (workExperience.length > 0) {
         console.log('💼 Sample work experience:', JSON.stringify(workExperience[0], null, 2));
@@ -3474,7 +3445,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.error('⚠️ Work experience error details:', expError.message, expError.stack);
       workExperience = [];
     }
-    
+
     // Get education details using raw query with correct column names
     let education = [];
     try {
@@ -3505,7 +3476,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         type: QueryTypes.SELECT
       });
       education = eduResults || [];
-      
+
       console.log(`🎓 Found ${education.length} education entries for candidate ${candidateId}`);
       if (education.length > 0) {
         console.log('🎓 Sample education:', JSON.stringify(education[0], null, 2));
@@ -3515,7 +3486,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.error('⚠️ Education error details:', eduError.message, eduError.stack);
       education = [];
     }
-    
+
     // Get resumes using raw query with correct column names
     let resumes = [];
     try {
@@ -3540,10 +3511,10 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             WHERE user_id = :userId 
         ORDER BY is_primary DESC, created_at DESC
           `, {
-            replacements: { userId: candidateId },
-            type: QueryTypes.SELECT
-          });
-      
+        replacements: { userId: candidateId },
+        type: QueryTypes.SELECT
+      });
+
       resumes = resumeResults || [];
       console.log(`📄 Found ${resumes.length} resumes for candidate ${candidateId}`);
       if (resumes.length > 0) {
@@ -3553,13 +3524,13 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.log('⚠️ Could not fetch resumes:', resumeError.message);
       resumes = [];
     }
-    
+
     // Fetch cover letters for the candidate
     let coverLetters = [];
     try {
       console.log(`📝 Fetching cover letters for candidate ${candidateId}`);
       const { CoverLetter } = require('../config/index');
-      
+
       // Use raw queries to be resilient to column naming differences
       let coverLetterResults = await sequelize.query(`
         SELECT 
@@ -3643,7 +3614,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         console.log('⚠️ Could not fetch cover letters (fallback query):', altError.message);
       }
     }
-    
+
     console.log(`✅ Found detailed profile for candidate: ${candidate.first_name} ${candidate.last_name}`);
     console.log(`📄 Resumes found: ${resumes.length}`);
     console.log(`📝 Cover letters found: ${coverLetters.length}`);
@@ -3654,7 +3625,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     if (coverLetters.length > 0) {
       console.log(`📝 First cover letter metadata:`, JSON.stringify(coverLetters[0].metadata, null, 2));
     }
-    
+
     // Build absolute URL helper for files served from /uploads
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const toAbsoluteUrl = (maybePath) => {
@@ -3700,7 +3671,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             return expYears;
           }
         }
-        
+
         // Fallback: Calculate from workExperience array
         if (Array.isArray(workExperience) && workExperience.length > 0) {
           let totalMonths = 0;
@@ -3708,12 +3679,12 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             const startDate = exp.start_date;
             const endDate = exp.end_date;
             const isCurrent = exp.is_current || false;
-            
+
             if (startDate) {
               try {
                 const start = new Date(startDate);
                 const end = isCurrent ? new Date() : (endDate ? new Date(endDate) : new Date());
-            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
                   const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
                   totalMonths += Math.max(0, months);
                 }
@@ -3724,15 +3695,15 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           });
           return Math.round((totalMonths / 12) * 10) / 10; // Round to 1 decimal place
         }
-        
+
         return 0;
       };
-      
+
       const totalExperienceYears = calculateTotalExperience();
-      const experienceDisplay = totalExperienceYears > 0 
+      const experienceDisplay = totalExperienceYears > 0
         ? `${totalExperienceYears} ${totalExperienceYears === 1 ? 'year' : 'years'}`
         : 'Fresher';
-      
+
       // Format current salary properly
       const formatCurrentSalary = () => {
         if (candidate.current_salary !== null && candidate.current_salary !== undefined) {
@@ -3743,343 +3714,343 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         }
         return 'Not specified';
       };
-      
+
       transformedCandidate = {
-      id: candidate.id,
-      name: `${candidate.first_name} ${candidate.last_name}`,
-      designation: candidate.headline || candidate.designation || 'Job Seeker',
-      experience: experienceDisplay,
-      experienceYears: totalExperienceYears, // Add numeric value for calculations and display
-      location: candidate.current_location || 'Not specified',
-      education: (() => {
-        // Get education from education array or highest_education field
-        if (Array.isArray(education) && education.length > 0) {
-          const firstEdu = education[0];
-          return firstEdu.degree || firstEdu.course || firstEdu.fieldOfStudy || 'Not specified';
-        }
-        if (candidate.highest_education) {
-          return candidate.highest_education;
-        }
-        return 'Not specified';
-      })(),
-      keySkills: (() => {
-        // Combine skills and key_skills arrays
-        const skills = toArray(candidate.skills, []);
-        const keySkills = toArray(candidate.key_skills, []);
-        // Merge and remove duplicates
-        const allSkills = [...new Set([...skills, ...keySkills])];
-        return allSkills.filter(s => s && String(s).trim() !== '');
-      })(),
-      preferredLocations: (() => {
-        const prefLocs = toArray(candidate.preferred_locations, []);
-        if (prefLocs.length > 0) return prefLocs;
-        if (candidate.willing_to_relocate) return ['Open to relocate'];
-        return [candidate.current_location || 'Not specified'];
-      })(),
-      avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
-      isAttached: true,
-      lastModified: safeDateString(candidate.last_profile_update),
-      activeStatus: safeDateString(candidate.last_login_at),
-      additionalInfo: candidate.summary || 'No summary available',
-      phoneVerified: candidate.is_phone_verified || false,
-      emailVerified: candidate.is_email_verified || false,
-      currentSalary: formatCurrentSalary(),
-      expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
-      noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
-      profileCompletion: candidate.profile_completion || 0,
-      
-      // Contact information
-      email: candidate.email,
-      phone: candidate.phone,
-      linkedin: getProp(candidate.social_links || {}, 'linkedin', null),
-      github: getProp(candidate.social_links || {}, 'github', null),
-      portfolio: getProp(candidate.social_links || {}, 'portfolio', null),
-      
-      // Detailed information
-      about: candidate.summary || 'No summary available',
-      
-      // Work experience - use actual database column names from query
-      workExperience: toArray(workExperience, []).map(exp => {
-        const startDate = exp.start_date;
-        const endDate = exp.end_date;
-        const isCurrent = exp.is_current || false;
-        const startDateStr = startDate ? safeDateString(startDate) : 'Not specified';
-        const endDateStr = isCurrent ? 'Present' : (endDate ? safeDateString(endDate) : 'Not specified');
-        
-        // Parse skills if it's a JSON string
-        let skillsArray = [];
-        if (exp.skills) {
-          if (typeof exp.skills === 'string') {
-            try {
-              skillsArray = JSON.parse(exp.skills);
-            } catch (e) {
-              skillsArray = [exp.skills];
-            }
-          } else if (Array.isArray(exp.skills)) {
-            skillsArray = exp.skills;
+        id: candidate.id,
+        name: `${candidate.first_name} ${candidate.last_name}`,
+        designation: candidate.headline || candidate.designation || 'Job Seeker',
+        experience: experienceDisplay,
+        experienceYears: totalExperienceYears, // Add numeric value for calculations and display
+        location: candidate.current_location || 'Not specified',
+        education: (() => {
+          // Get education from education array or highest_education field
+          if (Array.isArray(education) && education.length > 0) {
+            const firstEdu = education[0];
+            return firstEdu.degree || firstEdu.course || firstEdu.fieldOfStudy || 'Not specified';
           }
-        }
-        
-        // Parse achievements if it's a JSON string
-        let achievementsArray = [];
-        if (exp.achievements) {
-          if (typeof exp.achievements === 'string') {
-            try {
-              achievementsArray = JSON.parse(exp.achievements);
-            } catch (e) {
-              achievementsArray = [];
-            }
-          } else if (Array.isArray(exp.achievements)) {
-            achievementsArray = exp.achievements;
+          if (candidate.highest_education) {
+            return candidate.highest_education;
           }
-        }
-        
-        return {
-          id: exp.id || `exp_${Math.random()}`,
-          title: exp.title || 'Not specified',
-          company: exp.company || 'Not specified',
-          duration: `${startDateStr} - ${endDateStr}`,
-          startDate: startDate,
-          endDate: endDate,
-          isCurrent: isCurrent,
-          location: exp.location || 'Not specified',
-          description: exp.description || '',
-          skills: toArray(skillsArray, []),
-          employmentType: exp.employment_type || 'full-time',
-          salary: exp.salary ? `${exp.salary} ${exp.salary_currency || 'INR'}` : null,
-          achievements: toArray(achievementsArray, [])
-        };
-      }),
-      
-      // Education details - include highest_education and field_of_study from user profile
-      educationDetails: (() => {
-        const eduArray = toArray(education, []);
-        // If no education details from educations table but user has highest_education/field_of_study, create entry
-        if (eduArray.length === 0 && (candidate.highest_education || candidate.field_of_study)) {
-          return [{
-            id: 'profile_education',
-            degree: candidate.highest_education || 'Not specified',
-            institution: 'Not specified',
-            fieldOfStudy: candidate.field_of_study || 'Not specified',
-            duration: 'Not specified',
-            location: 'Not specified',
-            grade: null,
-            percentage: null,
-            cgpa: null
-          }];
-        }
-        return eduArray.map(edu => {
-          // Format degree name properly
-          const formatDegree = (degreeStr) => {
-            if (!degreeStr || degreeStr.toLowerCase() === 'not specified') return '';
-            const deg = String(degreeStr).trim();
-            const degLower = deg.toLowerCase();
-            
-            // Map common variations
-            const degreeMappings = {
-              'bachelor': "Bachelor's Degree",
-              'bachelors': "Bachelor's Degree",
-              'btech': 'B.Tech',
-              'b.tech': 'B.Tech',
-              'be': 'B.E.',
-              'b.e.': 'B.E.',
-              'bsc': 'B.Sc',
-              'b.sc': 'B.Sc',
-              'ba': 'B.A.',
-              'b.a.': 'B.A.',
-              'master': "Master's Degree",
-              'masters': "Master's Degree",
-              'mtech': 'M.Tech',
-              'm.tech': 'M.Tech',
-              'me': 'M.E.',
-              'm.e.': 'M.E.',
-              'msc': 'M.Sc',
-              'm.sc': 'M.Sc',
-              'ma': 'M.A.',
-              'm.a.': 'M.A.',
-              'mba': 'MBA',
-              'phd': 'Ph.D',
-              'ph.d': 'Ph.D',
-              'diploma': 'Diploma',
-              'certification': 'Certification'
-            };
-            
-            // Check exact match
-            if (degreeMappings[degLower]) {
-              return degreeMappings[degLower];
-            }
-            
-            // Check if contains any key
-            for (const [key, value] of Object.entries(degreeMappings)) {
-              if (degLower.includes(key)) {
-                return value;
-              }
-            }
-            
-            // Capitalize properly
-            return deg.split(' ').map(word => 
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
-          };
-          
-          const degreeValue = edu.degree || candidate.highest_education || '';
-          const formattedDegree = formatDegree(degreeValue);
-          const institutionValue = edu.institution || '';
-          const fieldOfStudyValue = edu.field_of_study || candidate.field_of_study || '';
-          const locationValue = edu.location || '';
-          
-          // Build duration string
-          let startYear = '';
-          let endYear = '';
-          if (edu.start_date) {
-            try {
-              const startDate = new Date(edu.start_date);
-              if (!isNaN(startDate.getTime())) {
-                startYear = startDate.getFullYear();
-                    }
-                  } catch (e) {
-              // Ignore invalid dates
-                  }
-                }
-          if (edu.end_date) {
-            try {
-              const endDate = new Date(edu.end_date);
-              if (!isNaN(endDate.getTime())) {
-                endYear = endDate.getFullYear();
-              }
-            } catch (e) {
-              // Ignore invalid dates
-            }
-          } else if (edu.is_current) {
-            endYear = 'Present';
-          }
-          const durationStr = startYear && endYear ? `${startYear} - ${endYear}` : (startYear ? `${startYear} - Present` : '');
-          
-          // Parse relevant courses if it's a JSON string
-          let relevantCourses = [];
-          if (edu.relevant_courses) {
-            if (typeof edu.relevant_courses === 'string') {
+          return 'Not specified';
+        })(),
+        keySkills: (() => {
+          // Combine skills and key_skills arrays
+          const skills = toArray(candidate.skills, []);
+          const keySkills = toArray(candidate.key_skills, []);
+          // Merge and remove duplicates
+          const allSkills = [...new Set([...skills, ...keySkills])];
+          return allSkills.filter(s => s && String(s).trim() !== '');
+        })(),
+        preferredLocations: (() => {
+          const prefLocs = toArray(candidate.preferred_locations, []);
+          if (prefLocs.length > 0) return prefLocs;
+          if (candidate.willing_to_relocate) return ['Open to relocate'];
+          return [candidate.current_location || 'Not specified'];
+        })(),
+        avatar: candidate.avatar || '/placeholder.svg?height=120&width=120',
+        isAttached: true,
+        lastModified: safeDateString(candidate.last_profile_update),
+        activeStatus: safeDateString(candidate.last_login_at),
+        additionalInfo: candidate.summary || 'No summary available',
+        phoneVerified: candidate.is_phone_verified || false,
+        emailVerified: candidate.is_email_verified || false,
+        currentSalary: formatCurrentSalary(),
+        expectedSalary: candidate.expected_salary ? `${candidate.expected_salary} LPA` : 'Not specified',
+        noticePeriod: candidate.notice_period ? `${candidate.notice_period} days` : 'Not specified',
+        profileCompletion: candidate.profile_completion || 0,
+
+        // Contact information
+        email: candidate.email,
+        phone: candidate.phone,
+        linkedin: getProp(candidate.social_links || {}, 'linkedin', null),
+        github: getProp(candidate.social_links || {}, 'github', null),
+        portfolio: getProp(candidate.social_links || {}, 'portfolio', null),
+
+        // Detailed information
+        about: candidate.summary || 'No summary available',
+
+        // Work experience - use actual database column names from query
+        workExperience: toArray(workExperience, []).map(exp => {
+          const startDate = exp.start_date;
+          const endDate = exp.end_date;
+          const isCurrent = exp.is_current || false;
+          const startDateStr = startDate ? safeDateString(startDate) : 'Not specified';
+          const endDateStr = isCurrent ? 'Present' : (endDate ? safeDateString(endDate) : 'Not specified');
+
+          // Parse skills if it's a JSON string
+          let skillsArray = [];
+          if (exp.skills) {
+            if (typeof exp.skills === 'string') {
               try {
-                relevantCourses = JSON.parse(edu.relevant_courses);
+                skillsArray = JSON.parse(exp.skills);
               } catch (e) {
-                relevantCourses = [];
+                skillsArray = [exp.skills];
               }
-            } else if (Array.isArray(edu.relevant_courses)) {
-              relevantCourses = edu.relevant_courses;
+            } else if (Array.isArray(exp.skills)) {
+              skillsArray = exp.skills;
             }
           }
-          
+
+          // Parse achievements if it's a JSON string
+          let achievementsArray = [];
+          if (exp.achievements) {
+            if (typeof exp.achievements === 'string') {
+              try {
+                achievementsArray = JSON.parse(exp.achievements);
+              } catch (e) {
+                achievementsArray = [];
+              }
+            } else if (Array.isArray(exp.achievements)) {
+              achievementsArray = exp.achievements;
+            }
+          }
+
           return {
-            id: edu.id || `edu_${Math.random()}`,
-            degree: formattedDegree,
-            institution: institutionValue,
-            fieldOfStudy: fieldOfStudyValue,
-            duration: durationStr,
-            location: locationValue,
-            grade: edu.grade || null,
-            percentage: edu.percentage || null,
-            cgpa: edu.cgpa || null,
-            relevantCourses: relevantCourses
+            id: exp.id || `exp_${Math.random()}`,
+            title: exp.title || 'Not specified',
+            company: exp.company || 'Not specified',
+            duration: `${startDateStr} - ${endDateStr}`,
+            startDate: startDate,
+            endDate: endDate,
+            isCurrent: isCurrent,
+            location: exp.location || 'Not specified',
+            description: exp.description || '',
+            skills: toArray(skillsArray, []),
+            employmentType: exp.employment_type || 'full-time',
+            salary: exp.salary ? `${exp.salary} ${exp.salary_currency || 'INR'}` : null,
+            achievements: toArray(achievementsArray, [])
           };
-        });
-      })(),
-      
-      // Certifications
-      certifications: toArray(candidate.certifications, []),
-      
-      // Languages
-      languages: toArray(candidate.languages, [
-        { name: "English", proficiency: "Professional" },
-        { name: "Hindi", proficiency: "Native" }
-      ]),
-      
-      // Resume information - return API endpoints instead of absolute file paths
-      resumes: (() => {
-        try {
-          const resumeArray = toArray(resumes, []);
-          console.log(`🔄 Transforming ${resumeArray.length} resumes`);
-          console.log(`🔄 First resume before transform - isDefault: ${resumeArray[0]?.isDefault}, is_primary: ${resumeArray[0]?.is_primary}`);
-          return resumeArray.map((resume, index) => {
-            const metadata = resume.metadata || {};
-            const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
-            const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-            const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
-            const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
-            
-            // Determine if this is the default resume - check multiple possible field names
-            // Backend orders by is_primary DESC, so first resume (index 0) should be default
-            const isDefaultResume = resume.isDefault === true || 
-                                    resume.isDefault === 'true' || 
-                                    resume.is_primary === true || 
-                                    resume.is_primary === 'true' ||
-                                    (index === 0 && resume.is_primary !== false && resume.is_primary !== 'false'); // First resume if ordered by is_primary DESC
-            
-            const transformedResume = {
-              id: resume.id,
-              title: resume.title || 'Resume',
-              filename: filename,
-              fileSize: fileSize,
-              uploadDate: resume.createdAt || resume.created_at,
-              lastUpdated: resume.lastUpdated || resume.updated_at,
-              isDefault: isDefaultResume, // Use camelCase for frontend
-              is_default: isDefaultResume, // Also include snake_case for backward compatibility
-              isPublic: resume.isPublic ?? resume.is_public ?? true,
-              views: resume.views || resume.view_count || 0,
-              downloads: resume.downloads || resume.download_count || 0,
-              summary: resume.summary || '',
-              skills: resume.skills || [],
-              viewUrl,
-              downloadUrl,
-              fileUrl: downloadUrl,
-              metadata: resume.metadata || {}
+        }),
+
+        // Education details - include highest_education and field_of_study from user profile
+        educationDetails: (() => {
+          const eduArray = toArray(education, []);
+          // If no education details from educations table but user has highest_education/field_of_study, create entry
+          if (eduArray.length === 0 && (candidate.highest_education || candidate.field_of_study)) {
+            return [{
+              id: 'profile_education',
+              degree: candidate.highest_education || 'Not specified',
+              institution: 'Not specified',
+              fieldOfStudy: candidate.field_of_study || 'Not specified',
+              duration: 'Not specified',
+              location: 'Not specified',
+              grade: null,
+              percentage: null,
+              cgpa: null
+            }];
+          }
+          return eduArray.map(edu => {
+            // Format degree name properly
+            const formatDegree = (degreeStr) => {
+              if (!degreeStr || degreeStr.toLowerCase() === 'not specified') return '';
+              const deg = String(degreeStr).trim();
+              const degLower = deg.toLowerCase();
+
+              // Map common variations
+              const degreeMappings = {
+                'bachelor': "Bachelor's Degree",
+                'bachelors': "Bachelor's Degree",
+                'btech': 'B.Tech',
+                'b.tech': 'B.Tech',
+                'be': 'B.E.',
+                'b.e.': 'B.E.',
+                'bsc': 'B.Sc',
+                'b.sc': 'B.Sc',
+                'ba': 'B.A.',
+                'b.a.': 'B.A.',
+                'master': "Master's Degree",
+                'masters': "Master's Degree",
+                'mtech': 'M.Tech',
+                'm.tech': 'M.Tech',
+                'me': 'M.E.',
+                'm.e.': 'M.E.',
+                'msc': 'M.Sc',
+                'm.sc': 'M.Sc',
+                'ma': 'M.A.',
+                'm.a.': 'M.A.',
+                'mba': 'MBA',
+                'phd': 'Ph.D',
+                'ph.d': 'Ph.D',
+                'diploma': 'Diploma',
+                'certification': 'Certification'
+              };
+
+              // Check exact match
+              if (degreeMappings[degLower]) {
+                return degreeMappings[degLower];
+              }
+
+              // Check if contains any key
+              for (const [key, value] of Object.entries(degreeMappings)) {
+                if (degLower.includes(key)) {
+                  return value;
+                }
+              }
+
+              // Capitalize properly
+              return deg.split(' ').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              ).join(' ');
             };
-            
-            console.log(`📄 Transformed resume [${index}]:`, transformedResume.id, 'isDefault:', transformedResume.isDefault);
-            return transformedResume;
-          });
-        } catch (resumeErr) {
-          console.error('❌ Resume transformation error:', resumeErr);
-          return [];
-        }
-      })(),
-      
-      // Cover letter information - return API endpoints instead of absolute file paths
-      coverLetters: (() => {
-        try {
-          const coverLetterArray = toArray(coverLetters, []);
-          console.log(`🔄 Transforming ${coverLetterArray.length} cover letters`);
-          return coverLetterArray.map(coverLetter => {
-            const metadata = coverLetter.metadata || {};
-            const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
-            const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
-            const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
-            
-            const transformedCoverLetter = {
-              id: coverLetter.id,
-              title: coverLetter.title || 'Cover Letter',
-              content: coverLetter.content || '',
-              summary: coverLetter.summary || '',
-              filename: filename,
-              fileSize: fileSize,
-              uploadDate: coverLetter.createdAt || coverLetter.createdAt,
-              lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
-              is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
-              isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
-              downloadUrl,
-              fileUrl: downloadUrl,
-              metadata: metadata
+
+            const degreeValue = edu.degree || candidate.highest_education || '';
+            const formattedDegree = formatDegree(degreeValue);
+            const institutionValue = edu.institution || '';
+            const fieldOfStudyValue = edu.field_of_study || candidate.field_of_study || '';
+            const locationValue = edu.location || '';
+
+            // Build duration string
+            let startYear = '';
+            let endYear = '';
+            if (edu.start_date) {
+              try {
+                const startDate = new Date(edu.start_date);
+                if (!isNaN(startDate.getTime())) {
+                  startYear = startDate.getFullYear();
+                }
+              } catch (e) {
+                // Ignore invalid dates
+              }
+            }
+            if (edu.end_date) {
+              try {
+                const endDate = new Date(edu.end_date);
+                if (!isNaN(endDate.getTime())) {
+                  endYear = endDate.getFullYear();
+                }
+              } catch (e) {
+                // Ignore invalid dates
+              }
+            } else if (edu.is_current) {
+              endYear = 'Present';
+            }
+            const durationStr = startYear && endYear ? `${startYear} - ${endYear}` : (startYear ? `${startYear} - Present` : '');
+
+            // Parse relevant courses if it's a JSON string
+            let relevantCourses = [];
+            if (edu.relevant_courses) {
+              if (typeof edu.relevant_courses === 'string') {
+                try {
+                  relevantCourses = JSON.parse(edu.relevant_courses);
+                } catch (e) {
+                  relevantCourses = [];
+                }
+              } else if (Array.isArray(edu.relevant_courses)) {
+                relevantCourses = edu.relevant_courses;
+              }
+            }
+
+            return {
+              id: edu.id || `edu_${Math.random()}`,
+              degree: formattedDegree,
+              institution: institutionValue,
+              fieldOfStudy: fieldOfStudyValue,
+              duration: durationStr,
+              location: locationValue,
+              grade: edu.grade || null,
+              percentage: edu.percentage || null,
+              cgpa: edu.cgpa || null,
+              relevantCourses: relevantCourses
             };
-            
-            console.log(`📝 Transformed cover letter:`, transformedCoverLetter);
-            return transformedCoverLetter;
           });
-        } catch (coverLetterErr) {
-          console.error('❌ Cover letter transformation error:', coverLetterErr);
-          return [];
-        }
-      })()
+        })(),
+
+        // Certifications
+        certifications: toArray(candidate.certifications, []),
+
+        // Languages
+        languages: toArray(candidate.languages, [
+          { name: "English", proficiency: "Professional" },
+          { name: "Hindi", proficiency: "Native" }
+        ]),
+
+        // Resume information - return API endpoints instead of absolute file paths
+        resumes: (() => {
+          try {
+            const resumeArray = toArray(resumes, []);
+            console.log(`🔄 Transforming ${resumeArray.length} resumes`);
+            console.log(`🔄 First resume before transform - isDefault: ${resumeArray[0]?.isDefault}, is_primary: ${resumeArray[0]?.is_primary}`);
+            return resumeArray.map((resume, index) => {
+              const metadata = resume.metadata || {};
+              const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_Resume.pdf`;
+              const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+              const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
+              const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
+
+              // Determine if this is the default resume - check multiple possible field names
+              // Backend orders by is_primary DESC, so first resume (index 0) should be default
+              const isDefaultResume = resume.isDefault === true ||
+                resume.isDefault === 'true' ||
+                resume.is_primary === true ||
+                resume.is_primary === 'true' ||
+                (index === 0 && resume.is_primary !== false && resume.is_primary !== 'false'); // First resume if ordered by is_primary DESC
+
+              const transformedResume = {
+                id: resume.id,
+                title: resume.title || 'Resume',
+                filename: filename,
+                fileSize: fileSize,
+                uploadDate: resume.createdAt || resume.created_at,
+                lastUpdated: resume.lastUpdated || resume.updated_at,
+                isDefault: isDefaultResume, // Use camelCase for frontend
+                is_default: isDefaultResume, // Also include snake_case for backward compatibility
+                isPublic: resume.isPublic ?? resume.is_public ?? true,
+                views: resume.views || resume.view_count || 0,
+                downloads: resume.downloads || resume.download_count || 0,
+                summary: resume.summary || '',
+                skills: resume.skills || [],
+                viewUrl,
+                downloadUrl,
+                fileUrl: downloadUrl,
+                metadata: resume.metadata || {}
+              };
+
+              console.log(`📄 Transformed resume [${index}]:`, transformedResume.id, 'isDefault:', transformedResume.isDefault);
+              return transformedResume;
+            });
+          } catch (resumeErr) {
+            console.error('❌ Resume transformation error:', resumeErr);
+            return [];
+          }
+        })(),
+
+        // Cover letter information - return API endpoints instead of absolute file paths
+        coverLetters: (() => {
+          try {
+            const coverLetterArray = toArray(coverLetters, []);
+            console.log(`🔄 Transforming ${coverLetterArray.length} cover letters`);
+            return coverLetterArray.map(coverLetter => {
+              const metadata = coverLetter.metadata || {};
+              const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
+              const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
+              const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
+
+              const transformedCoverLetter = {
+                id: coverLetter.id,
+                title: coverLetter.title || 'Cover Letter',
+                content: coverLetter.content || '',
+                summary: coverLetter.summary || '',
+                filename: filename,
+                fileSize: fileSize,
+                uploadDate: coverLetter.createdAt || coverLetter.createdAt,
+                lastUpdated: coverLetter.lastUpdated || coverLetter.last_updated,
+                is_default: coverLetter.isDefault ?? coverLetter.is_default ?? false,
+                isPublic: coverLetter.isPublic ?? coverLetter.is_public ?? true,
+                downloadUrl,
+                fileUrl: downloadUrl,
+                metadata: metadata
+              };
+
+              console.log(`📝 Transformed cover letter:`, transformedCoverLetter);
+              return transformedCoverLetter;
+            });
+          } catch (coverLetterErr) {
+            console.error('❌ Cover letter transformation error:', coverLetterErr);
+            return [];
+          }
+        })()
       };
-      
+
       console.log(`📄 Transformed candidate resumes:`, JSON.stringify(transformedCandidate.resumes, null, 2));
       console.log(`📝 Transformed candidate cover letters:`, JSON.stringify(transformedCandidate.coverLetters, null, 2));
     } catch (transformErr) {
@@ -4112,15 +4083,15 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
               const viewUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/view`;
               const downloadUrl = `/api/requirements/${requirement.id}/candidates/${candidate.id}/resume/${resume.id}/download`;
-              
+
               // Determine if this is the default resume - check multiple possible field names
               // Backend orders by is_primary DESC, so first resume (index 0) should be default
-              const isDefaultResume = resume.isDefault === true || 
-                                      resume.isDefault === 'true' || 
-                                      resume.is_primary === true || 
-                                      resume.is_primary === 'true' ||
-                                      (index === 0 && resume.is_primary !== false && resume.is_primary !== 'false'); // First resume if ordered by is_primary DESC
-              
+              const isDefaultResume = resume.isDefault === true ||
+                resume.isDefault === 'true' ||
+                resume.is_primary === true ||
+                resume.is_primary === 'true' ||
+                (index === 0 && resume.is_primary !== false && resume.is_primary !== 'false'); // First resume if ordered by is_primary DESC
+
               return {
                 id: resume.id,
                 title: resume.title || 'Resume',
@@ -4154,7 +4125,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
               const filename = metadata.originalName || metadata.filename || `${candidate.first_name}_${candidate.last_name}_CoverLetter.pdf`;
               const fileSize = metadata.fileSize ? `${(metadata.fileSize / 1024 / 1024).toFixed(1)} MB` : 'Unknown size';
               const downloadUrl = `/api/cover-letters/${coverLetter.id}/download`;
-              
+
               return {
                 id: coverLetter.id,
                 title: coverLetter.title || 'Cover Letter',
@@ -4178,7 +4149,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         })()
       };
     }
-    
+
     // Check if candidate is already shortlisted for this requirement
     let isShortlisted = false;
     try {
@@ -4190,11 +4161,11 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           source: 'requirement_shortlist'
         }
       });
-      
+
       if (existingShortlist && existingShortlist.metadata) {
         try {
-          const metadata = typeof existingShortlist.metadata === 'string' 
-            ? JSON.parse(existingShortlist.metadata) 
+          const metadata = typeof existingShortlist.metadata === 'string'
+            ? JSON.parse(existingShortlist.metadata)
             : existingShortlist.metadata;
           isShortlisted = metadata.requirementId === requirementId && existingShortlist.status === 'shortlisted';
         } catch (parseError) {
@@ -4204,16 +4175,16 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     } catch (shortlistError) {
       console.warn('⚠️ Could not check shortlist status:', shortlistError.message);
     }
-    
+
     // Add shortlist status to candidate data
     transformedCandidate.isShortlisted = isShortlisted;
-    
+
     // Track profile view for this requirement (if not already tracked)
     // CRITICAL: Update existing views without jobId to include requirementId
     try {
       const { ViewTracking } = require('../config/index');
       const ViewTrackingService = require('../services/viewTrackingService');
-      
+
       // CRITICAL: Due to unique constraint on (viewer_id, viewed_user_id, view_type),
       // there can only be ONE view per viewer/candidate/viewType combination.
       // So we need to find ANY existing view and update it to include this requirementId.
@@ -4225,19 +4196,19 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
           viewType: 'profile_view'
         }
       });
-      
+
       if (anyExistingView) {
         // View exists - update it to include this requirementId
         const existingMetadata = anyExistingView.metadata || {};
-        const existingRequirementIds = Array.isArray(existingMetadata.requirementIds) 
-          ? [...existingMetadata.requirementIds] 
+        const existingRequirementIds = Array.isArray(existingMetadata.requirementIds)
+          ? [...existingMetadata.requirementIds]
           : [];
-        
+
         // Add this requirementId if not already present
         if (!existingRequirementIds.includes(requirementId)) {
           existingRequirementIds.push(requirementId);
         }
-        
+
         // NOTE: Don't update jobId - it has a foreign key constraint to jobs table, not requirements
         // Store requirementId only in metadata, and queries check metadata.requirementId
         await anyExistingView.update({
@@ -4256,7 +4227,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         console.log(`✅ Updated existing view with requirementId ${requirementId} (total requirements: ${existingRequirementIds.length})`);
       } else {
         // No existing view, create new one
-          const result = await ViewTrackingService.trackView({
+        const result = await ViewTrackingService.trackView({
           viewerId: req.user.id,
           viewedUserId: candidateId,
           jobId: null, // Don't store requirementId in jobId - foreign key constraint to jobs table
@@ -4273,7 +4244,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
             requirementIds: [requirementId]
           }
         });
-        
+
         if (result.success) {
           console.log(`✅ Profile view tracked for candidate ${candidateId} from requirement ${requirementId}`);
         } else {
@@ -4284,7 +4255,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       console.warn('⚠️ Failed to track profile view:', viewError?.message || viewError);
       // Don't fail the request if view tracking fails
     }
-    
+
     return res.status(200).json({
       success: true,
       data: {
@@ -4295,7 +4266,7 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
         }
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Error fetching candidate profile:', error);
     console.error('❌ Error details:', {
@@ -4311,14 +4282,14 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
       let requirement = null;
       try {
         requirement = await Requirement.findByPk(requirementId);
-      } catch (_) {}
+      } catch (_) { }
 
       let candidate = null;
       try {
         candidate = await User.findByPk(candidateId, {
           attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'avatar', 'current_location', 'headline', 'summary']
         });
-      } catch (_) {}
+      } catch (_) { }
 
       if (candidate) {
         return res.status(200).json({
@@ -4355,8 +4326,8 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch candidate profile',
-      error: { 
-        name: error?.name, 
+      error: {
+        name: error?.name,
         message: error?.message,
         details: error?.errors || error?.stack
       }
@@ -4368,48 +4339,48 @@ router.get('/:requirementId/candidates/:candidateId', authenticateToken, async (
 router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId } = req.params;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can shortlist candidates.' });
     }
-    
+
     // Verify the requirement belongs to the employer's company
     const requirement = await Requirement.findOne({
-      where: { 
+      where: {
         id: requirementId,
         companyId: req.user.companyId || req.user.companyId
       }
     });
-    
+
     if (!requirement) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Requirement not found or access denied'
       });
     }
-    
+
     // Verify candidate exists
     const candidate = await User.findOne({
-      where: { 
+      where: {
         id: candidateId,
         user_type: 'jobseeker',
         is_active: true,
         account_status: 'active'
       }
     });
-    
+
     if (!candidate) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Candidate not found'
       });
     }
-    
+
     // Create a virtual job application for this requirement shortlisting
     // This allows the candidate to appear in the shortlisted page
     const { JobApplication, Job } = require('../config/index');
-    
+
     // Check if there's already a shortlist entry for this candidate and requirement
     // Use raw query for metadata search since Sequelize doesn't handle nested JSON queries well
     const existingShortlist = await JobApplication.findOne({
@@ -4419,35 +4390,35 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
         source: 'requirement_shortlist'
       }
     });
-    
+
     // Check if the metadata contains the requirementId
     let isExistingForRequirement = false;
     if (existingShortlist && existingShortlist.metadata) {
       try {
-        const metadata = typeof existingShortlist.metadata === 'string' 
-          ? JSON.parse(existingShortlist.metadata) 
+        const metadata = typeof existingShortlist.metadata === 'string'
+          ? JSON.parse(existingShortlist.metadata)
           : existingShortlist.metadata;
         isExistingForRequirement = metadata.requirementId === requirementId;
       } catch (parseError) {
         console.warn('⚠️ Could not parse metadata:', parseError.message);
       }
     }
-    
+
     if (existingShortlist && isExistingForRequirement) {
       // Toggle shortlist status
       const previousStatus = existingShortlist.status;
       const newStatus = previousStatus === 'shortlisted' ? 'applied' : 'shortlisted';
-      await existingShortlist.update({ 
+      await existingShortlist.update({
         status: newStatus,
         updated_at: new Date()
       });
-      
+
       console.log(`✅ Candidate ${candidateId} ${newStatus === 'shortlisted' ? 'shortlisted' : 'unshortlisted'} by employer ${req.user.id} for requirement ${requirementId}`);
-      
+
       // Handle notifications based on status change
       try {
         const NotificationService = require('../services/notificationService');
-        
+
         if (newStatus === 'shortlisted') {
           // Send notification when shortlisting
           await NotificationService.sendShortlistingNotification(
@@ -4481,7 +4452,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
         console.error('Failed to handle shortlisting notification:', notificationError);
         // Don't fail the shortlisting if notification fails
       }
-      
+
       return res.status(200).json({
         success: true,
         message: newStatus === 'shortlisted' ? 'Candidate shortlisted successfully' : 'Candidate removed from shortlist',
@@ -4548,7 +4519,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
           }
         });
       }
-      
+
       console.log(`✅ Candidate ${candidateId} shortlisted by employer ${req.user.id} for requirement ${requirementId}`);
 
       // Log candidate shortlisting activity
@@ -4590,7 +4561,7 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
         console.error('Failed to send shortlisting notification:', notificationError);
         // Don't fail the shortlisting if notification fails
       }
-      
+
       return res.status(200).json({
         success: true,
         message: 'Candidate shortlisted successfully',
@@ -4602,14 +4573,14 @@ router.post('/:requirementId/candidates/:candidateId/shortlist', authenticateTok
         }
       });
     }
-    
+
   } catch (error) {
     console.error('❌ Error shortlisting candidate:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to shortlist candidate',
-      error: { 
-        name: error?.name, 
+      error: {
+        name: error?.name,
         message: error?.message
       }
     });
@@ -4621,44 +4592,44 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
   try {
     const { requirementId, candidateId } = req.params;
     const { message, subject } = req.body;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied. Only employers and admins can contact candidates.' });
     }
-    
+
     // Verify the requirement belongs to the employer's company
     const requirement = await Requirement.findOne({
-      where: { 
+      where: {
         id: requirementId,
-        companyId: req.user.companyId 
+        companyId: req.user.companyId
       }
     });
-    
+
     if (!requirement) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Requirement not found or access denied'
       });
     }
-    
+
     // Verify candidate exists
     const candidate = await User.findOne({
-      where: { 
+      where: {
         id: candidateId,
         user_type: 'jobseeker',
         is_active: true,
         account_status: 'active'
       }
     });
-    
+
     if (!candidate) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Candidate not found'
       });
     }
-    
+
     // Create or find conversation between employer and candidate
     let conversation = await Conversation.findOne({
       where: {
@@ -4686,7 +4657,7 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
 
     // Create the message
     const messageContent = `Subject: ${subject || 'Job Opportunity'}\n\n${message || 'No message provided'}`;
-    
+
     const newMessage = await Message.create({
       conversationId: conversation.id,
       senderId: req.user.id,
@@ -4712,7 +4683,7 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
     console.log(`📧 Subject: ${subject || 'Job Opportunity'}`);
     console.log(`📧 Message: ${message || 'No message provided'}`);
     console.log(`💬 Conversation ID: ${conversation.id}, Message ID: ${newMessage.id}`);
-    
+
     return res.status(200).json({
       success: true,
       message: 'Message sent successfully',
@@ -4726,14 +4697,14 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
         message: message || 'No message provided'
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Error contacting candidate:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to send contact request',
-      error: { 
-        name: error?.name, 
+      error: {
+        name: error?.name,
         message: error?.message
       }
     });
@@ -4744,44 +4715,44 @@ router.post('/:requirementId/candidates/:candidateId/contact', authenticateToken
 router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', attachTokenFromQuery, authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId, resumeId } = req.params;
-    
+
     // Check if user is an employer
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only employers can view candidate resumes.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers can view candidate resumes.'
       });
     }
-    
+
     // Verify requirement: admins can access any requirement; employers must own it
     const requirement = await Requirement.findOne({
-      where: req.user.user_type === 'admin' 
+      where: req.user.user_type === 'admin'
         ? { id: requirementId }
         : { id: requirementId, companyId: req.user.companyId }
     });
-    
+
     if (!requirement) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Requirement not found or access denied'
       });
     }
-    
+
     // Get the resume
     const resume = await Resume.findOne({
-      where: { 
+      where: {
         id: resumeId,
         userId: candidateId
       }
     });
-    
+
     if (!resume) {
       return res.status(404).json({
         success: false,
         message: 'Resume not found'
       });
     }
-    
+
     // Increment view count
     await resume.update({
       views: resume.views + 1
@@ -4831,15 +4802,15 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', atta
       console.error('Failed to log resume view activity:', activityError);
       // Don't fail the view if activity logging fails
     }
-    
+
     // Get file path for serving the PDF
     const metadata = resume.metadata || {};
     const filename = metadata.filename || metadata.originalName || `resume-${resume.id}.pdf`;
     const originalName = metadata.originalName || filename;
-    
+
     console.log('🔍 Resume metadata:', JSON.stringify(metadata, null, 2));
     console.log('🔍 Filename from metadata:', filename);
-    
+
     // Try to find the file
     let filePath = null;
     const possiblePaths = [
@@ -4856,7 +4827,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', atta
       `/var/tmp/uploads/resumes/${filename}`,
       `/var/tmp/uploads/${filename}`
     ];
-    
+
     // Check each possible path
     for (const testPath of possiblePaths) {
       if (testPath && fs.existsSync(testPath)) {
@@ -4864,7 +4835,7 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', atta
         break;
       }
     }
-    
+
     if (!filePath) {
       console.log('❌ File does not exist in any of the expected locations');
       console.log('🔍 Checked paths:', possiblePaths);
@@ -4902,14 +4873,14 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/view', atta
         });
       }
     }
-    
+
     console.log('✅ File found at:', filePath);
-    
+
     // Set headers for PDF viewing (inline display)
     res.setHeader('Content-Disposition', `inline; filename="${originalName || filename}"`);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-    
+
     // Send file
     console.log('📤 Sending file for view:', filePath);
     res.sendFile(filePath);
@@ -4929,7 +4900,7 @@ function attachTokenFromQuery(req, _res, next) {
     const qToken = req.query && (req.query.token || req.query.access_token);
     console.log('🔍 attachTokenFromQuery - Query token:', qToken ? 'Present' : 'Missing');
     console.log('🔍 attachTokenFromQuery - Existing auth header:', req.headers?.authorization ? 'Present' : 'Missing');
-    
+
     if (!req.headers?.authorization && qToken) {
       req.headers.authorization = `Bearer ${qToken}`;
       console.log('✅ attachTokenFromQuery - Added token to headers');
@@ -4946,39 +4917,39 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     const { requirementId, candidateId, resumeId } = req.params;
     console.log('🔍 Download request - requirementId:', requirementId, 'candidateId:', candidateId, 'resumeId:', resumeId);
     console.log('🔍 Download request - user:', req.user?.email, req.user?.user_type);
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       console.log('❌ Download request - Access denied for user type:', req.user.user_type);
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only employers and admins can download candidate resumes.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only employers and admins can download candidate resumes.'
       });
     }
-    
+
     // Verify requirement: admins can access any requirement; employers must own it
     const requirement = await Requirement.findOne({
-      where: req.user.user_type === 'admin' 
+      where: req.user.user_type === 'admin'
         ? { id: requirementId }
         : { id: requirementId, companyId: req.user.companyId }
     });
-    
+
     if (!requirement) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Requirement not found or access denied'
       });
     }
-    
+
     // Get the resume
     console.log('🔍 Looking for resume with ID:', resumeId, 'for candidate:', candidateId);
     const resume = await Resume.findOne({
-      where: { 
+      where: {
         id: resumeId,
         userId: candidateId
       }
     });
-    
+
     if (!resume) {
       console.log('❌ Resume not found for ID:', resumeId, 'candidate:', candidateId);
       return res.status(404).json({
@@ -4986,17 +4957,17 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
         message: 'Resume not found'
       });
     }
-    
+
     console.log('✅ Resume found:', resume.id, 'filename:', resume.metadata?.filename);
     console.log('🔍 Full resume data:', JSON.stringify(resume.dataValues, null, 2));
     const metadata = resume.metadata || {};
     console.log('🔍 Resume metadata:', JSON.stringify(metadata, null, 2));
     const filename = metadata.filename || metadata.originalName || metadata.original_name || `resume-${resume.id}.pdf`;
     const originalName = metadata.originalName || metadata.original_name || filename;
-    
+
     console.log('🔍 Filename resolved:', filename);
     console.log('🔍 Original name resolved:', originalName);
-    
+
     // Try multiple possible file paths
     let filePath;
     const possiblePaths = [
@@ -5020,10 +4991,10 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
     ].filter(Boolean);
 
     console.log('🔍 Trying possible file paths:', possiblePaths);
-    
+
     // Find the first existing file
     filePath = possiblePaths.find(p => fs.existsSync(p));
-    
+
     if (!filePath) {
       console.log('❌ File does not exist in any of the expected locations');
       console.log('🔍 Checked paths:', possiblePaths);
@@ -5066,9 +5037,9 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
         });
       }
     }
-    
+
     console.log('✅ File found at:', filePath);
-    
+
     // Increment download count
     await resume.update({
       downloads: resume.downloads + 1
@@ -5118,11 +5089,11 @@ router.get('/:requirementId/candidates/:candidateId/resume/:resumeId/download', 
       console.error('Failed to log resume download activity:', activityError);
       // Don't fail the download if activity logging fails
     }
-    
+
     // Set headers for file download
     res.setHeader('Content-Disposition', `attachment; filename="${originalName || filename}"`);
     res.setHeader('Content-Type', metadata.mimeType || 'application/octet-stream');
-    
+
     // Send file
     console.log('📤 Sending file:', filePath);
     res.sendFile(filePath);
@@ -5142,10 +5113,10 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
   try {
     const requirementId = req.params.id;
     const { candidateIds, page = 1, limit = 20, processAll = false } = req.body;
-    
+
     console.log(`🎯 ATS calculation requested for requirement ${requirementId}`);
     console.log(`📄 Pagination params: page=${page}, limit=${limit}, processAll=${processAll}`);
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
@@ -5153,29 +5124,29 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         message: 'Access denied. Only employers can calculate ATS scores.'
       });
     }
-    
+
     // Verify requirement ownership
     const requirement = await Requirement.findOne({
-      where: req.user.user_type === 'admin' 
+      where: req.user.user_type === 'admin'
         ? { id: requirementId }
         : { id: requirementId, companyId: req.user.companyId }
     });
-    
+
     if (!requirement) {
       return res.status(404).json({
         success: false,
         message: 'Requirement not found or access denied'
       });
     }
-    
+
     // Import pooling service
     const atsPoolingService = require('../services/atsPoolingService');
-    
+
     let targetCandidateIds = candidateIds;
     let totalCandidates = 0;
     let hasMorePages = false;
-    
-        if (processAll) {
+
+    if (processAll) {
       // Get all candidate IDs for the requirement
       console.log('📋 Fetching ALL candidates for requirement (processAll=true)...');
       const allCandidatesData = await atsPoolingService.getAllCandidateIdsForRequirement(
@@ -5183,13 +5154,13 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         page,
         limit
       );
-      
+
       targetCandidateIds = allCandidatesData.candidateIds;
       totalCandidates = allCandidatesData.totalCandidates;
       hasMorePages = allCandidatesData.hasMorePages;
-      
+
       console.log(`📊 Found ${totalCandidates} total candidates, processing page ${page} with ${targetCandidateIds.length} candidates`);
-        } else {
+    } else {
       // Process only current page candidates
       if (!targetCandidateIds || targetCandidateIds.length === 0) {
         // Get candidates for current page using the same logic as candidates endpoint
@@ -5198,41 +5169,41 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
           page,
           limit
         );
-        
+
         targetCandidateIds = allCandidatesData.candidateIds;
         totalCandidates = allCandidatesData.totalCandidates;
         hasMorePages = allCandidatesData.hasMorePages;
-        
+
         console.log(`📄 Processing current page ${page}: ${targetCandidateIds.length} candidates`);
-    } else {
+      } else {
         // Validate provided candidates
-      const validatedCandidates = await User.findAll({
-        where: {
-          id: { [Op.in]: candidateIds },
-          user_type: 'jobseeker',
-          account_status: 'active',
-          is_active: true
-        },
-        attributes: ['id']
-      });
-      
-      targetCandidateIds = validatedCandidates.map(c => c.id);
-      totalCandidates = targetCandidateIds.length;
-      
-      console.log(`✅ Validated ${targetCandidateIds.length} candidates for ATS calculation`);
+        const validatedCandidates = await User.findAll({
+          where: {
+            id: { [Op.in]: candidateIds },
+            user_type: 'jobseeker',
+            account_status: 'active',
+            is_active: true
+          },
+          attributes: ['id']
+        });
+
+        targetCandidateIds = validatedCandidates.map(c => c.id);
+        totalCandidates = targetCandidateIds.length;
+
+        console.log(`✅ Validated ${targetCandidateIds.length} candidates for ATS calculation`);
       }
     }
-    
+
     if (targetCandidateIds.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No candidates found for this requirement'
       });
     }
-    
+
     console.log(`📊 Starting STREAMING ATS calculation for ${targetCandidateIds.length} candidates`);
     console.log(`🔧 Using intelligent pooling with max ${atsPoolingService.CONFIG.MAX_CANDIDATES_PER_BATCH} concurrent requests`);
-    
+
     // Return immediately with streaming configuration
     // The frontend will then call individual candidate endpoints
     return res.status(200).json({
@@ -5257,7 +5228,7 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('❌ ATS calculate error:', error);
     return res.status(500).json({
@@ -5272,9 +5243,9 @@ router.post('/:id/calculate-ats', authenticateToken, async (req, res) => {
 router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticateToken, async (req, res) => {
   try {
     const { requirementId, candidateId } = req.params;
-    
+
     console.log(`🎯 Individual ATS calculation: ${candidateId} for requirement ${requirementId}`);
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
@@ -5282,21 +5253,21 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
         message: 'Access denied. Only employers can calculate ATS scores.'
       });
     }
-    
+
     // Verify requirement ownership
     const requirement = await Requirement.findOne({
-      where: req.user.user_type === 'admin' 
+      where: req.user.user_type === 'admin'
         ? { id: requirementId }
         : { id: requirementId, companyId: req.user.companyId }
     });
-    
+
     if (!requirement) {
       return res.status(404).json({
         success: false,
         message: 'Requirement not found or access denied'
       });
     }
-    
+
     // Verify candidate exists and is active
     const candidate = await User.findOne({
       where: {
@@ -5306,20 +5277,20 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
         is_active: true
       }
     });
-    
+
     if (!candidate) {
       return res.status(404).json({
         success: false,
         message: 'Candidate not found or inactive'
       });
     }
-    
+
     // Import ATS service
     const atsService = require('../services/atsService');
-    
+
     // Calculate ATS score for this specific candidate
     console.log(`🚀 Calculating ATS score for candidate ${candidateId}...`);
-    
+
     let atsResult;
     try {
       atsResult = await atsService.calculateATSScore(candidateId, requirementId);
@@ -5334,10 +5305,10 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
       console.error('❌ ATS service error:', atsError);
       throw atsError;
     }
-    
+
     if (atsResult && atsResult.atsScore !== undefined) {
       console.log(`✅ ATS score calculated for ${candidateId}: ${atsResult.atsScore}`);
-      
+
       return res.status(200).json({
         success: true,
         message: 'ATS score calculated successfully',
@@ -5356,7 +5327,7 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
       });
     } else {
       console.log(`❌ ATS calculation failed for ${candidateId}: Invalid result structure`);
-      
+
       return res.status(500).json({
         success: false,
         message: 'ATS calculation failed for this candidate',
@@ -5367,7 +5338,7 @@ router.post('/:requirementId/calculate-candidate-ats/:candidateId', authenticate
         }
       });
     }
-    
+
   } catch (error) {
     console.error('❌ Individual ATS calculation error:', error);
     return res.status(500).json({

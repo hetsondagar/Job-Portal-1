@@ -343,6 +343,7 @@ export default function ManageJobsPage() {
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="paused">Paused</SelectItem>
                     <SelectItem value="closed">Closed</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline">

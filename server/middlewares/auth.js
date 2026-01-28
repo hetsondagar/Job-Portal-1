@@ -4,34 +4,25 @@ const { User } = require('../models');
 const authenticateToken = async (req, res, next) => {
   try {
     console.log('🔍 [AUTH] Starting authentication for:', req.path);
-    
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
     if (!token) {
       console.log('❌ [AUTH] No token provided');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Access token required' 
+      return res.status(401).json({
+        success: false,
+        message: 'Access token required'
       });
     }
 
     console.log('🔍 [AUTH] Verifying JWT token...');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    // Removed insecure fallback secret
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('✅ [AUTH] JWT token verified, user ID:', decoded.id);
-    
-    console.log('🔍 [AUTH] Fetching user from database...');
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] }
-    });
 
-    // Check session version for token invalidation
-    if (decoded.sessionVersion && user.session_version && decoded.sessionVersion !== user.session_version) {
-      console.log('❌ [AUTH] Session version mismatch - token invalidated');
-      return res.status(401).json({
-        success: false,
-        message: 'Session expired. Please log in again.'
-      });
-    }
+    console.log('🔍 [AUTH] Fetching user from database...');
+    const user = await User.findByPk(decoded.id);
 
     if (!user) {
       console.log('❌ [AUTH] User not found in database');
@@ -41,19 +32,28 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // Check session version for token invalidation
+    if (decoded.sessionVersion !== undefined && user.session_version !== undefined && decoded.sessionVersion !== user.session_version) {
+      console.log('❌ [AUTH] Session version mismatch - token invalidated');
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please log in again.'
+      });
+    }
+
     if (!user.is_active) {
       console.log('❌ [AUTH] User account is inactive');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Account is deactivated' 
+      return res.status(401).json({
+        success: false,
+        message: 'Account is deactivated'
       });
     }
 
     // Check account status for suspended users
     if (user.account_status === 'suspended') {
       console.log('❌ [AUTH] User account is suspended');
-      return res.status(403).json({ 
-        success: false, 
+      return res.status(403).json({
+        success: false,
         message: 'Your account has been suspended. Please contact support for assistance.',
         status: 'suspended'
       });
@@ -61,8 +61,8 @@ const authenticateToken = async (req, res, next) => {
 
     if (user.account_status === 'deleted') {
       console.log('❌ [AUTH] User account is deleted');
-      return res.status(403).json({ 
-        success: false, 
+      return res.status(403).json({
+        success: false,
         message: 'Account not found or has been deleted.',
         status: 'deleted'
       });
@@ -70,44 +70,40 @@ const authenticateToken = async (req, res, next) => {
 
     if (user.account_status === 'inactive') {
       console.log('❌ [AUTH] User account is inactive due to inactivity');
-      return res.status(403).json({ 
-        success: false, 
+      return res.status(403).json({
+        success: false,
         message: 'Your account has been marked as inactive due to prolonged inactivity. Please log in to reactivate your account.',
         status: 'inactive'
       });
     }
 
     console.log('✅ [AUTH] User authenticated successfully:', { id: user.id, type: user.user_type });
-    req.user = {
-      id: user.id,
-      email: user.email,
-      user_type: user.user_type,
-      region: user.region
-    };
+    // Set req.user to the full Sequelize instance for compatibility
+    req.user = user;
     next();
   } catch (error) {
     console.error('❌ [AUTH] Authentication error:', error);
-    
+
     if (error.name === 'JsonWebTokenError') {
       console.log('❌ [AUTH] Invalid JWT token');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid token' 
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
       });
     }
-    
+
     if (error.name === 'TokenExpiredError') {
       console.log('❌ [AUTH] Token expired');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token expired' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
       });
     }
 
     console.log('❌ [AUTH] General authentication failure');
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Authentication failed' 
+    return res.status(500).json({
+      success: false,
+      message: 'Authentication failed'
     });
   }
 };

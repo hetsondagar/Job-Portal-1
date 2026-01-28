@@ -90,6 +90,20 @@ export default function EmployerLoginPage() {
       } catch {
         // ignore and show login form
       }
+      
+      // Load saved credentials if available
+      try {
+        const savedEmail = localStorage.getItem('employer_saved_email')
+        const savedPassword = localStorage.getItem('employer_saved_password')
+        if (savedEmail && savedPassword) {
+          setEmail(savedEmail)
+          setPassword(savedPassword)
+          setRememberMe(true)
+        }
+      } catch (e) {
+        // LocalStorage might not be available
+      }
+      
       setChecking(false)
     }
     checkAlreadyLoggedIn()
@@ -112,6 +126,22 @@ export default function EmployerLoginPage() {
       console.log('✅ Login result:', result)
       console.log('👤 User data:', result?.user)
       console.log('🎯 User type:', result?.user?.userType)
+      
+      // Save or clear credentials based on rememberMe checkbox
+      try {
+        if (rememberMe) {
+          localStorage.setItem('employer_saved_email', email)
+          localStorage.setItem('employer_saved_password', password)
+          console.log('💾 Credentials saved to localStorage')
+        } else {
+          localStorage.removeItem('employer_saved_email')
+          localStorage.removeItem('employer_saved_password')
+          console.log('🗑️ Credentials cleared from localStorage')
+        }
+      } catch (e) {
+        // LocalStorage might not be available
+        console.log('⚠️ Could not access localStorage')
+      }
       
       // Check if user is an employer or admin and redirect accordingly
       if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {

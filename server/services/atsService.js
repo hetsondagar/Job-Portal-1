@@ -547,10 +547,16 @@ async function calculateRuleBasedATSScore(candidate, resumeContent, requirement)
   const gaps = [];
   
   // Extract requirement skills from the requirement object directly
-  // Use skills field (maps to required_skills), fallback to keySkills (maps to preferred_skills)
-  const requirementSkills = (requirement.skills && requirement.skills.length > 0) 
+  // Use skills field (maps to required_skills), fallback to keySkills (maps to preferred_skills), then check metadata
+  let requirementSkills = (requirement.skills && requirement.skills.length > 0) 
     ? requirement.skills 
     : (requirement.keySkills || []);
+  
+  // If no skills found in main fields, check metadata (includeSkills)
+  if (requirementSkills.length === 0 && requirement.metadata && requirement.metadata.includeSkills) {
+    requirementSkills = requirement.metadata.includeSkills;
+    console.log('📌 Using skills from metadata.includeSkills:', requirementSkills);
+  }
   
   // Extract candidate skills from both profile and resume content
   let candidateSkills = candidate.skills || [];

@@ -9,7 +9,9 @@ const { sequelize } = require('../config/sequelize');
 const { Op } = require('sequelize');
 const emailService = require('../services/emailService');
 const AdminNotificationService = require('../services/adminNotificationService');
-const { trackLogin, trackLogout } = require('../middleware/activityTracker');
+const { trackLogin, trackLogout } = require('../middlewares/activityTracker');
+
+const { authenticateToken } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -158,18 +160,18 @@ const validateResetPassword = [
 const generateToken = (user) => {
   console.log('🔍 [LOGIN] Generating JWT token for user:', user.email);
   console.log('🔍 [LOGIN] Using JWT secret:', process.env.JWT_SECRET ? 'Present' : 'Using default');
-  
+
   const token = jwt.sign(
-    { 
-      id: user.id, 
-      email: user.email, 
+    {
+      id: user.id,
+      email: user.email,
       userType: user.user_type,
       sessionVersion: user.session_version || 1
     },
     process.env.JWT_SECRET || 'your-secret-key',
     { expiresIn: '7d' }
   );
-  
+
   console.log('✅ [LOGIN] JWT token generated successfully');
   return token;
 };
@@ -185,7 +187,7 @@ const getRedirectUrl = (userType, region, company = null) => {
       effectiveRegion = 'gulf';
     }
   }
-  
+
   if (userType === 'superadmin') {
     return '/admin/dashboard';
   } else if (userType === 'employer' || userType === 'admin') {
@@ -204,7 +206,7 @@ const getRedirectUrl = (userType, region, company = null) => {
 router.post('/signup', validateSignup, async (req, res) => {
   try {
     console.log('🔍 Signup request received:', req.body);
-    
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -234,7 +236,7 @@ router.post('/signup', validateSignup, async (req, res) => {
 
     // Determine region - default to 'india' if not specified
     const userRegion = region || 'india';
-    
+
     // Create new user
     console.log('📝 Creating user with data:', {
       email,
@@ -245,7 +247,7 @@ router.post('/signup', validateSignup, async (req, res) => {
       account_status: 'active',
       region: userRegion
     });
-    
+
     const user = await User.create({
       email,
       password,
@@ -264,7 +266,7 @@ router.post('/signup', validateSignup, async (req, res) => {
         ...req.body.preferences
       }
     });
-    
+
     console.log('✅ User created successfully:', user.id);
 
     // Check for jobseeker milestones and create notifications
@@ -309,7 +311,7 @@ router.post('/signup', validateSignup, async (req, res) => {
 router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
   try {
     console.log('🔍 Employer signup request received:', req.body);
-    
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -322,29 +324,29 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
     }
 
     const { email, password, fullName, companyName, companyId, phone, companySize, industries, website, region, role, companyAccountType } = req.body;
-    
+
     // When joining existing company, industries can be empty - will use company's industries
     // When creating new company, industries are required
     let finalIndustries = industries;
-    
+
     if (companyId) {
       // Joining existing company - fetch company industries if not provided
       const existingCompanyCheck = await Company.findByPk(companyId);
       if (existingCompanyCheck) {
         // Use company's existing industries if none provided
         if (!industries || !Array.isArray(industries) || industries.length === 0) {
-          finalIndustries = existingCompanyCheck.industries || existingCompanyCheck.industry ? 
-            (Array.isArray(existingCompanyCheck.industries) ? existingCompanyCheck.industries : 
-             [existingCompanyCheck.industry || existingCompanyCheck.industries].filter(Boolean)) : 
+          finalIndustries = existingCompanyCheck.industries || existingCompanyCheck.industry ?
+            (Array.isArray(existingCompanyCheck.industries) ? existingCompanyCheck.industries :
+              [existingCompanyCheck.industry || existingCompanyCheck.industries].filter(Boolean)) :
             ['Other'];
         }
       } else {
         // Company doesn't exist yet, require industries
-    if (!industries || !Array.isArray(industries) || industries.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one industry must be selected'
-      });
+        if (!industries || !Array.isArray(industries) || industries.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'At least one industry must be selected'
+          });
         }
       }
     } else {
@@ -356,30 +358,30 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         });
       }
     }
-    
+
     // Use the first industry as the primary industry for backward compatibility
     const primaryIndustry = finalIndustries[0];
 
     // Check if user already exists and handle re-registration for rejected accounts
     const existingUser = await User.findOne({ where: { email } });
     let existingCompany = null;
-    
+
     if (existingUser) {
       // Check if the user's company is rejected OR user account is rejected - allow re-registration
       existingCompany = await Company.findByPk(existingUser.companyId);
-      
+
       // Allow re-registration if:
       // 1. Company verification is rejected
       // 2. User account is rejected  
       // 3. User account is pending verification (in case of incomplete registration)
       // 4. Company verification is pending (incomplete registration)
       const allowReRegistration = (
-        (existingCompany && existingCompany.verificationStatus === 'rejected') || 
+        (existingCompany && existingCompany.verificationStatus === 'rejected') ||
         existingUser.account_status === 'rejected' ||
         existingUser.account_status === 'pending_verification' ||
         (existingCompany && existingCompany.verificationStatus === 'pending')
       );
-      
+
       if (allowReRegistration) {
         console.log('🔄 Allowing re-registration for user:', email, 'Status:', existingUser.account_status, 'Company status:', existingCompany?.verificationStatus);
         // Continue with registration - will update existing company
@@ -408,10 +410,10 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, '')
           .substring(0, 50);
-        
+
         let slug = baseSlug;
         let counter = 1;
-        
+
         // Check if slug exists and generate unique one
         while (true) {
           const existingCompanyWithSlug = await Company.findOne({ where: { slug } });
@@ -421,7 +423,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           slug = `${baseSlug}-${counter}`;
           counter++;
         }
-        
+
         return slug;
       };
 
@@ -432,11 +434,11 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         if (!company) {
           throw new Error('Company not found');
         }
-        
+
         // Check if company is unclaimed (created by agency)
         if (!company.isClaimed && company.createdByAgencyId) {
           console.log('🔓 Claiming unclaimed company:', company.name);
-          
+
           // Update company as claimed
           company.isClaimed = true;
           company.claimedAt = new Date();
@@ -445,23 +447,23 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           company.contactPhone = phone;
           company.email = email;
           company.phone = phone;
-          
+
           // Note: Don't set claimedByUserId yet - will be set after user creation
           await company.save({ transaction });
-          
+
           console.log('✅ Company claimed successfully by actual owner');
         } else {
           console.log('✅ Joining existing company:', company.id);
         }
       } else {
         // Handle new company creation or re-registration
-        
+
         if (existingUser && existingUser.companyId) {
           // Update existing company for re-registration
           company = await Company.findByPk(existingUser.companyId, { transaction });
           if (company && company.verificationStatus === 'rejected') {
             console.log('🔄 Updating rejected company for re-registration:', company.name);
-            
+
             // Clean up old verification documents if they exist
             if (company.verificationDocuments && company.verificationDocuments.length > 0) {
               console.log('🗑️ Cleaning up old verification documents for company:', company.id);
@@ -469,7 +471,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
                 const fs = require('fs');
                 const path = require('path');
                 const uploadDir = path.join(__dirname, '../uploads/verification-documents');
-                
+
                 // Delete old document files
                 for (const doc of company.verificationDocuments) {
                   if (doc.filename) {
@@ -485,7 +487,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
                 // Don't fail the registration if document cleanup fails
               }
             }
-            
+
             await company.update({
               name: companyName,
               industries: finalIndustries,
@@ -505,7 +507,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             }, { transaction });
           }
         }
-        
+
         if (!company) {
           // Create new company record
           const companySlug = await generateSlug(companyName);
@@ -530,7 +532,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             claimedAt: new Date()
           }, { transaction });
         }
-        
+
         console.log('✅ Company created/updated successfully:', company?.id);
       }
 
@@ -542,21 +544,21 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
       // Determine user type and designation based on whether they're creating a new company or joining existing one
       const userType = companyId ? 'employer' : 'admin'; // New company = admin, existing company = employer
       const designation = companyId ? 'Recruiter' : 'Hiring Manager'; // Set proper designation
-      
+
       // Create or update employer user
       let user;
-      
+
       const allowUserUpdate = (
-        (existingUser && existingCompany?.verificationStatus === 'rejected') || 
+        (existingUser && existingCompany?.verificationStatus === 'rejected') ||
         (existingUser && existingUser.account_status === 'rejected') ||
         (existingUser && existingUser.account_status === 'pending_verification') ||
         (existingUser && existingCompany?.verificationStatus === 'pending')
       );
-      
+
       if (existingUser && allowUserUpdate) {
         // Update existing user for re-registration
         console.log('🔄 Updating existing user for re-registration:', email);
-        
+
         // If user account was rejected, also clean up company documents
         if (existingUser.account_status === 'rejected' && company && company.verificationDocuments && company.verificationDocuments.length > 0) {
           console.log('🗑️ Cleaning up old verification documents for rejected user account:', email);
@@ -564,7 +566,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             const fs = require('fs');
             const path = require('path');
             const uploadDir = path.join(__dirname, '../uploads/verification-documents');
-            
+
             // Delete old document files
             for (const doc of company.verificationDocuments) {
               if (doc.filename) {
@@ -575,7 +577,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
                 }
               }
             }
-            
+
             // Clear documents from company record
             await company.update({
               verificationDocuments: [],
@@ -587,7 +589,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
             // Don't fail the registration if document cleanup fails
           }
         }
-        
+
         await existingUser.update({
           password,
           first_name: firstName,
@@ -615,7 +617,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           account_status: 'active',
           company_id: company.id
         });
-        
+
         user = await User.create({
           email,
           password,
@@ -635,7 +637,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
           }
         }, { transaction });
       }
-      
+
       console.log('✅ Employer user created successfully:', user.id);
 
       // If this was a company claiming (unclaimed company joined), update claimedByUserId
@@ -703,7 +705,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Employer signup error:', error);
-    
+
     // Handle specific database errors
     if (error.name === 'SequelizeUniqueConstraintError') {
       const field = error.errors[0]?.path;
@@ -719,7 +721,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
         });
       }
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -732,7 +734,7 @@ router.post('/employer-signup', validateEmployerSignup, async (req, res) => {
 router.post('/login', validateLogin, async (req, res) => {
   try {
     console.log('🔍 Login request received:', req.body);
-    
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -789,7 +791,7 @@ router.post('/login', validateLogin, async (req, res) => {
         status: 'pending_verification'
       });
     }
-    
+
     if (user.account_status === 'rejected') {
       console.log('❌ Account rejected:', user.account_status);
       return res.status(403).json({
@@ -799,7 +801,7 @@ router.post('/login', validateLogin, async (req, res) => {
         redirectTo: '/employer-register'
       });
     }
-    
+
     if (user.account_status !== 'active') {
       console.log('❌ Account not active:', user.account_status);
       return res.status(401).json({
@@ -868,7 +870,7 @@ router.post('/login', validateLogin, async (req, res) => {
     // Validate login type if specified
     if (loginType) {
       console.log('🔍 Validating login type:', { loginType, userType: user.user_type });
-      
+
       if (loginType === 'employer' && user.user_type === 'jobseeker') {
         console.log('❌ Jobseeker trying to login through employer login');
         return res.status(403).json({
@@ -877,7 +879,7 @@ router.post('/login', validateLogin, async (req, res) => {
           redirectTo: '/login'
         });
       }
-      
+
       if (loginType === 'jobseeker' && (user.user_type === 'employer' || user.user_type === 'admin' || user.user_type === 'superadmin')) {
         console.log('❌ Employer/Admin/Superadmin trying to login through jobseeker login');
         return res.status(403).json({
@@ -886,7 +888,7 @@ router.post('/login', validateLogin, async (req, res) => {
           redirectTo: '/employer-login'
         });
       }
-      
+
       if (loginType === 'employer' && user.user_type === 'superadmin') {
         console.log('❌ Superadmin trying to login through employer login');
         return res.status(403).json({
@@ -895,9 +897,9 @@ router.post('/login', validateLogin, async (req, res) => {
           redirectTo: '/admin-login'
         });
       }
-      
+
       // Validate admin login - only allow admin and superadmin users
-      if (loginType === 'admin'  && user.user_type !== 'superadmin') {
+      if (loginType === 'admin' && user.user_type !== 'superadmin') {
         console.log('❌ Non-admin user trying to login through admin login:', user.user_type);
         return res.status(403).json({
           success: false,
@@ -925,13 +927,13 @@ router.post('/login', validateLogin, async (req, res) => {
 
     // Prepare response data
     const userRegions = user.preferences?.regions || [user.region].filter(Boolean);
-    
+
     // Get company info early for redirect determination
     let company = null;
     if ((user.user_type === 'employer' || user.user_type === 'admin') && user.company_id) {
       company = await Company.findByPk(user.company_id);
     }
-    
+
     const responseData = {
       user: {
         id: user.id,
@@ -973,7 +975,7 @@ router.post('/login', validateLogin, async (req, res) => {
     // Create greeting notification for first-time login
     try {
       const { Notification } = require('../config/index');
-      
+
       // Check if this is the first login (no previous notifications)
       const existingNotifications = await Notification.count({
         where: { userId: user.id }
@@ -1009,7 +1011,7 @@ router.post('/login', validateLogin, async (req, res) => {
         };
 
         const greeting = greetingMessages[user.user_type] || greetingMessages.jobseeker;
-        
+
         await Notification.create({
           userId: user.id,
           type: 'system',
@@ -1046,28 +1048,9 @@ router.post('/login', validateLogin, async (req, res) => {
 });
 
 // Get current user profile
-router.get('/me', async (req, res) => {
+router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    const user = req.user;
 
     // Map user data to frontend format (camelCase)
     const userRegions = user.preferences?.regions || [user.region].filter(Boolean);
@@ -1104,7 +1087,7 @@ router.get('/me', async (req, res) => {
         message: 'Invalid token'
       });
     }
-    
+
     console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
@@ -1120,7 +1103,7 @@ router.post('/logout', async (req, res) => {
     if (req.user) {
       await trackLogout(req.user.id, req);
     }
-    
+
     res.status(200).json({
       success: true,
       message: 'Logged out successfully'
@@ -1135,26 +1118,9 @@ router.post('/logout', async (req, res) => {
 });
 
 // Refresh token endpoint
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', authenticateToken, async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findByPk(decoded.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    const user = req.user;
 
     // Generate new token
     const newToken = generateToken(user);
@@ -1219,7 +1185,7 @@ router.post('/forgot-password', validateForgotPassword, async (req, res) => {
     try {
       const userName = user.first_name || user.email.split('@')[0];
       console.log(`📧 Scheduling password reset email for: ${user.email}`);
-      
+
       // Fire-and-forget: do not await to prevent UI hanging on slow SMTP
       Promise.resolve()
         .then(() => {
@@ -1345,29 +1311,29 @@ router.post('/test-email', async (req, res) => {
   try {
     const { email } = req.body;
     const testEmail = email || 'test@example.com';
-    
+
     console.log(`🧪 Testing email service with: ${testEmail}`);
-    
+
     const result = await emailService.sendPasswordResetEmail(
-      testEmail, 
-      'test-token-' + Date.now(), 
+      testEmail,
+      'test-token-' + Date.now(),
       'Test User'
     );
-    
+
     console.log('📧 Test email result:', result);
-    
-    res.json({ 
-      success: true, 
-      message: 'Test email sent successfully', 
+
+    res.json({
+      success: true,
+      message: 'Test email sent successfully',
       result,
-      testEmail 
+      testEmail
     });
   } catch (error) {
     console.error('❌ Test email failed:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Test email failed', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Test email failed',
+      error: error.message
     });
   }
 });
@@ -1376,18 +1342,18 @@ router.post('/test-email', async (req, res) => {
 router.post('/check-existing-user', async (req, res) => {
   try {
     const { email, password, requestingRegion } = req.body;
-    
+
     console.log('🔍 Checking existing user for cross-portal signup:', { email, requestingRegion });
-    
+
     if (!email || !password || !requestingRegion) {
       return res.status(400).json({
         success: false,
         message: 'Email, password, and requesting region are required'
       });
     }
-    
+
     const existingUser = await User.findOne({ where: { email } });
-    
+
     if (!existingUser) {
       // User doesn't exist, proceed with normal registration
       return res.status(200).json({
@@ -1396,17 +1362,17 @@ router.post('/check-existing-user', async (req, res) => {
         message: 'User does not exist. Proceed with normal registration.'
       });
     }
-    
+
     // User exists, check if password is correct
     const isValidPassword = await existingUser.comparePassword(password);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
         message: 'Invalid password. Please enter the correct password.'
       });
     }
-    
+
     // Check if user already has access to the requesting region
     const userRegions = existingUser.preferences?.regions || [];
     if (userRegions.includes(requestingRegion)) {
@@ -1415,11 +1381,11 @@ router.post('/check-existing-user', async (req, res) => {
         message: `You already have access to ${requestingRegion === 'gulf' ? 'Gulf' : 'India'} portal.`
       });
     }
-    
+
     // Generate OTP
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    
+
     // Store OTP in user preferences temporarily
     if (!existingUser.preferences) {
       existingUser.preferences = {};
@@ -1430,7 +1396,7 @@ router.post('/check-existing-user', async (req, res) => {
       region: requestingRegion
     };
     await existingUser.save();
-    
+
     // Send OTP email
     try {
       await emailService.sendOTPEmail(existingUser.email, otp);
@@ -1439,7 +1405,7 @@ router.post('/check-existing-user', async (req, res) => {
       console.error('❌ Failed to send OTP email:', emailError);
       // Don't fail the request, just log the error
     }
-    
+
     return res.status(200).json({
       success: true,
       userExists: true,
@@ -1450,7 +1416,7 @@ router.post('/check-existing-user', async (req, res) => {
         firstName: existingUser.first_name
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Check existing user error:', error);
     res.status(500).json({
@@ -1465,42 +1431,42 @@ router.post('/check-existing-user', async (req, res) => {
 router.post('/verify-otp-and-register', async (req, res) => {
   try {
     const { userId, otp, requestingRegion } = req.body;
-    
+
     console.log('🔍 Verifying OTP for cross-portal registration:', { userId, requestingRegion });
-    
+
     if (!userId || !otp || !requestingRegion) {
       return res.status(400).json({
         success: false,
         message: 'User ID, OTP, and requesting region are required'
       });
     }
-    
+
     const user = await User.findByPk(userId);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
-    
+
     // Check OTP
     const storedOTP = user.preferences?.crossPortalOTP;
-    
+
     if (!storedOTP) {
       return res.status(400).json({
         success: false,
         message: 'OTP not found. Please request a new OTP.'
       });
     }
-    
+
     if (storedOTP.code !== otp) {
       return res.status(401).json({
         success: false,
         message: 'Invalid OTP. Please try again.'
       });
     }
-    
+
     // Check if OTP has expired
     if (new Date(storedOTP.expires) < new Date()) {
       return res.status(401).json({
@@ -1508,7 +1474,7 @@ router.post('/verify-otp-and-register', async (req, res) => {
         message: 'OTP has expired. Please request a new OTP.'
       });
     }
-    
+
     // Check if OTP is for the correct region
     if (storedOTP.region !== requestingRegion) {
       return res.status(400).json({
@@ -1516,13 +1482,13 @@ router.post('/verify-otp-and-register', async (req, res) => {
         message: 'Invalid region for this OTP.'
       });
     }
-    
+
     // Grant access to the new region
     const userRegions = user.preferences?.regions || [];
     if (!userRegions.includes(requestingRegion)) {
       userRegions.push(requestingRegion);
     }
-    
+
     // Update user preferences using raw SQL for proper JSONB handling
     const updatedPreferences = {
       ...user.preferences,
@@ -1530,28 +1496,28 @@ router.post('/verify-otp-and-register', async (req, res) => {
     };
     // Remove crossPortalOTP from the object
     delete updatedPreferences.crossPortalOTP;
-    
+
     await sequelize.query(
       `UPDATE users SET preferences = :prefs::jsonb WHERE id = :userId`,
       {
-        replacements: { 
+        replacements: {
           prefs: JSON.stringify(updatedPreferences),
           userId: user.id
         },
         type: sequelize.QueryTypes.UPDATE
       }
     );
-    
+
     // Refresh user to get updated preferences
     user = await User.findByPk(userId);
-    
+
     console.log('✅ User preferences updated:', user.preferences);
-    
+
     console.log('✅ User registered for cross-portal access:', { userId, region: requestingRegion });
-    
+
     // Generate JWT token
     const token = generateToken(user);
-    
+
     return res.status(200).json({
       success: true,
       message: `Successfully registered for ${requestingRegion === 'gulf' ? 'Gulf' : 'India'} portal!`,
@@ -1570,7 +1536,7 @@ router.post('/verify-otp-and-register', async (req, res) => {
         token
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Verify OTP and register error:', error);
     res.status(500).json({

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { GulfEmployerNavbar } from "@/components/gulf-employer-navbar"
 import { EmployerFooter } from "@/components/employer-footer"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { apiService } from "@/lib/api"
 import IndustryDropdown from "@/components/ui/industry-dropdown"
 import DepartmentDropdown from "@/components/ui/department-dropdown"
@@ -56,7 +56,6 @@ const normalizeLocations = (values: string[]): string[] => {
 
 export default function GulfCreateRequirementPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [currentSkill, setCurrentSkill] = useState("")
   const [currentIncludeSkill, setCurrentIncludeSkill] = useState("")
@@ -261,10 +260,8 @@ export default function GulfCreateRequirementPage() {
     if (!formData.description.trim()) missing.push('Job Description')
     if (!formData.location.trim()) missing.push('Location')
     if (missing.length > 0) {
-      toast({
-        title: 'Missing required fields',
-        description: `Please fill: ${missing.join(', ')}`,
-        variant: 'destructive'
+      toast.error('Missing required fields', {
+        description: `Please fill: ${missing.join(', ')}`
       })
       return
     }
@@ -326,17 +323,14 @@ export default function GulfCreateRequirementPage() {
 
       const createdId = response.data?.id || response.data?.data?.id || ''
       setIsLoading(false)
-      toast({
-        title: "Requirement Created",
+      toast.success("✅ Gulf Requirement Created", {
         description: createdId ? `Your Gulf requirement has been created successfully. ID: ${createdId}` : 'Your Gulf requirement has been created successfully.',
       })
       router.push(createdId ? `/gulf-dashboard/requirements/${createdId}/candidates` : '/gulf-dashboard/requirements')
     } catch (error: any) {
       console.error('❌ Error creating Gulf requirement:', error?.message || error)
-      toast({
-        title: "Error",
+      toast.error("❌ Creation Failed", {
         description: error?.message || "Failed to create requirement. Please try again.",
-        variant: "destructive",
       })
     } finally {
       setIsLoading(false)

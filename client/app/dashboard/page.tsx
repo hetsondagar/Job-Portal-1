@@ -106,12 +106,10 @@ export default function DashboardPage() {
           const currentSession = user.lastLoginAt
           const now = new Date()
           
-          // Only honor skip if it's the SAME login session
+          // Only honor skip if it's the SAME login session AND timestamp hasn't expired
           if (skipSession === currentSession && skipUntil > now) {
             console.log('⏰ Profile completion skipped until:', skipUntil, '(same session)')
             return false // Don't show dialog yet
-          } else if (skipSession !== currentSession) {
-            console.log('🔄 New login session detected - showing popup again')
           }
         }
         
@@ -140,13 +138,6 @@ export default function DashboardPage() {
       setProfileCheckDone(true)
     }
   }, [user, loading, profileCheckDone])
-  
-  // Reset profile check when user updates (after skip or completion)
-  useEffect(() => {
-    if (user) {
-      setProfileCheckDone(false)
-    }
-  }, [user])
 
   // Single useEffect to handle all data fetching with proper debouncing
   useEffect(() => {

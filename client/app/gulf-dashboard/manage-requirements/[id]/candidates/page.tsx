@@ -1288,7 +1288,7 @@ export default function CandidatesPage() {
                             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${candidate.likedByCurrent ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                           >
                             <svg className={`w-3.5 h-3.5 ${candidate.likedByCurrent ? 'fill-green-600 text-green-600' : 'text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 5l7 12H5l7-12z"/></svg>
-                            <span>{candidate.likeCount ?? 0}</span>
+                            {(candidate.likeCount ?? 0) > 0 && <span>{candidate.likeCount}</span>}
                           </button>
                     </div>
                   </div>

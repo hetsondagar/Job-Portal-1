@@ -1571,8 +1571,10 @@ export function EmployerProfileCompletionDialog({
     }
     
     // If dialog is being closed, trigger skip logic (12 hour snooze)
-    if (!open) {
+    if (!open && isOpen) {
+      console.log('📌 User closed dialog - triggering snooze');
       await handleSkip()
+      return; // Don't call onClose() again, handleSkip already does it
     }
     
     console.log('✅ Dialog close allowed');

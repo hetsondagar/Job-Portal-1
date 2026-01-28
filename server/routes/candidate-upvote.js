@@ -67,6 +67,8 @@ router.get('/:candidateId', authenticateToken, async (req, res) => {
 router.post('/:candidateId', authenticateToken, ensureEmployer, async (req, res) => {
 	try {
 		const { candidateId } = req.params;
+		const { requirementId } = req.body;
+		
 		if (candidateId === req.user.id) {
 			return res.status(400).json({ success: false, message: 'Cannot like your own profile' });
 		}
@@ -75,14 +77,20 @@ router.post('/:candidateId', authenticateToken, ensureEmployer, async (req, res)
 		if (!candidate || candidate.user_type !== 'jobseeker') {
 			return res.status(404).json({ success: false, message: 'Candidate not found' });
 		}
+		
+		// Create like with requirement ID if provided
 		const [like, created] = await CandidateLike.findOrCreate({
-			where: { employerId: req.user.id, candidateId },
-			defaults: { employerId: req.user.id, candidateId }
+			where: requirementId 
+				? { employerId: req.user.id, candidateId, requirementId }
+				: { employerId: req.user.id, candidateId },
+			defaults: requirementId 
+				? { employerId: req.user.id, candidateId, requirementId }
+				: { employerId: req.user.id, candidateId }
 		});
 
 		// Record jobseeker activity without revealing employer identity
 		try {
-			await DashboardService.recordActivity(candidateId, 'profile_like', { source: 'employer' });
+			await DashboardService.recordActivity(candidateId, 'profile_like', { source: 'employer', requirementId });
 			await Notification.create({
 				userId: candidateId,
 				type: 'profile_view',
@@ -90,12 +98,12 @@ router.post('/:candidateId', authenticateToken, ensureEmployer, async (req, res)
 				message: 'Someone upvoted your profile.',
 				priority: 'medium',
 				icon: 'arrow-up',
-				metadata: { event: 'profile_like' }
+				metadata: { event: 'profile_like', requirementId }
 			});
 		} catch (activityErr) {
 			console.warn('Failed to record profile_like activity:', activityErr?.message || activityErr);
 		}
-		return res.json({ success: true, data: { liked: true, created } });
+		return res.json({ success: true, data: { saved: true, requirementId, created } });
 	} catch (error) {
 		console.error('Error liking candidate:', error);
 		return res.status(500).json({ success: false, message: 'Failed to like candidate' });
@@ -106,8 +114,14 @@ router.post('/:candidateId', authenticateToken, ensureEmployer, async (req, res)
 router.delete('/:candidateId', authenticateToken, ensureEmployer, async (req, res) => {
 	try {
 		const { candidateId } = req.params;
-		const deleted = await CandidateLike.destroy({ where: { employerId: req.user.id, candidateId } });
-		return res.json({ success: true, data: { liked: false, deleted: deleted > 0 } });
+		const { requirementId } = req.query;
+		
+		const whereClause = requirementId 
+			? { employerId: req.user.id, candidateId, requirementId }
+			: { employerId: req.user.id, candidateId };
+		
+		const deleted = await CandidateLike.destroy({ where: whereClause });
+		return res.json({ success: true, data: { removed: deleted > 0, requirementId } });
 	} catch (error) {
 		console.error('Error unliking candidate:', error);
 		return res.status(500).json({ success: false, message: 'Failed to unlike candidate' });

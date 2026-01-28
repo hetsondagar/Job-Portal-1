@@ -830,26 +830,39 @@ export default function HomePage() {
         console.log('💼 Jobs API response:', jobsResp)
         const list = Array.isArray((jobsResp as any)?.data?.rows) ? (jobsResp as any).data.rows : (Array.isArray((jobsResp as any)?.data) ? (jobsResp as any).data : [])
         console.log(`✅ Found ${list.length} jobs`)
-        const mappedJobs = list.map((j: any) => ({
-          id: j.id,
-          title: j.title,
-          company: j.companyName || j.company?.name || '',
-          location: j.location || j.city || j.state || j.country || '—',
-          experience: j.experienceLevel || [j.experienceMin, j.experienceMax].filter(Boolean).join('-'),
-          salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax}` : ''),
-          type: j.jobType || j.type || 'Full-time',
-          skills: Array.isArray(j.skills) ? j.skills : [],
-          logo: j.company?.logo || j.companyLogo || '/placeholder.svg?height=40&width=40',
-          posted: j.createdAt || '',
-          applicationDeadline: j.applicationDeadline || j.validTill || j.createdAt || '',
-          applicants: j.applications || 0,
-          urgent: j.isUrgent || j.is_urgent || false,
-          sector: 'technology',
-          // Hot Vacancy Premium Features
-          isHotVacancy: j.isHotVacancy || j.ishotvacancy || false,
-          urgentHiring: j.urgentHiring || j.urgenthiring || false,
-          superFeatured: j.superFeatured || j.superfeatured || false,
-        }))
+        const now = new Date()
+        const mappedJobs = list
+          .map((j: any) => ({
+            id: j.id,
+            title: j.title,
+            company: j.companyName || j.company?.name || '',
+            location: j.location || j.city || j.state || j.country || '—',
+            experience: j.experienceLevel || [j.experienceMin, j.experienceMax].filter(Boolean).join('-'),
+            salary: j.salary || (j.salaryMin && j.salaryMax ? `${j.salaryMin}-${j.salaryMax}` : ''),
+            type: j.jobType || j.type || 'Full-time',
+            skills: Array.isArray(j.skills) ? j.skills : [],
+            logo: j.company?.logo || j.companyLogo || '/placeholder.svg?height=40&width=40',
+            posted: j.createdAt || '',
+            applicationDeadline: j.applicationDeadline || j.validTill || j.createdAt || '',
+            applicants: j.applications || 0,
+            urgent: j.isUrgent || j.is_urgent || false,
+            sector: 'technology',
+            // Hot Vacancy Premium Features
+            isHotVacancy: j.isHotVacancy || j.ishotvacancy || false,
+            urgentHiring: j.urgentHiring || j.urgenthiring || false,
+            superFeatured: j.superFeatured || j.superfeatured || false,
+          }))
+          .filter((j: any) => {
+            // Filter out expired jobs (where deadline is in the past)
+            if (j.applicationDeadline) {
+              const deadline = new Date(j.applicationDeadline)
+              if (deadline < now) {
+                console.log(`⏰ Filtering out expired job: ${j.title} (deadline: ${j.applicationDeadline})`)
+                return false
+              }
+            }
+            return true
+          })
         setFeaturedJobs(mappedJobs)
         setTrendingJobRoles([])
         setStats((prev) => [

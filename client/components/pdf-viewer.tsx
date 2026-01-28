@@ -61,6 +61,9 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
         });
         
         if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('NO_RESUME_FOUND');
+          }
           throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
         }
         
@@ -169,11 +172,17 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
         {error && (
           <div className="flex items-center justify-center h-full bg-gray-50">
             <div className="text-center p-8">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-8 h-8 text-red-600" />
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-yellow-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">PDF Preview Not Available</h3>
-              <p className="text-sm text-gray-600">Unable to load PDF preview. Please use the View CV button below to view the resume.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {error === 'NO_RESUME_FOUND' ? 'No Resume Found' : 'PDF Preview Not Available'}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {error === 'NO_RESUME_FOUND' 
+                  ? 'No resume has been uploaded for this candidate.' 
+                  : 'Unable to load PDF preview. Please use the View CV button below to view the resume.'}
+              </p>
             </div>
           </div>
         )}
@@ -210,7 +219,7 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
               </div>
             )}
             
-            {/* PDF Container - exactly one page with scrollbar for multi-page */}
+            {/* PDF Container - responsive height with max-height */}
             <div 
               className="relative w-full"
               style={{ 
@@ -218,28 +227,29 @@ export function PDFViewer({ pdfUrl, className = '' }: PDFViewerProps) {
                 padding: '0',
                 margin: '0',
                 width: '100%',
-                height: '1050px',
-                maxHeight: '1050px',
+                minHeight: 'clamp(500px, 60vh, 900px)',
+                maxHeight: '90vh',
                 overflow: 'hidden',
                 position: 'relative',
                 border: '1px solid #e5e7eb',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                aspectRatio: '8.5 / 11' // Standard letter aspect ratio
               }}
             >
-              {/* Use iframe - fixed to one page height, PDF scrolls internally */}
+              {/* Use iframe - responsive sizing */}
                 <iframe
                   src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&zoom=${zoomLevel}`}
                   title="Resume Preview"
                   style={{ 
                     width: '100%',
-                  height: '1050px',
+                    height: '100%',
                     border: 'none',
                     outline: 'none',
                     display: 'block',
-                  background: '#ffffff',
-                  backgroundColor: '#ffffff',
-                  padding: '0',
-                  margin: '0'
+                    background: '#ffffff',
+                    backgroundColor: '#ffffff',
+                    padding: '0',
+                    margin: '0'
                 }}
                 allow="fullscreen"
               />

@@ -30,6 +30,8 @@ const JobTemplate = require('../models/JobTemplate');
 
 
 
+const { authenticateToken } = require('../middlewares/auth');
+
 const router = express.Router();
 
 
@@ -38,9 +40,9 @@ const router = express.Router();
 
 router.get('/health', (req, res) => {
 
-  res.json({ 
+  res.json({
 
-    status: 'ok', 
+    status: 'ok',
 
     service: 'bulk-import',
 
@@ -124,69 +126,7 @@ const upload = multer({
 
 
 
-// Middleware to verify JWT token
 
-const authenticateToken = async (req, res, next) => {
-
-  try {
-
-    const authHeader = req.headers['authorization'];
-
-    const token = authHeader && authHeader.split(' ')[1];
-
-
-
-    if (!token) {
-
-      return res.status(401).json({
-
-        success: false,
-
-        message: 'Access token required'
-
-      });
-
-    }
-
-
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-
-    const user = await User.findByPk(decoded.id);
-
-
-
-    if (!user) {
-
-      return res.status(404).json({
-
-        success: false,
-
-        message: 'User not found'
-
-      });
-
-    }
-
-
-
-    req.user = user;
-
-    next();
-
-  } catch (error) {
-
-    return res.status(401).json({
-
-      success: false,
-
-      message: 'Invalid token'
-
-    });
-
-  }
-
-};
 
 
 
@@ -442,8 +382,8 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 
     console.log('📊 Request URL:', req.url);
 
-    
-    
+
+
     // Safely extract form data with fallbacks
 
     const importName = req.body?.importName || '';
@@ -488,8 +428,8 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 
     let parsedValidationRules = {};
 
-    
-    
+
+
     try {
 
       parsedDefaultValues = defaultValues ? JSON.parse(defaultValues) : {};
@@ -502,8 +442,8 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 
     }
 
-    
-    
+
+
     try {
 
       parsedMappingConfig = mappingConfig ? JSON.parse(mappingConfig) : {};
@@ -516,8 +456,8 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 
     }
 
-    
-    
+
+
     try {
 
       parsedValidationRules = validationRules ? JSON.parse(validationRules) : {};
@@ -601,16 +541,16 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 
     console.error('Error stack:', error.stack);
 
-    
-    
+
+
     // Determine appropriate status code
 
     let statusCode = 500;
 
     let errorMessage = 'Failed to create bulk import';
 
-    
-    
+
+
     if (error.name === 'ValidationError') {
 
       statusCode = 400;
@@ -631,8 +571,8 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 
     }
 
-    
-    
+
+
     res.status(statusCode).json({
 
       success: false,
@@ -870,7 +810,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // Prioritize user's company_id first
     const userCompanyId = req.user.company_id || req.user.companyId;
-    
+
     const importRecord = await BulkJobImport.findOne({
       where: {
         id: id,
@@ -899,7 +839,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         },
         limit: 1000 // Safety limit
       });
-      
+
       if (jobsToDelete.length > 0) {
         console.log(`🗑️ Deleting ${jobsToDelete.length} jobs associated with bulk import ${id}`);
         for (const job of jobsToDelete) {
@@ -972,7 +912,7 @@ router.delete('/', authenticateToken, async (req, res) => {
           },
           limit: 1000
         });
-        
+
         for (const job of jobsToDelete) {
           await job.destroy();
           deletedJobsCount++;
@@ -1018,17 +958,17 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
 
     const { type } = req.params;
 
-    
-    
+
+
     // Create template based on type
 
     const template = createJobTemplate(type);
 
-    
+
     // CRITICAL: Double-check that no hot vacancy fields are present before generating template
     const finalTemplate = filterHotVacancyFields(template);
-    
-    
+
+
     if (type === 'csv') {
 
       // Generate CSV file
@@ -1037,8 +977,8 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
 
       res.setHeader('Content-Disposition', `attachment; filename="job-import-template.csv"`);
 
-      
-      
+
+
       // Convert template to CSV
 
       const csvContent = convertToCSV(finalTemplate);
@@ -1052,8 +992,8 @@ router.get('/template/:type', authenticateToken, async (req, res) => {
 
       res.setHeader('Content-Disposition', `attachment; filename="job-import-template-${type}.xlsx"`);
 
-      
-      
+
+
       const workbook = xlsx.utils.book_new();
 
       const worksheet = xlsx.utils.json_to_sheet(finalTemplate);
@@ -1096,34 +1036,34 @@ function parseSalaryFields(record) {
   if (record.salary && typeof record.salary === 'string') {
     // Remove currency symbols and extra spaces
     const cleanSalary = record.salary.replace(/[₹,]/g, '').trim();
-    
+
     // Check if it's in LPA format (contains "LPA" or "lpa")
     const isLPAFormat = /lpa/i.test(cleanSalary);
-    
+
     // Extract numbers from range like "30-40" or "3000000-4000000"
     const salaryMatch = cleanSalary.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
-    
-      if (salaryMatch) {
-        let min = parseFloat(salaryMatch[1]);
-        let max = parseFloat(salaryMatch[2]);
-        
-        // Determine if numbers are in LPA or raw rupees
-        // If contains "LPA" OR numbers are small (< 1000), assume LPA format
-        if (isLPAFormat || (min < 1000 && max < 1000)) {
-          // Convert LPA to actual rupees (multiply by 100000)
-          salaryMin = min * 100000;
-          salaryMax = max * 100000;
-          // Format for display (in LPA) - already in LPA format
-          formattedSalary = `${min}-${max} LPA`;
-        } else {
-          // Already in rupees, use as-is, but format display in LPA
-          salaryMin = min;
-          salaryMax = max;
-          // Convert to LPA for display
-          const minLPA = (min / 100000).toFixed(0);
-          const maxLPA = (max / 100000).toFixed(0);
-          formattedSalary = `${minLPA}-${maxLPA} LPA`;
-        }
+
+    if (salaryMatch) {
+      let min = parseFloat(salaryMatch[1]);
+      let max = parseFloat(salaryMatch[2]);
+
+      // Determine if numbers are in LPA or raw rupees
+      // If contains "LPA" OR numbers are small (< 1000), assume LPA format
+      if (isLPAFormat || (min < 1000 && max < 1000)) {
+        // Convert LPA to actual rupees (multiply by 100000)
+        salaryMin = min * 100000;
+        salaryMax = max * 100000;
+        // Format for display (in LPA) - already in LPA format
+        formattedSalary = `${min}-${max} LPA`;
+      } else {
+        // Already in rupees, use as-is, but format display in LPA
+        salaryMin = min;
+        salaryMax = max;
+        // Convert to LPA for display
+        const minLPA = (min / 100000).toFixed(0);
+        const maxLPA = (max / 100000).toFixed(0);
+        formattedSalary = `${minLPA}-${maxLPA} LPA`;
+      }
     } else {
       // Single value
       const singleValue = parseFloat(cleanSalary.replace(/[^\d.]/g, ''));
@@ -1147,7 +1087,7 @@ function parseSalaryFields(record) {
       salaryMin = salaryMin * 100000;
     }
   }
-  
+
   if (salaryMax !== null && !isNaN(salaryMax)) {
     if (salaryMax < 100000 && salaryMax > 0) {
       // Likely in LPA format, convert to rupees
@@ -1208,8 +1148,8 @@ async function processBulkImport(importId) {
 
     const filePath = path.join(__dirname, '../uploads/bulk-imports', path.basename(importRecord.fileUrl));
 
-    
-    
+
+
     if (!fs.existsSync(filePath)) {
 
       throw new Error('Import file not found');
@@ -1344,13 +1284,13 @@ async function processBulkImport(importId) {
           .replace(/-+/g, '-')
 
           .replace(/^-+|-+$/g, '') + '-' + Date.now();
-        
-        
+
+
 
         // Map CSV/Excel fields to Job model fields properly
         // Handle type vs jobType mapping
         const jobType = record.type || record.jobType || 'full-time';
-        
+
         // Map experience to experienceLevel
         const experienceLevelMap = {
           'fresher': 'entry',
@@ -1359,9 +1299,9 @@ async function processBulkImport(importId) {
           'mid': 'mid',
           'senior': 'senior'
         };
-        const experienceLevel = record.experienceLevel || 
+        const experienceLevel = record.experienceLevel ||
           (record.experience ? experienceLevelMap[record.experience] : 'entry');
-        
+
         // Handle employmentType mapping (if provided, otherwise derive from jobType)
         let employmentType = record.employmentType || record.employment_type || '';
         if (!employmentType && jobType) {
@@ -1410,10 +1350,10 @@ async function processBulkImport(importId) {
             tagsArray = record.tags;
           }
         }
-        
+
         // Handle consultancy posting fields
         const postingType = record.postingType || record.posting_type || 'company';
-        
+
         // CRITICAL: For consultancy postings, consultancy name MUST be the employer's company name
         // Auto-set consultancyName to the company name, ignoring any value from the import file
         let consultancyName = null;
@@ -1425,7 +1365,7 @@ async function processBulkImport(importId) {
             throw new Error('Cannot create consultancy posting: Employer company name not found');
           }
         }
-        
+
         const metadata = {
           postingType: postingType,
           companyName: record.companyName || record.company_name || null,
@@ -1440,7 +1380,7 @@ async function processBulkImport(importId) {
             showHiringCompanyDetails: record.showHiringCompanyDetails === 'true' || record.showHiringCompanyDetails === true || false
           })
         };
-        
+
         // Create job with proper field mapping
         const jobData = {
 
@@ -1507,8 +1447,8 @@ async function processBulkImport(importId) {
 
         const job = await Job.create(jobData);
 
-        
-        
+
+
         successLog.push({
 
           jobId: job.id,
@@ -1605,8 +1545,8 @@ async function processBulkImport(importId) {
 
     console.error('Bulk import processing error:', error);
 
-    
-    
+
+
     try {
 
       await BulkJobImport.update({
@@ -1709,8 +1649,8 @@ function validateJobRecord(record, validationRules) {
 
   const errors = [];
 
-  
-  
+
+
   // Required fields
 
   const requiredFields = ['title', 'description', 'location'];
@@ -1755,20 +1695,20 @@ function convertToCSV(data) {
 
   if (!data || data.length === 0) return '';
 
-  
-  
+
+
   // Get headers from the first object
 
   const headers = Object.keys(data[0]);
 
-  
-  
+
+
   // Create CSV header row
 
   const csvHeader = headers.join(',');
 
-  
-  
+
+
   // Create CSV data rows
 
   const csvRows = data.map(row => {
@@ -1791,8 +1731,8 @@ function convertToCSV(data) {
 
   });
 
-  
-  
+
+
   return [csvHeader, ...csvRows].join('\n');
 
 }
@@ -1879,7 +1819,7 @@ function createJobTemplate(type) {
 
       location: 'Mumbai, Maharashtra',
 
-      
+
       // Location details
       city: 'Mumbai',
 
@@ -1888,7 +1828,7 @@ function createJobTemplate(type) {
       country: 'India',
 
       region: 'india', // Options: 'india', 'gulf', 'other'
-      
+
       // Job type and experience
       jobType: 'full-time', // Options: 'full-time', 'part-time', 'contract'
       type: 'full-time', // Alias for jobType
@@ -1898,7 +1838,7 @@ function createJobTemplate(type) {
 
       experienceMax: 10,
 
-      
+
       // Salary details - IMPORTANT: Use LPA format (e.g., "30-40 LPA" or "3-4 LPA")
       // The system will automatically convert to rupee amounts for storage
       // Examples: "3-4 LPA", "30-40 LPA", "500000-800000" (raw rupees also supported)
@@ -1908,47 +1848,47 @@ function createJobTemplate(type) {
       salaryMax: 40, // In LPA format (will be converted to 4000000 rupees automatically)
       salaryCurrency: 'INR', // Options: 'INR', 'USD', 'EUR', etc.
       salaryPeriod: 'yearly', // Options: 'yearly', 'monthly', 'hourly'
-      
+
       // Department, category, industry, and role category
       department: 'Engineering - Software & QA',
       category: 'Technology',
 
       industryType: 'Software Product (532)', // Industry type from Step 1 dropdown (include number for matching)
       roleCategory: 'Software Development', // Role category from Step 2 dropdown
-      
+
       // Role and Employment Type (Step 2 - CRITICAL FIELDS)
       role: 'Senior Software Engineer', // CRITICAL: Specific role title (e.g., Security Administrator, Software Engineer, Data Analyst)
       employmentType: 'Full Time, Permanent', // CRITICAL: Options: 'Full Time, Permanent', 'Part Time, Permanent', 'Full Time, Contract', 'Part Time, Contract', 'Freelance', 'Temporary'
-      
+
       // Skills and requirements
       skills: 'JavaScript,React,Node.js,TypeScript,PostgreSQL,AWS,Docker,Kubernetes', // Comma-separated
       requirements: "Bachelor's or Master's degree in Computer Science or related field, 5+ years of experience in software development, Proven leadership skills",
 
       responsibilities: 'Lead a team of software engineers,Design and implement scalable software solutions,Mentor junior developers,Collaborate with product and design teams',
 
-      
+
       // Work details
       remoteWork: 'hybrid', // Options: 'on-site', 'remote', 'hybrid'
       shiftTiming: 'day', // Options: 'day', 'night', 'rotating'
-      
+
       // Education and benefits
       education: "Bachelor's Degree", // String (not array in database)
       benefits: 'Health Insurance,401k,Remote Work,Paid Time Off,Performance Bonus,Learning Budget', // Comma-separated
-      
+
       // Tags and metadata
       tags: 'javascript,react,fullstack,senior,leadership', // Comma-separated
       isUrgent: false, // true/false
       isFeatured: true, // true/false
       isPremium: false, // true/false
-      
+
       // Dates
       validTill: '2024-12-31', // Format: YYYY-MM-DD
       applicationDeadline: '2024-12-31', // Format: YYYY-MM-DD
-      
+
       // ========== POSTING TYPE: Company or Consultancy ==========
       postingType: 'company', // CRITICAL: Options: 'company' or 'consultancy'
       companyName: 'Tech Solutions Inc.', // REQUIRED if postingType='company'
-      
+
       // Consultancy Fields (ONLY required if postingType='consultancy')
       // NOTE: consultancyName is AUTO-SET to your company name - do not include this column
       hiringCompanyName: '', // Company the consultancy is hiring for (REQUIRED if postingType='consultancy')
@@ -2020,12 +1960,12 @@ function createJobTemplate(type) {
       validTill: '2024-12-31',
 
       applicationDeadline: '2024-12-31',
-      
+
       // Company/Consultancy Posting Type
       postingType: 'company',
       companyName: 'Global Marketing Agency',
 
-      
+
       // Consultancy Fields (ONLY required if postingType=consultancy)
       // NOTE: consultancyName is AUTO-SET to your company name - do not include this column
       hiringCompanyName: '',
@@ -2073,7 +2013,7 @@ function createJobTemplate(type) {
       validTill: '2024-12-31',
       applicationDeadline: '2024-12-31',
 
-      
+
       // ========== POSTING TYPE: Consultancy ==========
       postingType: 'consultancy', // CRITICAL: Set to 'consultancy' for consultancy postings
       companyName: '', // Leave empty for consultancy (only used for company postings)
@@ -2090,7 +2030,7 @@ function createJobTemplate(type) {
 
   // CRITICAL: Filter out any hot vacancy fields to ensure they never appear in the template
   const filteredTemplate = filterHotVacancyFields(baseTemplate);
-  
+
   return filteredTemplate;
 }
 

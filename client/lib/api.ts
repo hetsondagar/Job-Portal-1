@@ -2916,6 +2916,24 @@ class ApiService {
     return this.handleResponse<{ liked: boolean; deleted: boolean }>(response);
   }
 
+  // Per-requirement candidate save/like methods
+  async saveCandidateForRequirement(candidateId: string, requirementId: string): Promise<ApiResponse<{ saved: boolean; requirementId: string }>> {
+    const response = await fetch(`${API_BASE_URL}/candidate-likes/${candidateId}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ requirementId })
+    });
+    return this.handleResponse<{ saved: boolean; requirementId: string }>(response);
+  }
+
+  async removeCandidateFromRequirement(candidateId: string, requirementId: string): Promise<ApiResponse<{ removed: boolean; requirementId: string }>> {
+    const response = await fetch(`${API_BASE_URL}/candidate-likes/${candidateId}?requirementId=${requirementId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<{ removed: boolean; requirementId: string }>(response);
+  }
+
   // Dashboard Stats endpoint
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     try {

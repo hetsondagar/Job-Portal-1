@@ -51,6 +51,20 @@ export default function LoginPage() {
       } catch {
         // ignore and show login form
       }
+      
+      // Load saved credentials if available
+      try {
+        const savedEmail = localStorage.getItem('jobseeker_saved_email')
+        const savedPassword = localStorage.getItem('jobseeker_saved_password')
+        if (savedEmail && savedPassword) {
+          setEmail(savedEmail)
+          setPassword(savedPassword)
+          setRememberMe(true)
+        }
+      } catch (e) {
+        // LocalStorage might not be available
+      }
+      
       setChecking(false)
     }
     checkAlreadyLoggedIn()
@@ -71,6 +85,22 @@ export default function LoginPage() {
       console.log('🔄 Attempting login...')
       const result = await login({ email, password, rememberMe, loginType: 'jobseeker' })
       console.log('✅ Login successful:', result)
+      
+      // Save or clear credentials based on rememberMe checkbox
+      try {
+        if (rememberMe) {
+          localStorage.setItem('jobseeker_saved_email', email)
+          localStorage.setItem('jobseeker_saved_password', password)
+          console.log('💾 Credentials saved to localStorage')
+        } else {
+          localStorage.removeItem('jobseeker_saved_email')
+          localStorage.removeItem('jobseeker_saved_password')
+          console.log('🗑️ Credentials cleared from localStorage')
+        }
+      } catch (e) {
+        // LocalStorage might not be available
+        console.log('⚠️ Could not access localStorage')
+      }
       
       // Check if login was successful and redirect accordingly
       if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {

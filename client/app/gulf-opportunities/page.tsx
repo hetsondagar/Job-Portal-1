@@ -9,15 +9,16 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { 
-  Globe, 
-  MapPin, 
-  DollarSign, 
-  Building2, 
-  Users, 
-  TrendingUp, 
-  CheckCircle, 
+import {
+  Globe,
+  MapPin,
+  DollarSign,
+  Building2,
+  Users,
+  TrendingUp,
+  CheckCircle,
   ArrowRight,
   Search,
   Filter,
@@ -39,23 +40,23 @@ export default function GulfOpportunitiesPage() {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [showRegisterDialog, setShowRegisterDialog] = useState(false)
   const [showExistingUserDialog, setShowExistingUserDialog] = useState(false)
-  const [loginData, setLoginData] = useState({ email: '', password: '' })
-  const [registerData, setRegisterData] = useState({ 
-    fullName: '', 
-    email: '', 
-    password: '', 
+  const [loginData, setLoginData] = useState({ email: '', password: '', rememberMe: false })
+  const [registerData, setRegisterData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
     confirmPassword: '',
     phone: '',
     experience: '',
     agreeToTerms: false,
     subscribeNewsletter: false
   })
-  const [existingUserData, setExistingUserData] = useState({ 
-    userId: '', 
-    firstName: '', 
-    email: '', 
-    confirmPassword: '', 
-    otp: '' 
+  const [existingUserData, setExistingUserData] = useState({
+    userId: '',
+    firstName: '',
+    email: '',
+    confirmPassword: '',
+    otp: ''
   })
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
@@ -73,7 +74,7 @@ export default function GulfOpportunitiesPage() {
   // Fetch applied jobs for logged in users
   const fetchAppliedJobs = async () => {
     if (!user) return
-    
+
     try {
       const response = await apiService.getGulfJobApplications()
       if (response.success && response.data) {
@@ -98,19 +99,19 @@ export default function GulfOpportunitiesPage() {
       if (withdrawingJobs.has(jobId)) {
         return
       }
-      
+
       setWithdrawingJobs(prev => new Set([...prev, jobId]))
       console.log('🔄 Attempting to withdraw application for Gulf job:', jobId)
-      
+
       // Get the application ID for this job
       const response = await apiService.getGulfJobApplications()
       if (response.success && response.data) {
         const applications = response.data.applications || []
         const application = applications.find((app: any) => (app.jobId || app.job?.id) === jobId)
-        
+
         if (application) {
           const withdrawResponse = await apiService.updateApplicationStatus(application.id, 'withdrawn')
-          
+
           if (withdrawResponse.success) {
             toast.success('Application withdrawn successfully')
             // Remove from applied jobs set
@@ -153,11 +154,11 @@ export default function GulfOpportunitiesPage() {
           region: 'gulf',
           limit: 20
         })
-        
+
         if (response.success && response.data) {
           // Double-check: Filter to ensure ONLY Gulf jobs are shown
           const gulfOnlyJobs = response.data.filter((job: any) => job.region === 'gulf')
-          
+
           // Transform backend jobs to match frontend format
           const transformedJobs = gulfOnlyJobs.map((job: any) => ({
             id: job.id,
@@ -165,7 +166,7 @@ export default function GulfOpportunitiesPage() {
             company: job.company?.name || 'Unknown Company',
             companyId: job.company?.id || job.companyId,
             location: job.location,
-            salary: job.salary || (job.salaryMin && job.salaryMax 
+            salary: job.salary || (job.salaryMin && job.salaryMax
               ? `${job.salaryCurrency || 'AED'} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
               : 'Competitive'),
             type: job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time',
@@ -198,7 +199,25 @@ export default function GulfOpportunitiesPage() {
       setAppliedJobs(new Set())
     }
   }, [user])
-  
+
+  // Load saved credentials for gulf login
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem('gulf_saved_email')
+      const savedPassword = localStorage.getItem('gulf_saved_password')
+      if (savedEmail && savedPassword) {
+        setLoginData(prev => ({
+          ...prev,
+          email: savedEmail,
+          password: savedPassword,
+          rememberMe: true
+        }))
+      }
+    } catch (e) {
+      // LocalStorage might not be available
+    }
+  }, [showLoginDialog])
+
 
   const benefits = [
     {
@@ -227,18 +246,34 @@ export default function GulfOpportunitiesPage() {
     e.preventDefault()
     setIsLoggingIn(true)
     setLoginError('')
-    
+
     try {
-      console.log('🔍 Gulf login attempt with:', { email: loginData.email, password: '[HIDDEN]' })
-      
-      const result = await login({ 
-        email: loginData.email, 
+      console.log('🔍 Gulf login attempt with:', { email: loginData.email, password: '[HIDDEN]', rememberMe: loginData.rememberMe })
+
+      const result = await login({
+        email: loginData.email,
         password: loginData.password,
-        rememberMe: false 
+        rememberMe: loginData.rememberMe
       })
-      
+
       console.log('✅ Gulf login successful:', result)
-      
+
+      // Save or clear credentials based on rememberMe checkbox
+      try {
+        if (loginData.rememberMe) {
+          localStorage.setItem('gulf_saved_email', loginData.email)
+          localStorage.setItem('gulf_saved_password', loginData.password)
+          console.log('💾 Credentials saved to localStorage')
+        } else {
+          localStorage.removeItem('gulf_saved_email')
+          localStorage.removeItem('gulf_saved_password')
+          console.log('🗑️ Credentials cleared from localStorage')
+        }
+      } catch (e) {
+        // LocalStorage might not be available
+        console.log('⚠️ Could not access localStorage')
+      }
+
       // Check if login was successful and redirect accordingly
       if (result?.user?.userType === 'employer' || result?.user?.userType === 'admin') {
         console.log('❌ Employer/Admin trying to login through Gulf jobseeker login')
@@ -249,7 +284,7 @@ export default function GulfOpportunitiesPage() {
       } else {
         // Check if user has Gulf portal access
         const hasGulfAccess = result?.user?.regions?.includes('gulf') || result?.user?.region === 'gulf'
-        
+
         if (!hasGulfAccess) {
           console.log('❌ User does not have Gulf portal access')
           toast.error('You do not have access to the Gulf portal yet. Please register for Gulf access.')
@@ -259,13 +294,13 @@ export default function GulfOpportunitiesPage() {
           setIsLoggingIn(false)
           return
         }
-        
+
         console.log('✅ Gulf jobseeker login successful, using redirectTo from server')
-        
+
         // Use the redirectTo URL from the server response
         const redirectTo = result?.redirectTo || '/jobseeker-gulf-dashboard'
         console.log('✅ Redirecting to:', redirectTo)
-        
+
         toast.success('Successfully signed in! Redirecting to Gulf dashboard...')
         setTimeout(() => {
           router.push(redirectTo)
@@ -283,31 +318,31 @@ export default function GulfOpportunitiesPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setRegisterError('')
-    
+
     // Validate passwords match
     if (registerData.password !== registerData.confirmPassword) {
       toast.error("Passwords do not match")
       return
     }
-    
+
     // Validate terms agreement
     if (!registerData.agreeToTerms) {
       toast.error("Please agree to the terms and conditions")
       return
     }
-    
+
     setIsRegistering(true)
-    
+
     try {
-      console.log('🔍 Gulf registration attempt with:', { 
-        fullName: registerData.fullName, 
-        email: registerData.email, 
+      console.log('🔍 Gulf registration attempt with:', {
+        fullName: registerData.fullName,
+        email: registerData.email,
         phone: registerData.phone,
         experience: registerData.experience,
         agreeToTerms: registerData.agreeToTerms,
         subscribeNewsletter: registerData.subscribeNewsletter
       })
-      
+
       const result = await signup({
         fullName: registerData.fullName,
         email: registerData.email,
@@ -318,32 +353,32 @@ export default function GulfOpportunitiesPage() {
         subscribeNewsletter: registerData.subscribeNewsletter,
         region: 'gulf' // Set region for Gulf registration
       })
-      
+
       console.log('✅ Gulf registration successful')
-      
+
       // Auto-login after successful registration
       if (result?.user && result?.token) {
         toast.success("Account created successfully! Redirecting to Gulf dashboard...")
         // Close register dialog
         setShowRegisterDialog(false)
-        
+
         // Redirect to Gulf dashboard where profile completion dialog will show
         setTimeout(() => {
           router.push('/jobseeker-gulf-dashboard')
         }, 1500)
       } else {
         toast.success("Account created successfully! Please sign in to continue.")
-      // Close register dialog and show login dialog
-      setShowRegisterDialog(false)
-      setShowLoginDialog(true)
-      
-      // Pre-fill login form with registered email
-      setLoginData(prev => ({ ...prev, email: registerData.email }))
+        // Close register dialog and show login dialog
+        setShowRegisterDialog(false)
+        setShowLoginDialog(true)
+
+        // Pre-fill login form with registered email
+        setLoginData(prev => ({ ...prev, email: registerData.email }))
       }
-      
+
     } catch (error: any) {
       console.error('❌ Gulf registration error:', error)
-      
+
       // Handle specific validation errors from backend
       if (error.message && error.message.includes('Validation failed')) {
         toast.error("Please check your input and try again")
@@ -351,7 +386,7 @@ export default function GulfOpportunitiesPage() {
       } else if (error.message && error.message.includes('already exists')) {
         // User exists in another portal - show cross-portal registration dialog
         console.log('🔍 User exists, checking for cross-portal registration...')
-        
+
         // First, check if user exists with password verification
         try {
           const checkResponse = await apiService.checkExistingUser(
@@ -359,13 +394,13 @@ export default function GulfOpportunitiesPage() {
             registerData.password,
             'gulf'
           )
-          
+
           console.log('🔍 checkResponse structure:', {
             success: checkResponse.success,
             userExists: checkResponse.userExists,
             data: checkResponse.data
           })
-          
+
           if (checkResponse.success && checkResponse.userExists) {
             // Show dialog to verify OTP
             const userData = checkResponse.data?.data || checkResponse.data
@@ -395,7 +430,7 @@ export default function GulfOpportunitiesPage() {
           toast.error(checkError.message || 'Failed to verify user. Please try again.')
           return
         }
-        
+
         setRegisterError("An account with this email already exists")
         toast.error("An account with this email already exists")
       } else {
@@ -406,26 +441,26 @@ export default function GulfOpportunitiesPage() {
       setIsRegistering(false)
     }
   }
-  
+
   // Handle OTP verification for existing users
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsVerifyingOTP(true)
-    
+
     try {
       const response = await apiService.verifyOTPAndRegister(
         existingUserData.userId,
         existingUserData.otp,
         'gulf'
       )
-      
+
       if (response.success) {
         console.log('✅ Cross-portal registration successful')
         toast.success("Successfully registered for Gulf portal! Logging you in...")
-        
+
         // Close dialog
         setShowExistingUserDialog(false)
-        
+
         // Refresh user data
         window.location.reload()
       } else {
@@ -452,11 +487,11 @@ export default function GulfOpportunitiesPage() {
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     try {
       console.log(`🔍 Gulf OAuth login with ${provider}`)
-      
+
       // Redirect to OAuth endpoint with state parameter to indicate Gulf flow
       // Get OAuth URLs from backend for Gulf jobseeker
       const response = await apiService.getOAuthUrls('jobseeker', 'gulf')
-      
+
       if (response.success && response.data) {
         const url = provider === 'google' ? response.data.google : response.data.facebook
         console.log('✅ Gulf OAuth URL received:', url);
@@ -479,14 +514,14 @@ export default function GulfOpportunitiesPage() {
 
     try {
       console.log(`🔍 Applying for Gulf job ${jobId}...`)
-      
+
       // Find the job data
       const job = gulfJobs.find(j => j.id === jobId)
       if (!job) {
         toast.error('Job not found')
         return
       }
-      
+
       // Submit application using the API
       const response = await apiService.applyJob(jobId, {
         coverLetter: `I am interested in the ${job.title} position at ${job.company}. I am excited about the opportunity to work in the Gulf region.`,
@@ -497,17 +532,17 @@ export default function GulfOpportunitiesPage() {
         preferredLocations: [job.location],
         resumeId: undefined
       })
-      
+
       if (response.success) {
         toast.success(`Application submitted successfully for ${job.title} at ${job.company}!`, {
           description: 'Your application has been saved and will appear in your Gulf dashboard.',
           duration: 5000,
         })
         console.log('Gulf job application submitted:', jobId)
-        
+
         // Add job to applied jobs set immediately for better UX
         setAppliedJobs(prev => new Set([...prev, jobId]))
-        
+
         // Redirect to Gulf dashboard to see the application
         setTimeout(() => {
           router.push('/jobseeker-gulf-dashboard')
@@ -537,7 +572,7 @@ export default function GulfOpportunitiesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-green-100 to-yellow-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <GulfNavbar />
-      
+
       <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Hero Section */}
@@ -546,20 +581,20 @@ export default function GulfOpportunitiesPage() {
               <Globe className="w-4 h-4" />
               <span>Gulf Region Opportunities</span>
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6">
               Discover Your Dream Job in the
               <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent"> Gulf</span>
             </h1>
-            
+
             <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto">
-              Join thousands of professionals who have found their perfect career in the Gulf region. 
+              Join thousands of professionals who have found their perfect career in the Gulf region.
               Enjoy tax-free salaries, world-class benefits, and unparalleled growth opportunities.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg"
                 onClick={handleExploreJobs}
               >
@@ -567,12 +602,12 @@ export default function GulfOpportunitiesPage() {
                 Explore Gulf Jobs
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-              
+
               {/* Only show Create Gulf Account button for non-Gulf users */}
               {(!user || (!user.regions?.includes('gulf') && user.region !== 'gulf')) && (
-                <Button 
-                  size="lg" 
-                  variant="outline" 
+                <Button
+                  size="lg"
+                  variant="outline"
                   className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 px-8 py-4 text-lg"
                   onClick={() => setShowRegisterDialog(true)}
                 >
@@ -588,7 +623,7 @@ export default function GulfOpportunitiesPage() {
             <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
               Why Choose Gulf Opportunities?
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {benefits.map((benefit, index) => (
                 <Card key={index} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-green-200 dark:border-green-800">
@@ -616,8 +651,8 @@ export default function GulfOpportunitiesPage() {
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
                 Featured Gulf Jobs
               </h2>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
                 onClick={handleExploreJobs}
               >
@@ -625,7 +660,7 @@ export default function GulfOpportunitiesPage() {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {gulfJobsLoading ? (
                 // Loading skeleton
@@ -648,121 +683,120 @@ export default function GulfOpportunitiesPage() {
                 ))
               ) : gulfJobs.length > 0 ? (
                 gulfJobs.slice(0, 4).map((job) => (
-                <Card key={job.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 border-green-200 dark:border-green-800">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <CardTitle className="text-lg text-slate-900 dark:text-white">
-                            {job.title}
-                          </CardTitle>
-                          {job.featured && (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                              <Star className="w-3 h-3 mr-1" />
-                              Featured
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-300">
-                          <div className="flex items-center space-x-1">
-                            <Building2 className="w-4 h-4" />
-                            {job.companyId ? (
-                              <Link 
-                                href={`/gulf-companies/${job.companyId}`}
-                                className="hover:text-green-600 dark:hover:text-green-400 transition-colors"
-                              >
-                                {job.company}
-                              </Link>
-                            ) : (
-                              <span>{job.company}</span>
+                  <Card key={job.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:shadow-lg transition-all duration-200 border-green-200 dark:border-green-800">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <CardTitle className="text-lg text-slate-900 dark:text-white">
+                              {job.title}
+                            </CardTitle>
+                            {job.featured && (
+                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                <Star className="w-3 h-3 mr-1" />
+                                Featured
+                              </Badge>
                             )}
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="w-4 h-4" />
-                            <span>{job.location}</span>
+                          <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-300">
+                            <div className="flex items-center space-x-1">
+                              <Building2 className="w-4 h-4" />
+                              {job.companyId ? (
+                                <Link
+                                  href={`/gulf-companies/${job.companyId}`}
+                                  className="hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                >
+                                  {job.company}
+                                </Link>
+                              ) : (
+                                <span>{job.company}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <MapPin className="w-4 h-4" />
+                              <span>{job.location}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm">
-                      {job.description}
-                    </p>
-                    
-                    <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1">
-                          <DollarSign className="w-4 h-4" />
-                          <span>{job.salary}</span>
+                    </CardHeader>
+
+                    <CardContent>
+                      <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm">
+                        {job.description}
+                      </p>
+
+                      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-1">
+                            <DollarSign className="w-4 h-4" />
+                            <span>{job.salary}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{job.experience}</span>
+                          </div>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{job.experience}</span>
+                          <Calendar className="w-4 h-4" />
+                          <span>{job.posted}</span>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{job.posted}</span>
+
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {job.benefits.slice(0, 2).map((benefit: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {benefit}
+                          </Badge>
+                        ))}
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {job.benefits.slice(0, 2).map((benefit: string, index: number) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {benefit}
-                        </Badge>
-                      ))}
-                    </div>
-                    
-                    <Button 
-                      className={`w-full ${
-                        appliedJobs.has(job.id) 
-                          ? 'bg-green-500 text-white cursor-not-allowed' 
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
-                      onClick={() => handleApplyToJob(job.id)}
-                      disabled={appliedJobs.has(job.id)}
-                    >
-                      {appliedJobs.has(job.id) ? (
-                        <>
-                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          Applied
-                        </>
-                      ) : (
-                        <>
-                          Apply Now
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
-                    
-                    {appliedJobs.has(job.id) && (
+
                       <Button
-                        onClick={() => handleWithdrawApplication(job.id)}
-                        variant="outline"
-                        size="sm"
-                        disabled={withdrawingJobs.has(job.id)}
-                        className="w-full mt-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50"
+                        className={`w-full ${appliedJobs.has(job.id)
+                            ? 'bg-green-500 text-white cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        onClick={() => handleApplyToJob(job.id)}
+                        disabled={appliedJobs.has(job.id)}
                       >
-                        {withdrawingJobs.has(job.id) ? (
+                        {appliedJobs.has(job.id) ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
-                            Withdrawing...
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Applied
                           </>
                         ) : (
                           <>
-                            <X className="w-4 h-4 mr-2" />
-                            Withdraw Application
+                            Apply Now
+                            <ArrowRight className="w-4 h-4 ml-2" />
                           </>
                         )}
                       </Button>
-                    )}
-                  </CardContent>
-                </Card>
+
+                      {appliedJobs.has(job.id) && (
+                        <Button
+                          onClick={() => handleWithdrawApplication(job.id)}
+                          variant="outline"
+                          size="sm"
+                          disabled={withdrawingJobs.has(job.id)}
+                          className="w-full mt-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-700 disabled:opacity-50"
+                        >
+                          {withdrawingJobs.has(job.id) ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                              Withdrawing...
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-4 h-4 mr-2" />
+                              Withdraw Application
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
                 ))
               ) : (
                 <div className="col-span-2 text-center py-12">
@@ -791,8 +825,8 @@ export default function GulfOpportunitiesPage() {
                   Join thousands of professionals who have found their dream jobs in the Gulf region
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     variant="secondary"
                     className="bg-white text-green-600 hover:bg-green-50 px-8 py-4 text-lg"
                     onClick={handleExploreJobs}
@@ -800,8 +834,8 @@ export default function GulfOpportunitiesPage() {
                     <Briefcase className="w-5 h-5 mr-2" />
                     Start Exploring
                   </Button>
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     className="bg-white text-green-600 hover:bg-green-50 border-2 border-white px-8 py-4 text-lg font-semibold shadow-lg"
                     onClick={() => setShowRegisterDialog(true)}
                   >
@@ -826,7 +860,7 @@ export default function GulfOpportunitiesPage() {
               Use your existing credentials or create a new account
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -839,7 +873,7 @@ export default function GulfOpportunitiesPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -851,23 +885,34 @@ export default function GulfOpportunitiesPage() {
                 required
               />
             </div>
-            
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="rememberMe"
+                checked={loginData.rememberMe}
+                onCheckedChange={(checked) => setLoginData({ ...loginData, rememberMe: checked as boolean })}
+              />
+              <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">
+                Remember me
+              </Label>
+            </div>
+
             {/* Error Display */}
             {loginError && (
               <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
                 {loginError}
               </div>
             )}
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               disabled={isLoggingIn}
             >
               {isLoggingIn ? "Signing In..." : "Sign In"}
             </Button>
           </form>
-          
+
           {/* OAuth Login Options */}
           <div className="space-y-3">
             <div className="relative">
@@ -880,7 +925,7 @@ export default function GulfOpportunitiesPage() {
                 </span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               <Button
                 type="button"
@@ -889,14 +934,14 @@ export default function GulfOpportunitiesPage() {
                 onClick={() => handleOAuthLogin('google')}
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 Google
               </Button>
-              
+
               <Button
                 type="button"
                 variant="outline"
@@ -904,13 +949,13 @@ export default function GulfOpportunitiesPage() {
                 onClick={() => handleOAuthLogin('facebook')}
               >
                 <svg className="w-4 h-4 mr-2" fill="#1877F2" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
                 Facebook
               </Button>
             </div>
           </div>
-          
+
           <div className="text-center">
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Don't have an account?{" "}
@@ -940,7 +985,7 @@ export default function GulfOpportunitiesPage() {
               Start your journey to Gulf opportunities
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -953,7 +998,7 @@ export default function GulfOpportunitiesPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -965,7 +1010,7 @@ export default function GulfOpportunitiesPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="phone">Phone (Optional)</Label>
               <Input
@@ -976,7 +1021,7 @@ export default function GulfOpportunitiesPage() {
                 onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="experience">Experience Level</Label>
               <Select value={registerData.experience} onValueChange={(value) => setRegisterData({ ...registerData, experience: value })}>
@@ -992,7 +1037,7 @@ export default function GulfOpportunitiesPage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -1004,7 +1049,7 @@ export default function GulfOpportunitiesPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
@@ -1016,7 +1061,7 @@ export default function GulfOpportunitiesPage() {
                 required
               />
             </div>
-            
+
             {/* Terms Agreement */}
             <div className="flex items-start space-x-2">
               <input
@@ -1038,7 +1083,7 @@ export default function GulfOpportunitiesPage() {
                 </a>
               </Label>
             </div>
-            
+
             {/* Newsletter Subscription */}
             <div className="flex items-start space-x-2">
               <input
@@ -1052,23 +1097,23 @@ export default function GulfOpportunitiesPage() {
                 Subscribe to Gulf job opportunities newsletter
               </Label>
             </div>
-            
+
             {/* Error Display */}
             {registerError && (
               <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
                 {registerError}
               </div>
             )}
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               disabled={isRegistering}
             >
               {isRegistering ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
-          
+
           <div className="text-center">
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Already have an account?{" "}
@@ -1086,7 +1131,7 @@ export default function GulfOpportunitiesPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Existing User Verification Dialog */}
       <Dialog open={showExistingUserDialog} onOpenChange={setShowExistingUserDialog}>
         <DialogContent className="sm:max-w-[500px]">
@@ -1098,7 +1143,7 @@ export default function GulfOpportunitiesPage() {
               You're already a member of CampusZone! Verify your OTP to get access to the Gulf portal as well.
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleVerifyOTP} className="space-y-4">
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
               <p className="text-sm text-slate-700 dark:text-slate-300">
@@ -1108,7 +1153,7 @@ export default function GulfOpportunitiesPage() {
                 We've sent a 6-digit OTP to your email address. Please check your inbox.
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="otp">Enter OTP</Label>
               <Input
@@ -1126,16 +1171,16 @@ export default function GulfOpportunitiesPage() {
                 OTP is valid for 10 minutes
               </p>
             </div>
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               disabled={isVerifyingOTP || existingUserData.otp.length !== 6}
             >
               {isVerifyingOTP ? "Verifying..." : "Verify & Access Gulf Portal"}
             </Button>
           </form>
-          
+
           <div className="text-center">
             <button
               type="button"
@@ -1288,7 +1333,7 @@ export default function GulfOpportunitiesPage() {
           </div>
         </div>
       </footer>
-      
+
       {/* Registration Chatbot */}
       <RegistrationChatbot />
     </div>

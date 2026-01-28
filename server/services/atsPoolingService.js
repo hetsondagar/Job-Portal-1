@@ -286,10 +286,25 @@ async function streamATSScores(
  */
 async function getAllCandidateIdsForRequirement(requirementId, page = 1, limit = 100) {
   const { Requirement, User } = require('../config/index');
-  const { Op, sequelize } = require('sequelize');
-  const { QueryTypes } = require('sequelize');
+  const { Op } = require('sequelize');
+  const sequelizeDB = require('../config/sequelize').sequelize;
 
-  const requirement = await Requirement.findByPk(requirementId);
+  const requirement = await Requirement.findByPk(requirementId, {
+    attributes: [
+      'id',
+      'title',
+      'description',
+      'experience_min',
+      'experience_max',
+      'salary_min',
+      'salary_max',
+      'required_skills',
+      'preferred_skills',
+      'location_type',
+      'metadata'
+    ]
+  });
+  
   if (!requirement) {
     throw new Error('Requirement not found');
   }
@@ -306,9 +321,9 @@ async function getAllCandidateIdsForRequirement(requirementId, page = 1, limit =
     }
   }
 
-  // Get experience range
-  let workExperienceMin = requirement.workExperienceMin || requirement.experienceMin;
-  let workExperienceMax = requirement.workExperienceMax || requirement.experienceMax;
+  // Get experience range - use the actual column names from DB
+  let workExperienceMin = requirement.experience_min;
+  let workExperienceMax = requirement.experience_max;
 
   // Build base where clause
   const whereClause = {
@@ -334,20 +349,25 @@ async function getAllCandidateIdsForRequirement(requirementId, page = 1, limit =
   // Build matching conditions (same logic as main endpoint)
   const matchingConditions = [];
 
-  // Skills matching
-  const requirementSkills = requirement.keySkills || requirement.skills || [];
-  if (requirementSkills.length > 0) {
-    const skillsArray = Array.isArray(requirementSkills) ? requirementSkills : [requirementSkills];
+  // Skills matching - use required_skills and preferred_skills
+  const allSkills = [];
+  if (requirement.required_skills && Array.isArray(requirement.required_skills)) {
+    allSkills.push(...requirement.required_skills);
+  }
+  if (requirement.preferred_skills && Array.isArray(requirement.preferred_skills)) {
+    allSkills.push(...requirement.preferred_skills);
+  }
+  
+  if (allSkills.length > 0) {
+    const skillsArray = allSkills;
     matchingConditions.push({
       [Op.or]: [
-        { skills: { [Op.overlap]: skillsArray } },
-        { key_skills: { [Op.overlap]: skillsArray } },
-        sequelize.where(
-          sequelize.cast(sequelize.col('skills'), 'text'),
+        sequelizeDB.where(
+          sequelizeDB.cast(sequelizeDB.col('skills'), 'text'),
           { [Op.iLike]: { [Op.any]: skillsArray.map(skill => `%${skill}%`) } }
         ),
-        sequelize.where(
-          sequelize.cast(sequelize.col('key_skills'), 'text'),
+        sequelizeDB.where(
+          sequelizeDB.cast(sequelizeDB.col('key_skills'), 'text'),
           { [Op.iLike]: { [Op.any]: skillsArray.map(skill => `%${skill}%`) } }
         )
       ]
@@ -355,15 +375,15 @@ async function getAllCandidateIdsForRequirement(requirementId, page = 1, limit =
   }
 
   // Location matching
-  const requirementLocations = requirement.candidateLocations || requirement.locations || [];
-  if (requirementLocations.length > 0) {
-    const locationsArray = Array.isArray(requirementLocations) ? requirementLocations : [requirementLocations];
+  const requirementLocations = (requirement.metadata?.candidateLocations) || (requirement.metadata?.candidate_locations) || [];
+  if (requirementLocations && Array.isArray(requirementLocations) && requirementLocations.length > 0) {
+    const locationsArray = requirementLocations;
     matchingConditions.push({
       [Op.or]: [
         { current_location: { [Op.iLike]: { [Op.any]: locationsArray.map(loc => `%${loc}%`) } } },
         { willing_to_relocate: true },
-        sequelize.where(
-          sequelize.cast(sequelize.col('preferred_locations'), 'text'),
+        sequelizeDB.where(
+          sequelizeDB.cast(sequelizeDB.col('preferred_locations'), 'text'),
           { [Op.iLike]: { [Op.any]: locationsArray.map(loc => `%${loc}%`) } }
         )
       ]

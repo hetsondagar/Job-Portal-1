@@ -24,39 +24,7 @@ const {
 } = require('../controller/JobController');
 const { isApplicationsClosed } = require('../utils/applicationDeadline');
 
-// Middleware to verify JWT token
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findByPk(decoded.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(403).json({
-      success: false,
-      message: 'Invalid or expired token'
-    });
-  }
-};
+const { authenticateToken } = require('../middlewares/auth');
 
 // Public routes (order matters: specific routes before parameterized ':id')
 router.get('/', getAllJobs);
@@ -344,7 +312,7 @@ router.post('/:id/tap', authenticateToken, async (req, res) => {
     if (!user.secureJobTapsAt) {
       updateData.secureJobTapsAt = new Date();
       updateData.verification_level = 'premium';
-      
+
       // Update preferences to include premium badge
       const currentPrefs = user.preferences || {};
       updateData.preferences = {
@@ -359,9 +327,9 @@ router.post('/:id/tap', authenticateToken, async (req, res) => {
 
     await user.update(updateData);
 
-    console.log('✅ Secure job tap recorded:', { 
-      userId, 
-      jobId, 
+    console.log('✅ Secure job tap recorded:', {
+      userId,
+      jobId,
       newTapCount,
       premiumAwarded: !user.secureJobTapsAt
     });
@@ -401,7 +369,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
         message: 'Job not found'
       });
     }
-    
+
     // Block application if job is expired or application deadline passed
     const now = new Date();
     if (isApplicationsClosed(job, now)) {
@@ -410,7 +378,7 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
         message: 'Applications are closed for this job (deadline passed)'
       });
     }
-    
+
     console.log('🔍 Job details:', { job_id: job.id, employer_id: job.employerId, title: job.title });
 
     // Check if user has already applied for this job
@@ -491,12 +459,12 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       lastUpdatedAt: new Date()
     });
 
-    console.log('✅ Job application created:', { 
-      applicationId: application.id, 
-      job_id: application.jobId, 
-      user_id: application.userId, 
+    console.log('✅ Job application created:', {
+      applicationId: application.id,
+      job_id: application.jobId,
+      user_id: application.userId,
       employer_id: application.employerId,
-      status: application.status 
+      status: application.status
     });
 
     // Log activity for employer: application received
@@ -511,11 +479,11 @@ router.post('/:id/apply', authenticateToken, async (req, res) => {
       const { Notification, User } = require('../config/index');
       const employer = await User.findByPk(job.employerId);
       const applicant = await User.findByPk(userId);
-      
+
       if (employer && applicant) {
         const applicantName = `${applicant.firstName || applicant.first_name || ''} ${applicant.lastName || applicant.last_name || ''}`.trim();
         const displayName = applicantName || applicant.email || 'A candidate';
-        
+
         await Notification.create({
           userId: employer.id,
           type: 'job_application',

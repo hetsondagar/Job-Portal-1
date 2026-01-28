@@ -7,6 +7,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const { authenticateToken } = require('../middlewares/auth');
+
 const router = express.Router();
 // (moved list and join company routes below middleware definition)
 
@@ -14,38 +16,7 @@ const router = express.Router();
 const { CompanyPhoto } = require('../config');
 
 // Middleware to verify JWT token (must be defined before use)
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findByPk(decoded.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(403).json({
-      success: false,
-      message: 'Invalid or expired token'
-    });
-  }
-};
 
 // Use memory storage for Cloudinary uploads
 const companyPhotoStorage = multer.memoryStorage();
@@ -130,7 +101,7 @@ router.post('/:id/photos', authenticateToken, companyPhotoUpload.single('photo')
     if (isPrimary === 'true' || isPrimary === true) {
       try {
         await CompanyPhoto.update({ isPrimary: false }, { where: { companyId: id } });
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const photo = await CompanyPhoto.create({
@@ -163,7 +134,7 @@ router.get('/:id/photos', async (req, res) => {
       where: { companyId: id, isActive: true },
       order: [['display_order', 'ASC'], ['created_at', 'ASC']]
     });
-    
+
     console.log('🔍 Company photos found:', photos.length);
     console.log('🔍 First photo data:', photos[0] ? {
       id: photos[0].id,
@@ -171,7 +142,7 @@ router.get('/:id/photos', async (req, res) => {
       filePath: photos[0].filePath,
       filename: photos[0].filename
     } : 'No photos');
-    
+
     return res.status(200).json({ success: true, data: photos });
   } catch (error) {
     console.error('List company photos error:', error);
@@ -196,7 +167,7 @@ router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
     try {
       const absPath = path.join(__dirname, '..', photo.filePath);
       if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
-    } catch (_) {}
+    } catch (_) { }
 
     await photo.destroy();
     return res.status(200).json({ success: true, message: 'Company photo deleted' });
@@ -224,7 +195,7 @@ router.post('/:id/logo', authenticateToken, companyLogoUpload.single('logo'), as
 
     // Upload to Cloudinary (persistent cloud storage)
     let fileUrl;
-    
+
     if (isConfigured()) {
       console.log('☁️ Uploading logo to Cloudinary...');
       const cloudinaryResult = await uploadBufferToCloudinary(
@@ -280,7 +251,7 @@ router.post('/:id/banner', authenticateToken, companyLogoUpload.single('banner')
 
     // Upload to Cloudinary (persistent cloud storage)
     let fileUrl;
-    
+
     if (isConfigured()) {
       console.log('☁️ Uploading banner to Cloudinary...');
       const cloudinaryResult = await uploadBufferToCloudinary(
@@ -319,38 +290,7 @@ router.post('/:id/banner', authenticateToken, companyLogoUpload.single('banner')
 });
 
 // Middleware to verify JWT token
-const authenticateToken2 = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findByPk(decoded.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(403).json({
-      success: false,
-      message: 'Invalid or expired token'
-    });
-  }
-};
 
 // List companies (public)
 router.get('/', async (req, res) => {
@@ -368,8 +308,8 @@ router.get('/', async (req, res) => {
     const companies = await Company.findAll({
       where,
       attributes: [
-        'id', 'name', 'slug', 'logo', 'industries', 'companySize', 'website', 
-        'city', 'state', 'country', 'region', 'description', 'foundedYear', 
+        'id', 'name', 'slug', 'logo', 'industries', 'companySize', 'website',
+        'city', 'state', 'country', 'region', 'description', 'foundedYear',
         'revenue', 'companyType', 'natureOfBusiness', 'companyTypes', 'isFeatured', 'isVerified', 'isActive', 'verificationStatus', 'created_at', 'updated_at',
         // Add claiming fields for registration flow
         'isClaimed', 'createdByAgencyId', 'claimedAt'
@@ -450,30 +390,30 @@ router.post('/join', authenticateToken, async (req, res) => {
     if (!company) {
       return res.status(404).json({ success: false, message: 'Company not found' });
     }
-    
+
     // Persist role into user preferences (non-breaking)
     const prefs = req.user.preferences || {};
     prefs.employerRole = (role && typeof role === 'string') ? role : (prefs.employerRole || 'recruiter');
-    
+
     // Update user: job seekers become employers, existing employers stay employers
     const newUserType = req.user.user_type === 'jobseeker' ? 'employer' : req.user.user_type;
-    
-    await req.user.update({ 
+
+    await req.user.update({
       user_type: newUserType, // ✅ Job seekers become employers when joining company
-      company_id: company.id, 
-      preferences: prefs 
+      company_id: company.id,
+      preferences: prefs
     });
-    
+
     console.log(`✅ User ${req.user.id} joined company ${company.id} as ${newUserType}`);
-    
-    return res.json({ 
-      success: true, 
-      message: 'Joined company successfully', 
-      data: { 
-        companyId: company.id, 
+
+    return res.json({
+      success: true,
+      message: 'Joined company successfully',
+      data: {
+        companyId: company.id,
         role: prefs.employerRole,
         userType: newUserType
-      } 
+      }
     });
   } catch (error) {
     console.error('Join company error:', error);
@@ -484,7 +424,7 @@ router.post('/join', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, industries, companySize, website, description, address, city, state, country, email, phone, region, whyJoinUs, natureOfBusiness, companyTypes } = req.body;
-    
+
     // Check if user is an employer or admin
     if (req.user.user_type !== 'employer' && req.user.user_type !== 'admin') {
       return res.status(403).json({
@@ -508,10 +448,10 @@ router.post('/', authenticateToken, async (req, res) => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '')
         .substring(0, 50);
-      
+
       let slug = baseSlug;
       let counter = 1;
-      
+
       // Check if slug exists and generate unique one
       while (true) {
         const existingCompany = await Company.findOne({ where: { slug } });
@@ -521,12 +461,12 @@ router.post('/', authenticateToken, async (req, res) => {
         slug = `${baseSlug}-${counter}`;
         counter++;
       }
-      
+
       return slug;
     };
 
     const companySlug = await generateSlug(name);
-    
+
     // Create company record
     const company = await Company.create({
       name,
@@ -553,7 +493,7 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     // Update user with company_id and set as admin with Hiring Manager designation
-    await req.user.update({ 
+    await req.user.update({
       company_id: company.id,
       user_type: 'admin', // User becomes admin when they create a company
       designation: 'Hiring Manager' // Set proper designation for company creators
@@ -609,7 +549,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.post('/:companyId/photos/:photoId/set-placeholder', authenticateToken, async (req, res) => {
   try {
     const { companyId, photoId } = req.params;
-    
+
     // Check if user has access to this company
     if (req.user.user_type !== 'admin' && String(req.user.company_id) !== String(companyId)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -628,17 +568,17 @@ router.post('/:companyId/photos/:photoId/set-placeholder', authenticateToken, as
 
     // Unset all other placeholder photos for this company
     await CompanyPhoto.update(
-      { isPlaceholder: false }, 
+      { isPlaceholder: false },
       { where: { companyId: companyId } }
     );
 
     // Set this photo as placeholder
     await photo.update({ isPlaceholder: true });
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: 'Placeholder image set successfully',
-      data: photo 
+      data: photo
     });
   } catch (error) {
     console.error('Set placeholder error:', error);
@@ -693,7 +633,7 @@ router.get('/followed', authenticateToken, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Try to authenticate if token is provided
     let user = null;
     try {
@@ -707,14 +647,14 @@ router.get('/:id', async (req, res) => {
       // Continue without authentication for public access
       console.log('No valid token provided, allowing public access to company info');
     }
-    
+
     // Allow public access to company details for job seekers
     // Only restrict access if user is an employer trying to edit/update (not view)
     // For viewing company details, allow all users (public access)
     // This check is moved to PUT/PATCH endpoints only
 
     const company = await Company.findByPk(id);
-    
+
     if (!company) {
       return res.status(404).json({
         success: false,
@@ -737,7 +677,7 @@ router.get('/:id', async (req, res) => {
       'Pragma': 'no-cache',
       'Expires': '0'
     });
-    
+
     // Get additional company data
     let companyPhotos = [];
     let companyStats = {
@@ -837,11 +777,11 @@ router.get('/:id/jobs', async (req, res) => {
     const { department, location, experience, salary, region } = req.query;
     const Job = require('../models/Job');
     const { Op } = require('sequelize');
-    
+
     // CRITICAL: Only show active jobs that are NOT expired
     // Expired jobs (validTill < now) should NOT appear in public listings
     const now = new Date();
-    const where = { 
+    const where = {
       companyId: id,
       status: 'active',
       [Op.and]: [
@@ -880,7 +820,7 @@ router.get('/:id/jobs', async (req, res) => {
         'mid': { experienceMin: { [Op.gte]: 2, [Op.lte]: 5 } },
         'senior': { experienceMin: { [Op.gte]: 6 } }
       };
-      
+
       if (experienceMap[experience]) {
         Object.assign(where, experienceMap[experience]);
       }
@@ -893,19 +833,19 @@ router.get('/:id/jobs', async (req, res) => {
         'medium': { salaryMin: { [Op.gte]: 500001, [Op.lte]: 1500000 } },
         'high': { salaryMin: { [Op.gte]: 1500001 } }
       };
-      
+
       if (salaryMap[salary]) {
         Object.assign(where, salaryMap[salary]);
       }
     }
-    
+
     const jobs = await Job.findAll({
       where,
       order: [['created_at', 'DESC']],
       attributes: [
-        'id', 'title', 'location', 'jobType', 'experienceLevel', 
+        'id', 'title', 'location', 'jobType', 'experienceLevel',
         'salaryMin', 'salaryMax', 'description', 'requirements',
-        'created_at', 'isUrgent', 'department', 'category', 'city', 
+        'created_at', 'isUrgent', 'department', 'category', 'city',
         'state', 'country', 'salary', 'skills', 'applications',
         'updated_at', 'status', 'remoteWork', 'experienceMin', 'experienceMax', 'validTill', 'region'
       ]
@@ -917,7 +857,7 @@ router.get('/:id/jobs', async (req, res) => {
       'Pragma': 'no-cache',
       'Expires': '0'
     });
-    
+
     res.json({
       success: true,
       data: jobs
@@ -936,11 +876,11 @@ router.get('/:id/jobs', async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      name, industries, companySize, website, description, address, city, state, country, 
-      whyJoinUs, natureOfBusiness, companyTypes, phone, email, about, region 
+    const {
+      name, industries, companySize, website, description, address, city, state, country,
+      whyJoinUs, natureOfBusiness, companyTypes, phone, email, about, region
     } = req.body;
-    
+
     // Check if the user has access to this company
     if (req.user.user_type !== 'admin') {
       if (req.user.user_type !== 'employer' || String(req.user.company_id) !== String(id)) {
@@ -952,7 +892,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     const company = await Company.findByPk(id);
-    
+
     if (!company) {
       return res.status(404).json({
         success: false,
@@ -1275,10 +1215,10 @@ router.post('/cleanup-orphaned-photos', authenticateToken, async (req, res) => {
     if (req.user.userType !== 'admin') {
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
-    
+
     const { cleanupOrphanedPhotos } = require('../scripts/cleanup-orphaned-photos');
     await cleanupOrphanedPhotos();
-    
+
     return res.status(200).json({ success: true, message: 'Orphaned photos cleaned up successfully' });
   } catch (error) {
     console.error('Cleanup orphaned photos error:', error);

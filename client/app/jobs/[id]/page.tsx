@@ -36,6 +36,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { Navbar } from "@/components/navbar"
+import { EmployerDashboardNavbar } from "@/components/employer-dashboard-navbar"
 import { apiService } from '@/lib/api'
 import { sampleJobManager } from '@/lib/sampleJobManager'
 import { useAuth } from '@/hooks/useAuth'
@@ -613,11 +614,18 @@ export default function JobDetailPage() {
   }
 
   const handleBackNavigation = () => {
-    const referrer = document.referrer
-    if (referrer.includes(`/companies/${job?.companyId}/departments/`)) {
-      router.back()
+    // Check if user is an employer
+    if (user?.userType === 'employer' || user?.userType === 'admin') {
+      // If employer, redirect to manage-jobs with the job ID
+      router.push(`/employer-dashboard/manage-jobs/${jobIdFromParams}`)
     } else {
-      router.push("/jobs")
+      // For regular jobseekers, use back button or go to jobs
+      const referrer = document.referrer
+      if (referrer.includes(`/companies/${job?.companyId}/departments/`)) {
+        router.back()
+      } else {
+        router.push("/jobs")
+      }
     }
   }
 
@@ -665,7 +673,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Navbar />
+      {isEmployerAccount ? <EmployerDashboardNavbar /> : <Navbar />}
 
       <div className="pt-16 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1681,8 +1689,8 @@ export default function JobDetailPage() {
                           <span className="font-medium text-blue-600">{job.website}</span>
                         </div>
                       </div>
-                      {/* Only show View Company Profile for direct company jobs with existing company profiles */}
-                      {!job?.isConsultancy && job?.companyId && (
+                      {/* Only show View Company Profile for jobseekers, NOT for employers */}
+                      {!isEmployerAccount && !job?.isConsultancy && job?.companyId && (
                       <Link href={`/companies/${job.companyId || ''}`}>
                         <Button variant="outline" className="w-full bg-transparent">
                           <Building2 className="w-4 h-4 mr-2" />

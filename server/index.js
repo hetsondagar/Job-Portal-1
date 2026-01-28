@@ -51,7 +51,7 @@ const companiesRoutes = require('./routes/companies');
 const jobsRoutes = require('./routes/jobs');
 
 // Import activity tracking middleware
-const { sessionManager } = require('./middleware/activityTracker');
+const { sessionManager } = require('./middlewares/activityTracker');
 
 // Import inactivity management service
 const InactivityCronService = require('./services/inactivityCronService');
@@ -144,8 +144,8 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
+    'Content-Type',
+    'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin',
@@ -374,7 +374,7 @@ app.get('/api/track/open/:invitationId', async (req, res) => {
   try {
     const { invitationId } = req.params;
     console.log(`📧 Email opened - Invitation ID: ${invitationId}`);
-    
+
     // Return a 1x1 transparent pixel
     const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
     res.set('Content-Type', 'image/png');
@@ -390,11 +390,11 @@ app.get('/api/track/click/:invitationId/:linkType', async (req, res) => {
   try {
     const { invitationId, linkType } = req.params;
     console.log(`🔗 Email link clicked - Invitation ID: ${invitationId}, Link Type: ${linkType}`);
-    
+
     // Redirect to the appropriate page
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     let redirectUrl = `${baseUrl}/`;
-    
+
     switch (linkType) {
       case 'signup':
         redirectUrl = `${baseUrl}/signup`;
@@ -411,7 +411,7 @@ app.get('/api/track/click/:invitationId/:linkType', async (req, res) => {
       default:
         redirectUrl = `${baseUrl}/`;
     }
-    
+
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('❌ Error tracking email click:', error);
@@ -420,34 +420,34 @@ app.get('/api/track/click/:invitationId/:linkType', async (req, res) => {
 });
 app.use('/api/support', require('./routes/support'));
 
-  // Compatibility redirect for cover-letter download legacy path
-  app.get('/api/cover-letters/:id/download', (req, res) => {
-    // Forward to user route if available
-    try {
-      const token = req.headers.authorization || req.query.token || req.query.access_token || '';
-      const cleanToken = token.replace(/^Bearer\s+/i, '');
-      const url = `/api/user/cover-letters/${req.params.id}/download`;
-      
-      console.log('🔍 Cover letter redirect - Original URL:', req.originalUrl);
-      console.log('🔍 Cover letter redirect - Forwarding to:', url);
-      console.log('🔍 Cover letter redirect - Token present:', !!cleanToken);
-      
-      // Create new request object with updated URL and headers
-      const newReq = Object.create(req);
-      newReq.url = url + (cleanToken ? `?token=${encodeURIComponent(cleanToken)}` : '');
-      newReq.originalUrl = url;
-      newReq.path = `/cover-letters/${req.params.id}/download`;
-      
-      if (cleanToken && !newReq.headers.authorization) {
-        newReq.headers.authorization = `Bearer ${cleanToken}`;
-      }
-      
-      return userRoutes.handle(newReq, res);
-    } catch (error) {
-      console.error('❌ Cover letter redirect error:', error);
-      return res.status(404).json({ success: false, message: 'Route /api/cover-letters/:id/download not found' });
+// Compatibility redirect for cover-letter download legacy path
+app.get('/api/cover-letters/:id/download', (req, res) => {
+  // Forward to user route if available
+  try {
+    const token = req.headers.authorization || req.query.token || req.query.access_token || '';
+    const cleanToken = token.replace(/^Bearer\s+/i, '');
+    const url = `/api/user/cover-letters/${req.params.id}/download`;
+
+    console.log('🔍 Cover letter redirect - Original URL:', req.originalUrl);
+    console.log('🔍 Cover letter redirect - Forwarding to:', url);
+    console.log('🔍 Cover letter redirect - Token present:', !!cleanToken);
+
+    // Create new request object with updated URL and headers
+    const newReq = Object.create(req);
+    newReq.url = url + (cleanToken ? `?token=${encodeURIComponent(cleanToken)}` : '');
+    newReq.originalUrl = url;
+    newReq.path = `/cover-letters/${req.params.id}/download`;
+
+    if (cleanToken && !newReq.headers.authorization) {
+      newReq.headers.authorization = `Bearer ${cleanToken}`;
     }
-  });
+
+    return userRoutes.handle(newReq, res);
+  } catch (error) {
+    console.error('❌ Cover letter redirect error:', error);
+    return res.status(404).json({ success: false, message: 'Route /api/cover-letters/:id/download not found' });
+  }
+});
 
 // 404 handler
 app.use(notFoundHandler);
@@ -479,7 +479,7 @@ const startServer = async () => {
     } catch (migrateErr) {
       console.warn('⚠️ Migration step skipped due to error:', migrateErr?.message || migrateErr);
     }
-    
+
     // Fix ALL database issues (missing columns, tables, constraints)
     if (process.env.NODE_ENV === 'production' || process.env.RUN_DB_FIXES === 'true') {
       try {
@@ -487,14 +487,14 @@ const startServer = async () => {
         const { exec } = require('child_process');
         const { promisify } = require('util');
         const execAsync = promisify(exec);
-        
+
         await execAsync('node fix-all-database-issues.js', { cwd: __dirname });
         console.log('✅ All database issues fixed successfully!');
       } catch (fixError) {
         console.warn('⚠️ Database fix failed, continuing with startup:', fixError?.message || fixError);
       }
     }
-    
+
     // Optional non-destructive sync (alter) only if explicitly enabled
     if ((process.env.NODE_ENV || 'development') === 'development' && process.env.RUN_SYNC === 'true') {
       try {
@@ -607,7 +607,7 @@ const startServer = async () => {
             isDefault: d.isDefault,
             templateData: d.templateData,
             tags: d.tags
-          }, { fields: ['name','description','category','isPublic','isDefault','templateData','tags'] });
+          }, { fields: ['name', 'description', 'category', 'isPublic', 'isDefault', 'templateData', 'tags'] });
           console.log(`✅ Seeded default template: ${d.name}`);
         }
       }
@@ -617,13 +617,13 @@ const startServer = async () => {
 
     // Job preferences table and admin seeding scripts removed during cleanup
     // These features are now handled by migrations and the admin-setup route
-    
+
     app.listen(PORT, async () => {
       console.log(`🚀 Job Portal API server running on port: ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log(`🔗 API Documentation: http://localhost:${PORT}/api`);
-      
+
       // Start contract expiry monitoring service
       try {
         const contractExpiryService = require('./services/contractExpiryService');
@@ -638,14 +638,14 @@ const startServer = async () => {
       } catch (error) {
         console.warn('⚠️ Failed to start contract expiry service:', error.message);
       }
-      
+
       // Start inactivity management cron jobs
       try {
         InactivityCronService.start();
       } catch (error) {
         console.warn('⚠️ Failed to start inactivity cron service:', error.message);
       }
-      
+
       // Start job alerts cron service
       try {
         JobAlertCronService.start();

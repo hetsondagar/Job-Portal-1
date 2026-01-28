@@ -23,6 +23,14 @@ const CandidateLike = sequelize.define('CandidateLike', {
 			model: 'users',
 			key: 'id'
 		}
+	},
+	requirementId: {
+		type: DataTypes.UUID,
+		allowNull: true,
+		references: {
+			model: 'requirements',
+			key: 'id'
+		}
 	}
 }, {
   tableName: 'candidate_likes',
@@ -32,9 +40,16 @@ const CandidateLike = sequelize.define('CandidateLike', {
 	underscored: true,
 	indexes: [
 		{
+			fields: ['employer_id', 'candidate_id', 'requirement_id'],
+			unique: true,
+			name: 'unique_employer_candidate_requirement_like',
+			where: { requirement_id: { [require('sequelize').Op.ne]: null } }
+		},
+		{
 			fields: ['employer_id', 'candidate_id'],
 			unique: true,
-			name: 'unique_employer_candidate_like'
+			name: 'unique_employer_candidate_like',
+			where: { requirement_id: null }
 		},
 		{
 			fields: ['candidate_id']

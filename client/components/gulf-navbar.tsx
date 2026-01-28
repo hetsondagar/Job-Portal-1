@@ -48,7 +48,8 @@ export default function GulfNavbar() {
     firstName: '', 
     email: '', 
     confirmPassword: '', 
-    otp: '' 
+    otp: '',
+    showOTPForm: false
   })
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
@@ -111,6 +112,38 @@ export default function GulfNavbar() {
 
     setIsLoggingIn(true)
     try {
+      // First check if this is an existing normal user trying to upgrade to gulf
+      try {
+        const checkResponse = await apiService.checkExistingUser(
+          loginData.email,
+          loginData.password,
+          'gulf'
+        )
+        
+        if (checkResponse.success && checkResponse.userExists) {
+          const userData = checkResponse.data?.data || checkResponse.data
+          
+          // Check if user is not already a gulf user
+          if (!(userData.regions?.includes('gulf') || userData.region === 'gulf')) {
+            // This is a normal user wanting to upgrade - show upgrade dialog
+            setExistingUserData({
+              userId: userData.id || userData.userId || '',
+              firstName: userData.firstName || '',
+              email: userData.email || '',
+              confirmPassword: '',
+              otp: ''
+            })
+            setShowLoginDialog(false)
+            setShowExistingUserDialog(true)
+            toast.info("Account found! OTP sent to upgrade to Gulf portal.")
+            setIsLoggingIn(false)
+            return
+          }
+        }
+      } catch (checkError) {
+        console.log('User check skipped, proceeding with normal login:', checkError)
+      }
+
       await login(loginData)
       toast.success("Welcome to Gulf Jobs!")
       setShowLoginDialog(false)
@@ -283,7 +316,7 @@ export default function GulfNavbar() {
             >
               Opportunities
             </Link>
-            {/* Show appropriate dashboard link based on user region */}
+            {/* Show dashboard link only for gulf users */}
             {user && (user.regions?.includes('gulf') || user.region === 'gulf') ? (
               <Link 
                 href="/jobseeker-gulf-dashboard" 
@@ -291,21 +324,15 @@ export default function GulfNavbar() {
               >
                 Gulf Dashboard
               </Link>
-            ) : user ? (
-              <Link 
-                href="/dashboard" 
-                className="text-white hover:text-green-100 transition-colors font-medium"
-              >
-                Dashboard
-              </Link>
             ) : null}
           </div>
 
           {/* User Actions */}
           <div className="hidden md:flex items-center space-x-4">
             {user && (user.regions?.includes('gulf') || user.region === 'gulf') ? (
+              // Show menu only for gulf users
               <div className="flex items-center space-x-4">
-                {/* Show user menu only for users with Gulf portal access */}
+                {/* Show user menu for gulf users */}
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
@@ -325,6 +352,7 @@ export default function GulfNavbar() {
                 </Button>
               </div>
             ) : (
+              // Show login/register for non-gulf users (including normal portal users)
               <div className="flex items-center space-x-3">
                 <Button
                   variant="ghost"
@@ -383,7 +411,7 @@ export default function GulfNavbar() {
               >
                 Opportunities
               </Link>
-              {/* Show appropriate dashboard link based on user region */}
+              {/* Show dashboard link only for gulf users */}
               {user && (user.regions?.includes('gulf') || user.region === 'gulf') ? (
                 <Link 
                   href="/jobseeker-gulf-dashboard" 
@@ -392,18 +420,11 @@ export default function GulfNavbar() {
                 >
                   Gulf Dashboard
                 </Link>
-              ) : user ? (
-                <Link 
-                  href="/dashboard" 
-                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
-                </Link>
               ) : null}
               
               <div className="border-t pt-4">
                 {user && (user.regions?.includes('gulf') || user.region === 'gulf') ? (
+                  // Show user menu only for gulf users
                   <div className="flex flex-col space-y-3">
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -425,6 +446,7 @@ export default function GulfNavbar() {
                     </Button>
                   </div>
                 ) : (
+                  // Show login/register for non-gulf users
                   <div className="flex flex-col space-y-2">
                     <Button
                       variant="outline"
@@ -646,65 +668,71 @@ export default function GulfNavbar() {
               Welcome Back, {existingUserData.firstName}!
             </DialogTitle>
             <DialogDescription className="text-center text-slate-600 mt-2">
-              You're already a member of CampusZone! Verify your OTP to get access to the Gulf portal as well.
+              Your CampusZone account can also access Gulf portal. Would you like to upgrade your account?
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleVerifyOTP} className="space-y-4">
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <p className="text-sm text-slate-700">
-                <strong>Email:</strong> {existingUserData.email}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                We've sent a 6-digit OTP to your email address. Please check your inbox.
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="otp">Enter OTP</Label>
-              <Input
-                id="otp"
-                type="text"
-                placeholder="Enter 6-digit OTP"
-                value={existingUserData.otp}
-                onChange={(e) => setExistingUserData({ ...existingUserData, otp: e.target.value })}
-                maxLength={6}
-                pattern="[0-9]{6}"
-                required
-                className="text-center text-2xl tracking-widest"
-              />
-              <p className="text-xs text-slate-500">
-                OTP is valid for 10 minutes
-              </p>
-            </div>
-            
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <p className="text-sm text-slate-700">
+              <strong>Email:</strong> {existingUserData.email}
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              By clicking "Yes", you'll be able to access both CampusZone and Gulf portal with the same login credentials.
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
             <Button 
-              type="submit" 
-              className="w-full bg-green-600 hover:bg-green-700"
-              disabled={isVerifyingOTP || existingUserData.otp.length !== 6}
+              onClick={async () => {
+                // Yes - Register for Gulf portal
+                setIsVerifyingOTP(true)
+                try {
+                  // Send OTP for verification
+                  const response = await apiService.sendOTPForRegion(
+                    existingUserData.email,
+                    'gulf'
+                  );
+                  
+                  if (response.success) {
+                    toast.info("OTP sent to your email. Please verify to upgrade.");
+                    // Show OTP verification form
+                    setExistingUserData({
+                      ...existingUserData,
+                      showOTPForm: true
+                    });
+                  }
+                } catch (error) {
+                  console.error('Error sending OTP:', error);
+                  toast.error("Failed to send OTP. Please try again.");
+                } finally {
+                  setIsVerifyingOTP(false);
+                }
+              }}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              disabled={isVerifyingOTP}
             >
               {isVerifyingOTP ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Verifying...
+                  Processing...
                 </>
               ) : (
-                'Verify & Access Gulf Portal'
+                'Yes, Upgrade Account'
               )}
             </Button>
-          </form>
-          
-          <div className="text-center">
-            <button
-              type="button"
-              className="text-sm text-green-600 hover:text-green-700 font-medium"
+            
+            <Button 
               onClick={() => {
+                // No - Show register dialog for new account
                 setShowExistingUserDialog(false)
+                setShowLoginDialog(false)
                 setShowRegisterDialog(true)
               }}
+              variant="outline"
+              className="flex-1"
             >
-              Back to registration
-            </button>
+              No, Register New
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
